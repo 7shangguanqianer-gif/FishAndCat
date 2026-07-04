@@ -1,6 +1,6 @@
 ﻿# Automation Builder 建工程操作卡(照着点,预计 60-90 分钟)
 
-> 目标:把 plc\ 下 8 个 ST 文件导入 AB,仿真模式跑通 21 个测试用例(iPassed=23)。
+> 目标:把 plc\ 下 8 个 ST 文件导入 AB,仿真模式跑通 23 个测试用例(iPassed=23)。
 > 你不需要懂 ST 也能完成;每一步都写了"预期看到什么"。卡壳了把报错原文发给我或 Codex。
 > 注:AB 版本/语言不同,菜单名可能略有出入(中英对照都给了);界面差异不影响流程。
 
@@ -57,8 +57,10 @@
 
 ## 第五步:导入功能块 FB 与程序 PRG(15 分钟)
 
-1. 同法建 6 个 POU,类型选 **功能块(Function Block)**(来源 04 文件):
-   `FB_InitWarehouse`、`FB_SelectSlot`、`FB_AssignAllGoods`、`FB_LocalSwapImprove`、`FB_Stats`、`FB_BuildVisuPath`。
+1. 同法建 8 个 POU,类型选 **功能块(Function Block)**(来源 04 文件):
+   `FB_InitWarehouse`、`FB_SelectSlot`、`FB_AssignAllGoods`、`FB_LocalSwapImprove`、`FB_Stats`、
+   `FB_AnimatePath`、`FB_ScanLoadProbe`、`FB_BuildVisuPath`。
+   另注:第四步的函数表还需补 2 个(同在 03 文件):`FC_AxisTime`(REAL)、`FC_CalcDualCycleTime`(REAL)。
 2. 建 2 个 POU,类型选 **程序(Program)**:`PRG_Main`(05 文件)、`PRG_Test`(06 文件)。
 3. 全部粘贴后:菜单 **编译(Build)→ 生成(Build)**。
    - 预期:0 错误。有错误看第七步排错表。
@@ -73,7 +75,7 @@
 4. **跑测试**:双击打开 PRG_Test(在线状态),找到变量 `xRunTests`,双击其"准备值"填 TRUE → 
    按 **Ctrl+F7(写入值)**。
    - 预期:`iPassed = 23`,`iFailed = 0`,`xAllPass = TRUE`。
-   - 截图存到 `F:\abb_wh_work\plc\验收截图\`(建个文件夹),文件名 `W1_PRGTest_21pass.png`。
+   - 截图存到 `F:\abb_wh_work\plc\验收截图\`(建个文件夹),文件名 `W1_PRGTest_23pass.png`。
 5. **跑演示**:GVL_Visu 里把 `CmdReset` 写 TRUE(复位测试污染的仓库)→ `CmdLoadDemo` 写 TRUE
    (载入 20 件演示货)→ `SelStrategy` 写 3 → `CmdRunAssign` 写 TRUE。
    - 预期:VisuStatusText 依次显示"分配中...→优化中...→完成:全部入库,违规=0";
@@ -90,6 +92,7 @@
 | E_MainState.STATE_IDLE 不识别 | 枚举前缀语法差异 | 把 `E_MainState.STATE_IDLE` 改成 `STATE_IDLE`(全文件同改) |
 | 中文注释乱码 | 编码问题 | 无害,不影响编译;想清爽就用 VSCode 把文件另存为 UTF-8 with BOM 再粘 |
 
-> 全部通过后告诉我"iPassed=23",我把 W1 验收清单第一条勾掉,并开工 L1 加减速模型。
+> 全部通过后告诉我"iPassed=23",我把 W1 验收清单第一条勾掉(T22/T23 过=加减速与双命令
+> 的 ST 实现和 Python 仿真逐条一致,L1/L2 的 PLC 侧就此闭环)。
 > 这套操作你走完一遍,就已经学会了:AB 工程结构、DUT/GVL/POU 三类对象、仿真模式、在线写值——
 > 决赛可视化(W4)要用的全部基本功。
