@@ -60,13 +60,18 @@ def axis_time(d, vmax, acc):
     return 2.0 * math.sqrt(d / acc)
 
 
-def travel_time(col, tier):
-    """切比雪夫行程时间(单程):双轴同时运动,取慢轴(A5)。
+def travel_time_between(c0, t0, c1, t1):
+    """任意两点间切比雪夫行程时间(L2 双命令周期用;ST 侧 FC_CalcTravelTime 同签名)。
     ACCEL=False 匀速(基础口径);True 梯形速度曲线(L1 工程口径,A4b)。"""
-    dx, dy = col * CELL_W, tier * CELL_H
+    dx, dy = abs(c1 - c0) * CELL_W, abs(t1 - t0) * CELL_H
     if ACCEL:
         return max(axis_time(dx, VX, AX), axis_time(dy, VY, AY))
     return max(dx / VX, dy / VY)
+
+
+def travel_time(col, tier):
+    """I/O口(0,0)到仓位的行程时间(单程),= travel_time_between(0,0,col,tier)。"""
+    return travel_time_between(0, 0, col, tier)
 
 
 def t_max_now():

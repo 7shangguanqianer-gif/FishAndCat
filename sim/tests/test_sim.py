@@ -63,6 +63,21 @@ class TestGeometry(unittest.TestCase):
         finally:
             ws.ACCEL = False
 
+    def test_l2_travel_between(self):
+        # 任意两点行程(双命令周期地基):对称/自反/端点特例/三角不等式
+        self.assertAlmostEqual(ws.travel_time_between(0, 0, 19, 19), 38.0)
+        self.assertAlmostEqual(ws.travel_time_between(19, 19, 0, 0), 38.0)
+        self.assertAlmostEqual(ws.travel_time_between(5, 2, 5, 2), 0.0)
+        self.assertAlmostEqual(ws.travel_time(7, 3), ws.travel_time_between(0, 0, 7, 3))
+        import random as _r
+        rng = _r.Random(1)
+        for _ in range(30):     # 经原点三角不等式 = 双命令节省非负的数学依据
+            a = (rng.randrange(20), rng.randrange(20))
+            b = (rng.randrange(20), rng.randrange(20))
+            self.assertLessEqual(
+                ws.travel_time_between(a[0], a[1], b[0], b[1]),
+                ws.travel_time(*a) + ws.travel_time(*b) + 1e-9)
+
     def test_manhattan_path(self):
         self.assertAlmostEqual(ws.path_len(19, 19), 38.0)
         self.assertAlmostEqual(ws.path_len(3, 4), 7.0)
