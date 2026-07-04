@@ -74,33 +74,44 @@ def fig1(res):
 
 
 def fig2(goods, whs):
-    """占用热力图三联:直观看到"热货聚左下、重货沉底"。"""
+    """占用热力图三联:直观看到"热货聚左下、重货沉底"。
+    配色:空=白,预占=中灰(独立通道,不占用色带),货物=YlOrRd 按频次热度。"""
+    import numpy as np
+    from matplotlib.patches import Patch
     by_freq = sorted(goods, key=lambda g: -g.freq)
     rank = {g.gid: i for i, g in enumerate(by_freq)}
     n = len(goods)
-    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.4))
+    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.6))
     for ax, name in zip(axes, ["near", "score", "awra"]):
         wh = whs[name]
-        img = [[0.0] * 20 for _ in range(20)]      # [tier][col]
+        heat = np.full((20, 20), np.nan)            # [tier][col] 货物热度
+        pre = np.zeros((20, 20), dtype=bool)
         for c in range(20):
             for t in range(20):
                 cell = wh.grid[c][t]
-                if cell is None:
-                    img[t][c] = float("nan")        # 空=白
-                elif cell == "PRE":
-                    img[t][c] = -1.0                # 预占=灰(用 -1 区分)
-                else:
-                    img[t][c] = 1.0 - rank[cell.gid] / max(1, n - 1)   # 越热越大
-        im = ax.imshow(img, origin="lower", cmap="YlOrRd", vmin=-1, vmax=1,
+                if cell == "PRE":
+                    pre[t][c] = True
+                elif cell is not None:
+                    heat[t][c] = 1.0 - rank[cell.gid] / max(1, n - 1)
+        # 底层:预占用灰块(独立绘制,不进色带)
+        grey = np.where(pre, 0.55, np.nan)
+        ax.imshow(grey, origin="lower", cmap="Greys", vmin=0, vmax=1,
+                  aspect="equal", interpolation="nearest")
+        im = ax.imshow(heat, origin="lower", cmap="YlOrRd", vmin=0, vmax=1,
                        aspect="equal", interpolation="nearest")
         ax.set_title(LBL[name], fontsize=11)
-        ax.set_xlabel("列(I/O 口在左下)", fontsize=9)
+        ax.set_xlabel("列(I/O 口在左下)", fontsize=10)
         if name == "near":
-            ax.set_ylabel("层(0=底层)", fontsize=9)
-        ax.plot(0, 0, marker="*", color="#1976d2", markersize=10)
-    fig.suptitle("仓位占用热力图(颜色深=访问频次高;左下角★=I/O 口;灰=-1 为预占用)", fontsize=12)
+            ax.set_ylabel("层(0=底层)", fontsize=10)
+        ax.plot(0, 0, marker="*", color="#1976d2", markersize=11, markeredgecolor="white")
+        ax.tick_params(labelsize=9)
+    fig.suptitle("仓位占用热力图(seed=2026,120件;颜色深=访问频次高)", fontsize=12)
     cbar = fig.colorbar(im, ax=axes, shrink=0.8)
-    cbar.set_label("频次热度(-1=预占用)", fontsize=9)
+    cbar.set_label("货物频次热度(1=最热)", fontsize=10)
+    axes[0].legend(handles=[Patch(fc="#8c8c8c", label="预占用格"),
+                            Patch(fc="white", ec="#999999", label="空仓位"),
+                            Patch(fc="#e6550d", label="货物(色深=热)")],
+                   loc="upper left", fontsize=9, framealpha=0.9)
     fig.savefig(os.path.join(FIGS, "fig2_占用热力图.png"), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
