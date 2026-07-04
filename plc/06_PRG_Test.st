@@ -13,7 +13,7 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 21;                  // 用例总数(加用例先改这里,防空槽误计)
+    N_CASES   : INT := 23;                  // 用例总数(加用例先改这里,防空槽误计)
     aResult   : ARRAY[1..24] OF BOOL;       // 各用例结果(TRUE=通过)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
@@ -115,6 +115,26 @@ IF xRunTests THEN
     GVL_WH.iGoodsCount := 0;
     FC_LoadDemoGoods();
     aResult[21] := (GVL_WH.iGoodsCount = GVL_Data.N_DEMO);
+
+    // ---- T22 L1 加减速口径一致性向量(与 Python 梯形模型逐条比对) ----
+    GVL_Param.xUseAccel := TRUE;
+    iVecFail := 0;
+    FOR i := 1 TO GVL_Data.N_TESTVEC DO
+        rV := FC_CalcTravelTime(x0 := 0, y0 := 0,
+                                x1 := GVL_Data.aTestVec[i].X, y1 := GVL_Data.aTestVec[i].Y,
+                                xSimXY := TRUE);
+        IF ABS(rV - GVL_Data.aTestVec[i].ExpTimeAccel) >= 0.001 THEN
+            iVecFail := iVecFail + 1;
+        END_IF
+    END_FOR
+    GVL_Param.xUseAccel := FALSE;               // 恢复默认口径
+    aResult[22] := (iVecFail = 0);
+
+    // ---- T23 双命令周期:已知值 + 不劣于单命令(C10) ----
+    // 存(5,2) 取(10,5),匀速切比雪夫:t存=max(2.5,4)=4, t间=max(2.5,6)=6, t取=max(5,10)=10
+    rV := FC_CalcDualCycleTime(iStoreX := 5, iStoreY := 2, iRetrX := 10, iRetrY := 5);
+    aResult[23] := (ABS(rV - 20.0) < 0.001)
+                   AND (rV <= 2.0 * 4.0 + 2.0 * 10.0 + 0.001);
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

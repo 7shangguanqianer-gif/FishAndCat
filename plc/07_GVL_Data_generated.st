@@ -15,7 +15,8 @@ STRUCT
     WMax     : REAL;   // 归一分母
     FMax     : REAL;
     ExpScore : REAL;   // Python 期望评分(双精度算出,容差1e-3比对)
-    ExpTime  : REAL;   // Python 期望切比雪夫时间
+    ExpTime  : REAL;   // Python 期望切比雪夫时间(匀速口径)
+    ExpTimeAccel : REAL;   // Python 期望时间(L1 梯形加减速口径,T22 比对)
 END_STRUCT
 END_TYPE
 
@@ -26,16 +27,16 @@ VAR_GLOBAL CONSTANT
 END_VAR
 VAR_GLOBAL
     aTestVec : ARRAY[1..10] OF ST_TestVec := [
-        (W := 13.9, F := 1.83, X := 1, Y := 0, WMax := 80.0, FMax := 9.82, ExpScore := 0.122893, ExpTime := 0.500000),
-        (W := 69.5, F := 1.1, X := 5, Y := 2, WMax := 80.0, FMax := 9.82, ExpScore := 0.222415, ExpTime := 4.000000),
-        (W := 50.1, F := 2.02, X := 10, Y := 5, WMax := 80.0, FMax := 9.82, ExpScore := 0.306726, ExpTime := 10.000000),
-        (W := 46.1, F := 3.1, X := 19, Y := 19, WMax := 80.0, FMax := 9.82, ExpScore := 0.891932, ExpTime := 38.000000),
-        (W := 61.3, F := 2.14, X := 0, Y := 1, WMax := 80.0, FMax := 9.82, ExpScore := 0.162936, ExpTime := 2.000000),
-        (W := 51.1, F := 1.11, X := 3, Y := 3, WMax := 80.0, FMax := 9.82, ExpScore := 0.230741, ExpTime := 6.000000),
-        (W := 38.7, F := 4.28, X := 7, Y := 10, WMax := 80.0, FMax := 9.82, ExpScore := 0.524082, ExpTime := 20.000000),
-        (W := 56.0, F := 1.23, X := 15, Y := 1, WMax := 80.0, FMax := 9.82, ExpScore := 0.166878, ExpTime := 7.500000),
-        (W := 78.5, F := 9.82, X := 2, Y := 18, WMax := 80.0, FMax := 9.82, ExpScore := 1.876974, ExpTime := 36.000000),
-        (W := 80.0, F := 1.86, X := 12, Y := 7, WMax := 80.0, FMax := 9.82, ExpScore := 0.514996, ExpTime := 14.000000)
+        (W := 13.9, F := 1.83, X := 1, Y := 0, WMax := 80.0, FMax := 9.82, ExpScore := 0.122893, ExpTime := 0.500000, ExpTimeAccel := 2.828427),
+        (W := 69.5, F := 1.1, X := 5, Y := 2, WMax := 80.0, FMax := 9.82, ExpScore := 0.222415, ExpTime := 4.000000, ExpTimeAccel := 6.324555),
+        (W := 50.1, F := 2.02, X := 10, Y := 5, WMax := 80.0, FMax := 9.82, ExpScore := 0.306726, ExpTime := 10.000000, ExpTimeAccel := 11.666667),
+        (W := 46.1, F := 3.1, X := 19, Y := 19, WMax := 80.0, FMax := 9.82, ExpScore := 0.891932, ExpTime := 38.000000, ExpTimeAccel := 39.666667),
+        (W := 61.3, F := 2.14, X := 0, Y := 1, WMax := 80.0, FMax := 9.82, ExpScore := 0.162936, ExpTime := 2.000000, ExpTimeAccel := 3.666667),
+        (W := 51.1, F := 1.11, X := 3, Y := 3, WMax := 80.0, FMax := 9.82, ExpScore := 0.230741, ExpTime := 6.000000, ExpTimeAccel := 7.666667),
+        (W := 38.7, F := 4.28, X := 7, Y := 10, WMax := 80.0, FMax := 9.82, ExpScore := 0.524082, ExpTime := 20.000000, ExpTimeAccel := 21.666667),
+        (W := 56.0, F := 1.23, X := 15, Y := 1, WMax := 80.0, FMax := 9.82, ExpScore := 0.166878, ExpTime := 7.500000, ExpTimeAccel := 11.500000),
+        (W := 78.5, F := 9.82, X := 2, Y := 18, WMax := 80.0, FMax := 9.82, ExpScore := 1.876974, ExpTime := 36.000000, ExpTimeAccel := 37.666667),
+        (W := 80.0, F := 1.86, X := 12, Y := 7, WMax := 80.0, FMax := 9.82, ExpScore := 0.514996, ExpTime := 14.000000, ExpTimeAccel := 15.666667)
     ];
 END_VAR
 

@@ -32,8 +32,13 @@ probe_slots = [(1, 0), (5, 2), (10, 5), (19, 19), (0, 1), (3, 3), (7, 10),
                (15, 1), (2, 18), (12, 7)]
 vecs = []
 for g, (c, t) in zip(goods[:10], probe_slots):
-    vecs.append((g.weight, g.freq, c, t, w_max, f_max,
-                 score_fn(g, c, t), ws.travel_time(c, t)))
+    ws.ACCEL = False
+    t_uni = ws.travel_time(c, t)
+    sc = score_fn(g, c, t)
+    ws.ACCEL = True
+    t_acc = ws.travel_time(c, t)                 # L1 梯形口径期望值(T22 用)
+    ws.ACCEL = False
+    vecs.append((g.weight, g.freq, c, t, w_max, f_max, sc, t_uni, t_acc))
 
 L = []
 L.append("(* ============================================================")
@@ -53,7 +58,8 @@ L.append("    Y        : INT;    // 候选仓位层")
 L.append("    WMax     : REAL;   // 归一分母")
 L.append("    FMax     : REAL;")
 L.append("    ExpScore : REAL;   // Python 期望评分(双精度算出,容差1e-3比对)")
-L.append("    ExpTime  : REAL;   // Python 期望切比雪夫时间")
+L.append("    ExpTime  : REAL;   // Python 期望切比雪夫时间(匀速口径)")
+L.append("    ExpTimeAccel : REAL;   // Python 期望时间(L1 梯形加减速口径,T22 比对)")
 L.append("END_STRUCT")
 L.append("END_TYPE")
 L.append("")
@@ -64,11 +70,11 @@ L.append(f"    N_TESTVEC : INT := {len(vecs)};")
 L.append("END_VAR")
 L.append("VAR_GLOBAL")
 L.append("    aTestVec : ARRAY[1..10] OF ST_TestVec := [")
-for i, (w, f, c, t, wm, fm, es, et) in enumerate(vecs):
+for i, (w, f, c, t, wm, fm, es, et, eta) in enumerate(vecs):
     sep = "," if i < len(vecs) - 1 else ""
     L.append(f"        (W := {w}, F := {f}, X := {c}, Y := {t}, "
              f"WMax := {wm}, FMax := {fm}, "
-             f"ExpScore := {es:.6f}, ExpTime := {et:.6f}){sep}")
+             f"ExpScore := {es:.6f}, ExpTime := {et:.6f}, ExpTimeAccel := {eta:.6f}){sep}")
 L.append("    ];")
 L.append("END_VAR")
 L.append("")
@@ -92,6 +98,7 @@ out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "plc",
 with open(out, "w", encoding="utf-8") as fp:
     fp.write("\n".join(L) + "\n")
 print(f"已生成 {os.path.normpath(out)}")
-print(f"演示批次 {N_DEMO} 件(seed={SEED}),测试向量 {len(vecs)} 条")
-for i, (w, f, c, t, wm, fm, es, et) in enumerate(vecs[:3], 1):
-    print(f"  vec{i}: W={w} F={f} slot=({c},{t}) -> score={es:.6f} time={et:.3f}")
+print(f"演示批次 {N_DEMO} 件(seed={SEED}),测试向量 {len(vecs)} 条(含加减速期望值)")
+for i, (w, f, c, t, wm, fm, es, et, eta) in enumerate(vecs[:3], 1):
+    print(f"  vec{i}: W={w} F={f} slot=({c},{t}) -> score={es:.6f} "
+          f"t_uni={et:.3f} t_acc={eta:.3f}")

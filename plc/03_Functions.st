@@ -83,12 +83,35 @@ FC_FitsPhysical := TRUE;
 END_FUNCTION
 
 
-(* ---------- FC_CalcTravelTime:行程时间(A5/A9:双模型开关) ----------
-   主口径 = 切比雪夫:水平/垂直双电机同时运动,取慢轴(AS/RS 文献标准)
-   对照   = 顺序模型:先水平后垂直(资料包保守模型,答辩演示差异用)   *)
+(* ---------- FC_AxisTime:L1 单轴行程时间(梯形/三角速度曲线) ----------
+   与 Python axis_time 一字对齐:d≥v²/a → d/v+v/a(梯形);否则 2·√(d/a)(三角)。
+   匀速模型系统性低估短程时间(实验发现 F7:对优化布局低估 43.5%)。 *)
+FUNCTION FC_AxisTime : REAL
+VAR_INPUT
+    d    : REAL;                // 行程距离 m(非负)
+    vmax : REAL;                // 峰值速度 m/s
+    acc  : REAL;                // 加减速 m/s²
+END_VAR
+IF d <= 0.0 THEN
+    FC_AxisTime := 0.0;
+    RETURN;
+END_IF
+IF vmax <= 0.0 THEN vmax := 1.0; END_IF     // 非法输入保护
+IF acc  <= 0.0 THEN acc  := 0.1; END_IF
+IF d >= vmax * vmax / acc THEN
+    FC_AxisTime := d / vmax + vmax / acc;
+ELSE
+    FC_AxisTime := 2.0 * SQRT(d / acc);
+END_IF
+END_FUNCTION
+
+
+(* ---------- FC_CalcTravelTime:行程时间(A5/A9/A4b 三开关) ----------
+   主口径 = 切比雪夫:双电机同动取慢轴;xSimXY=FALSE 退化为顺序模型(对照)。
+   GVL_Param.xUseAccel=TRUE 时轴时间用梯形曲线(L1 工程口径),与 Python 同全局开关。 *)
 FUNCTION FC_CalcTravelTime : REAL
 VAR_INPUT
-    x0, y0, x1, y1  : INT;      // 起点/终点(格坐标)
+    x0, y0, x1, y1  : INT;      // 起点/终点(格坐标;支持任意两点,双命令周期用)
     xSimXY          : BOOL;     // TRUE=切比雪夫 FALSE=顺序
 END_VAR
 VAR
@@ -100,13 +123,36 @@ dy := ABS(INT_TO_REAL(y1 - y0)) * GVL_Param.CELL_H;
 // 边界:速度非法保护(边界清单#8思想:非法输入修正)
 vx := GVL_Param.rVx;  IF vx <= 0.0 THEN vx := 1.0; END_IF
 vy := GVL_Param.rVy;  IF vy <= 0.0 THEN vy := 1.0; END_IF
-tx := dx / vx;
-ty := dy / vy;
+IF GVL_Param.xUseAccel THEN
+    tx := FC_AxisTime(d := dx, vmax := vx, acc := GVL_Param.rAx);
+    ty := FC_AxisTime(d := dy, vmax := vy, acc := GVL_Param.rAy);
+ELSE
+    tx := dx / vx;
+    ty := dy / vy;
+END_IF
 IF xSimXY THEN
     FC_CalcTravelTime := MAX(tx, ty) + GVL_Param.rTLoad + GVL_Param.rTUnload;
 ELSE
     FC_CalcTravelTime := tx + ty + GVL_Param.rTLoad + GVL_Param.rTUnload;
 END_IF
+END_FUNCTION
+
+
+(* ---------- FC_CalcDualCycleTime:L2 双命令周期时间(C10 口径) ----------
+   一趟联合行程:I/O→存位(带货)→取位(空驶联程)→I/O(带货);
+   节省 = 单命令(2t存+2t取) − 本值 ≥ 0(切比雪夫三角不等式,有 Python 测试)。 *)
+FUNCTION FC_CalcDualCycleTime : REAL
+VAR_INPUT
+    iStoreX, iStoreY : INT;     // 存位
+    iRetrX,  iRetrY  : INT;     // 取位
+END_VAR
+FC_CalcDualCycleTime :=
+      FC_CalcTravelTime(x0 := 0, y0 := 0, x1 := iStoreX, y1 := iStoreY,
+                        xSimXY := GVL_Param.xSimultaneousXY)
+    + FC_CalcTravelTime(x0 := iStoreX, y0 := iStoreY, x1 := iRetrX, y1 := iRetrY,
+                        xSimXY := GVL_Param.xSimultaneousXY)
+    + FC_CalcTravelTime(x0 := iRetrX, y0 := iRetrY, x1 := 0, y1 := 0,
+                        xSimXY := GVL_Param.xSimultaneousXY);
 END_FUNCTION
 
 

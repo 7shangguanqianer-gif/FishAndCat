@@ -449,6 +449,93 @@ xOld := xExecute;
 END_FUNCTION_BLOCK
 
 
+(* ---------- FB_AnimatePath:堆垛机动画回放(L6 决赛可视化核心) ----------
+   沿 VisuPath 的 L 形物理走线逐点推进 VisuCurrentX/Y,总时长 = 该点切比雪夫
+   行程时间 × 回放倍率(口径 C2:显示走线为曼哈顿,时序按切比雪夫等比回放,
+   两口径并列的动画化呈现)。先调 FB_BuildVisuPath 生成路径再启动本 FB。 *)
+FUNCTION_BLOCK FB_AnimatePath
+VAR_INPUT
+    xStart      : BOOL;         // 上升沿启动回放
+    rCycleTime  : REAL := 0.01; // 本任务周期 s(10ms 任务填 0.01)
+    rSpeedScale : REAL := 5.0;  // 回放倍速(5=五倍速演示)
+END_VAR
+VAR_OUTPUT
+    xBusy : BOOL;
+    xDone : BOOL;
+END_VAR
+VAR
+    xOld     : BOOL;
+    rElapsed : REAL;            // 已回放的"仿真时间" s
+    rTotal   : REAL;            // 目标点切比雪夫总时长 s
+    iIdx     : INT;
+END_VAR
+
+IF xStart AND NOT xOld THEN
+    IF GVL_Visu.VisuPathCount > 1 THEN
+        rTotal := FC_CalcTravelTime(x0 := 0, y0 := 0,
+                                    x1 := GVL_Visu.VisuTargetX, y1 := GVL_Visu.VisuTargetY,
+                                    xSimXY := GVL_Param.xSimultaneousXY);
+        IF rTotal <= 0.0 THEN rTotal := 0.001; END_IF
+        rElapsed := 0.0;  xBusy := TRUE;  xDone := FALSE;
+        GVL_Visu.VisuCurrentX := GVL_Visu.VisuPathX[0];
+        GVL_Visu.VisuCurrentY := GVL_Visu.VisuPathY[0];
+    END_IF
+END_IF
+xOld := xStart;
+
+IF xBusy THEN
+    rElapsed := rElapsed + rCycleTime * rSpeedScale;
+    // 路径索引 = 已过时间占比 × 路径点数(线性等比映射)
+    iIdx := REAL_TO_INT(rElapsed / rTotal * INT_TO_REAL(GVL_Visu.VisuPathCount - 1));
+    IF iIdx >= GVL_Visu.VisuPathCount - 1 THEN
+        iIdx := GVL_Visu.VisuPathCount - 1;
+        xBusy := FALSE;  xDone := TRUE;
+    END_IF
+    GVL_Visu.VisuCurrentX := GVL_Visu.VisuPathX[iIdx];
+    GVL_Visu.VisuCurrentY := GVL_Visu.VisuPathY[iIdx];
+END_IF
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_ScanLoadProbe:L4 扫描周期负载实测(AC500 实现章的实测数据源) ----------
+   用法:在要测量的代码段前后各调一次:
+     fbProbe(xStart := TRUE);   (* 段前 *)
+     ... 被测代码(如 fbAssign 一个分片周期)...
+     fbProbe(xStop := TRUE);    (* 段后 *)
+   输出微秒级 单次/平均/最大 耗时与样本数 —— 报告里给出
+   "10ms 任务周期下分片计算占用 X%(看门狗裕量 Y 倍)"的实测表。 *)
+FUNCTION_BLOCK FB_ScanLoadProbe
+VAR_INPUT
+    xStart : BOOL;
+    xStop  : BOOL;
+END_VAR
+VAR_OUTPUT
+    rLastUs : REAL;             // 最近一次段耗时 µs
+    rAvgUs  : REAL;
+    rMaxUs  : REAL;
+    nSamples: DINT;
+END_VAR
+VAR
+    tT0     : LTIME;
+    xArmed  : BOOL;
+    rSumUs  : LREAL;
+END_VAR
+
+IF xStart THEN
+    tT0 := LTIME();             // CODESYS 3.5 高精度单调时钟(ns 分辨率)
+    xArmed := TRUE;
+END_IF
+IF xStop AND xArmed THEN
+    rLastUs := LREAL_TO_REAL(LTIME_TO_LREAL(LTIME() - tT0) / 1000.0);   // ns→µs
+    rSumUs := rSumUs + rLastUs;
+    nSamples := nSamples + 1;
+    IF rLastUs > rMaxUs THEN rMaxUs := rLastUs; END_IF
+    rAvgUs := LREAL_TO_REAL(rSumUs / DINT_TO_LREAL(nSamples));
+    xArmed := FALSE;
+END_IF
+END_FUNCTION_BLOCK
+
+
 (* ---------- FB_BuildVisuPath:生成 L 形路径点(决赛可视化路径展示) ----------
    物理走线按"先水平后垂直"展开为逐格路径点(曼哈顿口径);
    执行时间按切比雪夫另算 —— 两口径并列,呼应 C2。 *)

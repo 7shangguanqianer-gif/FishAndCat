@@ -24,6 +24,10 @@ VAR_GLOBAL
     rTLoad          : REAL := 0.0;      // 装货时间 s(A8:暂不计,保留接口)
     rTUnload        : REAL := 0.0;      // 卸货时间 s(A8)
     xSimultaneousXY : BOOL := TRUE;     // TRUE=切比雪夫(主口径A5) FALSE=顺序模型(A9对照)
+    // ---- L1 梯形速度曲线(A4b;与 Python ACCEL/AX/AY 一字对齐) ----
+    xUseAccel       : BOOL := FALSE;    // FALSE=匀速(基础口径,历史数字) TRUE=加减速工程口径
+    rAx             : REAL := 0.5;      // 水平加减速 m/s²
+    rAy             : REAL := 0.3;      // 垂直加减速 m/s²
 
     // ---- 预占用规则(B1 题面歧义,三解读可切) ----
     iPreRule        : INT := 0;         // 0=x且y被3整除(49格) 1=或(231格) 2=线性编号(134格)

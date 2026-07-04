@@ -1,0 +1,2 @@
+﻿完整资料包(含6个克隆项目36万文件)在: C:\Users\86177\Documents\ABB_Warehouse_Slotting_Research_20260704
+本目录只归档报告与论文PDF;要用克隆项目(warehouse-simulator等)去原路径。
