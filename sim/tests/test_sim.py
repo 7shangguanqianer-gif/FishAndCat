@@ -152,6 +152,25 @@ class TestFindings(unittest.TestCase):
         for k in m:
             self.assertEqual(m[k]["viol"], 0, k)       # C8:违规恒0
 
+    def test_h_caliber_headline_lock(self):
+        # H 口径(报告主口径,拍板①②):加减速+自适应策略表;seed=2026 锁定值
+        self.assertEqual(ws.lookup_weights(120, "skew", "batch"), (0.05, 0.6))
+        self.assertEqual(ws.lookup_weights(120, "skew", "online"), (0.10, 1.0))
+        self.assertEqual(ws.lookup_weights(500, "skew", "batch"), (0.05, 0.6))  # 密度钳位330档
+        try:
+            ws.ACCEL = True
+            goods = ws.gen_goods(120, 2026)
+            wm = max(g.weight for g in goods)
+            fm = max(g.freq for g in goods)
+            d, bg = ws.lookup_weights(120, "skew", "batch")
+            fn = ws.make_score_fn(1.0, bg / 2, bg / 2, d, wm, fm)
+            wh, placed, failed = ws.run_awra_ls(goods, "and", fn, wm, fm)
+            m = ws.metrics(wh, placed, failed)
+            self.assertAlmostEqual(m["exp_t"], 7.6202, delta=0.01)
+            self.assertEqual(m["viol"], 0)
+        finally:
+            ws.ACCEL = False
+
     def test_all_cases_zero_violation(self):
         for case in ("uniform", "skew", "heavy"):
             goods = ws.gen_goods(100, 7, case)

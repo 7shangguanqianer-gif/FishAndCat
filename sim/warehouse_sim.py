@@ -177,6 +177,30 @@ class Warehouse:
         return g
 
 
+# ---------------- 场景自适应权重策略表(A1/T11,2026-07-04 拍板①采纳) ----------------
+# 来源:adaptive_weights.py 18场景×15组合×2seeds 标定 + verify_policy.py 留出seed泛化验证通过
+# (批量留出增益均值 6.88% 全正,违规0)。此表是"已定口径"的一部分,与 plc/08 生成文件同源;
+# 重标定必须两处同步并重跑验证。键:(密度档, 分布, 模式) → (δ, β+γ)。
+WEIGHT_POLICY = {
+    (120, "uniform", "online"): (0.20, 0.6), (120, "uniform", "batch"): (0.15, 0.6),
+    (120, "skew", "online"): (0.10, 1.0),    (120, "skew", "batch"): (0.05, 0.6),
+    (120, "heavy", "online"): (0.10, 0.6),   (120, "heavy", "batch"): (0.10, 0.6),
+    (240, "uniform", "online"): (0.20, 0.6), (240, "uniform", "batch"): (0.15, 0.6),
+    (240, "skew", "online"): (0.20, 0.6),    (240, "skew", "batch"): (0.05, 0.6),
+    (240, "heavy", "online"): (0.20, 0.6),   (240, "heavy", "batch"): (0.15, 0.6),
+    (330, "uniform", "online"): (0.20, 0.6), (330, "uniform", "batch"): (0.20, 0.6),
+    (330, "skew", "online"): (0.20, 0.6),    (330, "skew", "batch"): (0.05, 0.6),
+    (330, "heavy", "online"): (0.20, 0.6),   (330, "heavy", "batch"): (0.20, 0.6),
+}
+
+
+def lookup_weights(n_goods, case, mode):
+    """场景→权重查表(PLC 侧对应 plc/08 的 aPolicyDelta/aPolicyBG)。
+    密度档:<180→120档,<285→240档,否则330档;未知场景回落固定默认。"""
+    dens = 120 if n_goods < 180 else (240 if n_goods < 285 else 330)
+    return WEIGHT_POLICY.get((dens, case, mode), (0.15, 1.0))
+
+
 # ---------------- 多目标评分(在线 score 与批量 AWRA-LS 共用同一目标函数) ----------------
 def make_score_fn(alpha, beta, gamma, delta, w_max, f_max):
     """score = α·(频次/最大)·(时间/最大)   —— 高频货放远处要罚(效率)
@@ -395,6 +419,8 @@ def main():
                     help="货物分布:A均匀/B高频偏态(默认)/C重货偏多")
     ap.add_argument("--accel", action="store_true",
                     help="L1:启用梯形速度曲线(加减速)口径;默认匀速(历史口径)")
+    ap.add_argument("--adaptive", action="store_true",
+                    help="A1:场景自适应权重查表(报告主口径 H = --accel --adaptive)")
     ap.add_argument("--alpha", type=float, default=1.0, help="评分权重:效率项")
     ap.add_argument("--beta", type=float, default=0.6, help="评分权重:稳定项")
     ap.add_argument("--gamma", type=float, default=0.4, help="评分权重:能耗项")
@@ -413,7 +439,14 @@ def main():
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
     by_freq = sorted(goods, key=lambda g: -g.freq)
-    score_fn = make_score_fn(a.alpha, a.beta, a.gamma, a.delta, w_max, f_max)
+    if a.adaptive:
+        d_on, bg_on = lookup_weights(a.goods, a.case, "online")
+        d_ba, bg_ba = lookup_weights(a.goods, a.case, "batch")
+        score_fn = make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
+        score_fn_batch = make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
+    else:
+        score_fn = make_score_fn(a.alpha, a.beta, a.gamma, a.delta, w_max, f_max)
+        score_fn_batch = score_fn
 
     pre = sum(1 for c in range(COLS) for t in range(TIERS) if preoccupied(c, t, a.rule))
     motion = (f"梯形加减速(ax={AX} ay={AY})" if ACCEL else "匀速") + "·切比雪夫"
@@ -430,7 +463,7 @@ def main():
         results.append((name, "在线", placed, metrics(wh, placed, failed)))
         if a.map and name in ("near", "score"):
             globals().setdefault("_maps", []).append((name, wh))
-    wh, placed, failed = run_awra_ls(goods, a.rule, score_fn, w_max, f_max,
+    wh, placed, failed = run_awra_ls(goods, a.rule, score_fn_batch, w_max, f_max,
                                      max_iter=a.ls_iter)
     results.append(("awra", "批量", placed, metrics(wh, placed, failed)))
     if a.map:
