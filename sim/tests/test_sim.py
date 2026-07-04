@@ -39,6 +39,30 @@ class TestGeometry(unittest.TestCase):
         self.assertAlmostEqual(ws.travel_time(19, 0), 9.5)
         self.assertAlmostEqual(ws.travel_time(0, 19), 38.0)
 
+    def test_l1_axis_time_known_values(self):
+        # 水平 vx=2,ax=0.5:临界距离 vmax²/a=8m
+        self.assertAlmostEqual(ws.axis_time(19.0, 2.0, 0.5), 19 / 2 + 2 / 0.5)   # 梯形 13.5
+        self.assertAlmostEqual(ws.axis_time(2.0, 2.0, 0.5), 4.0)                 # 三角 2√(2/0.5)
+        self.assertAlmostEqual(ws.axis_time(8.0, 2.0, 0.5), 8.0)                 # 临界点两式相等
+        self.assertAlmostEqual(ws.axis_time(0.0, 2.0, 0.5), 0.0)
+        # 垂直 vy=0.5,ay=0.3:临界 0.8333m
+        self.assertAlmostEqual(ws.axis_time(19.0, 0.5, 0.3), 19 / 0.5 + 0.5 / 0.3)  # 39.667
+
+    def test_l1_accel_switch(self):
+        # 开关默认关(匀速历史口径);开启后时间恒不小于匀速,且已知值正确
+        self.assertFalse(ws.ACCEL)
+        try:
+            ws.ACCEL = True
+            self.assertAlmostEqual(ws.travel_time(19, 19), 19 / 0.5 + 0.5 / 0.3)
+            for c, t in [(0, 0), (1, 0), (5, 3), (19, 19), (0, 19), (10, 2)]:
+                ws.ACCEL = True
+                ta = ws.travel_time(c, t)
+                ws.ACCEL = False
+                tu = ws.travel_time(c, t)
+                self.assertGreaterEqual(ta + 1e-12, tu, (c, t))
+        finally:
+            ws.ACCEL = False
+
     def test_manhattan_path(self):
         self.assertAlmostEqual(ws.path_len(19, 19), 38.0)
         self.assertAlmostEqual(ws.path_len(3, 4), 7.0)

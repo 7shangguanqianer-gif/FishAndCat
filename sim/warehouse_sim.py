@@ -26,6 +26,7 @@ warehouse_sim.py — 立体仓储仓位优化仿真 v2(零依赖,任何 Python 3
 """
 import argparse
 import csv
+import math
 import os
 import random
 import sys
@@ -38,22 +39,47 @@ except Exception:
 # ---------------- 参数(与 canonical_assumptions 对应) ----------------
 COLS, TIERS = 20, 20          # A1: 20列(x 水平) x 20层(y 垂直)
 CELL_W, CELL_H = 1.0, 1.0     # A2: 仓位尺寸 1m
-VX, VY = 2.0, 0.5             # A4: 堆垛机水平/垂直速度 m/s
+VX, VY = 2.0, 0.5             # A4: 堆垛机水平/垂直最大速度 m/s
+AX, AY = 0.5, 0.3             # A4b(L1): 水平/垂直加减速 m/s²(默认待确认,行业典型量级)
+ACCEL = False                 # L1 开关:False=匀速(基础口径,历史数字) True=梯形速度曲线
 BASE_CAP = 100.0              # A6: 底层仓位限重 kg(层k限重 = (1-0.02k)*BASE_CAP)
 CELL_VOL = 1.0                # B4: 仓位容积 m^3
 
-T_MAX = max((COLS - 1) * CELL_W / VX, (TIERS - 1) * CELL_H / VY)  # 最远仓位单程时间
 H_MAX = (TIERS - 1) * CELL_H
+
+
+def axis_time(d, vmax, acc):
+    """L1 单轴行程时间:对称加减速、静止起止的梯形/三角速度曲线。
+    d ≥ vmax²/acc(能到峰速):t = d/vmax + vmax/acc(梯形,比匀速恒多 vmax/acc)
+    d < vmax²/acc(到不了峰速):t = 2·√(d/acc)(三角)
+    匀速模型系统性低估短程时间——近位并不"免费",这正是本升级的建模意义。"""
+    if d <= 0.0:
+        return 0.0
+    if d >= vmax * vmax / acc:
+        return d / vmax + vmax / acc
+    return 2.0 * math.sqrt(d / acc)
+
+
+def travel_time(col, tier):
+    """切比雪夫行程时间(单程):双轴同时运动,取慢轴(A5)。
+    ACCEL=False 匀速(基础口径);True 梯形速度曲线(L1 工程口径,A4b)。"""
+    dx, dy = col * CELL_W, tier * CELL_H
+    if ACCEL:
+        return max(axis_time(dx, VX, AX), axis_time(dy, VY, AY))
+    return max(dx / VX, dy / VY)
+
+
+def t_max_now():
+    """全库最远仓位单程时间(评分归一分母,跟随当前运动模型口径)。"""
+    return travel_time(COLS - 1, TIERS - 1)
+
+
+T_MAX = t_max_now()           # 兼容旧引用(匀速口径下的常量;评分工厂内部用 t_max_now)
 
 
 def tier_cap(tier):
     """层承重:底层(tier=0)系数1.0,每层递减0.02(题面给定)。"""
     return (1.0 - 0.02 * tier) * BASE_CAP
-
-
-def travel_time(col, tier):
-    """切比雪夫行程时间(单程):双轴同时运动,取慢轴。"""
-    return max(col * CELL_W / VX, tier * CELL_H / VY)
 
 
 def path_len(col, tier):
@@ -155,8 +181,9 @@ def make_score_fn(alpha, beta, gamma, delta, w_max, f_max):
     第四项是在线决策的关键:近位是稀缺资源,冷门货占了热门货就没了;
     没有它,在线评分会退化成"就近贪心"(δ=0 时占位集合与 near 完全相同,实验可复现)。
     δ 初标定 0.15(单 seed 甜点:同占位集合内配对更优,W2 做多 seed 精标)。"""
+    tmax = t_max_now()                      # 归一分母跟随当前运动模型口径(L1)
     def score(good, col, tier):
-        t_norm = travel_time(col, tier) / T_MAX
+        t_norm = travel_time(col, tier) / tmax
         f_norm = good.freq / f_max
         eff = f_norm * t_norm
         stab = (good.weight / w_max) * (tier / (TIERS - 1))
@@ -361,6 +388,8 @@ def main():
                     help="预占用解读(B1,默认and=x,y都被3整除)")
     ap.add_argument("--case", choices=["uniform", "skew", "heavy"], default="skew",
                     help="货物分布:A均匀/B高频偏态(默认)/C重货偏多")
+    ap.add_argument("--accel", action="store_true",
+                    help="L1:启用梯形速度曲线(加减速)口径;默认匀速(历史口径)")
     ap.add_argument("--alpha", type=float, default=1.0, help="评分权重:效率项")
     ap.add_argument("--beta", type=float, default=0.6, help="评分权重:稳定项")
     ap.add_argument("--gamma", type=float, default=0.4, help="评分权重:能耗项")
@@ -371,6 +400,10 @@ def main():
                     help="导出 CSV 到指定目录(summary+各策略assignment)")
     a = ap.parse_args()
 
+    global ACCEL
+    if a.accel:
+        ACCEL = True
+
     goods = gen_goods(a.goods, a.seed, a.case)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
@@ -378,9 +411,10 @@ def main():
     score_fn = make_score_fn(a.alpha, a.beta, a.gamma, a.delta, w_max, f_max)
 
     pre = sum(1 for c in range(COLS) for t in range(TIERS) if preoccupied(c, t, a.rule))
+    motion = (f"梯形加减速(ax={AX} ay={AY})" if ACCEL else "匀速") + "·切比雪夫"
     print(f"场景:{COLS}列x{TIERS}层={COLS*TIERS}仓位 | 预占用[{a.rule}]={pre}格 "
           f"| 货物{a.goods}件 seed={a.seed} | vx={VX} vy={VY} 底层限重{BASE_CAP}kg")
-    print(f"口径:时间=切比雪夫双程,路径=曼哈顿双程,能耗=Σ重量x高度(kg·m);"
+    print(f"口径:时间={motion}双程,路径=曼哈顿双程,能耗=Σ重量x高度(kg·m);"
           f"权重 α={a.alpha} β={a.beta} γ={a.gamma} δ={a.delta}\n")
 
     results = []
