@@ -30,6 +30,8 @@ sim\ plc\ docs\ _ref\=机器工作区)。
   ③自查接管提示词与 README 是否过时 ④跑 python tools\doc_check.py + 回归测试
   ⑤git commit(中文写清改动)+ push。
 - 遇歧义/需拍板:停下来列选项等用户,不许猜。
+- 用户层文档(1_给你看\ 与 2_你要操作\)一律配同名 Word 版:改 md 后必须跑
+  python tools\make_user_docs.py 再生 docx(doc_check 核新鲜度)。
 
 【目录地图】
 现状与任务.md(单一真相源/resume点) 1_给你看\(用户阅读:说明书/实验发现/差异化战略)

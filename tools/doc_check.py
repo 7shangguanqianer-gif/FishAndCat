@@ -44,6 +44,25 @@ def iter_md():
                 yield os.path.join(dirpath, f)
 
 
+def check_user_docx():
+    """C. 用户层 Word 版新鲜度:1_给你看/2_你要操作 的每个 md 必须有同名 docx
+    且 docx 不旧于 md(用户偏好:md 难读,一律配 Word;md=源,docx=生成物)。"""
+    stale = []
+    for d in ("1_给你看", "2_你要操作"):
+        full = os.path.join(ROOT, d)
+        if not os.path.isdir(full):
+            continue
+        for f in os.listdir(full):
+            if f.endswith(".md"):
+                md = os.path.join(full, f)
+                dx = md[:-3] + ".docx"
+                if not os.path.exists(dx):
+                    stale.append(f"{d}\\{f} 缺同名 Word 版")
+                elif os.path.getmtime(dx) + 2 < os.path.getmtime(md):
+                    stale.append(f"{d}\\{f} 的 Word 版旧于 md")
+    return stale
+
+
 def main():
     broken, volatile = [], []
     for md in iter_md():
@@ -71,7 +90,8 @@ def main():
             if VOLATILE_RE.search(line):
                 volatile.append(f"{rel}:{ln_no}  {line.strip()[:60]}")
 
-    ok = not broken and not volatile
+    stale_docx = check_user_docx()
+    ok = not broken and not volatile and not stale_docx
     if broken:
         print(f"❌ 路径断链 {len(broken)} 处:")
         for b in broken:
@@ -80,8 +100,13 @@ def main():
         print(f"❌ 静态文档含易过时状态 {len(volatile)} 处(改为'以命令输出为准'):")
         for v in volatile:
             print("  ", v)
+    if stale_docx:
+        print(f"❌ 用户层 Word 版缺失/过时 {len(stale_docx)} 处"
+              f"(跑 python tools/make_user_docs.py):")
+        for s in stale_docx:
+            print("  ", s)
     if ok:
-        print("✅ doc_check 全绿:路径引用完好,静态文档无易过时状态")
+        print("✅ doc_check 全绿:路径引用完好,静态文档无易过时状态,用户层 Word 版齐且新")
     sys.exit(0 if ok else 1)
 
 
