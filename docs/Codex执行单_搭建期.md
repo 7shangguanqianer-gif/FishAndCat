@@ -115,7 +115,7 @@ Codex 不能点 GUI,此任务 = Codex 出详细操作卡,用户照卡点鼠标,C
 | W-002 回归哨兵 | A | ✅ 常驻机制运行中(每任务后必跑,现 19 用例) |
 | W-003 权重精标 | B | ✅ Claude 完成 = T1(calibrate.py,F5) |
 | W-004 NSGA-II 对照 | C | ✅ Claude 完成 = T2(nsga2_baseline.py,F6/fig6) |
-| W-005 AB 建工程 | C | 🟡 操作卡已备(2_你要操作/AB建工程操作卡.md),**等用户动手**,验收 iPassed=23 |
+| W-005 AB 建工程 | C | ✅ 完成(2026-07-05,AB2.9 仿真 iPassed=23/0E,截图已归档;余项=按 README_PLC §4 清单消 C0555 警告) |
 | W-006 fig2 打磨 | B | ✅ Claude 完成 = T3 |
 | W-007 决赛可视化 | D | ⏸ 支撑代码已备(FB_AnimatePath/GVL_Visu/plc08),画面搭建按排期 |
 | W-008 报告生成 | D | ⏸ = T9,报告周执行 |

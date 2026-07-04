@@ -39,9 +39,12 @@
    - **Name(名称)**:填 `ABB_WH`
    - **Location(位置)**:点 … 浏览到 `F:\abb_wh_work\plc\`,在路径末尾补新文件夹名 `AB_Project`
    - 点 **OK/Add**。
-3. 接着会让你**选 PLC 型号**(可能叫 "Select Controller/Device" 的列表):
-   - 展开 **AC500 V3** 系列 → 选 **PM5650**(找不到就任选 PM56xx;仿真不连真机,型号只是名头)。
-   - 预期:左侧 Devices 树出现一串节点;逐层展开能找到 **Application**。
+3. 接着会让你**选 PLC 型号**(标题 "New project" 的对话框:左树分类 PLC - AC500 V3,右侧型号列表):
+   - 右侧列表**单击选中 `PM5650-2ETH`**(真实型号名带 -2ETH 后缀=双以太网口,所以搜字面
+     "PM5650" 找不到;它在列表靠后,描述 AC500 CPU 80MB, Ethernet)。
+   - 顶部 **Object name(对象名)**若空着填 `PLC_AC500`(或保留默认,不重要);
+   - 点 **Add PLC**(选中型号后才由灰变可点)→ 点 **Close** 关对话框。
+   - 预期:左侧 Devices 树出现 PLC 节点;逐层展开(PLC_AC500 → PLC Logic)能找到 **Application**。
 4. 若弹许可证窗口:选 **Basic license(基础版,免费)**,按引导 **Activate(激活)**。
 5. **Ctrl+S** 保存(以后每完成一步按一次)。
 
@@ -201,7 +204,9 @@
 1. 在线状态双击 **GVL_Visu**,依次写值(手法同第 8 步):
    `CmdReset`=TRUE(清测试数据重新初始化)→ `CmdLoadDemo`=TRUE(载入 20 件演示货,
    与 Python 同一批)→ `SelStrategy`=**3**(选 AWRA-LS)→ `CmdRunAssign`=TRUE(开始!)。
-2. 盯 `VisuStatusText`:依次显示"分配中…→优化中…→**完成:全部入库,违规=0**"。
+2. 盯 `VisuStatusText`:依次显示 `ASSIGN_RUN_PLACED=…`(分配中)→ `IMPROVE_R=…_SWAPS=…`
+   (优化中)→ **`DONE_OK`**(完成,全部入库违规=0)。
+   (状态文本用英文码是因为 PLC 字符串里的中文会引发编码警告 C0555;决赛画面上会配中文标签。)
 3. GVL_WH 里 `stStats`:PlacedCnt=20、ViolCnt=0。截图留档。
    这就是决赛可视化的数据底座,W4 给它配 20×20 图形界面和动画。
 

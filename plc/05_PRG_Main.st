@@ -1,4 +1,4 @@
-(* ============================================================
+﻿(* ============================================================
    05_PRG_Main.st — 主程序(状态机)
    导入方法:POU 类型"程序(Program)",挂到循环任务(建议周期 10ms)
    演示流程(决赛口径):初始化 → 交互输入/载入演示批次 → 批量分配
@@ -25,7 +25,7 @@ END_VAR
 IF GVL_Visu.CmdReset AND NOT xResetOld THEN
     GVL_WH.iGoodsCount := 0;
     GVL_WH.stStats.PlacedCnt := 0;  GVL_WH.stStats.FailedCnt := 0;
-    GVL_Visu.VisuStatusText := '复位:仓库重新初始化';
+    GVL_Visu.VisuStatusText := 'RESET_INIT';
     eState := E_MainState.STATE_INIT;
 END_IF
 xResetOld := GVL_Visu.CmdReset;
@@ -41,7 +41,7 @@ CASE eState OF
         fbInit(xExecute := xKickInit, iRule := GVL_Param.iPreRule);
         IF fbInit.xDone THEN
             xKickInit := FALSE;
-            GVL_Visu.VisuStatusText := CONCAT('就绪:预占用格数=', INT_TO_STRING(fbInit.iPreCount));
+            GVL_Visu.VisuStatusText := CONCAT('READY_PRECOUNT=', INT_TO_STRING(fbInit.iPreCount));
             eState := E_MainState.STATE_WAIT_INPUT;
         END_IF
 
@@ -50,10 +50,10 @@ CASE eState OF
         // 按钮1:添加单件货物(题面五属性),并即时给出推荐仓位(黄色高亮)
         IF GVL_Visu.CmdAddGood AND NOT xAddOld THEN
             IF GVL_WH.iGoodsCount >= GVL_Param.MAX_GOODS THEN
-                GVL_Visu.VisuStatusText := '错误:货物表已满(400)';         // 边界#表满
+                GVL_Visu.VisuStatusText := 'ERR_GOODS_FULL_400';         // 边界#表满
             ELSIF GVL_Visu.InGoodWeight < 0.0 OR GVL_Visu.InGoodFreq < 0.0
                   OR GVL_Visu.InGoodVolume < 0.0 THEN
-                GVL_Visu.VisuStatusText := '错误:重量/频次/体积不得为负';   // 边界#负输入
+                GVL_Visu.VisuStatusText := 'ERR_NEG_INPUT';   // 边界#负输入
             ELSE
                 GVL_WH.iGoodsCount := GVL_WH.iGoodsCount + 1;
                 GVL_WH.aGoods[GVL_WH.iGoodsCount].Id     := GVL_Visu.InGoodId;
@@ -77,11 +77,11 @@ CASE eState OF
                     GVL_Visu.VisuSlotState[fbSelOne.iBestX, fbSelOne.iBestY] := 3;  // 黄:推荐
                     fbPath(xExecute := TRUE, iToX := fbSelOne.iBestX, iToY := fbSelOne.iBestY);
                     fbPath(xExecute := FALSE, iToX := fbSelOne.iBestX, iToY := fbSelOne.iBestY);
-                    GVL_Visu.VisuStatusText := CONCAT('推荐仓位 X=',
+                    GVL_Visu.VisuStatusText := CONCAT('SUGGEST_X=',
                         CONCAT(INT_TO_STRING(fbSelOne.iBestX),
-                        CONCAT(' Y=', INT_TO_STRING(fbSelOne.iBestY))));
+                        CONCAT('_Y=', INT_TO_STRING(fbSelOne.iBestY))));
                 ELSE
-                    GVL_Visu.VisuStatusText := '报警:该货物无可行仓位!';   // 边界#9 可视化报警
+                    GVL_Visu.VisuStatusText := 'ALARM_NO_FEASIBLE_SLOT';   // 边界#9 可视化报警
                 END_IF
             END_IF
         END_IF
@@ -90,7 +90,7 @@ CASE eState OF
         // 按钮2:载入演示批次(GVL_Data,由 Python seed=2026 导出,保证与仿真同源)
         IF GVL_Visu.CmdLoadDemo AND NOT xDemoOld THEN
             FC_LoadDemoGoods();
-            GVL_Visu.VisuStatusText := CONCAT('演示批次已载入,件数=',
+            GVL_Visu.VisuStatusText := CONCAT('DEMO_LOADED_N=',
                                               INT_TO_STRING(GVL_WH.iGoodsCount));
         END_IF
         xDemoOld := GVL_Visu.CmdLoadDemo;
@@ -98,7 +98,7 @@ CASE eState OF
         // 按钮3:运行批量分配
         IF GVL_Visu.CmdRunAssign AND NOT xRunOld THEN
             IF GVL_WH.iGoodsCount = 0 THEN
-                GVL_Visu.VisuStatusText := '错误:请先输入货物';
+                GVL_Visu.VisuStatusText := 'ERR_NO_GOODS';
             ELSE
                 // 策略选择:0=seq 1=near 2=score(在线) 3=AWRA-LS(批量=Rank+score+LS)
                 xUseRank := (GVL_Visu.SelStrategy = 3);
@@ -113,7 +113,7 @@ CASE eState OF
     E_MainState.STATE_ASSIGN:
         fbAssign(xStart := xKickAssign, xUseRank := xUseRank, iStrategy := iStrat);
         xKickAssign := FALSE;
-        GVL_Visu.VisuStatusText := CONCAT('分配中... 已入库=', INT_TO_STRING(fbAssign.iAssigned));
+        GVL_Visu.VisuStatusText := CONCAT('ASSIGN_RUN_PLACED=', INT_TO_STRING(fbAssign.iAssigned));
         IF fbAssign.xDone THEN
             IF GVL_Visu.SelStrategy = 3 THEN
                 xKickImprove := TRUE;
@@ -128,9 +128,9 @@ CASE eState OF
     E_MainState.STATE_IMPROVE:
         fbImprove(xStart := xKickImprove);
         xKickImprove := FALSE;
-        GVL_Visu.VisuStatusText := CONCAT('优化中... 轮=',
+        GVL_Visu.VisuStatusText := CONCAT('IMPROVE_R=',
             CONCAT(INT_TO_STRING(fbImprove.iRounds),
-            CONCAT(' 交换=', INT_TO_STRING(fbImprove.iSwaps))));
+            CONCAT('_SWAPS=', INT_TO_STRING(fbImprove.iSwaps))));
         IF fbImprove.xDone THEN
             GVL_WH.stStats.SwapCnt  := fbImprove.iSwaps;
             GVL_WH.stStats.LsRounds := fbImprove.iRounds;
@@ -150,10 +150,10 @@ CASE eState OF
     // ---------- 完成:结果驻留可视化;失败件数非0则黄色警示文本 ----------
     E_MainState.STATE_DONE:
         IF GVL_WH.stStats.FailedCnt > 0 THEN
-            GVL_Visu.VisuStatusText := CONCAT('完成(有失败!) 失败件数=',
+            GVL_Visu.VisuStatusText := CONCAT('DONE_FAILED_N=',
                                               INT_TO_STRING(GVL_WH.stStats.FailedCnt));
         ELSE
-            GVL_Visu.VisuStatusText := '完成:全部入库,违规=0';
+            GVL_Visu.VisuStatusText := 'DONE_OK';
         END_IF
         // 停留本状态;CmdReset 重来(顶部全局处理)
 

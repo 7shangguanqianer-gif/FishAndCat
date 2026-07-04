@@ -4,3 +4,11 @@
 sim/out/
 sim/figs/
 
+
+# AB 工程:只跟踪主工程文件,缓存/锁/备份排除
+plc/AB_Project/*
+!plc/AB_Project/ABB_WH.project
+# Word 临时锁文件
+~$*.docx
+**/~$*.docx
+

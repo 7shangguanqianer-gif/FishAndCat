@@ -44,7 +44,16 @@
   将 FC_CalcScore 及比较链改用 LREAL(AC500 V3 支持)即可,已预留说明。
 - 07 是生成文件:改了 Python 评分函数/权重/场景参数,必须重跑 `python sim/export_st_vectors.py`
   并在 AB 里替换粘贴,否则 T19/T20 会红——红了先想是不是忘了同步,这是设计出来的护栏。
-- STRING 字面量中避免中文(部分 AB 版本编码敏感);注释中文无碍。
+- **STRING 字面量已全部 ASCII 化(2026-07-05,W-005 实测后落地)**:中文字符串触发 AB 的
+  C0555 编码警告,已把 05/04 里所有状态文本改为英文状态码(RESET_INIT / READY_PRECOUNT= /
+  ERR_GOODS_FULL_400 / ERR_NEG_INPUT / SUGGEST_X=…_Y= / ALARM_NO_FEASIBLE_SLOT /
+  DEMO_LOADED_N= / ERR_NO_GOODS / ASSIGN_RUN_PLACED= / IMPROVE_R=…_SWAPS= /
+  DONE_FAILED_N= / DONE_OK / NO_SLOT_GOODS_ID=)。**AB 工程侧必须与本清单逐条一致**
+  (Codex 首建时自改过部分,须按本清单对齐,消掉全部 C0555 警告);
+  决赛可视化画面用静态中文标签解释状态码,变量字符串保持 ASCII。注释中文无碍。
+- Task 挂载:标准做法是 Task 直接挂 PRG_Main/PRG_Test 两个调用;Codex 首建时用了
+  "PLC_PRG 包一层再调用两者"的等效绕法(行为相同),保持现状即可——但"直接挂会
+  not defined"的说法不成立,勿写进报告。
 - 局部交换阶段 O(n²) 对数在 n=400 时约 8 万对/轮,按 nPairsPerCycle=200 需 ~400 周期/轮(10ms 任务 ≈ 4s/轮),
   演示可接受;若嫌慢调大 nPairsPerCycle(单周期 200 对评分 ≈ 微秒级,余量巨大)。
 

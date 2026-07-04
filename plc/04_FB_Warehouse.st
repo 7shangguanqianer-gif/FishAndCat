@@ -1,4 +1,4 @@
-(* ============================================================
+﻿(* ============================================================
    04_FB_Warehouse.st — 功能块(FB,有状态)
    导入方法:每个 FUNCTION_BLOCK 建一个 POU(类型"功能块"),粘贴对应段落
    核心设计:扫描周期感知的分片执行 —— 批量分配与局部搜索都做成
@@ -217,7 +217,7 @@ CASE iPhase OF
                 GVL_WH.aGoods[iG].Assigned := FALSE;
                 GVL_WH.aGoods[iG].X := -1;  GVL_WH.aGoods[iG].Y := -1;
                 iFailed := iFailed + 1;
-                GVL_Visu.VisuStatusText := CONCAT('无可行仓位: 货物Id=',
+                GVL_Visu.VisuStatusText := CONCAT('NO_SLOT_GOODS_ID=',
                                                   INT_TO_STRING(GVL_WH.aGoods[iG].Id));
             END_IF
             iCur := iCur + 1;
