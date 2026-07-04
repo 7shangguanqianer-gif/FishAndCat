@@ -151,19 +151,27 @@ def convert(md_path, docx_path):
 
 
 def main():
-    made = []
+    made, skipped = [], []
     for d in USER_DIRS:
         full = os.path.join(ROOT, d)
         for f in sorted(os.listdir(full)):
             if f.endswith(".md"):
                 src = os.path.join(full, f)
                 dst = os.path.join(full, f[:-3] + ".docx")
-                convert(src, dst)
-                made.append(os.path.join(d, f[:-3] + ".docx"))
+                try:
+                    convert(src, dst)
+                    made.append(os.path.join(d, f[:-3] + ".docx"))
+                except PermissionError:
+                    skipped.append(os.path.join(d, f[:-3] + ".docx"))
     print(f"已生成 {len(made)} 份 Word:")
     for m in made:
         print("  ", m)
+    if skipped:
+        print(f"⚠️ {len(skipped)} 份被占用跳过(Word 里开着?关掉后重跑本脚本):")
+        for s in skipped:
+            print("  ", s)
     print("纪律:改内容只改 .md,改完重跑本脚本;doc_check 会核对 docx 不旧于 md。")
+    sys.exit(1 if skipped else 0)
 
 
 if __name__ == "__main__":

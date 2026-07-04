@@ -66,10 +66,12 @@ def initial_layout(strat_name, goods, fn, w_max, f_max):
     return wh, {g.gid: pos for g, pos in placed}
 
 
-def run_mixed(strat_name, goods, new_goods, requests, fn, w_max, f_max):
+def run_mixed(strat_name, goods, new_goods, requests, fn, w_max, f_max,
+              fn_batch=None):
     """跑混合流:入库决策用该策略的在线形式(awra 布局的后续入库用 score 在线,
-    因为混合流是逐件到达场景——批量重排不适用于单件即时决策,如实声明)。"""
-    wh, pos_of = initial_layout(strat_name, goods, fn, w_max, f_max)
+    因为混合流是逐件到达场景——批量重排不适用于单件即时决策,如实声明)。
+    fn_batch:awra 初始布局用的评分(H 口径下批量/在线权重不同,A1);缺省=fn。"""
+    wh, pos_of = initial_layout(strat_name, goods, fn_batch or fn, w_max, f_max)
     online = {"seq": ws.strat_seq, "near": ws.strat_near,
               "score": ws.strat_score, "awra": ws.strat_score}[strat_name]
     tot_single = tot_dual = 0.0
@@ -109,6 +111,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cycles", type=int, default=100, help="混合周期数(默认100)")
     ap.add_argument("--accel", action="store_true", help="用 L1 加减速口径")
+    ap.add_argument("--adaptive", action="store_true",
+                    help="A1 自适应权重查表(报告主口径 H = --accel --adaptive)")
     a = ap.parse_args()
     if a.accel:
         ws.ACCEL = True
@@ -116,17 +120,24 @@ def main():
     goods = ws.gen_goods(N_INIT, SEED)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
-    fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
+    if a.adaptive:
+        d_on, bg_on = ws.lookup_weights(N_INIT, "skew", "online")
+        d_ba, bg_ba = ws.lookup_weights(N_INIT, "skew", "batch")
+        fn = ws.make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
+        fn_batch = ws.make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
+    else:
+        fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
+        fn_batch = fn
     new_goods, requests = build_workload(goods, a.cycles, SEED)
 
-    motion = "梯形加减速" if ws.ACCEL else "匀速"
+    motion = ("梯形加减速" if ws.ACCEL else "匀速") + ("+自适应权重" if a.adaptive else "+固定权重")
     print(f"混合作业流:{a.cycles} 周期(每周期1存+1取,共{2*a.cycles}次作业),"
-          f"口径={motion}·切比雪夫,seed={SEED}")
+          f"口径={motion},seed={SEED}")
     print(f"{'策略':<16}{'单命令总时(s)':>13}{'双命令总时(s)':>13}{'节省':>7}"
           f"{'吞吐(双命令,次/h)':>17}{'出库均时(s)':>11}{'失败':>5}{'违规':>5}")
     rows = []
     for s in STRATS:
-        m = run_mixed(s, goods, new_goods, requests, fn, w_max, f_max)
+        m = run_mixed(s, goods, new_goods, requests, fn, w_max, f_max, fn_batch)
         rows.append((s, m))
         print(f"{LBL[s]:<16}{m['tot_single']:>13.0f}{m['tot_dual']:>13.0f}"
               f"{m['saving']:>6.1f}%{m['thr_dual']:>15.0f}{m['avg_retr']:>11.2f}"

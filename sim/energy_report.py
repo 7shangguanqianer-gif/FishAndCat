@@ -61,9 +61,10 @@ def cycle_energy_joule(s_in, s_out):
     return e
 
 
-def run_energy(strat_name, goods, new_goods, requests, fn, w_max, f_max):
-    """沿 mixed_ops 的双命令流,逐周期累计机械能。"""
-    wh, pos_of = mo.initial_layout(strat_name, goods, fn, w_max, f_max)
+def run_energy(strat_name, goods, new_goods, requests, fn, w_max, f_max,
+               fn_batch=None):
+    """沿 mixed_ops 的双命令流,逐周期累计机械能。fn_batch=awra 初始布局评分(H口径)。"""
+    wh, pos_of = mo.initial_layout(strat_name, goods, fn_batch or fn, w_max, f_max)
     online = {"seq": ws.strat_seq, "near": ws.strat_near,
               "score": ws.strat_score, "awra": ws.strat_score}[strat_name]
     e_total = 0.0
@@ -82,10 +83,25 @@ def run_energy(strat_name, goods, new_goods, requests, fn, w_max, f_max):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--accel", action="store_true", help="L1 加减速口径")
+    ap.add_argument("--adaptive", action="store_true", help="A1 自适应权重(H 口径=两者都开)")
+    a = ap.parse_args()
+    if a.accel:
+        ws.ACCEL = True
+
     goods = ws.gen_goods(mo.N_INIT, mo.SEED)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
-    fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
+    if a.adaptive:
+        d_on, bg_on = ws.lookup_weights(mo.N_INIT, "skew", "online")
+        d_ba, bg_ba = ws.lookup_weights(mo.N_INIT, "skew", "batch")
+        fn = ws.make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
+        fn_batch = ws.make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
+    else:
+        fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
+        fn_batch = fn
     new_goods, requests = mo.build_workload(goods, 100, mo.SEED)
 
     print("=" * 62)
@@ -96,9 +112,11 @@ def main():
     print(f"  电价 {ELEC_PRICE} 元/kWh | 电网排放因子 {CO2_FACTOR} kgCO2/kWh")
     print("=" * 62)
 
+    print(f"口径:{'加减速' if a.accel else '匀速'}+{'自适应' if a.adaptive else '固定'}权重"
+          f"(H 口径 = --accel --adaptive)")
     results = {}
     for s in ("seq", "awra"):
-        e_j, n_cy = run_energy(s, goods, new_goods, requests, fn, w_max, f_max)
+        e_j, n_cy = run_energy(s, goods, new_goods, requests, fn, w_max, f_max, fn_batch)
         e_elec_j = e_j / ETA
         kwh_per_cycle = e_elec_j / n_cy / J_PER_KWH
         ops_per_cycle = 2                                   # 1存+1取
