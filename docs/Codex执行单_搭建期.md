@@ -1,4 +1,4 @@
-# Codex 执行单(搭建期,2026-07-03 签发)
+﻿# Codex 执行单(搭建期,2026-07-03 签发)
 
 > 使用方式:每个任务的「给 Codex 的提示词」整段复制给 Codex 执行。
 > Codex 冷启动须知(写进每个提示词开头了):先读 F:\abb_wh_work\现状与任务.md 和
@@ -19,8 +19,8 @@
    (本机走 Clash 代理时 pip 直连易断,统一用阿里云源,不要用默认源重试浪费时间)
 2) 跑 python F:\abb_wh_work\sim\run_all.py,确认末尾"全部完成",
    且回归测试 15/15 OK、实验矩阵"全矩阵违规总数 = 0"。
-3) Automation Builder 用户正在装,你不负责装它,但生成一份安装后自检清单存
-   F:\abb_wh_work\docs\AB安装自检.md,内容:①启动 AB 确认版本≥2.8;②License Manager
+3) Automation Builder 用户正在装,你不负责装它,但生成一份安装后自检清单
+   (注:此项后来被 2_你要操作\AB建工程操作卡.md 覆盖实现,未单独产出),内容:①启动 AB 确认版本≥2.8;②License Manager
    里激活免费 Basic 许可证(装完首次启动会引导,选 Basic license 免费注册即可);
    ③新建测试工程选 AC500 V3 任一 CPU(如 PM5650)能进入 CODESYS 编辑器;
    ④菜单里能找到 在线→仿真(Simulation) 选项。除 AB 外无须装任何其他软件
@@ -41,7 +41,7 @@
 
 **给 Codex 的提示词:**
 ```
-项目:F:\abb_wh_work(先读 现状与任务.md、docs\canonical_assumptions.md §E、docs\实验发现.md F2)。
+项目:F:\abb_wh_work(先读 现状与任务.md、docs\canonical_assumptions.md §E、1_给你看\实验发现.md F2)。
 任务:把单 seed 初标定升级为多 seed 精标。
 1) 新建 sim\calibrate.py:网格 δ∈{0.05..0.30 步0.05} × β∈{0.4,0.6,0.8} × γ∈{0.2,0.4,0.6},
    α 固定 1.0;每组合跑 5 seeds(2026,7,42,123,999)×120件×and 规则,策略只跑 near/score/awra;
@@ -76,7 +76,7 @@ Codex 不能点 GUI,此任务 = Codex 出详细操作卡,用户照卡点鼠标,C
 ```
 项目:F:\abb_wh_work。用户已装好 Automation Builder。任务:引导建 PLC 工程。
 1) 读 plc\README_PLC.md,把 §1-§2 展开成逐步操作卡(每步一句话+预期界面反馈),
-   存 docs\AB建工程操作卡.md;导入顺序:DUT(01,07的TYPE)→GVL(02,07的GVL)→
+   存 2_你要操作\AB建工程操作卡.md;导入顺序:DUT(01,07的TYPE)→GVL(02,07的GVL)→
    函数(03,07的FC_LoadDemoGoods)→功能块(04)→程序(05,06)→任务配置(10ms 挂 PRG_Main)。
 2) 用户完成后让其提供:PRG_Test 运行截图(iPassed 值)、编译输出。
    期望 iPassed=21;若编译报错,按报错逐条给修改建议(常见:AB 版本语法差异、
@@ -115,7 +115,7 @@ Codex 不能点 GUI,此任务 = Codex 出详细操作卡,用户照卡点鼠标,C
 | W-002 回归哨兵 | A | ✅ 常驻机制运行中(每任务后必跑,现 19 用例) |
 | W-003 权重精标 | B | ✅ Claude 完成 = T1(calibrate.py,F5) |
 | W-004 NSGA-II 对照 | C | ✅ Claude 完成 = T2(nsga2_baseline.py,F6/fig6) |
-| W-005 AB 建工程 | C | 🟡 操作卡已备(docs/AB建工程操作卡.md),**等用户动手**,验收 iPassed=23 |
+| W-005 AB 建工程 | C | 🟡 操作卡已备(2_你要操作/AB建工程操作卡.md),**等用户动手**,验收 iPassed=23 |
 | W-006 fig2 打磨 | B | ✅ Claude 完成 = T3 |
 | W-007 决赛可视化 | D | ⏸ 支撑代码已备(FB_AnimatePath/GVL_Visu/plc08),画面搭建按排期 |
 | W-008 报告生成 | D | ⏸ = T9,报告周执行 |

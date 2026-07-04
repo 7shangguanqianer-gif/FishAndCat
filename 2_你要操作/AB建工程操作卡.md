@@ -48,6 +48,8 @@
 | FC_TMax | REAL | 03 |
 | FC_CalcScore | REAL | 03 |
 | FC_CalcPriority | REAL | 03 |
+| FC_AxisTime | REAL | 03(L1 梯形速度曲线) |
+| FC_CalcDualCycleTime | REAL | 03(L2 双命令周期) |
 | FC_LoadDemoGoods | BOOL | **07 文件** |
 
 2. 每个 POU:上半窗(声明区)粘 `FUNCTION ... END_VAR` 之间的声明部分,下半窗(实现区)粘剩余逻辑。

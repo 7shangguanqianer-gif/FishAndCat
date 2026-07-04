@@ -17,13 +17,17 @@ except Exception:
     pass
 
 STEPS = [
-    ("回归测试(15用例)", [sys.executable, os.path.join(HERE, "tests", "test_sim.py")]),
+    ("回归测试(数量以输出为准)", [sys.executable, os.path.join(HERE, "tests", "test_sim.py")]),
     ("主对比+CSV导出", [sys.executable, os.path.join(HERE, "warehouse_sim.py"),
                         "--csv", os.path.join(HERE, "out")]),
     ("ST一致性数据生成", [sys.executable, os.path.join(HERE, "export_st_vectors.py")]),
     ("多seed实验矩阵", [sys.executable, os.path.join(HERE, "experiments.py")]),
-    ("报告图表(5张)", [sys.executable, os.path.join(HERE, "plots.py")]),
+    ("基础图表 fig1-5", [sys.executable, os.path.join(HERE, "plots.py")]),
+    ("H口径头条数字", [sys.executable, os.path.join(HERE, "headline.py")]),
+    ("文档联动自检", [sys.executable, os.path.join(HERE, "..", "tools", "doc_check.py")]),
 ]
+# 专项实验(耗时较长,不进底盘,按需单跑):calibrate / nsga2_baseline / motion_compare /
+# mixed_ops / analytic_bounds / energy_report / reslot_cycle / adaptive_weights / verify_policy
 
 
 def main():
