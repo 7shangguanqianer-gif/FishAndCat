@@ -484,15 +484,21 @@ END_IF
 xOld := xStart;
 
 IF xBusy THEN
-    rElapsed := rElapsed + rCycleTime * rSpeedScale;
-    // 路径索引 = 已过时间占比 × 路径点数(线性等比映射)
-    iIdx := REAL_TO_INT(rElapsed / rTotal * INT_TO_REAL(GVL_Visu.VisuPathCount - 1));
-    IF iIdx >= GVL_Visu.VisuPathCount - 1 THEN
-        iIdx := GVL_Visu.VisuPathCount - 1;
+    IF GVL_Visu.VisuPathCount < 2 THEN
+        // 回放途中路径被外部清除(复位/批量启动会清 VisuPathCount)→ 中止,
+        // 否则下面 PathCount-1 = -1 会造成数组负索引越界(真实边界,勿删护栏)
         xBusy := FALSE;  xDone := TRUE;
+    ELSE
+        rElapsed := rElapsed + rCycleTime * rSpeedScale;
+        // 路径索引 = 已过时间占比 × 路径点数(线性等比映射)
+        iIdx := REAL_TO_INT(rElapsed / rTotal * INT_TO_REAL(GVL_Visu.VisuPathCount - 1));
+        IF iIdx >= GVL_Visu.VisuPathCount - 1 THEN
+            iIdx := GVL_Visu.VisuPathCount - 1;
+            xBusy := FALSE;  xDone := TRUE;
+        END_IF
+        GVL_Visu.VisuCurrentX := GVL_Visu.VisuPathX[iIdx];
+        GVL_Visu.VisuCurrentY := GVL_Visu.VisuPathY[iIdx];
     END_IF
-    GVL_Visu.VisuCurrentX := GVL_Visu.VisuPathX[iIdx];
-    GVL_Visu.VisuCurrentY := GVL_Visu.VisuPathY[iIdx];
 END_IF
 END_FUNCTION_BLOCK
 
@@ -571,4 +577,44 @@ IF xExecute AND NOT xOld THEN
     xDone := TRUE;
 END_IF
 xOld := xExecute;
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_VisuRefresh:可视化镜像刷新(L6,PRG_Main 尾部每周期常驻调用) ----------
+   职责=把"算法语义层"翻译成"画面显示层",三件事:
+   1. VisuSlotState[列,层] → VisuSlotColor[列,显示行]:状态→颜色查表 + 上下翻转
+      (仓库层0在底、画面行0在顶,显示行 = TIERS-1-层)——画面矩形阵列只绑颜色数组;
+   2. 路径叠加:VisuPath 各点在颜色层画蓝,但只叠加在空闲/预占格上
+      (不写 VisuSlotState 语义层,避免"蓝色盖掉已占格后无法恢复"的状态污染);
+   3. 堆垛机像素坐标:VisuCurrentX/Y(格)→ VisuCraneXpx/Ypx(px,含翻转),
+      供堆垛机图元的 Absolute movement 绑定(图元设计位置放 (0,0),偏移即绝对)。
+   开销:400 次查表+少量换算/周期 ≈ 微秒级,常驻无压力(L4 实测口径可佐证)。 *)
+FUNCTION_BLOCK FB_VisuRefresh
+VAR
+    c, r, k, iSt : INT;
+END_VAR
+
+// 1) 状态→颜色 + 上下翻转(显示行 r=0 是画面顶=层19)
+FOR c := 0 TO GVL_Param.COLS - 1 DO
+    FOR r := 0 TO GVL_Param.TIERS - 1 DO
+        GVL_Visu.VisuSlotColor[c, r] :=
+            FC_StateToColor(iState := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - r]);
+    END_FOR
+END_FOR
+
+// 2) 路径叠加(蓝):只画在空闲/预占格上,已占/推荐格保持原色
+FOR k := 0 TO GVL_Visu.VisuPathCount - 1 DO
+    IF k > 39 THEN EXIT; END_IF                       // 路径数组上限 40 点,防越界
+    iSt := GVL_Visu.VisuSlotState[GVL_Visu.VisuPathX[k], GVL_Visu.VisuPathY[k]];
+    IF iSt = 0 OR iSt = 1 THEN
+        GVL_Visu.VisuSlotColor[GVL_Visu.VisuPathX[k],
+                               GVL_Param.TIERS - 1 - GVL_Visu.VisuPathY[k]] :=
+            FC_StateToColor(iState := 4);
+    END_IF
+END_FOR
+
+// 3) 堆垛机格坐标 → 像素坐标(图元锚点=左上角,大小=一个单元格)
+GVL_Visu.VisuCraneXpx := GVL_Param.GRID_X0 + GVL_Visu.VisuCurrentX * GVL_Param.CELL_PX_W;
+GVL_Visu.VisuCraneYpx := GVL_Param.GRID_Y0
+    + (GVL_Param.TIERS - 1 - GVL_Visu.VisuCurrentY) * GVL_Param.CELL_PX_H;
 END_FUNCTION_BLOCK

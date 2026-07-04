@@ -15,6 +15,11 @@ VAR_GLOBAL CONSTANT
     CELL_H      : REAL := 1.0;      // 仓位高 m(A2)
     BASE_CAP    : REAL := 100.0;    // 底层限重 kg(A6)
     CELL_VOL    : REAL := 1.0;      // 仓位容积 m3(B4)
+    // ---- L6 可视化画面几何常量(单位 px;与 2_你要操作/AB可视化搭建操作卡 的元件坐标同源) ----
+    GRID_X0     : INT := 40;        // 仓位网格左上角 X(左侧留层号标签)
+    GRID_Y0     : INT := 40;        // 仓位网格左上角 Y(顶部留标题)
+    CELL_PX_W   : INT := 28;        // 单格宽(20列=560px,网格右缘 x=600)
+    CELL_PX_H   : INT := 20;        // 单格高(20层=400px,网格下缘 y=440)
 END_VAR
 
 VAR_GLOBAL
@@ -90,4 +95,12 @@ VAR_GLOBAL
     CmdRunAssign    : BOOL;                 // 按钮:运行批量分配(AWRA-LS)
     CmdReset        : BOOL;                 // 按钮:复位重来
     SelStrategy     : INT := 2;             // 策略选择 0=seq 1=near 2=score(在线) 3=AWRA-LS(批量)
+    // ---- L6 决赛画面增补(元件绑定方法见 2_你要操作/AB可视化搭建操作卡.md) ----
+    VisuSlotColor   : ARRAY[0..19, 0..19] OF DWORD;
+        // [列,显示行] 单元格填充色(16#00RRGGBB);显示行0=画面顶(=层19),
+        // 上下翻转+状态→颜色查表由 FB_VisuRefresh 每周期重算——画面矩形阵列只绑这一个数组
+    VisuCraneXpx    : INT;                  // 堆垛机图元 X 像素(FB_VisuRefresh 从 VisuCurrentX 换算)
+    VisuCraneYpx    : INT;                  // 堆垛机图元 Y 像素(含上下翻转)
+    VisuAlarm       : BOOL;                 // 报警灯:超重/负输入/无可行位=TRUE(演示第6步,红灯元件)
+    CmdAnimate      : BOOL;                 // 按钮:堆垛机沿当前路径回放动画(FB_AnimatePath)
 END_VAR

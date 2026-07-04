@@ -8,54 +8,71 @@
 
 ---
 
-## 批次 2026-07-05-A(当前待执行)
+## 批次 2026-07-05-B(当前待执行)
 
-### 任务 1:PRG_Test 回归重验(必做,前面的事故要闭环)
+### 背景(为什么换方法)
 
-你上次坦白"曾有一次误把 PRG_Main 下窗贴到 PRG_Test 的风险,已恢复"——恢复后**没有跑过
-完整验证**,所以现在的 iPassed=23 只是预期不是事实。执行:
+上一批 FB_ScanLoadProbe 的 LTIME() 差分在 AB 仿真里恒为 0(PC 仿真计时分辨率问题,
+不是你的操作问题)。本批改用 **AB 自带的任务监视页官方读数**——零代码改动,读数是
+CODESYS 调度器自己的统计,不依赖 LTIME。
+另一个修正:演示批次只有 20 件货,所以上一批的 nBatchPerCycle=50 和 100 两组**等效**
+(一个周期就把 20 件全处理完了)——本批分组重新设计,让"单周期分片重量"真正拉开差距。
 
-1. 对照仓库 `plc\06_PRG_Test.st`,逐段核对 AB 工程里 PRG_Test 的**声明区和实现区**与仓库
-   完全一致(不是看着像,是逐段对);同样抽查 PRG_Main 下窗开头/结尾 10 行与 `plc\05_PRG_Main.st` 一致。
-2. F11 编译:0 errors;唯一允许的 warning 是 "The connection to the PLC is currently not
-   encrypted"(通信加密提示,与代码无关,不用处理)。
-3. Simulation → Login → Start → PRG_Test 写 xRunTests:=TRUE → 确认 **iPassed=23, iFailed=0**。
-4. 截图覆盖保存 `F:\abb_wh_work\plc\验收截图\W1_PRGTest_23pass.png`(旧图是字符串清理前的)。
-5. 把"逐段核对结论 + iPassed 实测值"写进 致Claude.md。
+### 任务 1:任务监视页抄表(L4 负载实测,唯一任务)
 
-### 任务 2:L4 扫描负载实测(报告 AC500 章的独家数据)
+**打开监视页**:Simulation → Login → Start 之后,双击设备树里的
+**Task Configuration(任务配置)** → 切到 **Monitor(监视)** 标签页。
+应能看到每个任务一行,列大致为:Status(状态)/ IEC-Cycle Count(周期计数)/
+Cycle Time(周期时间)/ Average Cycle Time(平均周期)/ Max. Cycle Time(最大周期)/
+Min. Cycle Time(最小周期)/ Jitter(抖动),单位 µs。
+**先确认这些列会动、且不是恒 0**;若恒 0 或没有该标签页 → 停,截图写进 致Claude.md,不要自己想别的办法。
 
-目的:拿到"10ms 任务周期下,分片算法占用多少 CPU"的实测表。步骤:
+**统计清零方法**:在监视页任务行上**右键 → Reset(复位统计)**;若右键菜单没有 Reset,
+就用 Logout → Login → Start 代替(重新登录统计自动清零)。每组测量前必须清零一次。
 
-1. 打开 PLC_PRG,**声明区**追加一行:
-   `fbProbe : FB_ScanLoadProbe;`
-2. **实现区**改为(包夹 PRG_Main,PRG_Test 不包):
-   ```
-   fbProbe(xStart := TRUE, xStop := FALSE);
-   PRG_Main();
-   fbProbe(xStart := FALSE, xStop := TRUE);
-   PRG_Test();
-   ```
-3. F11(0 errors)→ Simulation → Login → Start。
-4. 测三组参数,每组流程相同:
-   在线把 `GVL_Param.nBatchPerCycle` 写为下表值 → GVL_Visu 里 CmdReset=TRUE →
-   CmdLoadDemo=TRUE → SelStrategy=3 → CmdRunAssign=TRUE → 等 VisuStatusText=DONE_OK →
-   记录 fbProbe 的 **rAvgUs / rMaxUs / nSamples** 三个值 → 下一组。
+**每组固定流程**(共 4 组,逐组做):
 
-   | 组 | nBatchPerCycle | rAvgUs | rMaxUs | nSamples |
-   |---|---|---|---|---|
-   | A | 10(默认) | 待填 | 待填 | 待填 |
-   | B | 50 | 待填 | 待填 | 待填 |
-   | C | 100 | 待填 | 待填 | 待填 |
+1. 在线把参数写为该组值(GVL_Param 里双击 Prepared value 写入 → Ctrl+F7 生效);
+2. 统计清零(右键 Reset 或重登录);
+3. GVL_Visu:CmdReset=TRUE → CmdLoadDemo=TRUE → SelStrategy=3 → CmdRunAssign=TRUE;
+4. 等 VisuStatusText = DONE_OK;
+5. **立即**抄监视页该任务行:Average / Max / Min Cycle Time + Cycle Count,
+   并截图存 `F:\abb_wh_work\plc\验收截图\L4_monitor_组名.png`(待产出,组名=IDLE/A/B/C);
+6. 下一组。
 
-5. 把表(含三组数)+ 你观察到的现象写进 致Claude.md。
-   注:仿真跑在 PC 上,数值比真 PLC 乐观,报告口径会写"仿真实测+真机预估"——如实记录即可。
-6. 做完后**把 PLC_PRG 实现区恢复为不带探针的两行**(PRG_Main(); PRG_Test();),
-   避免探针常驻;fbProbe 声明留着无害,可不删。
+| 组 | 参数设置 | 单周期分片重量(预期) | 截图名 |
+|---|---|---|---|
+| IDLE | 默认参数,清零后**不按任何 Cmd**,空跑约 30 秒后抄表 | 背景开销基线 | L4_monitor_IDLE.png |
+| A | nBatchPerCycle=1(其余默认) | 每周期 1 件×400 仓位评分 | L4_monitor_A.png |
+| B | nBatchPerCycle=20(其余默认) | 每周期 20 件×400 仓位评分(20件一口吃完) | L4_monitor_B.png |
+| C | nBatchPerCycle=20 且 nPairsPerCycle=2000 | 局部搜索每周期 2000 对(默认200的10倍) | L4_monitor_C.png |
+
+**记录表**(填进 致Claude.md):
+
+| 组 | Avg Cycle µs | Max Cycle µs | Min Cycle µs | Cycle Count | 备注 |
+|---|---|---|---|---|---|
+| IDLE | | | | | |
+| A | | | | | |
+| B | | | | | |
+| C | | | | | |
+
+预期解读(供你核对是否异常,不用写报告):Max 应随分片重量上升(B、C 组明显高于 IDLE);
+若四组 Max 几乎一样,如实记录,别修饰。
+
+**收尾**:全部做完后 Logout(在线写的参数值自动失效,回到源代码默认值 10/200,
+不需要手工改回);确认没有改过任何代码窗口。
 
 ### 禁止事项(本批次)
-- 不动可视化对象;不动 GVL/DUT/其他 POU;不改任何权重参数;
-- 除任务 2 指定的 PLC_PRG 两处外,不修改任何代码。
+- **零代码改动**:不打开任何 POU 的编辑窗,只在线写 GVL_Param 两个变量 + 按 GVL_Visu 按钮;
+- 不动可视化对象;不改权重参数;不置 xRunTests;
+- 监视页读数恒 0 或界面与描述不符 → 停下截图汇报,不自由发挥。
 
 ---
 (历史批次归档在本文件底部,由 Claude 维护)
+
+## 已归档批次
+
+### 批次 2026-07-05-A(已完成,汇报见 致Claude.md 同名批次;结论已进 现状与任务.md §5)
+
+任务 1 PRG_Test 回归重验:run_all 全绿+AB 编译 0E;截图时间戳后续已核验闭环。
+任务 2 L4 探针实测:探针被周期调用(nSamples 三组递增)但 LTIME 差分恒 0 → 催生本 B 批次换官方监视页读数。

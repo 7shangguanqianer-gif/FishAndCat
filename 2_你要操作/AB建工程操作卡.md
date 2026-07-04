@@ -112,7 +112,7 @@
 
 ## 第 4 步:导入全部函数(20 分钟)
 
-重复 2b 的方法(POU → Function → 填 Return type → 上下窗粘贴),共 12 个:
+重复 2b 的方法(POU → Function → 填 Return type → 上下窗粘贴),共 13 个:
 
 | Name | Return type | 来源 |
 |---|---|---|
@@ -127,6 +127,7 @@
 | FC_CalcPriority | REAL | 03 |
 | FC_AxisTime | REAL | 03 |
 | FC_CalcDualCycleTime | REAL | 03 |
+| FC_StateToColor | DWORD | 03(T17 可视化配色查表) |
 | FC_LoadDemoGoods | BOOL | **07** 文件末尾 |
 
 技巧:源文件里 Ctrl+F 搜函数名定位;每段边界=`FUNCTION 名字 : 类型` 到 `END_FUNCTION`。
@@ -136,11 +137,12 @@
 
 ## 第 5 步:功能块与主程序(20 分钟)
 
-**5a. 8 个 Function Block(功能块)**:Add Object → POU → Type 勾 **Function Block**
+**5a. 9 个 Function Block(功能块)**:Add Object → POU → Type 勾 **Function Block**
 (这种没有 Return type 框),来源全部 04_FB_Warehouse.st
 (段落边界 `FUNCTION_BLOCK 名字` → `END_FUNCTION_BLOCK`):
 `FB_InitWarehouse`、`FB_SelectSlot`、`FB_AssignAllGoods`、`FB_LocalSwapImprove`、
-`FB_Stats`、`FB_AnimatePath`、`FB_ScanLoadProbe`、`FB_BuildVisuPath`。
+`FB_Stats`、`FB_AnimatePath`、`FB_ScanLoadProbe`、`FB_BuildVisuPath`、
+`FB_VisuRefresh`(T17 可视化镜像)。
 
 **5b. 2 个 Program(程序)**:Add Object → POU → Type 勾 **Program**:
 `PRG_Main`(来源 05_PRG_Main.st)、`PRG_Test`(来源 06_PRG_Test.st)。

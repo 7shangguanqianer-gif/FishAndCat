@@ -227,3 +227,24 @@ FC_CalcPriority := GVL_Param.rLambda1 * rGoodF / rFMax
                  + GVL_Param.rLambda2 * rGoodW / rWMax
                  + GVL_Param.rLambda3 * rGoodV / rVMax;
 END_FUNCTION
+
+
+(* ---------- FC_StateToColor:仓位状态码 → 画面填充色(L6 可视化) ----------
+   颜色 DWORD 格式 16#00RRGGBB(CODESYS 颜色变量约定);
+   状态编码与 GVL_Visu.VisuSlotState 注释一一对应:0空闲/1预占/2占用/3推荐/4路径/5报警。
+   改配色只改这里——画面 400 个矩形元件不写死任何颜色(单一真相源)。 *)
+FUNCTION FC_StateToColor : DWORD
+VAR_INPUT
+    iState : INT;
+END_VAR
+CASE iState OF
+    0: FC_StateToColor := 16#00E8E8E8;   // 空闲:浅灰
+    1: FC_StateToColor := 16#00707070;   // 预占用:深灰
+    2: FC_StateToColor := 16#0043A047;   // 已占用:绿
+    3: FC_StateToColor := 16#00FFC107;   // 当前推荐:黄
+    4: FC_StateToColor := 16#0042A5F5;   // 路径:蓝
+    5: FC_StateToColor := 16#00E53935;   // 报警:红
+ELSE
+    FC_StateToColor := 16#00FF00FF;      // 未知状态:品红(醒目,便于发现bug)
+END_CASE
+END_FUNCTION

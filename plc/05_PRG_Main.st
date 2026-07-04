@@ -13,10 +13,13 @@ VAR
     fbStats     : FB_Stats;
     fbPath      : FB_BuildVisuPath;
     fbSelOne    : FB_SelectSlot;        // 单件交互添加时即时推荐用
+    fbVisu      : FB_VisuRefresh;       // L6:颜色镜像+堆垛机像素坐标,每周期常驻
+    fbAnim      : FB_AnimatePath;       // L6:堆垛机沿路径回放动画(CmdAnimate 触发)
     xKickInit, xKickAssign, xKickImprove, xKickStats : BOOL;
     xUseRank    : BOOL;
     iStrat      : INT;
     i           : INT;
+    c2, t2      : INT;                  // 清除推荐高亮用循环变量
     rWMaxTmp, rFMaxTmp : REAL;
     xAddOld, xDemoOld, xRunOld, xResetOld : BOOL;
 END_VAR
@@ -26,6 +29,10 @@ IF GVL_Visu.CmdReset AND NOT xResetOld THEN
     GVL_WH.iGoodsCount := 0;
     GVL_WH.stStats.PlacedCnt := 0;  GVL_WH.stStats.FailedCnt := 0;
     GVL_Visu.VisuStatusText := 'RESET_INIT';
+    GVL_Visu.VisuAlarm := FALSE;                    // 复位清报警灯
+    GVL_Visu.VisuPathCount := 0;                    // 复位清路径叠加
+    GVL_Visu.VisuCurrentX := 0;                     // 堆垛机归位 I/O 口(左下角)
+    GVL_Visu.VisuCurrentY := 0;
     eState := E_MainState.STATE_INIT;
 END_IF
 xResetOld := GVL_Visu.CmdReset;
@@ -51,9 +58,11 @@ CASE eState OF
         IF GVL_Visu.CmdAddGood AND NOT xAddOld THEN
             IF GVL_WH.iGoodsCount >= GVL_Param.MAX_GOODS THEN
                 GVL_Visu.VisuStatusText := 'ERR_GOODS_FULL_400';         // 边界#表满
+                GVL_Visu.VisuAlarm := TRUE;
             ELSIF GVL_Visu.InGoodWeight < 0.0 OR GVL_Visu.InGoodFreq < 0.0
                   OR GVL_Visu.InGoodVolume < 0.0 THEN
                 GVL_Visu.VisuStatusText := 'ERR_NEG_INPUT';   // 边界#负输入
+                GVL_Visu.VisuAlarm := TRUE;
             ELSE
                 GVL_WH.iGoodsCount := GVL_WH.iGoodsCount + 1;
                 GVL_WH.aGoods[GVL_WH.iGoodsCount].Id     := GVL_Visu.InGoodId;
@@ -80,8 +89,10 @@ CASE eState OF
                     GVL_Visu.VisuStatusText := CONCAT('SUGGEST_X=',
                         CONCAT(INT_TO_STRING(fbSelOne.iBestX),
                         CONCAT('_Y=', INT_TO_STRING(fbSelOne.iBestY))));
+                    GVL_Visu.VisuAlarm := FALSE;               // 推荐成功清报警灯
                 ELSE
                     GVL_Visu.VisuStatusText := 'ALARM_NO_FEASIBLE_SLOT';   // 边界#9 可视化报警
+                    GVL_Visu.VisuAlarm := TRUE;                // 红灯亮(演示第6步:超重货)
                 END_IF
             END_IF
         END_IF
@@ -92,6 +103,8 @@ CASE eState OF
             FC_LoadDemoGoods();
             GVL_Visu.VisuStatusText := CONCAT('DEMO_LOADED_N=',
                                               INT_TO_STRING(GVL_WH.iGoodsCount));
+            GVL_Visu.VisuAlarm := FALSE;                // 新批次开始,清报警灯与旧路径
+            GVL_Visu.VisuPathCount := 0;
         END_IF
         xDemoOld := GVL_Visu.CmdLoadDemo;
 
@@ -99,7 +112,19 @@ CASE eState OF
         IF GVL_Visu.CmdRunAssign AND NOT xRunOld THEN
             IF GVL_WH.iGoodsCount = 0 THEN
                 GVL_Visu.VisuStatusText := 'ERR_NO_GOODS';
+                GVL_Visu.VisuAlarm := TRUE;
             ELSE
+                // 进入批量前清交互阶段残留:推荐黄格回写空闲(推荐只会盖在空闲格上,
+                // fbSelOne 只选可行空位,故直接回写0安全)+ 路径叠加清除 + 报警灯灭
+                FOR c2 := 0 TO GVL_Param.COLS - 1 DO
+                    FOR t2 := 0 TO GVL_Param.TIERS - 1 DO
+                        IF GVL_Visu.VisuSlotState[c2, t2] = 3 THEN
+                            GVL_Visu.VisuSlotState[c2, t2] := 0;
+                        END_IF
+                    END_FOR
+                END_FOR
+                GVL_Visu.VisuPathCount := 0;
+                GVL_Visu.VisuAlarm := FALSE;
                 // 策略选择:0=seq 1=near 2=score(在线) 3=AWRA-LS(批量=Rank+score+LS)
                 xUseRank := (GVL_Visu.SelStrategy = 3);
                 IF GVL_Visu.SelStrategy = 3 THEN iStrat := 2; ELSE iStrat := GVL_Visu.SelStrategy; END_IF
@@ -160,4 +185,11 @@ CASE eState OF
     E_MainState.STATE_FAULT:
         ;   // 预留:严重故障驻留(当前边界均以文本报警+拒绝操作处理)
 END_CASE
+
+// ---------- L6 常驻段(每周期,与状态机无关) ----------
+// 动画回放:CmdAnimate 上升沿触发,堆垛机图元沿当前 VisuPath 走到目标格
+// (rCycleTime 与本任务周期一致:10ms 任务填 0.01;改任务周期须同步这里)
+fbAnim(xStart := GVL_Visu.CmdAnimate, rCycleTime := 0.01, rSpeedScale := 5.0);
+// 颜色镜像+堆垛机像素坐标刷新(画面所有动态元件的数据源,必须在 fbAnim 之后)
+fbVisu();
 END_PROGRAM

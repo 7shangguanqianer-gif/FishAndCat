@@ -10,8 +10,8 @@
 |---|---|---|
 | 01_DUTs.st | 4 个 DUT(每个 TYPE 一个) | ST_Good / ST_Slot / ST_Stats / E_MainState |
 | 02_GVL.st | 3 个 GVL | GVL_Param(常量段+变量段合一个,含 L1 加减速参数)/ GVL_WH / GVL_Visu |
-| 03_Functions.st | 11 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令) |
-| 04_FB_Warehouse.st | 8 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测) |
+| 03_Functions.st | 12 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表) |
+| 04_FB_Warehouse.st | 9 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测)+ **FB_VisuRefresh**(L6 颜色镜像) |
 | 05_PRG_Main.st | 1 个 POU-程序 | 主状态机,挂循环任务 |
 | 06_PRG_Test.st | 1 个 POU-程序 | 23 个边界+一致性用例(T22 加减速向量/T23 双命令) |
 | 07_GVL_Data_generated.st | 1 DUT + 1 GVL + 1 函数 | **生成文件勿手改**,由 sim/export_st_vectors.py 重生(含 ExpTimeAccel) |
@@ -70,8 +70,18 @@ fbProbe(xStop := TRUE);
 注:仿真模式跑在 PC 上,数值偏乐观——报告口径写"仿真实测+真机预估",若能借到实体 AC500 再补真机行。
 LTIME() 在个别 AB 版本若不可用,改用 SysTime 库 SysTimeGetNs(报错时按此替换)。
 
-## 5. 决赛可视化(W4 起做,变量已就绪)
+## 5. 决赛可视化(T17,ST 侧已就绪)
 
-CODESYS Visualization 画面绑定 GVL_Visu:20×20 网格用"矩形阵列+VisuSlotState 颜色映射"
-(0空闲/1预占/2占用/3推荐/4路径/5报警),输入区绑 InGood* 与 Cmd* 按钮,统计区绑 Visu 统计变量。
-演示脚本见 _ref/资料包 §10.3(六步:初始状态→轻高频→重货→批量→算法对比→超重报警)。
+**完整搭建步骤见 `2_你要操作/AB可视化搭建操作卡.md`(零基础逐键说明)。** 架构要点:
+
+- 20×20 网格 = 一个模板矩形绑 `GVL_Visu.VisuSlotColor[$FIRSTDIM$,$SECONDDIM$]`,
+  用 AB/CODESYS 官方命令 **Multiply visu element(元件倍增)** 一次生成 400 格——
+  不要手工复制 400 个矩形;
+- 颜色由 PLC 侧 FB_VisuRefresh 每周期算好(FC_StateToColor 查表 + 上下翻转:显示行0=层19),
+  画面元件不写死颜色,改配色只改 FC_StateToColor;
+- 堆垛机图元设计位置放 (0,0),Absolute movement 绑 VisuCraneXpx/Ypx(FB_VisuRefresh 换算,
+  几何常量 GRID_X0/Y0、CELL_PX_W/H 在 GVL_Param);
+- 输入区绑 InGood* 与 Cmd* 按钮(Tap 方式,程序内做沿检测),动画按钮=CmdAnimate,
+  报警灯=VisuAlarm;状态码为 ASCII(见 §4),画面用静态中文标签作对照解释。
+- 演示脚本(六步:初始状态→轻高频→重货→批量→算法对比→超重报警)已细化到按钮级,
+  见操作卡 §6;录屏建议同卡 §7。

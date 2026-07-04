@@ -24,9 +24,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH_RE = re.compile(
     r"(?:docs|sim|plc|tools|_ref|1_给你看|2_你要操作)[\\/][\w\-./\\()一-鿿]+"
     r"\.(?:md|py|st|csv|png|docx|pdf|txt|bat)")
-# 排除:代码块里的示例通配、明确标注为历史的行
+# 排除:代码块里的示例通配、明确标注为历史的行;
+# "待产出"=显式的未来产物标记——文档里引用"执行后才会存在的文件"(截图/录屏等)
+# 必须在同一行带上该标记,doc_check 才放行(防拿它当断链遮羞布:默认仍硬校验)
 SKIP_LINE_HINTS = ("已迁移", "历史路径", "变更记录", "figs/fig", "figs\\fig",
-                   "out/", "out\\")   # 产物路径可再生,不作断链硬校验
+                   "out/", "out\\", "待产出")   # 产物路径可再生,不作断链硬校验
 
 # B. 易过时状态模式(只查"必须无状态"的静态文档)
 STATELESS_DOCS = ["README.md", os.path.join("docs", "ClaudeCode接管提示词.md"),
