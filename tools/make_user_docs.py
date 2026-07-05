@@ -6,6 +6,7 @@ make_user_docs.py — 用户层文档 md→docx 一键再生(用户偏好:md 难
 范围:1_给你看\*.md 与 2_你要操作\*.md → 同目录同名 .docx。
 支持的 md 子集(本项目文档全部在此子集内):
   # ## ### 标题 | 无序/有序列表 | 表格 | ``` 代码块 | > 引用 | **粗体** `行内代码` | --- 分隔线
+  | ![图注](项目内相对路径.png) 整行图片(0705 加,给通俗导览配图;缺图打红字不中断)
 运行:python tools/make_user_docs.py
 """
 import os
@@ -16,7 +17,7 @@ from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor
+from docx.shared import Cm, Pt, RGBColor
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -67,6 +68,24 @@ def convert(md_path, docx_path):
         ln = lines[i]
         s = ln.strip()
         if not s:
+            i += 1
+            continue
+        m = re.match(r"^!\[(.*?)\]\((.+?)\)\s*$", s)  # 整行图片:![图注](相对路径)
+        if m:
+            cap, rel = m.group(1), m.group(2).replace("/", os.sep)
+            img = os.path.join(ROOT, rel)
+            if os.path.exists(img):
+                p = doc.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.add_run().add_picture(img, width=Cm(15))
+                if cap:
+                    cp = doc.add_paragraph()
+                    cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    set_font(cp.add_run(cap), 9, bold=True,
+                             color=(0x60, 0x60, 0x60))
+            else:                                     # 缺图:红字占位,不中断生成
+                p = doc.add_paragraph()
+                set_font(p.add_run(f"〔缺图:{rel}〕"), 9, color=(0xC0, 0x00, 0x00))
             i += 1
             continue
         if s.startswith("```"):                      # 代码块(灰底等宽,整块)
