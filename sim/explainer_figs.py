@@ -114,8 +114,8 @@ def fig_e2():
     _arrow(ax, 4.65, 3.35, 6.35, 3.35, color="#B71C1C")
     ax.text(5.5, 3.75, "差 19.3%(H口径)\n=“不知道未来”的代价", ha="center",
             fontsize=9.8, color="#B71C1C")
-    ax.text(5.5, 0.95, "两层用同一个打分公式 → 差距全部来自信息量,公平可比",
-            ha="center", fontsize=10.5, color="#37474F",
+    ax.text(8.4, 1.5, "两层用同一个打分公式\n→ 差距全部来自信息量,公平可比",
+            ha="center", fontsize=10.2, color="#37474F",
             bbox=dict(boxstyle="round,pad=0.35", fc="#ECEFF1", ec="#90A4AE"))
     ax.set_xlim(0, 11)
     ax.set_ylim(0.3, 10.2)
