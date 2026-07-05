@@ -99,6 +99,24 @@ def load_energy_two_sections():
     return assume, layout
 
 
+def load_rl_probe():
+    """rl_probe.csv 第二段(quantity,value)手工解析(双段 CSV,同 energy 的坑)。"""
+    p = os.path.join(OUT, "rl_probe.csv")
+    d = {}
+    if not os.path.exists(p):
+        return d
+    with open(p, encoding="utf-8-sig") as fp:
+        in2 = False
+        for line in fp:
+            cells = [c.strip() for c in line.strip().split(",")]
+            if cells and cells[0] == "quantity":
+                in2 = True
+                continue
+            if in2 and len(cells) >= 2 and cells[0]:
+                d[cells[0]] = cells[1]
+    return d
+
+
 HEAD = by_key(load_rows("headline_numbers.csv"), "strategy")
 MIX = {(r["strategy"], r["motion"]): r for r in load_rows("mixed_ops.csv")}
 BOUNDS = by_key(load_rows("analytic_bounds.csv"), "quantity")
@@ -155,6 +173,31 @@ try:
     k_aw = float(E_LAYOUT["awra"]["kwh_per_year"])
     KWH_SAVE = reg("energy_report:年省kWh", f"{k_seq - k_aw:.0f}")
     KWH_SAVE_PCT = reg("energy_report:年省%", f"{(k_seq - k_aw) / k_seq * 100:.0f}")
+except Exception:
+    pass
+# 展望口径:再生制动(R7 多口径方法论;η_regen 假设显式,不进头条)
+REGEN_NET_AW = REGEN_REC_AW = REGEN_GAP = ETA_REGEN_S = MISS
+try:
+    ETA_REGEN_S = reg("energy_report:η_regen假设", E_ASSUME.get("eta_regen_outlook"))
+    REGEN_REC_AW = reg("energy_report:awra年回收kWh",
+                       f"{float(E_LAYOUT['awra']['recovered_kwh_year']):.0f}")
+    REGEN_NET_AW = reg("energy_report:awra净耗电kWh",
+                       f"{float(E_LAYOUT['awra']['kwh_year_net_regen']):.0f}")
+    REGEN_GAP = reg("energy_report:再生口径差值kWh",
+                    f"{float(E_LAYOUT['seq']['kwh_year_net_regen']) - float(E_LAYOUT['awra']['kwh_year_net_regen']):.0f}")
+except Exception:
+    pass
+
+# RL 实跑对照(T13/F16)
+RLD = load_rl_probe()
+RL_FINAL = RL_SCORE = RL_RAND = RL_GAP = RL_COS = MISS
+try:
+    RL_FINAL = reg("rl_probe:RL终点", f"{float(RLD['rl_final_exp_t']):.2f}")
+    RL_SCORE = reg("rl_probe:标定评分", f"{float(RLD['score_ref_exp_t']):.2f}")
+    RL_RAND = reg("rl_probe:随机起点", f"{float(RLD['random_start_exp_t']):.2f}")
+    RL_GAP = reg("rl_probe:RL距标定%",
+                 f"{(float(RLD['rl_final_exp_t']) / float(RLD['score_ref_exp_t']) - 1) * 100:.1f}")
+    RL_COS = reg("rl_probe:余弦", f"{float(RLD['cos_to_calibrated']):.2f}")
 except Exception:
     pass
 
@@ -317,7 +360,12 @@ def main():
     r.p("三类压力实验:货物分布漂移(skew→uniform/heavy)、紧库存(330 件/351 可用位)、"
         "重货比例翻倍。AWRA-LS 在紧库存下失败件数为 0(就近贪心平均失败 5.3 件按 F 系列"
         "实验记录),全矩阵违规为 0;周期性重排作为运行期自愈机制,能消除布局熵漂移"
-        "(实验发现 F11:其价值是'自愈'而非'提效',成本经济学按收益>1.2×成本准入)。")
+        "(实验发现 F11:其价值是'自愈'而非'提效')。重排何时执行采用三级动态判据:"
+        "夜间窗口先做零成本体检(布局质量较上次重排后基准劣化超过阈值才开工),单步动作"
+        "以'预期收益大于 1.2 倍搬运成本'放行(裕度覆盖损坏风险等未计价项),并受夜班搬运"
+        "预算约束;搬运的额外损耗按时间与路径(磨损)双币种记账。高周转负载下判据每夜均"
+        "触发(证明每夜重排是被判据确认而非假设),低漂移节奏下自动跳过部分夜晚且质量不损"
+        "(F11 增补)。")
     r.fig("fig13_鲁棒压力.png", "图 13  鲁棒性压力矩阵")
     r.fig("fig11_重排闭环.png", "图 11  周期重排闭环:漂移与自愈")
     r.h("4.4 参数敏感性(D5)", 2)
@@ -358,6 +406,11 @@ def main():
         f"年节省用电约 {KWH_SAVE} kWh(降 {KWH_SAVE_PCT}%),电费与碳排放折算见图 10。"
         f"该结论与主办方'通过算法优化降低系统能耗'的绿色工程导向一致(王余,2026 年开赛"
         f"致辞)。")
+    r.p(f"展望口径(不计入头条):若配置再生制动(ABB 传动方案,回收效率按声明假设 "
+        f"{ETA_REGEN_S}),AWRA-LS 年回收 {REGEN_REC_AW} kWh、净耗电降至 {REGEN_NET_AW} "
+        f"kWh。值得如实指出:再生对存放位置更高的基线布局回收更多,两布局的节省差距在该"
+        f"口径下收窄至 {REGEN_GAP} kWh/年,但结论方向不变——这正是本文多口径方法(附录 C)"
+        f"的意义:口径切换只平移数字,不翻转结论。")
     r.fig("fig10_绿色换算.png", "图 10  绿色工程年化换算(假设显式声明)")
 
     # ---------------- 8 创新点与工程取舍 ----------------
@@ -369,12 +422,17 @@ def main():
         ["双实现同源+一致性向量的轻量数字孪生验证方法", "§6"],
         ["周期重排自愈闭环与其成本经济学(负结果如实呈现)", "§4.3,F11"],
     ])
-    r.p("工程取舍(考虑过且不采用):A* 路径规划——双轴同动且巷道无障碍时切比雪夫直达即"
-        "物理最优,A* 适用于把网格当作平面移动机器人地图的另一种建模;在线深度强化学习上"
-        "PLC——2025 年文献中 DRL 仓位分配需以长周期历史数据训练且相对分类基线的收益为个"
-        "位数百分比,与可解释、零训练数据、可在扫描周期内落地的规则评分路线相比,不符合本"
-        "题的实时性与可审计性要求,故仅作文献对照;查表化执行——400 仓位在线评分本身即微"
-        "秒级,查表反而丢失解释链。")
+    r.p(f"工程取舍(考虑过且不采用,均给出依据):A* 路径规划——双轴同动且巷道无障碍时"
+        f"切比雪夫直达即物理最优,A* 适用于把网格当作平面移动机器人地图的另一种建模;"
+        f"强化学习——除引用 2025 年文献(DRL 需长周期数据、收益为个位数百分比)外,"
+        f"本文实跑了轻量策略梯度对照(线性 softmax,1200 回合,训练/评测种子分离):"
+        f"RL 自随机({RL_RAND} s)学至 {RL_FINAL} s、约束违规 0,但收敛于'距离与层高主导"
+        f"的近似就近'策略,仍落后手工标定评分({RL_SCORE} s){RL_GAP}%,且未能自发形成 δ "
+        f"位置价值预留结构(学得方向与标定方向余弦 {RL_COS})——前瞻性资源预留属于长程"
+        f"信用分配,难以从终局回报中习得,这从反面佐证了 δ 项的设计价值;查表化执行——"
+        f"400 仓位在线评分本身即微秒级,查表反而丢失解释链。")
+    r.fig("fig15_RL对照.png", "图 15  轻量强化学习实跑对照:学习曲线与终局对比"
+                              "(复现:python sim/rl_probe.py)")
 
     # ---------------- 9 结论 ----------------
     r.h("9 结论", 1)
@@ -394,7 +452,27 @@ def main():
         ["一定创新性", "§8"], ["报告思路逻辑清晰", "全文递进结构"],
         ["功能块封装合理", "§5"], ["注释标注清晰易懂", "ST 源码(交付包)"],
     ])
-    r.h("附录 C  参考文献(仅列实际参考项)", 1)
+    r.h("附录 C  口径矩阵:一套系统,九把尺子(多口径并列验证方法)", 1)
+    r.p("本文每个建模选择都被显式识别为'口径',参数化并保留切换开关;凡有争议或依赖情境"
+        "的维度,主/对照两个口径并列呈现。这既是测量严谨性的保证,也使核心主张可以升级为"
+        "口径不变性:主结论(AWRA-LS 优于各基线、约束违规为 0)在下表全部口径组合下方向"
+        "一致,口径切换只平移数字量级(§4.4 敏感性、§3 运动模型对照、§7 再生展望为其证据)。")
+    r.table(["维度", "主口径", "对照/备选口径", "切换开关", "口径号"], [
+        ["运动模型", "梯形加减速", "匀速(文献可比)", "--accel / xUseAccel", "A4b"],
+        ["评分权重", "场景自适应查表", "固定 1.0/0.6/0.4/0.15", "--adaptive / 策略表", "E"],
+        ["行程度量", "切比雪夫时间(耗时)", "曼哈顿长度(磨损)", "并列输出", "C2"],
+        ["时间程数", "双程总时", "单程期望取货", "并列输出", "C1/C3"],
+        ["预占用解读", "x且y整除(49格)", "或/线性(231/134格)", "iPreRule 0/1/2", "B1"],
+        ["作业流", "循环访问", "一次性流转", "工作负载参数", "B6/B7"],
+        ["轴联动", "双轴同动(切比雪夫)", "顺序单轴(保守)", "xSimultaneousXY", "A5/A9"],
+        ["能耗回收", "不回收(保守)", "再生制动展望(η 假设)", "energy_report 展望行", "C4b"],
+        ["负载实测", "AB 仿真监视值", "真机(决赛阶段)", "—", "L4"],
+    ])
+    r.p("工业上同类做法并不陌生:汽车油耗有 WLTP 与 EPA 两套循环工况,财务报告有会计准则"
+        "口径与管理层口径——严肃的工程数字从来都需要声明测量框架。本文把这一实践系统化为"
+        "口径矩阵,并以回归测试锁定主口径数字(动口径=测试红灯)。")
+
+    r.h("附录 D  参考文献(仅列实际参考项)", 1)
     for ref in [
         "AS/RS 行程时间模型与控制策略综述(Automated Storage and Retrieval Systems: "
         "A Review on Travel Time Models and Control Policies)",

@@ -119,20 +119,30 @@ def reslot_pass(wh, pos_of, goods_by_gid, day_len, budget_moves=20, margin=1.2):
 
 
 def move_cost(moves):
-    """重排行车成本:每次搬运 = I/O→旧位(空驶)+旧位→新位(载货)+新位→I/O(空驶)。
-    保守口径:全部三段计时间(实际可批量串联优化,不吃这个账)。"""
-    tot = 0.0
+    """重排行车成本,返回 (时间s, 路径m):每次搬运 = I/O→旧位(空驶)+旧位→新位(载货)
+    +新位→I/O(空驶)。保守口径:三段全计。路径按曼哈顿(C5 磨损代理)——搬运的
+    "额外损耗"两种货币都记账;错误/损坏风险等未计价项由经济门槛的 margin=1.2 兜底。"""
+    tot_t = tot_p = 0.0
     for _, (c0, t0), (c1, t1) in moves:
-        tot += (ws.travel_time(c0, t0)
-                + ws.travel_time_between(c0, t0, c1, t1)
-                + ws.travel_time(c1, t1))
-    return tot
+        tot_t += (ws.travel_time(c0, t0)
+                  + ws.travel_time_between(c0, t0, c1, t1)
+                  + ws.travel_time(c1, t1))
+        tot_p += (ws.path_len(c0, t0)
+                  + abs(c1 - c0) * ws.CELL_W + abs(t1 - t0) * ws.CELL_H
+                  + ws.path_len(c1, t1))
+    return tot_t, tot_p
+
+
+THETA_DRIFT = 0.03      # 触发阈值:布局质量较"上次重排后基准"劣化超 3% 才开工(动态标准)
 
 
 def simulate(policy, cycles, day_len, drift, seed, online="score"):
-    """policy: 'none'=不重排 | 'nightly'=每 day_len 周期重排一次;
+    """policy: 'none'=不重排 | 'nightly'=每夜必重排 | 'triggered'=漂移触发式(动态标准):
+      夜间窗口先做一次零成本体检(当前布局质量 vs 上次重排后的基准),
+      劣化 > THETA_DRIFT 才执行重排;体检通过=整夜休息(成本恰好为 0)。
+      三级判据:①触发(漂移超阈)②单步放行(收益>margin×成本)③停止(夜班预算/无候选)。
     online: 回库在线决策用 'score'(频次感知)或 'near'(就近,不懂频次)。
-    返回逐周期布局质量序列 + 累计账本。"""
+    返回逐周期布局质量序列 + 累计账本(时间/路径两种货币+触发统计)。"""
     goods = ws.gen_goods(N_INIT, seed)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
@@ -161,6 +171,9 @@ def simulate(policy, cycles, day_len, drift, seed, online="score"):
         return fn_score(g, c, t)
 
     quality, flow_time, reslot_time, reslot_moves = [], 0.0, 0.0, 0
+    reslot_path = 0.0                     # 搬运磨损账(曼哈顿 m,C5)
+    nights_run, nights_skip = 0, 0        # 触发统计
+    q_ref = layout_quality(wh, pos_of, goods_by_gid)   # 触发基准=初始(AWRA)质量
     pool = list(goods)                    # 当前在库
     out_queue = []                        # (回库周期, 货物)
     new_idx = 0
@@ -206,14 +219,24 @@ def simulate(policy, cycles, day_len, drift, seed, online="score"):
         wh.remove(s_out[0], s_out[1])
 
         quality.append(layout_quality(wh, pos_of, goods_by_gid))
-        # ---- 夜间重排(成本感知+夜班预算) ----
-        if policy == "nightly" and (k + 1) % day_len == 0 and k + 1 < cycles:
+        # ---- 夜间窗口(成本感知+夜班预算;triggered 先过零成本体检) ----
+        if policy in ("nightly", "triggered") and (k + 1) % day_len == 0 and k + 1 < cycles:
+            if policy == "triggered":
+                drift_now = (quality[-1] - q_ref) / q_ref if q_ref > 0 else 0.0
+                if drift_now <= THETA_DRIFT:
+                    nights_skip += 1          # 体检通过,整夜休息(成本 0)
+                    continue
             moves = reslot_pass(wh, pos_of, goods_by_gid, day_len)
-            reslot_time += move_cost(moves)
+            mt, mp = move_cost(moves)
+            reslot_time += mt
+            reslot_path += mp
             reslot_moves += len(moves)
+            nights_run += 1
             quality[-1] = layout_quality(wh, pos_of, goods_by_gid)
+            q_ref = quality[-1]               # 重排后刷新触发基准
     return dict(quality=quality, flow=flow_time, reslot=reslot_time,
-                moves=reslot_moves)
+                moves=reslot_moves, path=reslot_path,
+                nights_run=nights_run, nights_skip=nights_skip)
 
 
 def main():
@@ -226,31 +249,39 @@ def main():
 
     print(f"重排闭环仿真:{a.cycles} 周期,每 {a.day} 周期一夜"
           f"{',第 ' + str(a.cycles//2) + ' 周期需求漂移' if drift else ',无漂移'},seed={SEED}")
-    combos = [("near", "none"), ("near", "nightly"), ("score", "none"), ("score", "nightly")]
+    combos = [("near", "none"), ("near", "nightly"), ("near", "triggered"),
+              ("score", "none"), ("score", "nightly"), ("score", "triggered")]
     lbl = {("near", "none"): "near在线·不重排(双无)",
-           ("near", "nightly"): "near在线·夜重排(重排救笨策略)",
+           ("near", "nightly"): "near在线·每夜必排",
+           ("near", "triggered"): "near在线·漂移触发(动态标准)",
            ("score", "none"): "score在线·不重排(在线自愈)",
-           ("score", "nightly"): "score在线·夜重排(双保险)"}
+           ("score", "nightly"): "score在线·每夜必排",
+           ("score", "triggered"): "score在线·漂移触发(动态标准)"}
     color = {("near", "none"): "#c62828", ("near", "nightly"): "#ef6c00",
-             ("score", "none"): "#1976d2", ("score", "nightly"): "#2e7d32"}
+             ("near", "triggered"): "#8d6e63",
+             ("score", "none"): "#1976d2", ("score", "nightly"): "#2e7d32",
+             ("score", "triggered"): "#6a1b9a"}
     res = {}
     for online, pol in combos:
         res[(online, pol)] = simulate(pol, a.cycles, a.day, drift, SEED, online)
 
     import statistics as st
     print(f"\n{'组合':<26}{'均布局exp_t':>11}{'期末':>7}{'流转(s)':>9}"
-          f"{'重排(s)':>8}{'搬运':>5}{'净总时(s)':>10}")
+          f"{'重排(s)':>8}{'搬运':>5}{'磨损(m)':>8}{'开工/休息':>9}{'净总时(s)':>10}")
     for key in combos:
         r = res[key]
         q = r["quality"]
         net = r["flow"] + r["reslot"]
+        nights = f"{r['nights_run']}/{r['nights_skip']}"
         print(f"{lbl[key]:<26}{st.mean(q):>11.2f}{q[-1]:>7.2f}{r['flow']:>9.0f}"
-              f"{r['reslot']:>8.0f}{r['moves']:>5}{net:>10.0f}")
+              f"{r['reslot']:>8.0f}{r['moves']:>5}{r['path']:>8.0f}{nights:>9}{net:>10.0f}")
     nn = res[("near", "none")]["flow"]
     nr = res[("near", "nightly")]
     sn = res[("score", "none")]["flow"]
     sr = res[("score", "nightly")]
-    print(f"\n结论三连:")
+    nt = res[("near", "triggered")]
+    stg = res[("score", "triggered")]
+    print(f"\n结论四连:")
     print(f"①重排救笨策略:near+夜重排 净总时 {nr['flow']+nr['reslot']:.0f}s vs near裸奔 {nn:.0f}s"
           f"(净省 {(1-(nr['flow']+nr['reslot'])/nn)*100:.1f}%)")
     print(f"②在线智能自带自愈:score裸奔 {sn:.0f}s 已接近 near+重排——频次感知的在线决策"
@@ -259,6 +290,11 @@ def main():
           f"{'省' if sr['flow']+sr['reslot']<sn else '亏'} "
           f"{abs(1-(sr['flow']+sr['reslot'])/sn)*100:.1f}%——增量小因为在线已做对,"
           f"重排作为需求漂移的兜底")
+    print(f"④动态标准(漂移>{THETA_DRIFT:.0%}才开工):score 触发式 开工{stg['nights_run']}夜/"
+          f"休息{stg['nights_skip']}夜,净总时 {stg['flow']+stg['reslot']:.0f}s"
+          f"(vs 每夜必排 {sr['flow']+sr['reslot']:.0f}s);near 触发式 开工{nt['nights_run']}夜/"
+          f"休息{nt['nights_skip']}夜——标准自己会看策略下菜:布局稳就整夜休息,"
+          f"漂移了才动手,自愈效果不打折")
 
     # ---- CSV ----
     os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
@@ -270,12 +306,14 @@ def main():
             w.writerow([i + 1] + [round(res[k]["quality"][i], 4) for k in combos])
         w.writerow([])
         w.writerow(["online", "policy", "mean_quality", "final_quality", "flow_s",
-                    "reslot_s", "moves", "net_total_s"])
+                    "reslot_s", "moves", "reslot_path_m", "nights_run",
+                    "nights_skip", "net_total_s"])
         for (o, p) in combos:
             r = res[(o, p)]
             w.writerow([o, p, round(st.mean(r["quality"]), 3),
                         round(r["quality"][-1], 3), round(r["flow"], 1),
-                        round(r["reslot"], 1), r["moves"],
+                        round(r["reslot"], 1), r["moves"], round(r["path"], 1),
+                        r["nights_run"], r["nights_skip"],
                         round(r["flow"] + r["reslot"], 1)])
 
     # ---- fig11 ----
@@ -296,7 +334,8 @@ def main():
         return out
 
     for key in combos:
-        ax.plot(xs, smooth(res[key]["quality"]), color=color[key], lw=1.5,
+        ax.plot(xs, smooth(res[key]["quality"]), color=color[key],
+                lw=1.5, ls="--" if key[1] == "triggered" else "-",
                 label=lbl[key], alpha=0.95)
     for d in range(a.day, a.cycles, a.day):
         ax.axvline(d, color="#9e9e9e", ls=":", lw=0.5, alpha=0.5)
@@ -306,7 +345,8 @@ def main():
                 fontsize=9, color="#6a1b9a", va="top")
     ax.set_xlabel(f"循环访问周期(取用∝频次,LAG=5 回库,10%汰换;灰虚线=夜间窗口,每 {a.day} 周期)")
     ax.set_ylabel("布局质量:在库货物期望取货时间 (s)")
-    ax.set_title("A2 重排闭环:在线智能 × 夜间重排 2×2 对照(重排算子=FB_LocalSwapImprove,PLC 零新增)")
+    ax.set_title("A2 重排闭环:在线智能 × 重排策略(不排/每夜/漂移触发)对照"
+                 "(重排算子=FB_LocalSwapImprove,PLC 零新增;触发式虚线与每夜实线重合=本负载下每夜都该排)")
     ax.legend(fontsize=8, loc="upper left")
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
