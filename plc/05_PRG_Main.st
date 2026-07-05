@@ -172,11 +172,12 @@ CASE eState OF
             eState := E_MainState.STATE_DONE;
         END_IF
 
-    // ---------- 完成:结果驻留可视化;失败件数非0则黄色警示文本 ----------
+    // ---------- 完成:结果驻留可视化;失败件数非0则警示文本+红灯 ----------
     E_MainState.STATE_DONE:
         IF GVL_WH.stStats.FailedCnt > 0 THEN
             GVL_Visu.VisuStatusText := CONCAT('DONE_FAILED_N=',
                                               INT_TO_STRING(GVL_WH.stStats.FailedCnt));
+            GVL_Visu.VisuAlarm := TRUE;    // 与其他异常态一致:有货无位=红灯(0705补)
         ELSE
             GVL_Visu.VisuStatusText := 'DONE_OK';
         END_IF

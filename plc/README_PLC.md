@@ -68,7 +68,10 @@ fbProbe(xStop := TRUE);
 在线观察 fbProbe.rAvgUs / rMaxUs / nSamples,记录成表:
 「nBatchPerCycle=10 时单周期平均 X µs / 最大 Y µs,占 10ms 周期 Z%,看门狗裕量 N 倍」。
 注:仿真模式跑在 PC 上,数值偏乐观——报告口径写"仿真实测+真机预估",若能借到实体 AC500 再补真机行。
-LTIME() 在个别 AB 版本若不可用,改用 SysTime 库 SysTimeGetNs(报错时按此替换)。
+**0705 实测修订**:AB 仿真中 LTIME() 差分恒 0(疑似 IEC 时间在扫描周期内缓存)——
+探针路线兜底顺序改为:①任务监视页官方读数(信箱批次 0705-B)→ ③SysTime 库时钟源
+(备用件 `09_FB_ScanLoadProbeNs_备用.st`,仅在①也恒 0 时导入,导库步骤见该文件头)
+→ ④真机。原候选②"累计窗口摊薄"对段耗时无效(窗口内每段差分仍为 0),已否决。
 
 ## 5. 决赛可视化(T17,ST 侧已就绪)
 
