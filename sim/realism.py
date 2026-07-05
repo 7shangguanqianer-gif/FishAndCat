@@ -171,10 +171,15 @@ def tier3(goods, new_goods, requests, cycles):
 
 
 def main():
+    global HANDLE_S
     ap = argparse.ArgumentParser()
     ap.add_argument("--cycles", type=int, default=100)
     ap.add_argument("--quick", action="store_true", help="30 周期快速自检")
+    ap.add_argument("--handle", type=float, default=None,
+                    help="覆盖装卸时间 s/次(canonical G1;敏感性扫描用,如 10/15/20)")
     a = ap.parse_args()
+    if a.handle is not None:
+        HANDLE_S = a.handle
     cycles = 30 if a.quick else a.cycles
 
     goods = ws.gen_goods(N_INIT, SEED)
