@@ -340,6 +340,11 @@ def main():
         ["C9", "吞吐", "存取作业次数/混合流总时间(次/时),对应题面'单位时间存取量'"],
         ["C10", "双命令周期", "联程 T=t(0→存)+t(存→取)+t(取→0);较两个单命令省一次空驶,节省量≥0 由三角不等式保证"],
     ])
+    r.p("本文的物理与场景参数经系统调研溯源,自真实生产场景入手建立拟真模型:堆垛机厂商"
+        "公开规格(7 组真实机型样本,含与本文货物量级对应的轻载单立柱档)、ABB 官方应用"
+        "文档(堆垛机专项手册与起重机控制固件参数手册)、AS/RS 原始文献(行程时间模型"
+        "开创性论文的原文假设)与中国现行行业标准名录(JB/T 7016-2017《巷道堆垛起重机》)"
+        "——每个取值可回溯到公开出处或显式声明为情景假设,引用体系分三层列于附录 D。")
 
     # ---------------- 2 双层算法 ----------------
     r.h("2 双层优化架构:在线评分与批量 AWRA-LS", 1)
@@ -526,6 +531,7 @@ def main():
         ["扫描周期分片:优化算法非阻塞运行于 10ms 实时任务", "§5"],
         ["双实现同源+一致性向量的轻量数字孪生验证方法", "§6"],
         ["周期重排自愈闭环与其成本经济学(负结果如实呈现)", "§4.3,F11"],
+        ["参数溯源体系:四层防御(厂商样本/标准名录/敏感性覆盖/官方确认)+负面出处清单+三档拟真验证", "§1/§4.5/附录 C-D"],
     ])
     r.p(f"工程取舍(考虑过且不采用,均给出依据):A* 路径规划——双轴同动且巷道无障碍时"
         f"切比雪夫直达即物理最优,A* 适用于把网格当作平面移动机器人地图的另一种建模;"
@@ -579,21 +585,48 @@ def main():
         "口径与管理层口径——严肃的工程数字从来都需要声明测量框架。本文把这一实践系统化为"
         "口径矩阵,并以回归测试锁定主口径数字(动口径=测试红灯)。")
 
-    r.h("附录 D  参考文献(仅列实际参考项)", 1)
+    r.h("附录 D  参考文献与文档溯源(三层引用体系,仅列实际参考项)", 1)
+    r.p("D.1 学术文献(理论假设的原文锚)", size=10.5)
     for ref in [
+        "Bozer, Y.A. & White, J.A. (1984). Travel-Time Models for Automated "
+        "Storage/Retrieval Systems. IIE Transactions 16(4), 329-338. DOI "
+        "10.1080/07408178408975252——双轴同动与 T=max(th,tv) 假设、单/双命令周期定义的原始出处",
+        "Roodbergen, K.J. & Vis, I.F.A. (2009). A survey of literature on automated "
+        "storage and retrieval systems. EJOR 194(2), 343-362——双命令调度=Chebyshev TSP",
         "AS/RS 行程时间模型与控制策略综述(Automated Storage and Retrieval Systems: "
         "A Review on Travel Time Models and Control Policies)",
         "考虑订单完成时间与能耗的 AS/RS 启发式(Mathematical Biosciences and "
         "Engineering, 2024)",
         "PLC Implementation of a Genetic Algorithm for Controller Optimization",
         "Deep reinforcement learning for the real-time inventory rack storage "
-        "assignment and replenishment problem(European Journal of Operational "
-        "Research, 2025)",
+        "assignment and replenishment problem(EJOR, 2025)",
         "Dynamic Storage Location Assignment in Warehouses Using Deep Reinforcement "
         "Learning(Technologies, 2022;DRL 较 ABC 分类降本 6.3% 案例)",
+    ]:
+        r.p("· " + ref, size=9.5)
+    r.p("D.2 ABB / 贝加莱官方文档(工程参数与产品能力锚)", size=10.5)
+    for ref in [
+        "ABB. ACS880 Stacker crane operation brochure(堆垛机专项). 3AXD50000736843 "
+        "Rev B, 2023-11",
+        "ABB. ACS880 Crane control program firmware manual. 3AUA0000132682——参数 "
+        "23.12/23.13(加减速时间)、23.16 Shape time(0=线性斜坡/>0=S 曲线)、组 77 防摇",
+        "ABB. AC500-S Smart Safety for Material Handling(e-book). 3ADR011134, 2022-08",
+        "ABB Stacker Cranes 应用页(AC500 列为堆垛机推荐控制器)与再生驱动案例:废料天车 "
+        "32%(News #4532,现场实测)、Pesmel 堆垛机回馈 54%(News #123993)——案例级引用",
+        "B&R. Technology Guard: CNC Jerk Limitation(1TGMPCNCJERK)——jerk 受限时加速度呈"
+        "梯形/三角、速度呈 S 形的官方定义",
         "2026 ABB 杯智能技术创新大赛官方赛题页与开赛新闻(ABB 中国)",
     ]:
         r.p("· " + ref, size=9.5)
+    r.p("D.3 行业标准名录(周期时间计算的标准框架对应)", size=10.5)
+    for ref in [
+        "JB/T 7016-2017《巷道堆垛起重机》(取代 JB/T 7016-1993 与 JB/T 2960-1999,中国现行)",
+        "FEM 9.851 Performance Data of Storage and Retrieval Machines: Cycle Times",
+        "VDI 3561 单巷道堆垛机周期时间(Blatt 2:2019 为多巷道扩展版)",
+    ]:
+        r.p("· " + ref, size=9.5)
+    r.note("引用纪律:标准仅引名录与沿革(正文条款在付费墙内,未见原文不引数值);"
+           "ABB 案例数字注明'案例实测'性质;负面出处清单(不得引用的营销数字)另存交付包。")
 
     path = os.path.join(OUT, "验证报告_draft.docx")
     r.d.save(path)
