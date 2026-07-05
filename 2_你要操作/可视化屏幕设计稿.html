@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>AB 可视化画面设计稿 v1(批次C施工前用户过目版)</title>
+<style>
+  body{font-family:"Microsoft YaHei",sans-serif;background:#E9E9E9;margin:0;padding:24px;color:#333;}
+  .frame{width:1240px;margin:0 auto;background:#FAFAFA;border:1px solid #ccc;border-radius:8px;padding:18px;}
+  .title{font-size:18px;color:#17365D;font-weight:bold;margin:0 0 10px;}
+  .note{font-size:12px;color:#888;margin:0 0 12px;}
+  .row{display:flex;gap:20px;align-items:flex-start;}
+  #grid{display:grid;grid-template-columns:repeat(20,28px);grid-auto-rows:20px;gap:1px;background:#fff;padding:1px;border:1px solid #ddd;}
+  .axis{font-size:11px;color:#888;}
+  .panel{flex:1;display:flex;flex-direction:column;gap:9px;font-size:13px;}
+  .box{border:1px solid #ddd;background:#fff;padding:8px 10px;}
+  .box b{color:#17365D;font-weight:600;}
+  .btn{border:1px solid #888;padding:3px 10px;background:#F2F2F2;display:inline-block;}
+  .btn.primary{border-color:#17365D;color:#17365D;background:#EAF1F8;}
+  .btn.sel{border:2px solid #2e7d32;background:#E8F5E9;color:#1B5E20;}
+  .mono{font-family:Consolas,monospace;font-size:12px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px;color:#555;}
+  .chip{width:13px;height:13px;display:inline-block;border:1px solid #ccc;}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="title">智储优控 · 立体仓储仓位优化(20列×20层=400仓位)</div>
+  <div class="note">设计稿 v1(2026-07-05)· 面板数字为摆样非实测 · 施工规格=2_你要操作\AB可视化搭建操作卡.md ·
+    过目要点:①六色配色 ②左网格/右面板布局 ③字号密度 ④权重区(黄底)要不要 ⑤缺什么想要的元素</div>
+  <div class="row">
+    <div>
+      <div style="display:flex;gap:5px;">
+        <div class="axis" style="display:flex;flex-direction:column;justify-content:space-between;height:420px;text-align:right;"><span>19</span><span>15</span><span>10</span><span>5</span><span>0</span></div>
+        <div>
+          <div id="grid"></div>
+          <div class="axis" style="display:flex;justify-content:space-between;width:580px;margin-top:3px;"><span>0</span><span>5</span><span>10</span><span>15</span><span>19</span></div>
+          <div style="font-size:12px;color:#7A3E00;margin-top:2px;">▲ 左下角 = 存取口 I/O(0,0),橙圆 = 堆垛机(动画时沿蓝色路径移动)</div>
+        </div>
+      </div>
+      <div class="legend" style="margin-top:10px;" id="legend"></div>
+    </div>
+    <div class="panel">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="mono" style="flex:1;background:#fff;border:1px solid #ccc;padding:6px 10px;">状态: SUGGEST_X=3_Y=2</span>
+        <span title="报警灯(VisuAlarm)" style="width:20px;height:20px;border-radius:50%;background:#D8D8D8;border:1px solid #aaa;"></span>
+      </div>
+      <div class="box"><b>货物输入</b><br>
+        编号 <span class="btn" style="background:#fff;">901</span>
+        名称 <span class="btn" style="background:#fff;">A</span>
+        重量 <span class="btn" style="background:#fff;">5.0</span>
+        频次 <span class="btn" style="background:#fff;">95.0</span>
+        体积 <span class="btn" style="background:#fff;">0.30</span>
+        <div style="margin-top:8px;">
+          <span class="btn primary">添加货物</span> <span class="btn">载入演示批</span> <span class="btn">复位</span>
+        </div>
+      </div>
+      <div class="box"><b>策略</b>
+        <span class="btn">顺序</span> <span class="btn">就近</span> <span class="btn">评分</span> <span class="btn sel">AWRA-LS</span>
+        &nbsp;&nbsp;<span class="btn primary">运行分配</span> <span class="btn">动画回放</span>
+      </div>
+      <div class="box"><b>路径</b> 目标 (3, 2) · 路径长度 5.0 m · 行程用时 4.0 s</div>
+      <div class="box"><b>统计(摆样)</b><br>
+        入库总时间 812.4 s &nbsp;|&nbsp; 平均单件 3.25 s &nbsp;|&nbsp; 空间利用率 0.423<br>
+        路径总长(损耗)1180 m &nbsp;|&nbsp; <span style="color:#1B5E20;">约束违规 0(必须=0)</span> &nbsp;|&nbsp; 已入库 20 件
+      </div>
+      <div class="box" style="background:#FFF8E1;"><b style="color:#7A5C00;">权重调节(R6,演示第7步"现场改权重")</b><br>
+        α <span class="btn" style="background:#fff;">1.00</span>
+        β <span class="btn" style="background:#fff;">0.60</span>
+        γ <span class="btn" style="background:#fff;">0.40</span>
+        δ <span class="btn" style="background:#fff;">0.15</span>
+        <span style="color:#888;font-size:11px;">默认 1.0/0.6/0.4/0.15,演示后请改回</span>
+      </div>
+      <div class="mono" style="color:#777;font-size:11px;">状态码对照(静态小字区):DONE_OK=全部成功 · SUGGEST_X=a_Y=b=推荐仓位(a,b) · ALARM_NO_FEASIBLE_SLOT=无可行位 · ERR_NEG_INPUT=属性不能为负 · RESET_INIT=已复位 ……(全表见操作卡 §5.6)</div>
+    </div>
+  </div>
+</div>
+<script>
+var C={free:'#E8E8E8',pre:'#707070',occ:'#43A047',sug:'#FFC107',path:'#42A5F5',alarm:'#E53935'};
+var occ=[[0,1],[1,0],[1,1],[2,0],[2,1],[4,0],[4,1],[5,0],[5,1],[7,0],[7,1],[8,0],[2,2],[4,2],[5,2],[8,1],[1,2],[7,2],[10,0],[11,0]];
+var path=[[0,0],[1,0],[2,0],[3,0],[3,1]];
+function key(a){return a[0]+'_'+a[1];}
+var so=new Set(occ.map(key)), sp=new Set(path.map(key));
+var g=document.getElementById('grid');
+for(var r=0;r<20;r++){for(var c=0;c<20;c++){
+  var t=19-r, d=document.createElement('div'), col=C.free;
+  if(c%3===0&&t%3===0)col=C.pre;
+  if(so.has(c+'_'+t))col=C.occ;
+  if(sp.has(c+'_'+t))col=C.path;
+  if(c===3&&t===2)col=C.sug;
+  d.style.background=col;
+  if(c===0&&t===0){d.style.position='relative';var o=document.createElement('div');o.style.cssText='position:absolute;inset:1px;border-radius:50%;background:#FF6D00;';d.appendChild(o);}
+  g.appendChild(d);
+}}
+var L=[['空闲',C.free],['预占用(49格)',C.pre],['已占用',C.occ],['当前推荐',C.sug],['路径',C.path],['报警',C.alarm],['堆垛机','#FF6D00']];
+var lg=document.getElementById('legend');
+L.forEach(function(x){var s=document.createElement('span');var b=document.createElement('span');b.className='chip';b.style.background=x[1];if(x[0]==='堆垛机')b.style.borderRadius='50%';s.appendChild(b);s.appendChild(document.createTextNode(x[0]));lg.appendChild(s);});
+</script>
+</body>
+</html>
