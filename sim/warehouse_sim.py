@@ -95,11 +95,14 @@ def path_len(col, tier):
 
 
 def preoccupied(col, tier, rule):
-    """B1 预占用解读(题面有歧义,三种都能跑,默认 and):
-    and    : x、y 都能被3整除(49格)   —— 资料包方案A
+    """B1 预占用解读(原题面歧义,四种都能跑):
+    sum    : x+y 之和能被3整除(133格)—— **官方答复口径(2026-07-06),现行默认**
+    and    : x、y 都能被3整除(49格)   —— 资料包方案A(0703-0705 历史主口径)
     linear : 仓位线性编号能被3整除(134格)—— 资料包方案B
     or     : x 或 y 能被3整除(231格)
     """
+    if rule == "sum":
+        return (col + tier) % 3 == 0
     if rule == "and":
         return col % 3 == 0 and tier % 3 == 0
     if rule == "or":
@@ -413,7 +416,7 @@ def main():
     ap = argparse.ArgumentParser(description="立体仓储仓位优化仿真 v2")
     ap.add_argument("--goods", type=int, default=120, help="货物数量(默认120)")
     ap.add_argument("--seed", type=int, default=2026, help="随机种子(默认2026,B5)")
-    ap.add_argument("--rule", choices=["and", "or", "linear"], default="and",
+    ap.add_argument("--rule", choices=["and", "or", "linear", "sum"], default="and",
                     help="预占用解读(B1,默认and=x,y都被3整除)")
     ap.add_argument("--case", choices=["uniform", "skew", "heavy"], default="skew",
                     help="货物分布:A均匀/B高频偏态(默认)/C重货偏多")
