@@ -188,19 +188,19 @@ WEIGHT_POLICY = {
     (120, "uniform", "online"): (0.20, 0.6), (120, "uniform", "batch"): (0.15, 0.6),
     (120, "skew", "online"): (0.10, 1.0),    (120, "skew", "batch"): (0.05, 0.6),
     (120, "heavy", "online"): (0.10, 0.6),   (120, "heavy", "batch"): (0.10, 0.6),
-    (240, "uniform", "online"): (0.20, 0.6), (240, "uniform", "batch"): (0.15, 0.6),
+    (200, "uniform", "online"): (0.20, 0.6), (200, "uniform", "batch"): (0.20, 0.6),
+    (200, "skew", "online"): (0.15, 0.6),    (200, "skew", "batch"): (0.05, 0.6),
+    (200, "heavy", "online"): (0.20, 0.6),   (200, "heavy", "batch"): (0.10, 0.6),
+    (240, "uniform", "online"): (0.20, 0.6), (240, "uniform", "batch"): (0.20, 0.6),
     (240, "skew", "online"): (0.20, 0.6),    (240, "skew", "batch"): (0.05, 0.6),
     (240, "heavy", "online"): (0.20, 0.6),   (240, "heavy", "batch"): (0.15, 0.6),
-    (330, "uniform", "online"): (0.20, 0.6), (330, "uniform", "batch"): (0.20, 0.6),
-    (330, "skew", "online"): (0.20, 0.6),    (330, "skew", "batch"): (0.05, 0.6),
-    (330, "heavy", "online"): (0.20, 0.6),   (330, "heavy", "batch"): (0.20, 0.6),
 }
 
 
 def lookup_weights(n_goods, case, mode):
     """场景→权重查表(PLC 侧对应 plc/08 的 aPolicyDelta/aPolicyBG)。
-    密度档:<180→120档,<285→240档,否则330档;未知场景回落固定默认。"""
-    dens = 120 if n_goods < 180 else (240 if n_goods < 285 else 330)
+    密度档:<160→120档,<220→200档,否则240档(sum口径267可用位;0706重设);未知场景回落固定默认。"""
+    dens = 120 if n_goods < 160 else (200 if n_goods < 220 else 240)
     return WEIGHT_POLICY.get((dens, case, mode), (0.15, 1.0))
 
 
@@ -416,7 +416,7 @@ def main():
     ap = argparse.ArgumentParser(description="立体仓储仓位优化仿真 v2")
     ap.add_argument("--goods", type=int, default=120, help="货物数量(默认120)")
     ap.add_argument("--seed", type=int, default=2026, help="随机种子(默认2026,B5)")
-    ap.add_argument("--rule", choices=["and", "or", "linear", "sum"], default="and",
+    ap.add_argument("--rule", choices=["and", "or", "linear", "sum"], default="sum",
                     help="预占用解读(B1,默认and=x,y都被3整除)")
     ap.add_argument("--case", choices=["uniform", "skew", "heavy"], default="skew",
                     help="货物分布:A均匀/B高频偏态(默认)/C重货偏多")

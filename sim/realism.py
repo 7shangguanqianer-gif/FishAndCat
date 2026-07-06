@@ -32,7 +32,7 @@ import warehouse_sim as ws
 from mixed_ops import LBL, STRATS, build_workload, initial_layout, run_mixed
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SEED, N_INIT, RULE = 2026, 120, "and"
+SEED, N_INIT, RULE = 2026, 120, "sum"
 
 # ---- 档3 拟真参数(占位值,标注〔G*〕待 deep-research 回填后进 canonical G 节)----
 HANDLE_S = 15.0        # 〔G1〕单次存/取的装卸附加时间 s(I/O 侧+货位侧两次货叉循环合计)

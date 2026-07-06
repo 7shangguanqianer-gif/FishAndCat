@@ -49,8 +49,8 @@ def main():
     for case in CASES:
         for seed in SEEDS:
             goods = ws.gen_goods(120, seed, case)
-            for s, m in run_matrix(goods, "and", seed).items():
-                rows.append(dict(scene="main", case=case, rule="and", goods=120,
+            for s, m in run_matrix(goods, "sum", seed).items():
+                rows.append(dict(scene="main", case=case, rule="sum", goods=120,
                                  seed=seed, strat=s, **m))
     # ---- 紧库存场景:or / 150件(F3 统计版) ----
     for seed in SEEDS[:3]:

@@ -40,9 +40,9 @@ def run_five(goods, seed, adaptive):
     for name, strat in [("random", ws.strat_random(random.Random(seed + 1))),
                         ("seq", ws.strat_seq), ("near", ws.strat_near),
                         ("score", ws.strat_score)]:
-        wh, placed, failed = ws.run_online(strat, goods, "and", fn_on)
+        wh, placed, failed = ws.run_online(strat, goods, "sum", fn_on)
         out[name] = ws.metrics(wh, placed, failed)
-    wh, placed, failed = ws.run_awra_ls(goods, "and", fn_ba, w_max, f_max)
+    wh, placed, failed = ws.run_awra_ls(goods, "sum", fn_ba, w_max, f_max)
     out["awra"] = ws.metrics(wh, placed, failed)
     return out
 

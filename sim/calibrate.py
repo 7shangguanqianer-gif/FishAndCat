@@ -31,7 +31,7 @@ SEEDS = [2026, 7, 42, 123, 999]
 DELTAS = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
 BETAS = [0.4, 0.6, 0.8]
 GAMMAS = [0.2, 0.4, 0.6]
-N_GOODS, RULE = 120, "and"
+N_GOODS, RULE = 120, "sum"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 
 

@@ -28,7 +28,7 @@ except Exception:
 import warehouse_sim as ws
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SEED, N_GOODS, RULE = 2026, 120, "and"
+SEED, N_GOODS, RULE = 2026, 120, "sum"
 
 
 # ---------------- 问题定义 ----------------

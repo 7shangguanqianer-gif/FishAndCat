@@ -26,7 +26,7 @@ import warehouse_sim as ws
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEEDS = [2026, 2027, 2028]
 N_GOODS = 120
-RULE = "and"                            # B1 主解读(49 预占格,同 headline)
+RULE = "sum"                            # B1 官方口径 sum(133 预占格,同 headline)
 BASE_W = (1.0, 0.6, 0.4, 0.15)          # 对照口径固定权重(canonical E)
 
 DELTA_SCAN = [0.0, 0.05, 0.10, 0.15, 0.20, 0.30]

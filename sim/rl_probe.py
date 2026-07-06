@@ -27,7 +27,7 @@ except Exception:
 import warehouse_sim as ws
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RULE = "and"
+RULE = "sum"
 N_GOODS = 120
 EPISODES = 1200
 LR0 = 0.15

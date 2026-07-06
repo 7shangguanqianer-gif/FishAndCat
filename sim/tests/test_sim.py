@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import warehouse_sim as ws
 
 
-def _run_all(goods, rule="and", delta=0.15):
+def _run_all(goods, rule="sum", delta=0.15):   # 0706 默认=官方口径;历史锁显式传 and
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
     fn = ws.make_score_fn(1.0, 0.6, 0.4, delta, w_max, f_max)
@@ -83,8 +83,9 @@ class TestGeometry(unittest.TestCase):
         self.assertAlmostEqual(ws.path_len(3, 4), 7.0)
 
     def test_preoccupied_counts(self):
-        # B1 三解读格数:and=49 / or=231 / linear=134(PRG_Test T05-T07 同口径)
-        for rule, expect in [("and", 49), ("or", 231), ("linear", 134)]:
+        # B1 四解读格数:sum=133(官方 0706)/ and=49 / or=231 / linear=134
+        #(PRG_Test T05-T07 同口径,sum 断言随批次 D 加入 ST 侧)
+        for rule, expect in [("sum", 133), ("and", 49), ("or", 231), ("linear", 134)]:
             n = sum(1 for c in range(20) for t in range(20)
                     if ws.preoccupied(c, t, rule))
             self.assertEqual(n, expect, rule)
@@ -92,7 +93,7 @@ class TestGeometry(unittest.TestCase):
 
 class TestFeasibility(unittest.TestCase):
     def setUp(self):
-        self.wh = ws.Warehouse("and")
+        self.wh = ws.Warehouse("sum")     # 官方口径;(0,0) 在 sum 下同样预占
 
     def test_preset_blocked(self):
         g = ws.Good(1, "G", 10.0, 1.0, 0.5)
@@ -139,10 +140,11 @@ class TestFindings(unittest.TestCase):
         self.assertGreater(len(out["near"][2]), 0)     # 在线贪心有失败件
         self.assertEqual(len(out["awra"][2]), 0)       # AWRA-LS Rank 全部成功
 
-    def test_f4_headline_numbers(self):
-        # 头条数字锁定(seed=2026/120件/and/默认权重);改口径必须走 canonical 流程
+    def test_f4_legacy_and_headline_numbers(self):
+        # 历史对照锁:0703-0705 主场景(and 49格/默认权重/匀速)——官方 0706 切 sum 后
+        # 保留守卫 F 系列历史条目引用的数字;显式传 rule="and",不随默认口径漂移
         goods = ws.gen_goods(120, 2026)
-        out = _run_all(goods)
+        out = _run_all(goods, rule="and")
         m = {k: ws.metrics(*v) for k, v in out.items()}
         self.assertAlmostEqual(m["seq"]["exp_t"], 19.02, delta=0.01)
         self.assertAlmostEqual(m["near"]["exp_t"], 7.99, delta=0.01)
@@ -153,10 +155,11 @@ class TestFindings(unittest.TestCase):
             self.assertEqual(m[k]["viol"], 0, k)       # C8:违规恒0
 
     def test_h_caliber_headline_lock(self):
-        # H 口径(报告主口径,拍板①②):加减速+自适应策略表;seed=2026 锁定值
+        # H 口径新锁(官方 sum 底图+0706 重标策略表,seed=2026 锁定值;经用户+官方批准的
+        # 口径变更,变更记录=canonical v3.0 与 docs/B1B2官方答复_影响分析.md)
         self.assertEqual(ws.lookup_weights(120, "skew", "batch"), (0.05, 0.6))
         self.assertEqual(ws.lookup_weights(120, "skew", "online"), (0.10, 1.0))
-        self.assertEqual(ws.lookup_weights(500, "skew", "batch"), (0.05, 0.6))  # 密度钳位330档
+        self.assertEqual(ws.lookup_weights(500, "skew", "batch"), (0.05, 0.6))  # 密度钳位240档
         try:
             ws.ACCEL = True
             goods = ws.gen_goods(120, 2026)
@@ -164,6 +167,21 @@ class TestFindings(unittest.TestCase):
             fm = max(g.freq for g in goods)
             d, bg = ws.lookup_weights(120, "skew", "batch")
             fn = ws.make_score_fn(1.0, bg / 2, bg / 2, d, wm, fm)
+            wh, placed, failed = ws.run_awra_ls(goods, "sum", fn, wm, fm)
+            m = ws.metrics(wh, placed, failed)
+            self.assertAlmostEqual(m["exp_t"], 8.6232, delta=0.01)
+            self.assertEqual(m["viol"], 0)
+        finally:
+            ws.ACCEL = False
+
+    def test_legacy_and_h_lock(self):
+        # 历史 H 锁(and 底图+当时策略表权重 (0.05,0.6) 硬编码,与新表解耦)
+        try:
+            ws.ACCEL = True
+            goods = ws.gen_goods(120, 2026)
+            wm = max(g.weight for g in goods)
+            fm = max(g.freq for g in goods)
+            fn = ws.make_score_fn(1.0, 0.3, 0.3, 0.05, wm, fm)
             wh, placed, failed = ws.run_awra_ls(goods, "and", fn, wm, fm)
             m = ws.metrics(wh, placed, failed)
             self.assertAlmostEqual(m["exp_t"], 7.6202, delta=0.01)

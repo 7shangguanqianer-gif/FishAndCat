@@ -20,28 +20,28 @@ import warehouse_sim as ws
 
 SEEDS_HOLDOUT = [42, 123, 999]                 # 标定用的是 2026/7,这三个是留出
 # 策略表(来源:adaptive_weights.py 2026-07-04,out/weight_policy_table.csv)
-POLICY = {  # (density, case, mode) -> (delta, beta+gamma)
+POLICY = {  # (density, case, mode) -> (delta, beta+gamma)  0706 sum口径重标
     (120, "uniform", "online"): (0.20, 0.6), (120, "uniform", "batch"): (0.15, 0.6),
     (120, "skew", "online"): (0.10, 1.0),    (120, "skew", "batch"): (0.05, 0.6),
     (120, "heavy", "online"): (0.10, 0.6),   (120, "heavy", "batch"): (0.10, 0.6),
-    (240, "uniform", "online"): (0.20, 0.6), (240, "uniform", "batch"): (0.15, 0.6),
+    (200, "uniform", "online"): (0.20, 0.6), (200, "uniform", "batch"): (0.20, 0.6),
+    (200, "skew", "online"): (0.15, 0.6),    (200, "skew", "batch"): (0.05, 0.6),
+    (200, "heavy", "online"): (0.20, 0.6),   (200, "heavy", "batch"): (0.10, 0.6),
+    (240, "uniform", "online"): (0.20, 0.6), (240, "uniform", "batch"): (0.20, 0.6),
     (240, "skew", "online"): (0.20, 0.6),    (240, "skew", "batch"): (0.05, 0.6),
     (240, "heavy", "online"): (0.20, 0.6),   (240, "heavy", "batch"): (0.15, 0.6),
-    (330, "uniform", "online"): (0.20, 0.6), (330, "uniform", "batch"): (0.20, 0.6),
-    (330, "skew", "online"): (0.20, 0.6),    (330, "skew", "batch"): (0.05, 0.6),
-    (330, "heavy", "online"): (0.20, 0.6),   (330, "heavy", "batch"): (0.20, 0.6),
 }
 DEFAULT = (0.15, 1.0)
-SCENES = [(120, "skew"), (120, "heavy"), (240, "skew"), (330, "skew")]  # 代表性抽样
+SCENES = [(120, "skew"), (120, "heavy"), (200, "skew"), (240, "skew")]  # 代表性抽样(0706 新档)
 
 
 def run(goods, mode, dw, w_max, f_max):
     delta, bg = dw
     fn = ws.make_score_fn(1.0, bg / 2, bg / 2, delta, w_max, f_max)
     if mode == "online":
-        wh, placed, failed = ws.run_online(ws.strat_score, goods, "and", fn)
+        wh, placed, failed = ws.run_online(ws.strat_score, goods, "sum", fn)
     else:
-        wh, placed, failed = ws.run_awra_ls(goods, "and", fn, w_max, f_max)
+        wh, placed, failed = ws.run_awra_ls(goods, "sum", fn, w_max, f_max)
     m = ws.metrics(wh, placed, failed)
     return m["exp_t"], m["viol"]
 

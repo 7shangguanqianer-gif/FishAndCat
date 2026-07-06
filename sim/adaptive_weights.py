@@ -4,7 +4,7 @@ adaptive_weights.py — A1 场景自适应权重策略表(T11):把 AWRA 的 Adap
 思想(资料包 contextual bandit 的轻量确定性版):最优权重依赖场景(F5 已证:
 在线/批量要不同 δ)。离线在场景网格上标定最优权重 → 生成"场景→权重"策略表 →
 PLC 按当前场景查表切换(查表=确定性可解释,不上任何在线学习)。
-场景维度:库存密度(120/240/330件≈42/72/95%) × 货物分布(uniform/skew/heavy) × 模式(在线/批量)
+场景维度:库存密度(120/200/240件≈63/83/93%,sum口径267可用位) × 货物分布(uniform/skew/heavy) × 模式(在线/批量)
 权重网格:δ∈{0,0.05,0.10,0.15,0.20} × (β+γ)∈{0.6,1.0,1.4}(F5:β/γ 只有和起作用,β=γ=和/2)
 选优:期望取货 exp_t 均值最小(2 seeds),tie-break 能耗;违规必须 0。
 产出:out/adaptive_weights.csv(全网格)+ out/weight_policy_table.csv(策略表)
@@ -30,7 +30,7 @@ import warehouse_sim as ws
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEEDS = [2026, 7]
-DENSITIES = [120, 240, 330]          # 占用率(含49预占)≈ 42% / 72% / 95%
+DENSITIES = [120, 200, 240]          # 占用率(含133预占,官方sum口径)≈ 63% / 83% / 93%
 CASES = ["uniform", "skew", "heavy"]
 MODES = ["online", "batch"]
 DELTAS = [0.0, 0.05, 0.10, 0.15, 0.20]
@@ -41,9 +41,9 @@ DEFAULT = (0.15, 1.0)                # 当前默认(δ, β+γ)
 def run_one(goods, mode, delta, bg, w_max, f_max):
     fn = ws.make_score_fn(1.0, bg / 2, bg / 2, delta, w_max, f_max)
     if mode == "online":
-        wh, placed, failed = ws.run_online(ws.strat_score, goods, "and", fn)
+        wh, placed, failed = ws.run_online(ws.strat_score, goods, "sum", fn)
     else:
-        wh, placed, failed = ws.run_awra_ls(goods, "and", fn, w_max, f_max)
+        wh, placed, failed = ws.run_awra_ls(goods, "sum", fn, w_max, f_max)
     m = ws.metrics(wh, placed, failed)
     return m
 

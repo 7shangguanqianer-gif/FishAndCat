@@ -20,7 +20,7 @@ except Exception:
 import warehouse_sim as ws
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SEED, N, RULE = 2026, 120, "and"
+SEED, N, RULE = 2026, 120, "sum"
 STRATS = ["random", "seq", "near", "score", "awra"]
 LBL = {"random": "随机", "seq": "顺序基线", "near": "就近贪心",
        "score": "多目标评分(在线)", "awra": "AWRA-LS(批量)"}

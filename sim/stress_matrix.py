@@ -35,10 +35,10 @@ LBL = {"seq": "顺序基线", "near": "就近贪心", "score": "多目标评分"
 
 def build(strat, goods, fn, w_max, f_max):
     if strat == "awra":
-        wh, placed, failed = ws.run_awra_ls(goods, "and", fn, w_max, f_max)
+        wh, placed, failed = ws.run_awra_ls(goods, "sum", fn, w_max, f_max)
     else:
         s = {"seq": ws.strat_seq, "near": ws.strat_near, "score": ws.strat_score}[strat]
-        wh, placed, failed = ws.run_online(s, goods, "and", fn)
+        wh, placed, failed = ws.run_online(s, goods, "sum", fn)
     return wh, placed, failed
 
 

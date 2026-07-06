@@ -34,7 +34,7 @@ LBL = {"random": "随机", "seq": "顺序基线", "near": "就近贪心",
 STRATS = ["random", "seq", "near", "score", "awra"]
 
 
-def compute(seed=2026, n=120, rule="and", delta=0.15):
+def compute(seed=2026, n=120, rule="sum", delta=0.15):
     goods = ws.gen_goods(n, seed)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
