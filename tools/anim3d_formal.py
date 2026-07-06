@@ -124,9 +124,10 @@ def build_events(goods):
         t = trips[-1]["T_end"]
     T_sim = t
     rng = random.Random(42)                      # 固定 seed(工程纪律)
+    # 到达均值 30s:单件服务≈27s → ρ≈0.9(稳定排队;16s 时 ρ=1.7 队列爆炸,0706 实测教训)
     arrivals, ta = [], 0.0
     while True:
-        ta += rng.expovariate(1 / 16.0)
+        ta += rng.expovariate(1 / 30.0)
         if ta >= T_sim:
             break
         arrivals.append(ta)
