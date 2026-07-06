@@ -65,11 +65,13 @@ def _t_move(old, new, good):
             + ws.handle_time(good) + ws.travel_time(*new))
 
 
-def run_lifecycle(seed, delta, cycles=200, day_len=40, turnover=TURNOVER):
+def run_lifecycle(seed, delta, cycles=200, day_len=40, turnover=TURNOVER,
+                  n_init=N_INIT):
     """单 seed 单 δ 组的全生命周期。负载只依赖 (seed, 常量) → 两组 CRN 配对成立。
     turnover=每几次回库汰换 1 次新货(10=10% 电工物料库画像 / 3≈33% / 2=50% 电商型)
-    ——δ 预留项的收益前提是"未来有新热货流入",汰换率是其敏感性主轴(显式情景轴)。"""
-    goods = ws.gen_goods(N_INIT, seed)
+    ——δ 预留项的收益前提是"未来有新热货流入",汰换率是其敏感性主轴(显式情景轴)。
+    n_init=初始件数(120=45% 填充主口径;240=90% 高压——δ 收益条件"近位竞争"的检验场)。"""
+    goods = ws.gen_goods(n_init, seed)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
     fn = ws.make_score_fn(1.0, 0.6, 0.4, delta, w_max, f_max)
@@ -144,6 +146,8 @@ def main():
     ap.add_argument("--day-len", type=int, default=40)
     ap.add_argument("--turnovers", default="10,3,2",
                     help="汰换率敏感性轴:每几次回库换 1 新货(10=10%%/3≈33%%/2=50%%)")
+    ap.add_argument("--n-init", type=int, default=N_INIT,
+                    help="初始件数(120=45%% 填充主口径;240=90%% 高压检验场)")
     a = ap.parse_args()
     seeds = [2026 + i for i in range(a.seeds)]
     turnovers = [int(x) for x in a.turnovers.split(",")]
@@ -154,7 +158,8 @@ def main():
         res = {0.15: [], 0.0: []}
         for sd in seeds:
             for d in (0.15, 0.0):
-                m = run_lifecycle(sd, d, a.cycles, a.day_len, turnover=tv)
+                m = run_lifecycle(sd, d, a.cycles, a.day_len, turnover=tv,
+                                  n_init=a.n_init)
                 res[d].append(m)
                 rows.append(dict(turnover=tv, seed=sd, delta=d,
                                  **{k: round(v, 3) if isinstance(v, float) else v

@@ -195,8 +195,12 @@ def main():
 
 
 def calibrate_detector():
-    """从 out/instgen_agg.csv(7 策略全量后)提取每场景最优策略与并列关系,
-    生成 out/detector_rules.md(规则表+每条规则的数据依据)。"""
+    """从 out/instgen_agg.csv(7 策略全量后)按**词典序目标**标定每场景最优:
+    ①可行性:fail_mean>0 一票否决(题面'存放准确性'=必须放得进);
+    ②效率:exp_t 最优 + CI 重叠者入并列集;
+    ③安全平票键:并列集内取 heavy_tier 最低(题面'存放合理性'=重货靠底层)。
+    纯 exp_t 单键会全选 TOB(它在 dense fail=9.7 件)——单指标标定不可辩护。
+    生成 out/detector_rules.md。综合目标的加权形式待拍板,词典序为挂机保守解。"""
     import csv
     path = os.path.join(HERE, "out", "instgen_agg.csv")
     if not os.path.exists(path):
@@ -206,17 +210,21 @@ def calibrate_detector():
     scen = {}
     for r in rows:
         scen.setdefault(r["scenario"], []).append(r)
-    lines = ["# 检测器标定表(自动生成;每场景最优策略+CI 并列判定)", ""]
-    lines.append("| 场景 | 最优 | exp_t±CI | CI 并列的次优 |")
-    lines.append("|---|---|---|---|")
+    lines = ["# 检测器标定表(词典序:fail=0 → exp_t 最优+CI并列 → heavy_tier 低)",
+             "", "| 场景 | 推荐 | exp_t±CI | heavy_tier | CI 并列集 | 淘汰(fail>0) |",
+             "|---|---|---|---|---|---|"]
     for name, rs in scen.items():
-        rs = sorted(rs, key=lambda r: float(r["exp_t_mean"]))
-        best = rs[0]
-        b_hi = float(best["exp_t_mean"]) + float(best["exp_t_ci95"])
-        ties = [r["strat"] for r in rs[1:]
-                if float(r["exp_t_mean"]) - float(r["exp_t_ci95"]) <= b_hi]
-        lines.append(f"| {name} | {best['strat']} | "
-                     f"{best['exp_t_mean']}±{best['exp_t_ci95']} | {','.join(ties) or '-'} |")
+        ok = [r for r in rs if float(r["fail_mean"]) == 0.0]
+        cut = [r["strat"] for r in rs if float(r["fail_mean"]) > 0.0]
+        ok = sorted(ok, key=lambda r: float(r["exp_t_mean"]))
+        best_t = float(ok[0]["exp_t_mean"]) + float(ok[0]["exp_t_ci95"])
+        ties = [r for r in ok
+                if float(r["exp_t_mean"]) - float(r["exp_t_ci95"]) <= best_t]
+        pick = min(ties, key=lambda r: float(r["heavy_tier_mean"]))
+        lines.append(
+            f"| {name} | **{pick['strat']}** | {pick['exp_t_mean']}±{pick['exp_t_ci95']} | "
+            f"{pick['heavy_tier_mean']} | {','.join(r['strat'] for r in ties)} | "
+            f"{','.join(cut) or '-'} |")
     out = os.path.join(HERE, "out", "detector_rules.md")
     with open(out, "w", encoding="utf-8") as fp:
         fp.write("\n".join(lines) + "\n")
