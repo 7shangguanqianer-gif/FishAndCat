@@ -63,6 +63,23 @@ class TestGeometry(unittest.TestCase):
         finally:
             ws.ACCEL = False
 
+    def test_u2_laden_kinematics(self):
+        # U2 载重口径(T1.3):垂直×0.80 折减、水平不折减;装卸三档已知值;
+        # 全周期=2×装卸+载去+空返;默认函数不受影响(历史口径零破坏)
+        self.assertAlmostEqual(ws.travel_time_laden(0, 0, 0, 10), 10 / (0.5 * 0.8))
+        self.assertAlmostEqual(ws.travel_time_laden(0, 0, 10, 0), 10 / 2.0)  # 水平不折减
+        self.assertAlmostEqual(ws.travel_time(0, 10), 20.0)                  # 原函数不动
+        g_l = ws.Good(1, "L", 20.0, 10.0, 0.5)
+        g_m = ws.Good(2, "M", 45.0, 10.0, 0.5)
+        g_h = ws.Good(3, "H", 70.0, 10.0, 0.5)
+        self.assertEqual((ws.handle_time(g_l), ws.handle_time(g_m), ws.handle_time(g_h)),
+                         (6.0, 8.5, 12.5))
+        self.assertAlmostEqual(ws.cycle_time_laden(g_l, 0, 10),
+                               6.0 + 25.0 + 6.0 + 20.0)
+        for c, t in [(1, 0), (5, 3), (19, 19), (0, 19)]:                     # 载≥空恒成立
+            self.assertGreaterEqual(ws.travel_time_laden(0, 0, c, t) + 1e-12,
+                                    ws.travel_time(c, t), (c, t))
+
     def test_l2_travel_between(self):
         # 任意两点行程(双命令周期地基):对称/自反/端点特例/三角不等式
         self.assertAlmostEqual(ws.travel_time_between(0, 0, 19, 19), 38.0)

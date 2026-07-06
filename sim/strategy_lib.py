@@ -142,34 +142,49 @@ def batch_profile(goods, capacity=267):
     )
 
 
-# 规则表(v0 先验版;--calibrate 用 30-seed 数据重标定后覆盖此注释块并写入
-# out/detector_rules.md。规则形状=可直接蒸馏 ST if-else 的阈值级联):
-#   证据基础:T1.1 全量数据(在线组 score≈near 于低偏斜/极小批;dense fail 差异)
-#   + HSG 1976(偏斜是 turnover 类策略收益的来源)。
-def select_strategy(profile, batch_known=True):
-    """按批次画像推荐策略。batch_known=False 时只在在线组内选。"""
+# 规则表 v1(0706 由 7 策略×30 seeds 标定表蒸馏,out/detector_rules.md;
+# 规则形状=可直接蒸馏 ST if-else 的阈值级联)。
+# **检测器的目标口径本身是输入**(F18-3):三档 objective——
+#   speed         纯效率(exp_t 词典首键):TOB 主导,dense 因 fail 否决转 CB;
+#   lexicographic 词典序(fail=0→exp_t+CI 并列→heavy_tier 低)=标定表原样;
+#   holistic      题面全要素(承重稳定 C6/能耗 C4 权重高):AWRA 主导,
+#                 极小批/无画像信息时降级简单规则(在线组 F18-2)。
+# 默认档=holistic(挂机保守解,与主打算法叙事一致;默认档最终待拍板)。
+def select_strategy(profile, batch_known=True, objective="holistic"):
+    """按批次画像推荐策略。batch_known=False 时只在在线组内选(seq/near/score)。"""
     p = profile
-    if not batch_known:                       # 在线逐件:只有 seq/near/score 可选
-        if p["skew"] < 0.35 or p["n"] <= 20:  # 画像无信息量/极小批→COL 即可
+    if not batch_known:                       # 在线逐件场景
+        if p["skew"] < 0.35 or p["n"] <= 20:  # 画像无信息量/极小批→COL 即可(F18-2)
             return "near"
         return "score"
-    if p["density"] >= 0.70:                  # 高压:批量重排防 fail(T1.1 硬证据)
-        return "awra"
-    if p["skew"] < 0.35:                      # 低偏斜:turnover 类失去收益来源
-        return "near" if p["n"] <= 60 else "awra"
-    return "awra"                             # 默认:批量已知时 AWRA-LS 全场景未败
+    if objective == "speed":
+        return "cb" if p["density"] >= 0.70 else "tob"   # dense:TOB fail 9.7 被否决(F19)
+    if objective == "lexicographic":          # 标定表 v1 蒸馏(out/detector_rules.md;12/12)
+        if p["density"] >= 0.70:
+            return "cb"                       # cb 快于 awra 且 fail=0(重货偏高,待拍板)
+        if p["density"] <= 0.25 and p["n"] > 20:
+            return "awra"                     # 低密度:与 tob CI 并列,安全键胜出
+        return "tob"                          # 极小批(n≤20)tob 显著更快,不并列
+    # holistic(默认):重货层高/能耗/高压 fail 全要素——AWRA 未在任何场景被否决
+    if p["skew"] < 0.35 and p["n"] <= 20:
+        return "near"                         # 极小批+无画像:简单规则即可(F18-2)
+    return "awra"
 
 
-def st_ifelse(rules_doc=False):
-    """输出检测器的 ST if-else 蒸馏文本(块2 移植用;与 select_strategy 同逻辑)。"""
+def st_ifelse(objective="holistic"):
+    """输出检测器的 ST if-else 蒸馏文本(块2 移植用;与 select_strategy v1 同逻辑)。"""
+    if objective == "lexicographic":
+        body = ("ELSIF rDensity >= 0.70 THEN sStrategy := 'CB';\n"
+                "ELSIF rDensity <= 0.25 THEN sStrategy := 'AWRA';\n"
+                "ELSE sStrategy := 'TOB'; END_IF;\n")
+    else:                                     # holistic 默认档
+        body = ("ELSIF rSkew < 0.35 AND nBatch <= 20 THEN sStrategy := 'COL';\n"
+                "ELSE sStrategy := 'AWRA'; END_IF;\n")
     return (
-        "(* FC_SelectStrategy — 场景检测器蒸馏版(strategy_lib.select_strategy 同逻辑) *)\n"
+        "(* FC_SelectStrategy — 场景检测器蒸馏版 v1(objective=" + objective + ") *)\n"
         "IF NOT bBatchKnown THEN\n"
         "    IF rSkew < 0.35 OR nBatch <= 20 THEN sStrategy := 'COL';\n"
-        "    ELSE sStrategy := 'SCORE'; END_IF;\n"
-        "ELSIF rDensity >= 0.70 THEN sStrategy := 'AWRA';\n"
-        "ELSIF rSkew < 0.35 AND nBatch <= 60 THEN sStrategy := 'COL';\n"
-        "ELSE sStrategy := 'AWRA'; END_IF;\n"
+        "    ELSE sStrategy := 'SCORE'; END_IF;\n" + body
     )
 
 
