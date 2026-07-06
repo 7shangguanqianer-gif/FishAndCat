@@ -8,7 +8,36 @@
 
 ---
 
-## 批次 2026-07-05-B(当前待执行)
+## 批次 2026-07-06-D(当前最高优先,先做本批再做下面的 B)
+
+### 背景(一句话)
+官方答复了预占用规则:**x+y 之和能被 3 整除(133 格,含 (0,0),呈对角条纹)**——
+Python 侧已全链切换,ST 源文件已同步更新;本批=把新 ST 文件贴进 AB 工程并回归。
+
+### 任务:重贴 6 个文件 + 回归 24 用例(预计 15 分钟)
+
+1. 打开 `plc\AB_Project\ABB_WH.project`;
+2. **逐个替换粘贴**下列 6 个文件的全文(源文件在 `F:\abb_wh_work\plc\`;AB 里打开同名对象
+   → Ctrl+A 全选 → 粘贴对应 .st 文件的全部内容;和首建时同一套动作):
+   - 02_GVL.st(GVL_Param:iPreRule 默认已改 3)
+   - 03_Functions.st(FC_IsPresetOccupied 新增 sum 分支)
+   - 04_FB_Warehouse.st(注释更新)
+   - 06_PRG_Test.st(**新增 T24,用例总数 24**)
+   - 07_GVL_Data_generated.st、08_GVL_WeightPolicy_generated.st(生成文件,整文件替换)
+3. F11 编译 → 期望 **0 error**(仅通信加密提示 warning 可忽略);
+4. Simulation → Login → Start → PRG_Test.xRunTests := TRUE →
+   期望 **iPassed=24, iFailed=0**,截图存 `plc\验收截图\W2_PRGTest_24pass_sumRule.png`(待产出);
+5. GVL_Visu:CmdReset=TRUE → 状态文本应为 **READY_PRECOUNT=133**(不再是 49),
+   截图存 `plc\验收截图\W2_precount133.png`(待产出);
+6. 全部结果(编译/iPassed/READY_PRECOUNT 三个数)写进 致Claude.md,批次号 0706-D。
+
+### 禁止事项(本批次)
+- 只做"替换粘贴+编译+跑测试+截图",不改任何代码内容;
+- 若 iPassed≠24 或编译报错:停,把错误窗口截图写进 致Claude.md,不要自己修。
+
+---
+
+## 批次 2026-07-05-B(第二优先,做完 D 再做)
 
 ### 背景(为什么换方法)
 

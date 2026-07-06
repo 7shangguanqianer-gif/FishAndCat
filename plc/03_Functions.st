@@ -26,23 +26,24 @@ FC_CapCoef := 1.0 - 0.02 * INT_TO_REAL(yy);
 END_FUNCTION
 
 
-(* ---------- FC_IsPresetOccupied:预占用判定(B1 三种解读封装,赛前可切) ---------- *)
+(* ---------- FC_IsPresetOccupied:预占用判定(B1 四解读封装;官方口径=3,2026-07-06 答复落地) ---------- *)
 FUNCTION FC_IsPresetOccupied : BOOL
 VAR_INPUT
     x     : INT;
     y     : INT;
-    iRule : INT;                // 0=and(49格) 1=or(231格) 2=linear(134格)
+    iRule : INT;                // 3=sum(133格,官方) 0=and(49格) 1=or(231格) 2=linear(134格)
 END_VAR
 FC_IsPresetOccupied := FALSE;
 IF x < 0 OR x > GVL_Param.COLS - 1 OR y < 0 OR y > GVL_Param.TIERS - 1 THEN
     RETURN;                     // 越界视为不可用由 FC_CheckFeasible 把关,这里仅答"是否预占"
 END_IF
 CASE iRule OF
+    3: FC_IsPresetOccupied := ((x + y) MOD 3 = 0);            // 官方口径(0706):x+y 之和能被3整除
     0: FC_IsPresetOccupied := (x MOD 3 = 0) AND (y MOD 3 = 0);
     1: FC_IsPresetOccupied := (x MOD 3 = 0) OR  (y MOD 3 = 0);
     2: FC_IsPresetOccupied := ((x * GVL_Param.TIERS + y) MOD 3 = 0);
 ELSE
-    FC_IsPresetOccupied := (x MOD 3 = 0) AND (y MOD 3 = 0);   // 非法规则回落默认
+    FC_IsPresetOccupied := ((x + y) MOD 3 = 0);               // 非法规则回落官方口径
 END_CASE
 END_FUNCTION
 

@@ -91,7 +91,7 @@ for(var r=0;r<20;r++){for(var c=0;c<20;c++){
   if(c===0&&t===0){d.style.position='relative';var o=document.createElement('div');o.style.cssText='position:absolute;inset:1px;border-radius:50%;background:#FF6D00;';d.appendChild(o);}
   g.appendChild(d);
 }}
-var L=[['空闲',C.free],['预占用(49格)',C.pre],['已占用',C.occ],['当前推荐',C.sug],['路径',C.path],['报警',C.alarm],['堆垛机','#FF6D00']];
+var L=[['空闲',C.free],['预占用(133格)',C.pre],['已占用',C.occ],['当前推荐',C.sug],['路径',C.path],['报警',C.alarm],['堆垛机','#FF6D00']];
 var lg=document.getElementById('legend');
 L.forEach(function(x){var s=document.createElement('span');var b=document.createElement('span');b.className='chip';b.style.background=x[1];if(x[0]==='堆垛机')b.style.borderRadius='50%';s.appendChild(b);s.appendChild(document.createTextNode(x[0]));lg.appendChild(s);});
 </script>

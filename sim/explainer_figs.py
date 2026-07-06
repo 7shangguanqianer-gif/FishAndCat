@@ -33,7 +33,7 @@ def fig_e1():
     fig, ax = plt.subplots(figsize=(8.6, 6.2))
     for c in range(20):
         for t in range(20):
-            pre = (c % 3 == 0 and t % 3 == 0)
+            pre = ((c + t) % 3 == 0)   # 官方口径 sum(0706):x+y 能被3整除
             ax.add_patch(Rectangle((c, t), 0.92, 0.92,
                                    fc=C_PRE if pre else C_FREE,
                                    ec="white", lw=0.6))
@@ -60,7 +60,7 @@ def fig_e1():
     ax.text(21.25, 9.8, "每高一层\n承重-2%", fontsize=10.5, color="#B71C1C")
     # 预占用图例
     ax.add_patch(Rectangle((13.2, 21.2), 0.9, 0.9, fc=C_PRE, ec="white"))
-    ax.text(14.4, 21.6, "= 预占用(坐标能被3整除,共49格)", fontsize=10,
+    ax.text(14.4, 21.6, "= 预占用(x+y能被3整除,共133格)", fontsize=10,
             va="center", color="#404040")
     ax.set_title("赛题场景:一面 20列×20层 的“快递柜墙”(400 仓位)",
                  fontsize=13, pad=14)

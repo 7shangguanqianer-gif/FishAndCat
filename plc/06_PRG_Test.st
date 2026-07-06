@@ -2,7 +2,7 @@
    06_PRG_Test.st — 边界与一致性测试程序
    导入方法:POU 类型"程序",可挂到同一任务或手动调用;
    置 xRunTests:=TRUE 单次运行,看 iPassed/iFailed/aResult。
-   覆盖:资料包 §7.3 边界判断清单 + Python↔ST 评分一致性向量
+   覆盖:资料包 §7.3 边界判断清单 + Python↔ST 评分一致性向量 + B1 官方口径(T24)
    (向量由 sim/export_st_vectors.py 生成于 07_GVL_Data_generated.st,
     与仿真同源 —— 这是"PLC 实现与验证报告数字互相背书"的证据链)
    注意:测试会改写仓库状态,跑完请按 CmdReset 重新初始化再演示。
@@ -13,7 +13,7 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 23;                  // 用例总数(加用例先改这里,防空槽误计)
+    N_CASES   : INT := 24;                  // 用例总数(加用例先改这里,防空槽误计;0706 +T24 官方口径)
     aResult   : ARRAY[1..24] OF BOOL;       // 各用例结果(TRUE=通过)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
@@ -34,7 +34,7 @@ IF xRunTests THEN
     aResult[3] := ABS(FC_CapCoef(y := -5) - 1.0)  < 0.0001;
     aResult[4] := ABS(FC_CapCoef(y := 25) - 0.62) < 0.0001;
 
-    // ---- T05-T07 预占用三种解读的格数(49/231/134) ----
+    // ---- T05-T07 预占用历史三解读格数(49/231/134;官方口径 sum 见 T24) ----
     n := 0;
     FOR x := 0 TO 19 DO FOR y := 0 TO 19 DO
         IF FC_IsPresetOccupied(x := x, y := y, iRule := 0) THEN n := n + 1; END_IF
@@ -135,6 +135,15 @@ IF xRunTests THEN
     rV := FC_CalcDualCycleTime(iStoreX := 5, iStoreY := 2, iRetrX := 10, iRetrY := 5);
     aResult[23] := (ABS(rV - 20.0) < 0.001)
                    AND (rV <= 2.0 * 4.0 + 2.0 * 10.0 + 0.001);
+
+    // ---- T24 B1 官方口径(2026-07-06 答复):x+y 之和被3整除 = 133 格 ----
+    // 官方原话"x+y 和能被3整除";含 (0,0) 格,呈对角条纹;与 Python 侧
+    // test_preoccupied_counts 的 sum=133 断言同口径(双实现同步铁律)
+    n := 0;
+    FOR x := 0 TO 19 DO FOR y := 0 TO 19 DO
+        IF FC_IsPresetOccupied(x := x, y := y, iRule := 3) THEN n := n + 1; END_IF
+    END_FOR END_FOR
+    aResult[24] := (n = 133);
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

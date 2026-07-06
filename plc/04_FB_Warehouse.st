@@ -15,7 +15,7 @@ VAR_INPUT
 END_VAR
 VAR_OUTPUT
     xDone     : BOOL;
-    iPreCount : INT;            // 预占用格数(rule0=49/rule1=231/rule2=134,自检用)
+    iPreCount : INT;            // 预占用格数(rule3=133官方/rule0=49/rule1=231/rule2=134,自检用)
 END_VAR
 VAR
     xOld : BOOL;
