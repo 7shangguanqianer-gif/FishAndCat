@@ -1,0 +1,21 @@
+===== FB_VisuRefresh.textual_declaration len=65 =====
+--repr first 400--
+'FUNCTION_BLOCK FB_VisuRefresh\nVAR\n    c, r, k, iSt : INT;\nEND_VAR'
+--repr last 200--
+'FUNCTION_BLOCK FB_VisuRefresh\nVAR\n    c, r, k, iSt : INT;\nEND_VAR'
+===== FB_VisuRefresh.textual_implementation len=972 =====
+--repr first 400--
+u'// 1) \u72b6\u6001\u2192\u989c\u8272 + \u4e0a\u4e0b\u7ffb\u8f6c(\u663e\u793a\u884c r=0 \u662f\u753b\u9762\u9876=\u5c4219)\nFOR c := 0 TO GVL_Param.COLS - 1 DO\n    FOR r := 0 TO GVL_Param.TIERS - 1 DO\n        GVL_Visu.VisuSlotColor[c, r] :=\n            FC_StateToColor(iState := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - r]);\n    END_FOR\nEND_FOR\n\n// 2) \u8def\u5f84\u53e0\u52a0(\u84dd):\u53ea\u753b\u5728\u7a7a\u95f2/\u9884\u5360\u683c\u4e0a,\u5df2\u5360/\u63a8\u8350\u683c\u4fdd\u6301\u539f\u8272\nFOR k := 0 TO GVL_Visu.VisuPathCount - 1 DO\n    IF k > 39 THEN EXIT; END_IF                       '
+--repr last 200--
+'u.VisuCraneXpx := GVL_Param.GRID_X0 + GVL_Visu.VisuCurrentX * GVL_Param.CELL_PX_W;\nGVL_Visu.VisuCraneYpx := GVL_Param.GRID_Y0\n    + (GVL_Param.TIERS - 1 - GVL_Visu.VisuCurrentY) * GVL_Param.CELL_PX_H;'
+===== FC_StateToColor.textual_declaration len=68 =====
+--repr first 400--
+'FUNCTION FC_StateToColor : DWORD\nVAR_INPUT\n    iState : INT;\nEND_VAR'
+--repr last 200--
+'FUNCTION FC_StateToColor : DWORD\nVAR_INPUT\n    iState : INT;\nEND_VAR'
+===== FC_StateToColor.textual_implementation len=392 =====
+--repr first 400--
+u'CASE iState OF\n    0: FC_StateToColor := 16#00E8E8E8;   // \u7a7a\u95f2:\u6d45\u7070\n    1: FC_StateToColor := 16#00707070;   // \u9884\u5360\u7528:\u6df1\u7070\n    2: FC_StateToColor := 16#0043A047;   // \u5df2\u5360\u7528:\u7eff\n    3: FC_StateToColor := 16#00FFC107;   // \u5f53\u524d\u63a8\u8350:\u9ec4\n    4: FC_StateToColor := 16#0042A5F5;   // \u8def\u5f84:\u84dd\n    5: FC_StateToColor := 16#00E53935;   // \u62a5\u8b66:\u7ea2\nELSE\n    FC_StateToColor := 16#00FF00FF;      // \u672a\u77e5\u72b6\u6001:\u54c1\u7ea2(\u9192\u76ee,\u4fbf\u4e8e\u53d1\u73b0bug)\nEND_CASE'
+--repr last 200--
+u'16#00FFC107;   // \u5f53\u524d\u63a8\u8350:\u9ec4\n    4: FC_StateToColor := 16#0042A5F5;   // \u8def\u5f84:\u84dd\n    5: FC_StateToColor := 16#00E53935;   // \u62a5\u8b66:\u7ea2\nELSE\n    FC_StateToColor := 16#00FF00FF;      // \u672a\u77e5\u72b6\u6001:\u54c1\u7ea2(\u9192\u76ee,\u4fbf\u4e8e\u53d1\u73b0bug)\nEND_CASE'
+=== DUMP_DONE ===

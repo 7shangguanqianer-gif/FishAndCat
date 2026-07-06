@@ -57,3 +57,11 @@ AutomationBuilder.exe --noUI --runscript="sync_st.py"
    闸门没过=退回批次 D 常态,无损失;
 3. 已证不是死路(最大杀手"无脚本组件"已排除),值不值这半天由投入产出定:
    口径今天已证会变,未来 ST 同步若还有多次,自动化摊薄快;若 ST 基本冻结,则手工批次够用。
+
+## 6. 落地结果(2026-07-06,当日建成)
+
+调查结论全部兑现:管线 `tools/ab_scripting/ab_sync.ps1` 一条命令完成 34 对象同步+编译+
+保存+在线跑测试,首跑实测 **Compile 0 errors + iPassed=24/iFailed=0**(批次 D 由此闭环,
+Codex 免执行)。脚本许可闸门实测通畅;完整命门与三小时排障实录(--profile 必填、
+create_pou 的 language/return_type 坑、**IEC 保留字 r/s 潜伏 bug**、TextBlob 正常形态、
+"在线读回独有值才是新代码生效的铁证")见 tools/ab_scripting/README.md。

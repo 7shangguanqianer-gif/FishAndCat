@@ -591,14 +591,14 @@ END_FUNCTION_BLOCK
    开销:400 次查表+少量换算/周期 ≈ 微秒级,常驻无压力(L4 实测口径可佐证)。 *)
 FUNCTION_BLOCK FB_VisuRefresh
 VAR
-    c, r, k, iSt : INT;
+    c, rw, k, iSt : INT;   // rw=显示行(r/s 是 IEC 置复位保留字,不可作变量名——0706 无头编译揪出的潜伏 bug)
 END_VAR
 
 // 1) 状态→颜色 + 上下翻转(显示行 r=0 是画面顶=层19)
 FOR c := 0 TO GVL_Param.COLS - 1 DO
-    FOR r := 0 TO GVL_Param.TIERS - 1 DO
-        GVL_Visu.VisuSlotColor[c, r] :=
-            FC_StateToColor(iState := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - r]);
+    FOR rw := 0 TO GVL_Param.TIERS - 1 DO
+        GVL_Visu.VisuSlotColor[c, rw] :=
+            FC_StateToColor(iState := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - rw]);
     END_FOR
 END_FOR
 

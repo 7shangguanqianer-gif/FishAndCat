@@ -1,0 +1,5 @@
+export_native(obj, path) fail: TypeError('expected IEnumerable[IExtendedObject[IScriptObject]], got ExtendedObject[IScriptObject]',)
+EXPORTED(list) FC_IsPresetOccupied
+export_native(obj, path) fail: TypeError('expected IEnumerable[IExtendedObject[IScriptObject]], got ExtendedObject[IScriptObject]',)
+EXPORTED(list) PRG_Test
+=== EXPORT_DONE ===

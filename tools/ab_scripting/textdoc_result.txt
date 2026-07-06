@@ -1,0 +1,14 @@
+--- dir(textual_implementation) ---
+__class__, __delattr__, __doc__, __format__, __getattribute__, __hash__, __init__, __new__, __reduce__, __reduce_ex__, __repr__, __setattr__, __sizeof__, __str__, __subclasshook__, append, get_line, get_text, insert, length, linecount, remove, replace, replace_line, text
+length = 972
+linecount = 23
+line_count -> AttributeError("'ScriptTextDocument' object has no attribute 'line_count'",)
+text = // 1) 状态→颜色 + 上下翻转(显示行 r=0 是画面顶=层19)
+FOR c := 0 TO GVL_Param.COLS - 1 DO
+    FOR r := 0 TO GVL_Param.TIERS - 1 DO
+      
+after 3-line replace:
+  length = 86
+  linecount = 3
+  text repr: 'GVL_Visu.VisuAlarm := FALSE;\nGVL_Visu.VisuAlarm := FALSE;\nGVL_Visu.VisuAlarm := FALSE;'
+=== TEXTDOC_DONE ===

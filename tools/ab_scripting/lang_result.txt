@@ -1,0 +1,5 @@
+FB_Stats: lang/impl attrs=[]
+FB_VisuRefresh: lang/impl attrs=[]
+FC_StateToColor: lang/impl attrs=[]
+FC_CapCoef: lang/impl attrs=[]
+=== LANG_DONE ===

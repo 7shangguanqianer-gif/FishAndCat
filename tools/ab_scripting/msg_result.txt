@@ -1,0 +1,7 @@
+BUILD_CALLED
+=== MSG 1: 'TO' expected instead of 'r'
+=== MSG 2: 'DO' expected instead of 'r'
+=== MSG 3: Expression expected instead of 'r'
+--- FB_VisuRefresh full dir ---
+
+=== MSG_DONE ===

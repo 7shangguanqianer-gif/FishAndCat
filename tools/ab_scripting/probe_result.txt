@@ -1,0 +1,64 @@
+=== AB ScriptEngine probe start ===
+python: AutomationBuilder.exe Automation Builder 2.9, ScriptEngine.plugin 4.1.0.0
+global 'projects' present: True
+global 'system' present: True
+global 'online' present: True
+global 'device' present: False
+opening project ...
+OPEN_OK path: F:\abb_wh_work\plc\AB_Project\ABB_WH.project
+--- project tree (POU names as AB sees them) ---
+- Project Settings   [impl=False decl=False]
+- PLC_AC500_V3   [impl=False decl=False]
+  - Plc Logic   [impl=False decl=False]
+    - Application   [impl=False decl=False]
+      - CheckConfigurationObject   [impl=False decl=False]
+      - TaskConfiguration   [impl=False decl=False]
+      - PLC_PRG   [impl=True decl=True]
+      - Library Manager   [impl=False decl=False]
+      - ST_Good   [impl=False decl=True]
+      - FC_CapCoef   [impl=True decl=True]
+      - ST_Slot   [impl=False decl=True]
+      - GVL_Param   [impl=False decl=True]
+      - Diagnosis   [impl=False decl=False]
+      - ST_Stats   [impl=False decl=True]
+      - E_MainState   [impl=False decl=True]
+      - ST_TestVec   [impl=False decl=True]
+      - GVL_WH   [impl=False decl=True]
+      - GVL_Visu   [impl=False decl=True]
+      - GVL_Data   [impl=False decl=True]
+      - FC_IsPresetOccupied   [impl=True decl=True]
+      - FC_CheckFeasible   [impl=True decl=True]
+      - FC_FitsPhysical   [impl=True decl=True]
+      - FC_AxisTime   [impl=True decl=True]
+      - FC_CalcTravelTime   [impl=True decl=True]
+      - FC_CalcDualCycleTime   [impl=True decl=True]
+      - FC_CalcPathLen   [impl=True decl=True]
+      - FC_TMax   [impl=True decl=True]
+      - FC_CalcScore   [impl=True decl=True]
+      - FC_CalcPriority   [impl=True decl=True]
+      - FC_LoadDemoGoods   [impl=True decl=True]
+      - FB_InitWarehouse   [impl=True decl=True]
+      - FB_SelectSlot   [impl=True decl=True]
+      - FB_AssignAllGoods   [impl=True decl=True]
+      - FB_LocalSwapImprove   [impl=True decl=True]
+      - FB_Stats   [impl=True decl=True]
+      - FB_AnimatePath   [impl=True decl=True]
+      - FB_BuildVisuPath   [impl=True decl=True]
+      - FB_ScanLoadProbe   [impl=True decl=True]
+      - PRG_Main   [impl=True decl=True]
+      - PRG_Test   [impl=True decl=True]
+  - IO_Bus   [impl=False decl=False]
+  - Interfaces   [impl=False decl=False]
+    - COM   [impl=False decl=False]
+    - CAN   [impl=False decl=False]
+    - Ethernet   [impl=False decl=False]
+      - ETH1   [impl=False decl=False]
+      - ETH2   [impl=False decl=False]
+      - Protocols   [impl=False decl=False]
+  - Extension_Bus   [impl=False decl=False]
+    - Slot_1   [impl=False decl=False]
+    - Slot_2   [impl=False decl=False]
+- __VisualizationStyle   [impl=False decl=False]
+find('Functions') hits: 0
+CLOSE_OK (no save)
+=== PROBE_DONE ===

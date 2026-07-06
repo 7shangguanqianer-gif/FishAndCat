@@ -1,0 +1,21 @@
+ImplementationLanguages dir: cfc, fbd, instruction_list, ladder, page_oriented_cfc, sfc, st, uml_statechart
+ST language = .st -> cc393387-a21c-4f68-a3e3-84c36951965d
+REMOVED old FB_VisuRefresh
+CREATED FB_VisuRefresh as ST
+FILLED FB_VisuRefresh (decl 65, impl 972)
+REMOVED old FC_StateToColor
+CREATED FC_StateToColor as ST
+FILLED FC_StateToColor (decl 68, impl 392)
+BUILD: Compile complete -- 29 errors, 1 warnings
+  ERR: Type definition expected instead of ','
+  ERR: Identifier expected instead of 'r'
+  ERR: 'TO' expected instead of 'r'
+  ERR: 'DO' expected instead of 'r'
+  ERR: Expression expected instead of 'r'
+  ERR: Counter initialisation expected
+  ERR: Expression expected instead of 'r'
+  ERR: Unexpected token 'r' found
+  ERR: ';' expected instead of ':='
+  ERR: Unexpected token ':=' found
+SAVED_WITH_ERRORS (源已同步,便于 GUI 复查)
+=== FIX_DONE ===
