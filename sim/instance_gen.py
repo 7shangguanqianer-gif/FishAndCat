@@ -37,6 +37,7 @@ except Exception:
     pass
 
 import warehouse_sim as ws
+import strategy_lib as sl
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
@@ -119,6 +120,10 @@ def _run(strat_name, goods, rule, seed):
     fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
     if strat_name == "awra":
         wh, placed, failed = ws.run_awra_ls(goods, rule, fn, w_max, f_max)
+    elif strat_name == "cb":                  # Class-based storage(T1.2 新增)
+        wh, placed, failed = sl.run_class_based(goods, rule)
+    elif strat_name == "tob":                 # Full-turnover-based storage(T1.2 新增)
+        wh, placed, failed = sl.run_full_turnover(goods, rule)
     elif strat_name == "random":
         wh, placed, failed = ws.run_online(ws.strat_random(random.Random(seed + 1)),
                                            goods, rule, fn)
@@ -128,8 +133,9 @@ def _run(strat_name, goods, rule, seed):
     return ws.metrics(wh, placed, failed)
 
 
-STRATS = ["random", "seq", "near", "score", "awra"]
-PAIRS = [("awra", "near"), ("awra", "score"), ("awra", "seq"), ("score", "near")]
+STRATS = ["random", "seq", "near", "score", "awra", "cb", "tob"]
+PAIRS = [("awra", "near"), ("awra", "score"), ("awra", "seq"), ("score", "near"),
+         ("awra", "cb"), ("awra", "tob"), ("tob", "near")]
 PAIR_METRICS = ["exp_t", "energy"]
 
 # ---------------- 4. 统计引擎 ----------------
@@ -198,6 +204,9 @@ def main():
             for k in ("exp_t", "energy", "heavy_tier", "hot_t"):
                 m, h = ci95([r[k] for r in res[s]])
                 row[k + "_mean"], row[k + "_ci95"] = round(m, 3), round(h, 3)
+            # 相对精度自证(Law WSC2015 惯例:half-length 占点估计的百分比)
+            row["exp_t_relci_pct"] = (round(row["exp_t_ci95"] / row["exp_t_mean"] * 100, 2)
+                                      if row["exp_t_mean"] else 0.0)
             row["fail_mean"] = round(st.mean([r["fail"] for r in res[s]]), 2)
             row["viol_sum"] = sum(r["viol"] for r in res[s])
             agg.append(row)

@@ -74,6 +74,39 @@ def travel_time(col, tier):
     return travel_time_between(0, 0, col, tier)
 
 
+# ---------------- U2 载重运动学(T1.3;开关式新口径,默认不影响历史数字) ----------------
+LADEN_FACTOR_VY = 0.80        # U2: 满载垂直速度折减(Mecalux 0.818/Muvro 0.667 取 0.80 有据)
+                              #     水平不折减=行业惯例(枪A 0706);挂钩 ABB ACS880 满/空载双速度曲线
+HANDLE_TIERS = ((30.0, 6.0), (60.0, 8.5), (float("inf"), 12.5))
+                              # U2: 装卸时间三档中值,轻(≤30kg)5-7s/中(≤60)7-10s/重(>60)10-15s
+                              #     情景假设需显式声明(FEM 9.851 把装卸当常数,可变档=超出标准的细化)
+
+
+def travel_time_laden(c0, t0, c1, t1):
+    """载货行程时间:垂直轴速度×LADEN_FACTOR_VY,水平轴不折减;ACCEL 口径同步生效。
+    (ST 侧对应 FC_CalcTravelTime 的 bLaden 分支,块2 移植)"""
+    dx, dy = abs(c1 - c0) * CELL_W, abs(t1 - t0) * CELL_H
+    vy = VY * LADEN_FACTOR_VY
+    if ACCEL:
+        return max(axis_time(dx, VX, AX), axis_time(dy, vy, AY))
+    return max(dx / VX, dy / vy)
+
+
+def handle_time(good):
+    """装卸时间(单次存或取的货叉全循环):按重量三档(U2 可变装卸,替代 G1 常数 15s 口径)。"""
+    for w_hi, t in HANDLE_TIERS:
+        if good.weight <= w_hi:
+            return t
+    return HANDLE_TIERS[-1][1]
+
+
+def cycle_time_laden(good, col, tier):
+    """U2 口径单件入库全周期:载货去程 + 放货 + 空载返程(取货装载在 I/O 侧,亦计一次装卸)。
+    = handle(取装) + laden(0,0→c,t) + handle(放) + unladen(c,t→0,0)。"""
+    return (handle_time(good) + travel_time_laden(0, 0, col, tier)
+            + handle_time(good) + travel_time_between(col, tier, 0, 0))
+
+
 def t_max_now():
     """全库最远仓位单程时间(评分归一分母,跟随当前运动模型口径)。"""
     return travel_time(COLS - 1, TIERS - 1)
