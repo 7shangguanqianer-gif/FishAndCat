@@ -1,0 +1,12 @@
+MSG: Unknown type: 'SYSTIME'
+MSG: Unknown type: 'SYSTIME'
+MSG: Identifier 'SysTimeGetNs' not defined
+MSG: Program name, function or function block instance expected instead of 'SysTimeGetNs'
+MSG: Identifier 'SysTimeGetNs' not defined
+MSG: Program name, function or function block instance expected instead of 'SysTimeGetNs'
+MSG: Cannot compare type 'SYSTIME' with type 'SYSTIME'
+MSG: Cannot convert type 'SYSTIME' to type 'ANY_NUM'
+MSG: Cannot convert type 'SYSTIME' to type 'ULINT'
+MSG: Compile complete -- 9 errors, 1 warnings
+MSG: Additional code checks complete -- 0 errors
+=== SIG_DONE (not saved) ===

@@ -1,0 +1,30 @@
+OPEN_OK
+LibraryManager found; dir: 
+SysTime ref already present
+FB_ScanLoadProbeNs exists
+FB filled (decl 511, impl 644)
+PLC_PRG original decl: 'PROGRAM PLC_PRG\nVAR\n    fbProbe : FB_ScanLoadProbe;\nEND_VAR'
+PLC_PRG original impl: 'PRG_Main();\nPRG_Test();'
+PLC_PRG wrapped with probe
+BUILD(probe): Compile complete -- 0 errors, 1 warnings
+[IDLE] login+start ok state=run
+[IDLE] rAvgUs=REAL#0 rMaxUs=REAL#0 rLastUs=REAL#0 nSamples=DINT#6827
+[A] login+start ok state=run
+[A] status wait done ok=True
+[A] rAvgUs=REAL#0 rMaxUs=REAL#0 rLastUs=REAL#0 nSamples=DINT#9275
+[B] login+start ok state=run
+[B] status wait done ok=True
+[B] rAvgUs=REAL#0 rMaxUs=REAL#0 rLastUs=REAL#0 nSamples=DINT#11617
+[C] login+start ok state=run
+[C] status wait done ok=True
+[C] rAvgUs=REAL#0 rMaxUs=REAL#0 rLastUs=REAL#0 nSamples=DINT#14003
+BUILD(restored): Compile complete -- 0 errors, 0 warnings
+SAVE_OK (PLC_PRG restored; FB_ScanLoadProbeNs+SysTime kept, harmless)
+
+===== L4 结果表(SysTimeGetNs 探针,AB 仿真) =====
+组 | nBatch | nPairs | AvgUs | MaxUs | LastUs | nSamples
+IDLE | None | None | REAL#0 | REAL#0 | REAL#0 | DINT#6827
+A | 1 | 200 | REAL#0 | REAL#0 | REAL#0 | DINT#9275
+B | 20 | 200 | REAL#0 | REAL#0 | REAL#0 | DINT#11617
+C | 20 | 2000 | REAL#0 | REAL#0 | REAL#0 | DINT#14003
+=== L4_DONE ===

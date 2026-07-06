@@ -1,0 +1,28 @@
+librarymanager dir: categories, find_library, get_all_libraries, get_category, get_file_path, get_library, insert_repository, install_library, move_repository, remove_repository, repositories, top_level_categories, uninstall_library, update_repository
+SysTime candidates in repo: SysTime, 3.5.17.0 (System) || SysTime, 3.5.5.0 (System) || SysTime, 3.5.9.0 (System) || SysTime23, 3.5.13.0 (System) || SysTimeCore, 3.5.17.0 (System) || SysTimeRtc, 3.5.21.30 (System)
+proj libmgr dir: 
+cur[0] = #IoStandard
+cur[1] = #Standard
+cur[2] = #3SLicense
+cur[3] = #AC500_Ethernet
+cur[4] = #AC500_Pm
+cur[5] = #AC500_Io
+cur[6] = #AC500_DiagTypes
+cur[7] = #AC500_DiagCpu
+cur[8] = #AC500_DiagIoBus
+cur[9] = #AC500_IoDrvOnlineAccess
+cur[10] = #AC500_IoDrvEthernet
+cur[11] = #BreakpointLogging
+cur[12] = SysTime, 3.5.17.0 (System)
+removed stale ref: SysTime, 3.5.17.0 (System)
+ADD_OK: SysTime, 3.5.17.0 (System)
+BUILD(probe with lib): Compile complete -- 9 errors, 1 warnings
+  ERR: Unknown type: 'SYSTIME'
+  ERR: Unknown type: 'SYSTIME'
+  ERR: Identifier 'SysTimeGetNs' not defined
+  ERR: Identifier 'SysTimeGetNs' not defined
+  ERR: Cannot compare type 'SYSTIME' with type 'SYSTIME'
+  ERR: Cannot convert type 'SYSTIME' to type 'ANY_NUM'
+  ERR: Cannot convert type 'SYSTIME' to type 'ULINT'
+restored+saved (library ref kept: SysTime, 3.5.17.0 (System))
+=== LIBFIX_DONE ===

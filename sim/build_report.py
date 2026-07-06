@@ -503,9 +503,28 @@ def main():
         "(23 用例版本已实测 iPassed=23、iFailed=0、编译 0 错误;+T24 后期望 iPassed=24,"
         "随口径切换批次回归)。字符串状态码全部 ASCII 化以规避编码告警,"
         "可视化画面以静态中文标签对照解释。")
-    r.note(f"{MISS} L4 扫描负载实测表:任务监视页官方读数(信箱批次 0705-B 执行中),"
-           "回填后此处生成'平均/最大周期时间 vs 分片参数'表与看门狗裕量结论;"
-           "真机数据若可得另起一行(R4)。")
+    L4ROWS = [r_ for r_ in load_rows("l4_task_cycles.csv") if r_.get("cycles_to_done")]
+    r.p("扫描负载实测采用任务级口径。方法学结论先行:PC 仿真环境的三种周期内时钟源"
+        "(IEC LTIME 差分、任务监视页统计、SysTime 库纳秒计数)经逐一实测均无法给出"
+        "非零的周期内耗时(时间服务按扫描周期缓存/粒度粗于周期),故周期内微秒值"
+        "在仿真环境不可测——如实记录,不作推断。可测且更硬的指标是**任务完成所需"
+        "扫描周期数**:它由分片算法逻辑决定,与时钟实现无关,仿真与真机同值。")
+    lrows = []
+    for r_ in L4ROWS:
+        lrows.append([r_.get("group", MISS),
+                      fnum(r_, "n_batch_per_cycle", 0, src="l4_task_cycles"),
+                      fnum(r_, "n_pairs_per_cycle", 0, src="l4_task_cycles"),
+                      fnum(r_, "cycles_to_done", 0, src="l4_task_cycles"),
+                      reg("l4:真机预估s",
+                          "%.2f" % (float(r_.get("cycles_to_done", 0)) * 0.010))])
+    r.table(["组", "nBatchPerCycle", "nPairsPerCycle", "完成周期数(实测)",
+             "真机预估 s(×10ms 标称周期)"], lrows)
+    r.p("读表:nBatchPerCycle=1 时分配段被显著拉长(逐件一周期),提高到 5 以上后"
+        "瓶颈转移到状态机固定开销,完成周期数稳定;nPairsPerCycle 在 20 件演示批下"
+        "不敏感——两两交换仅 190 对,单周期分片即可吃完(该参数在满仓 400 件场景才"
+        "成为主变量,Python 侧同源逻辑可给理论周期数)。全部四组均正常完成"
+        "(DONE_OK),看门狗零触发;数据由无头自动化管线在线实测"
+        "(tools/ab_scripting,探针周期计数器口径,与仿真同 seed 演示批)。")
 
     # ---------------- 6 数字孪生验证方法论 ----------------
     r.h("6 双实现交叉验证:轻量数字孪生方法", 1)

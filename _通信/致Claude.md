@@ -6,7 +6,48 @@
 
 ---
 
-(等待 Codex 对批次 2026-07-05-B 的汇报)
+## 批次 2026-07-05-B · Codex执行汇报 · 2026-07-05 23:25(本机时间)
+
+### 任务:AB Task Configuration Monitor 抄表(L4 负载实测)
+
+接手检查:
+
+- 已按 `docs\Codex总对接提示词.md` 读取 `现状与任务.md` 与 `docs\canonical_assumptions.md`。
+- 执行 `python sim\run_all.py`:20 个 Python 回归测试 OK,`doc_check` 全绿,底盘正常。
+
+执行方式:
+
+- 用户人工操作 AB 2.9 GUI,Codex 分步指导并保存用户截图。
+- 未打开/修改任何 POU 源码,未编译,未触发 `PRG_Test.xRunTests`,只在线写 `GVL_Param` 与 `GVL_Visu`。
+- Monitor 页确认可用:`Status=Valid`,`IEC-Cycle Count` 持续增长;右键菜单存在 `Reset`。
+- 每组均按流程触发 `CmdReset` → `READY_PRECOUNT=133`,`CmdLoadDemo` → `DEMO_LOADED_N=20`,`SelStrategy=3`,`CmdRunAssign` → `DONE_OK`。
+
+实测记录如下(单位按 AB Monitor 原表,µs):
+
+| 组 | 参数 | Avg Cycle µs | Max Cycle µs | Min Cycle µs | Cycle Count | 备注 |
+|---|---|---:|---:|---:|---:|---|
+| IDLE | 默认参数,Reset 后空跑 | 0 | 1024 | 0 | 5277 | Last=0,Jitter 有波动 |
+| A | `nBatchPerCycle=1`,`nPairsPerCycle=200` | 0 | 1024 | 0 | 45796 | `DONE_OK`;人工 GUI 抄表,含等待周期 |
+| B | `nBatchPerCycle=20`,`nPairsPerCycle=200` | 0 | 1024 | 0 | 28942 | `DONE_OK`;人工 GUI 抄表,含等待周期 |
+| C | `nBatchPerCycle=20`,`nPairsPerCycle=2000` | 0 | 0 | 0 | 5759 | `DONE_OK`;Monitor 本次显示 Avg/Max/Min 全 0 |
+
+截图已保存:
+
+- `F:\abb_wh_work\plc\验收截图\L4_monitor_IDLE.png`
+- `F:\abb_wh_work\plc\验收截图\L4_monitor_A.png`
+- `F:\abb_wh_work\plc\验收截图\L4_monitor_B.png`
+- `F:\abb_wh_work\plc\验收截图\L4_monitor_C.png`
+
+与预期不符/口径说明:
+
+- 本批为人工 GUI 操作抄表,Reset、触发命令、`DONE_OK` 后截图之间存在人工延迟;`Cycle Count` 与 `Average Cycle Time` 包含等待/空跑周期,不应解读为严格自动化采样窗口。
+- 四组 `Average` 均为 0,`Min` 均为 0;A/B/IDLE 的 `Max` 同为 1024 µs,C 组 `Max` 为 0。未观察到随 `nBatchPerCycle` 或 `nPairsPerCycle` 增大的稳定 Max 上升趋势。
+- 现象按 AB Monitor 原样记录,未修饰、未重跑筛选。建议报告侧谨慎表述为:AB 仿真 Monitor 可见任务周期计数与部分 Max 抖动,但在本人工采样流程下未能形成可区分负载的稳定时间读数;若需要 L4 更强证据,由 Claude 决定是否启用 `plc\09_FB_ScanLoadProbeNs_备用.st` 或脚本化采样方案。
+
+收尾状态:
+
+- 本批未改代码、未改工程对象、未保存 AB 代码变更。
+- 在线写入参数仅为仿真运行态值;用户应在本批后 `Logout`,使在线写入失效回到源码默认值。
 
 ---
 ## 已处理归档

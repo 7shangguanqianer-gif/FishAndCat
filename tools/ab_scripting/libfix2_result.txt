@@ -1,0 +1,21 @@
+[1] removed SysTime, 3.5.17.0 (System)
+[1] add_placeholder OK
+[1] BUILD: Compile complete -- 4 errors, 1 warnings
+    ERR: Identifier 'pTimeNs' not defined
+    ERR: Identifier 'pTimeNs' not defined
+[2] BUILD(namespace-qualified): Compile complete -- 6 errors, 1 warnings
+[3] lib: #IoStandard
+[3] lib: #Standard
+[3] lib: #3SLicense
+[3] lib: #AC500_Ethernet
+[3] lib: #AC500_Pm
+[3] lib: #AC500_Io
+[3] lib: #AC500_DiagTypes
+[3] lib: #AC500_DiagCpu
+[3] lib: #AC500_DiagIoBus
+[3] lib: #AC500_IoDrvOnlineAccess
+[3] lib: #AC500_IoDrvEthernet
+[3] lib: #BreakpointLogging
+[3] lib: #SysTime
+restored to non-probe state, saved
+=== LIBFIX2_DONE ok=False ===

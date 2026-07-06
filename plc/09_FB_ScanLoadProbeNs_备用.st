@@ -40,13 +40,13 @@ END_VAR
 
 // 段前:取一次系统纳秒计数(直连 OS 计时器,不受 IEC 周期缓存影响)
 IF xStart AND NOT xArmed THEN
-    SysTimeGetNs(pTimeNs := tT0);   // 形参名以 AB 输入助手为准,见文件头第3条
+    SysTimeGetNs(tT0);   // 位置传参,规避各版本形参名差异(0706 实测 3.5.17 无 pTimeNs)
     xArmed := TRUE;
 END_IF
 
 // 段后:再取一次,差分入统计
 IF xStop AND xArmed THEN
-    SysTimeGetNs(pTimeNs := tT1);
+    SysTimeGetNs(tT1);
     xArmed := FALSE;
     IF tT1 >= tT0 THEN                               // 防计数器回绕的负差
         rDiffUs := ULINT_TO_REAL(tT1 - tT0) / 1000.0;   // ns → µs

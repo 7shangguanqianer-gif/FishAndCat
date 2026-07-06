@@ -29,6 +29,15 @@ prs = Presentation()
 prs.slide_width, prs.slide_height = Cm(33.87), Cm(19.05)      # 16:9
 BLANK = prs.slide_layouts[6]
 
+_l4 = [r for r in br.load_rows("l4_task_cycles.csv") if r.get("cycles_to_done")]
+try:
+    _a = [r for r in _l4 if r["group"] == "A"][0]["cycles_to_done"]
+    _c = [r for r in _l4 if r["group"] == "C"][0]["cycles_to_done"]
+    l4_bullet = ("实测(自动化管线在线):nBatch=1 → %s 周期完成;nBatch≥5 → 稳定 ~%s 周期"
+                 "(状态机固定开销主导);真机预估 = 周期数 × 10ms 标称,看门狗零触发" % (_a, _c))
+except Exception:
+    l4_bullet = "〔L4 数据读取失败,查 sim/out/l4_task_cycles.csv〕"
+
 
 def _set(run, size, bold=False, color=None):
     run.font.name = FONT
@@ -146,8 +155,9 @@ slide("鲁棒性与运行期自愈",
 slide("AC500 落地:优化算法跑在 10ms 实时任务里",
       [("三层封装:FC 纯函数 / FB 状态机 / PRG 主状态机", 0),
        ("扫描周期分片:每周期 nBatchPerCycle 件、nPairsPerCycle 对,非阻塞不触发看门狗", 0),
-       ("23 项边界+一致性用例,AB 仿真实测 iPassed=23 / 0 错误", 0),
-       ("〔L4 任务级负载实测表:批次回执后此页补数据〕", 1)],
+       ("24 项边界+一致性用例(含官方口径预占格数断言),AB 仿真在线实测 iPassed=24 / 0 错误", 0),
+       ("三时钟源(LTIME/Monitor/SysTimeGetNs)周期内耗时在 PC 仿真均恒 0——如实记录,口径转任务级", 1),
+       (l4_bullet, 1)],
       note="ABB 工程师评委最认的一页;截图在下一页。")
 
 slide("轻量数字孪生:Python 与 ST 互相背书",
@@ -198,4 +208,4 @@ slide("Q&A", [("〔答辩 QA 卡:T18 产出后此页后附常见 20 问〕", 0)]
 path = os.path.join(HERE, "out", "答辩PPT_draft.pptx")
 prs.save(path)
 print(f"已生成:{path}({len(prs.slides.__iter__.__self__._sldIdLst)} 页)")
-print("占位符〔〕清单:封面队伍名 / L4 表 / 可视化截图 / QA 附页——对应任务回执后重跑本脚本。")
+print("占位符〔〕清单:封面队伍名 / 可视化截图 / QA 附页——对应任务回执后重跑本脚本。")

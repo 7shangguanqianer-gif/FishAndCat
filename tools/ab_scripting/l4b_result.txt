@@ -1,0 +1,16 @@
+OPEN_OK
+BUILD(probe): Compile complete -- 0 errors, 1 warnings
+login+start state=run
+[A] nBatch=1 nPairs=200 ok=True status='DONE_OK' cycles=314 wall=0.80s per-cycle=2.56ms
+[B] nBatch=5 nPairs=200 ok=True status='DONE_OK' cycles=126 wall=0.21s per-cycle=1.66ms
+[C] nBatch=20 nPairs=200 ok=True status='DONE_OK' cycles=126 wall=0.21s per-cycle=1.63ms
+[D] nBatch=20 nPairs=2000 ok=True status='DONE_OK' cycles=130 wall=0.21s per-cycle=1.61ms
+restored+saved
+
+===== L4 任务级负载表(AB 仿真实测,seed 同演示批 20 件) =====
+组 | nBatchPerCycle | nPairsPerCycle | 完成周期数 | 挂钟 s | 平均周期间隔 ms | DONE_OK
+A | 1 | 200 | 314 | 0.80 | 2.56 | True
+B | 5 | 200 | 126 | 0.21 | 1.66 | True
+C | 20 | 200 | 126 | 0.21 | 1.63 | True
+D | 20 | 2000 | 130 | 0.21 | 1.61 | True
+=== L4B_DONE ===
