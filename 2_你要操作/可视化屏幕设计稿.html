@@ -2,13 +2,11 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>AB 可视化屏幕设计稿 v2 · 三风格对撞</title>
+<title>AB 可视化屏幕设计稿 v3 · 红黑变体两版对照</title>
 <style>
   body{font-family:"Microsoft YaHei",sans-serif;background:#DDD;margin:0;padding:20px;color:#333;}
   .intro{width:1240px;margin:0 auto 16px;background:#FFFDF5;border:1px solid #C9B458;padding:12px 16px;font-size:13px;line-height:1.7;}
   .intro b{color:#8B6914;}
-  .pick{width:1240px;margin:0 auto 20px;font-size:14px;}
-  .pick a{margin-right:14px;color:#17365D;}
   .frame{width:1240px;margin:0 auto 30px;border-radius:4px;padding:18px;border:1px solid #bbb;}
   .tag{display:inline-block;font-size:12px;padding:2px 8px;margin-bottom:8px;color:#fff;}
   .note{font-size:12px;margin:6px 0 12px;line-height:1.6;}
@@ -21,113 +19,105 @@
   .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin:8px 0;}
   .legend span{display:inline-flex;align-items:center;gap:4px;}
   .sw{width:14px;height:14px;display:inline-block;border:1px solid rgba(0,0,0,.25);}
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;}
+  .wrow{display:flex;align-items:center;gap:6px;margin:3px 0;}
+  .viol{display:inline-block;background:#B71C1C;color:#fff;font-size:11px;padding:1px 6px;margin:2px 4px 2px 0;}
 </style>
 </head>
 <body>
 
 <div class="intro">
-  <b>设计稿 v2(0706)· 三风格对撞,选一个或说混搭</b><br>
-  ① 这不是网页交付物——是「施工蓝图」:选定风格后,配色写进 FC_StateToColor 与画面元件属性,<b>真正的画面用 CODESYS Visualization 在 AB 工程里搭</b>(批次 C),仿真登录后实时运行;评委看到的=录屏里它跑起来的样子(初赛唯一演示载体)。<br>
-  ② 施工约束:CODESYS 元件=纯色块/文本/基本按钮,<b>无渐变无阴影无圆角</b>——三版都按「可施工」画,所见≈所得。<br>
-  ③ 3D 仿真=独立决策,不影响批次 C(方案清单见聊天回复;推荐项=Python 3D 回放动画,与本画面数据同源)。<br>
-  <b>过目要点:整体风格 A/B/C → 报警色处理 → 权重区要不要 → 缺什么元素</b>
+  <b>设计稿 v3(0706)· 你拍板「A 改红黑」后的两版对照</b><br>
+  ① 调研实锤(docs/HMI交互惯例调研_0706.md):ISA-101 标准<b>明文禁止黑色背景</b>(眩光疲劳)、<b>红色只许用于异常状态</b>(防报警脱敏)——全红黑画面会被内行评委扣分。<br>
+  ② 化解:<b>v3-主推=红黑收进品牌框(顶栏),工作区按 ISA-101 中灰</b>——品牌记忆点保住,报告还能写「画面遵循 ISA-101/ISA-18.2 设计」变成专业加分项;下方给全红黑对照版让你亲眼比较。<br>
+  ③ v3 新增五件工业惯例标准件(两版都含):页眉时间戳/模式指示 · 报警汇总条 · 权重改值=NumPad+写前确认两步 · KPI 异常才着色 · 报警格深红+黑粗边(你的 Q2 拍板)。<br>
+  ④ v2 三风格稿在 git 历史(9d02b47)可随时找回。<b>react 方式:回「照主推版施工」或指出要改的元素。</b>
 </div>
-<div class="pick">跳转:<a href="#a">风格A·ABB红白瑞士</a> <a href="#b">风格B·深色工业HMI</a> <a href="#c">风格C·蓝灰工程(v1精修)</a></div>
 
-<!-- ================= 风格 A:ABB 红白瑞士 ================= -->
-<div class="frame" id="a" style="background:#FFFFFF;">
-  <span class="tag" style="background:#FF000F;">风格A · ABB 红白瑞士</span>
-  <div style="background:#FF000F;color:#fff;padding:10px 14px;font-size:20px;font-weight:bold;letter-spacing:1px;">
-    ABB&nbsp;&nbsp;智储优控 · 立体仓储仓位优化演示&nbsp;&nbsp;<span style="font-size:12px;font-weight:normal;">AC500 · 20×20 · 官方口径(x+y)%3 预占 133 格</span>
+<!-- ================= v3 主推:红黑品牌框 + ISA-101 灰工作区 ================= -->
+<div class="frame" id="h" style="background:#D5D5D5;">
+  <span class="tag" style="background:#B7000C;">v3-主推 · 红黑品牌框 + ISA-101 灰工作区</span>
+
+  <!-- 页眉:黑底品牌区(红黑在这里) -->
+  <div class="hdr" style="background:#1A1A1A;border-bottom:3px solid #FF000F;">
+    <div style="font-size:20px;font-weight:bold;color:#fff;"><span style="color:#FF000F;">ABB</span>&nbsp; 智储优控 · 立体仓储仓位优化</div>
+    <div style="font-size:12px;color:#B7BCC4;">2026-07-06 14:32:05 &nbsp;|&nbsp; 模式:<b style="color:#E7C84B;">SIM</b> &nbsp;|&nbsp; OP: admin &nbsp;|&nbsp; AC500</div>
   </div>
-  <div class="note" style="color:#666;">瑞士风=大量留白+一处强色:红只出现在顶栏与主按钮,格子语义色克制;<b>报警色改深红 #B71C1C 加粗黑边</b>,防与主题红混淆。施工:画面底=白,FC_StateToColor 六值见图例。</div>
+  <!-- 报警汇总条(常驻;无报警=灰,有活动报警=优先级色) -->
+  <div style="background:#B71C1C;color:#fff;font-size:12px;padding:4px 14px;border:2px solid #000;">⚠ 活动报警 1:仓位(17,2) 传感器故障 · 未确认 &nbsp;&nbsp;<span class="btn" style="border-color:#fff;color:#fff;font-size:11px;padding:1px 8px;">确认</span></div>
+
+  <div class="note" style="color:#555;margin-top:10px;">工作区=中灰(ISA-101):正常状态视觉静默(占用=灰蓝,不抢眼),颜色只给需要注意的东西(推荐=琥珀/路径=蓝/报警=深红黑边)。红色在整个工作区<b>只出现在报警格与报警条</b>。</div>
   <div class="row">
     <div>
-      <div class="grid" id="gridA" style="background:#E8E8E8;"></div>
-      <div class="legend" id="legA"></div>
+      <div class="grid" id="gridH" style="background:#C2C2C2;"></div>
+      <div class="legend" id="legH"></div>
     </div>
     <div class="panel">
-      <div class="box" style="border-color:#DDD;background:#FAFAFA;"><b style="color:#000;">状态</b><br>READY_PRECOUNT=133 · DEMO_LOADED_N=20<br>策略 SelStrategy=3(AWRA-LS)</div>
-      <div class="box" style="border-color:#DDD;background:#FAFAFA;"><b style="color:#000;">货物输入</b><br>重量 42.5 kg · 频次 87.2 · 体积 0.4 m³<br>推荐位 X=2 Y=1 · 评分 0.183</div>
-      <div class="box" style="border-color:#DDD;background:#FAFAFA;"><b style="color:#000;">统计</b><br>已占 153/400 · 期望取货 8.40s · 能耗 14345</div>
-      <div class="box" style="border-color:#FF000F;background:#FFF5F5;"><b style="color:#FF000F;">权重(评委现场可调)</b><br>α 1.0 · β 0.3 · γ 0.3 · δ 0.05</div>
+      <div class="box" style="border-color:#AAA;background:#E8E8E8;"><b style="color:#1A1A1A;">状态</b><br>READY_PRECOUNT=133 · DEMO_LOADED_N=20<br>策略 SelStrategy=3(AWRA-LS)</div>
+      <div class="box" style="border-color:#AAA;background:#E8E8E8;"><b style="color:#1A1A1A;">货物输入</b><br>重量 42.5 kg · 频次 87.2 · 体积 0.4 m³<br>推荐位 X=2 Y=1 · 评分 0.183</div>
+      <div class="box" style="border-color:#AAA;background:#E8E8E8;"><b style="color:#1A1A1A;">统计(KPI 异常才着色)</b><br>已占 153/400 · 期望取货 <b>8.40s</b> · 能耗 14345<br><span style="font-size:11px;color:#777;">数值正常=黑;超告警阈值→琥珀;超临界→红(ISA-18.2)</span></div>
+      <div class="box" style="border-color:#666;background:#E0E0E0;">
+        <b style="color:#1A1A1A;">权重(评委现场可调 · NumPad+确认两步)</b>
+        <div class="wrow">α <b>1.0</b> <span class="btn" style="border-color:#666;background:#fff;">改</span> β <b>0.3</b> <span class="btn" style="border-color:#666;background:#fff;">改</span> γ <b>0.3</b> <span class="btn" style="border-color:#666;background:#fff;">改</span> δ <b>0.05</b> <span class="btn" style="border-color:#666;background:#fff;">改</span></div>
+        <div style="border:2px solid #1A1A1A;background:#fff;padding:5px 8px;margin-top:6px;font-size:12px;">
+          确认写入:<b>α&nbsp; 1.0 → 1.2</b>(范围 0~2)<br>
+          <span class="btn" style="border-color:#B7000C;background:#B7000C;color:#fff;">Confirm</span>
+          <span class="btn" style="border-color:#999;background:#F2F2F2;">Cancel</span>
+          <span style="font-size:11px;color:#777;">← 点「改」弹 CODESYS 原生 NumPad,输完出这个框,Confirm 才写 PLC</span>
+        </div>
+      </div>
       <div>
-        <span class="btn" style="border-color:#FF000F;color:#fff;background:#FF000F;">RunAssign</span>
-        <span class="btn" style="border-color:#999;color:#333;background:#fff;">Reset</span>
-        <span class="btn" style="border-color:#999;color:#333;background:#fff;">LoadDemo</span>
-        <span class="btn" style="border-color:#999;color:#333;background:#fff;">Animate</span>
+        <span class="btn" style="border-color:#1A1A1A;color:#fff;background:#1A1A1A;">RunAssign</span>
+        <span class="btn" style="border-color:#999;color:#333;background:#F5F5F5;">Reset</span>
+        <span class="btn" style="border-color:#999;color:#333;background:#F5F5F5;">LoadDemo</span>
+        <span class="btn" style="border-color:#999;color:#333;background:#F5F5F5;">Animate</span>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ================= 风格 B:深色工业 HMI ================= -->
-<div class="frame" id="b" style="background:#1B1D21;">
-  <span class="tag" style="background:#00B4A0;color:#00332d;">风格B · 深色工业 HMI</span>
-  <div style="color:#E8E8E8;padding:8px 2px;font-size:20px;font-weight:bold;border-bottom:2px solid #00B4A0;">
-    智储优控 · 仓位优化实时画面 <span style="font-size:12px;color:#8A8F98;font-weight:normal;">AC500 · SCADA 控制室审美 · 数据色青绿</span>
+<!-- ================= v3 对照:全红黑(不推荐,给你亲眼比较) ================= -->
+<div class="frame" id="r" style="background:#111111;">
+  <span class="tag" style="background:#FF000F;">v3-对照 · 全红黑(标准违例已标注)</span>
+  <div>
+    <span class="viol">✗ ISA-101:禁止黑底(眩光疲劳)</span>
+    <span class="viol">✗ 红色非异常专属→报警脱敏</span>
+    <span class="viol">✗ 黑底红字=色盲最常见失效通道</span>
   </div>
-  <div class="note" style="color:#8A8F98;">控制室/SCADA 风:低亮度防疲劳,数据高对比,<b>报警红在暗底上极醒目(深色版的天然优势)</b>。施工:画面底=深灰 16#1B1D21,文本反白,其余同 A。</div>
+  <div class="hdr" style="background:#000;border-bottom:3px solid #FF000F;margin-top:6px;">
+    <div style="font-size:20px;font-weight:bold;color:#FF000F;">ABB&nbsp; 智储优控 · 立体仓储仓位优化</div>
+    <div style="font-size:12px;color:#B7BCC4;">2026-07-06 14:32:05 | SIM | OP: admin</div>
+  </div>
+  <div style="background:#4A0505;color:#FF6B60;font-size:12px;padding:4px 14px;border:2px solid #FF000F;">⚠ 活动报警 1:仓位(17,2) 传感器故障(注意:报警条在满屏红元素里已不突出)</div>
   <div class="row" style="margin-top:10px;">
     <div>
-      <div class="grid" id="gridB" style="background:#0E0F11;"></div>
-      <div class="legend" id="legB" style="color:#B7BCC4;"></div>
+      <div class="grid" id="gridR" style="background:#000;"></div>
+      <div class="legend" id="legR" style="color:#B7BCC4;"></div>
     </div>
     <div class="panel" style="color:#D7DBE0;">
-      <div class="box" style="border-color:#33373D;background:#22252A;"><b style="color:#00B4A0;">状态</b><br>READY_PRECOUNT=133 · DEMO_LOADED_N=20<br>策略 SelStrategy=3(AWRA-LS)</div>
-      <div class="box" style="border-color:#33373D;background:#22252A;"><b style="color:#00B4A0;">货物输入</b><br>重量 42.5 kg · 频次 87.2 · 体积 0.4 m³<br>推荐位 X=2 Y=1 · 评分 0.183</div>
-      <div class="box" style="border-color:#33373D;background:#22252A;"><b style="color:#00B4A0;">统计</b><br>已占 153/400 · 期望取货 8.40s · 能耗 14345</div>
-      <div class="box" style="border-color:#C9A227;background:#2A2617;"><b style="color:#E7C84B;">权重(评委现场可调)</b><br>α 1.0 · β 0.3 · γ 0.3 · δ 0.05</div>
+      <div class="box" style="border-color:#5A0A0A;background:#1C0606;"><b style="color:#FF000F;">状态</b><br>READY_PRECOUNT=133 · DEMO_LOADED_N=20</div>
+      <div class="box" style="border-color:#5A0A0A;background:#1C0606;"><b style="color:#FF000F;">货物输入</b><br>重量 42.5 kg · 频次 87.2 · 推荐 X=2 Y=1</div>
+      <div class="box" style="border-color:#5A0A0A;background:#1C0606;"><b style="color:#FF000F;">权重</b><br>α 1.0 · β 0.3 · γ 0.3 · δ 0.05</div>
       <div>
-        <span class="btn" style="border-color:#00B4A0;color:#00332d;background:#00B4A0;">RunAssign</span>
-        <span class="btn" style="border-color:#5A5F66;color:#D7DBE0;background:#22252A;">Reset</span>
-        <span class="btn" style="border-color:#5A5F66;color:#D7DBE0;background:#22252A;">LoadDemo</span>
-        <span class="btn" style="border-color:#5A5F66;color:#D7DBE0;background:#22252A;">Animate</span>
+        <span class="btn" style="border-color:#FF000F;color:#fff;background:#FF000F;">RunAssign</span>
+        <span class="btn" style="border-color:#5A5F66;color:#D7DBE0;background:#1C1C1C;">Reset</span>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- ================= 风格 C:蓝灰工程(v1 精修) ================= -->
-<div class="frame" id="c" style="background:#FAFAFA;">
-  <span class="tag" style="background:#17365D;">风格C · 蓝灰工程(v1 精修)</span>
-  <div style="color:#17365D;padding:8px 2px;font-size:20px;font-weight:bold;">
-    智储优控 · 立体仓储仓位优化 <span style="font-size:12px;color:#888;font-weight:normal;">AC500 · v1 骨架保持 · 与报告/PPT 配色同族</span>
-  </div>
-  <div class="note" style="color:#888;">最稳妥:与报告/PPT 现配色(海军蓝 #17365D)一致,文档-画面-录屏视觉统一;施工成本与 A/B 相同(都只是改颜色值)。</div>
-  <div class="row" style="margin-top:10px;">
-    <div>
-      <div class="grid" id="gridC" style="background:#FFF;border:1px solid #ddd;"></div>
-      <div class="legend" id="legC"></div>
-    </div>
-    <div class="panel">
-      <div class="box" style="border-color:#ddd;background:#fff;"><b style="color:#17365D;">状态</b><br>READY_PRECOUNT=133 · DEMO_LOADED_N=20<br>策略 SelStrategy=3(AWRA-LS)</div>
-      <div class="box" style="border-color:#ddd;background:#fff;"><b style="color:#17365D;">货物输入</b><br>重量 42.5 kg · 频次 87.2 · 体积 0.4 m³<br>推荐位 X=2 Y=1 · 评分 0.183</div>
-      <div class="box" style="border-color:#ddd;background:#fff;"><b style="color:#17365D;">统计</b><br>已占 153/400 · 期望取货 8.40s · 能耗 14345</div>
-      <div class="box" style="border-color:#C9A227;background:#FFF9E6;"><b style="color:#8B6914;">权重(评委现场可调)</b><br>α 1.0 · β 0.3 · γ 0.3 · δ 0.05</div>
-      <div>
-        <span class="btn" style="border-color:#17365D;color:#fff;background:#17365D;">RunAssign</span>
-        <span class="btn" style="border-color:#888;background:#F2F2F2;">Reset</span>
-        <span class="btn" style="border-color:#888;background:#F2F2F2;">LoadDemo</span>
-        <span class="btn" style="border-color:#888;background:#F2F2F2;">Animate</span>
-      </div>
+      <div class="note" style="color:#8A8F98;margin-top:8px;">观感:第一眼冲击力强,但 30 秒后「哪里是报警」开始分不清——这正是标准反对它的原因。</div>
     </div>
   </div>
 </div>
 
 <div class="intro" style="margin-top:0;">
-  <b>react 方式</b>:回一句「A / B / C / A的顶栏+C的面板」这类即可;要改的元素直接说。拍板后=批次 C 施工规格,配色进 FC_StateToColor(6 个 DWORD 一处改)。
+  <b>react 方式</b>:「照主推版施工」/「还是要全红黑」/ 指定改某元素(如顶栏红线加粗、报警条挪位置)。拍板后=批次 C 施工规格:六色进 FC_StateToColor,页眉/报警条/NumPad 确认框=CODESYS 原生元件(操作卡会给逐步指引)。
 </div>
 
 <script>
-// 六色语义(三风格各自适配);(x+y)%3==0 预占=官方口径 133 格;三版同布局便于纯风格对比
+// 主推 H:ISA-101 灰工作区(正常静默,颜色只给异常/注意);对照 R:全红黑
 var THEMES = {
-  A: {free:"#F2F2F2", pre:"#C9CDD2", occ:"#3D8B40", sug:"#E7B800", path:"#3E7BD6", alarm:"#B71C1C",
-      names:["空闲","预占(133)","已占","推荐","路径","报警(深红粗边)"]},
-  B: {free:"#26292E", pre:"#3A3E45", occ:"#37B24D", sug:"#F5C518", path:"#3BA3FF", alarm:"#FF3B30",
-      names:["空闲","预占(133)","已占","推荐","路径","报警"]},
-  C: {free:"#E8E8E8", pre:"#707070", occ:"#43A047", sug:"#FFC107", path:"#42A5F5", alarm:"#E53935",
-      names:["空闲","预占(133)","已占","推荐","路径","报警"]}
+  H: {free:"#DCDCDC", pre:"#9EA3A8", occ:"#5B7A9D", sug:"#E7B800", path:"#3E7BD6", alarm:"#B71C1C",
+      names:["空闲","预占(133)","已占(灰蓝·静默)","推荐","路径","报警(深红黑边)"]},
+  R: {free:"#1C1C1C", pre:"#3A3A3A", occ:"#8B1A1A", sug:"#FFC107", path:"#FF6B60", alarm:"#FF000F",
+      names:["空闲","预占(133)","已占(红——和报警撞)","推荐","路径(红——也撞)","报警"]}
 };
 var occ = [[1,0],[2,0],[4,0],[2,1],[5,1],[7,0],[1,3],[3,2],[6,2],[8,1],[10,0],[4,3],[9,2],[11,1],[5,4],[13,0],[7,3],[12,2],[14,1],[16,0]];
 var path = [[0,0],[1,0],[2,0],[3,0],[3,1],[3,2]];
@@ -152,9 +142,8 @@ function legend(id, t){
   for(var i=0;i<6;i++) html += '<span><span class="sw" style="background:'+t[keys[i]]+'"></span>'+t.names[i]+'</span>';
   document.getElementById(id).innerHTML = html;
 }
-draw("gridA",THEMES.A,true); legend("legA",THEMES.A);
-draw("gridB",THEMES.B,false); legend("legB",THEMES.B);
-draw("gridC",THEMES.C,false); legend("legC",THEMES.C);
+draw("gridH",THEMES.H,true); legend("legH",THEMES.H);
+draw("gridR",THEMES.R,false); legend("legR",THEMES.R);
 </script>
 </body>
 </html>
