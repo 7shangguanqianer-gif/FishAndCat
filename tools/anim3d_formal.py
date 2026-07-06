@@ -103,13 +103,25 @@ def axis_v(t, d, vmax, acc):
 
 
 def traj_points(col, tier, n=48):
-    """真实轨迹曲线:双轴各自梯形积分的参数曲线(y=-0.75 巷道平面)。"""
+    """去程真实轨迹:双轴各自梯形积分的参数曲线(y=-0.75 巷道平面)。"""
     T = max(axis_T(col, VX, AX), axis_T(tier, VY, AY))
     pts = []
     for i in range(n + 1):
         t = T * i / n
         pts.append((axis_pos(t, col, VX, AX) + 0.5, -0.75,
                     axis_pos(t, tier, VY, AY) + 0.5))
+    return np.array(pts)
+
+
+def traj_points_return(col, tier, n=48):
+    """回程真实轨迹:从 (col,tier) 归零——与去程曲线镜像不重合
+    (去程=垂直先到位而后平走;回程=垂直先归零而后平走)。"""
+    T = max(axis_T(col, VX, AX), axis_T(tier, VY, AY))
+    pts = []
+    for i in range(n + 1):
+        t = T * i / n
+        pts.append((col - axis_pos(t, col, VX, AX) + 0.5, -0.75,
+                    tier - axis_pos(t, tier, VY, AY) + 0.5))
     return np.array(pts)
 
 
@@ -313,14 +325,15 @@ def main():
              "运动学/布局=canonical A4/A4b+assignment 真值 | 水平2.0/垂直0.5 m/s=A4(提升受功率限制,行业普遍水平>垂直) | 到达=固定seed泊松 | 能耗=示意",
              fontsize=6.5, color="#999")
     fig.text(0.995, 0.006,
-             "V2c · 封板=预占(133) · 轨迹线=双轴梯形真实曲线 · 深红=报警(ISA-18.2 未确认保持)",
+             "V2c · 封板=预占(133) · 轨迹=双轴梯形真曲线(深蓝去/浅蓝回) · 深红=报警(ISA-18.2) · 故障重排为演示编排,最终布局=assignment 真值",
              fontsize=6.5, color="#777", ha="right")
 
-    speed_state = {"trip": None}
+    speed_state = {"trip": None, "mode": None}
 
-    def redraw_speed(tr):
+    def redraw_speed(tr, show_cell=None):
         ax_v.clear(); ax_v.set_facecolor(C["panel"])
         g = tr["g"]
+        cell = show_cell if show_cell else (g["col"], g["tier"])
         dx, dz = float(g["col"]), float(g["tier"])
         T_out = tr["T_out"]
         T_tot = T_LOAD + 2 * T_out + T_DWELL
@@ -341,7 +354,7 @@ def main():
                   solid_capstyle="butt", label="装卸驻留(G1)×2")
         ax_v.plot([T_LOAD + T_out, T_LOAD + T_out + T_DWELL], [0, 0],
                   color=C["amber"], lw=3.0, solid_capstyle="butt")
-        ax_v.set_title(f"当前行程速度曲线:{g['name']} → 库位({g['col']},{g['tier']})",
+        ax_v.set_title(f"当前行程速度曲线:{g['name']} → 库位({cell[0]},{cell[1]})",
                        fontsize=8.5, color=C["txt"], pad=3)
         ax_v.set_ylabel("m/s", fontsize=7.5); ax_v.tick_params(labelsize=7)
         ax_v.set_ylim(0, 2.3)
@@ -371,7 +384,7 @@ def main():
                         color=C["lid"])
     tgt = pl.add_mesh(box(0.04, 0.96, 0.04, 0.96, 0.04, 0.96), color=C["amber"],
                       style="wireframe", line_width=3)
-    carried, placed_b, placed_l, paths, qboxes = [], [], [], [], []
+    carried, placed_b, placed_l, paths, rpaths, qboxes = [], [], [], [], [], []
     for tr in trips:
         g = tr["g"]
         carried.append(pl.add_mesh(box(-0.26, 0.26, -1.02, -0.50, -0.22, 0.22),
@@ -383,6 +396,8 @@ def main():
                                         z + 0.72, z + 0.84), color=C["lid"]))
         paths.append(pl.add_mesh(pv.lines_from_points(traj_points(x, z)),
                                  color=C["path"], line_width=3))
+        rpaths.append(pl.add_mesh(pv.lines_from_points(traj_points_return(x, z)),
+                                  color="#8FB3E8", line_width=3))   # 回程=浅一档蓝
         qboxes.append(pl.add_mesh(box(-0.40, 0.40, -0.40, 0.40, 0, 0.80),
                                   color=C[g["cls"]]))
     # 故障戏专属:原目标 (17,2) 的轨迹与红格三件套
@@ -434,7 +449,13 @@ def main():
 
         # ---- mpl ----
         if tr is not None and speed_state["trip"] is not tr:
+            # 故障趟:故障前标题显示原目标(防剧透),故障后重绘为重排格
+            pre = (tr is fault_trip and not fault)
+            redraw_speed(tr, show_cell=FAULT_CELL if pre else None)
+            speed_state["mode"] = "pre" if pre else "post"
+        elif (tr is fault_trip and fault and speed_state["mode"] == "pre"):
             redraw_speed(tr)
+            speed_state["mode"] = "post"
         if tr is not None:
             speed_state["cursor"].set_xdata([t - tr["t0"], t - tr["t0"]])
         k = len([x for x in q_steps_t if x <= t])
@@ -471,9 +492,11 @@ def main():
             ph = ("取货驻留" if t < tr["T_depart"] else
                   "载货去程" if t < tr["T_xfer"] - 0.5 * T_DWELL else
                   "放货驻留" if t < tr["T_place"] else "空载回程")
+            cell = (FAULT_CELL if (tr is fault_trip and not fault)
+                    else (g["col"], g["tier"]))            # 故障前显示原目标
             status.set_text(f"当前:{g['name']}({g['w']:.1f} kg,"
                             f"{'重' if g['cls']=='heavy' else '中' if g['cls']=='mid' else '轻'}货)"
-                            f" → 库位({g['col']},{g['tier']}) · {ph}")
+                            f" → 库位({cell[0]},{cell[1]}) · {ph}")
             status.set_color(C["txt"])
         fig.canvas.draw()
         base = Image.fromarray(np.asarray(fig.canvas.buffer_rgba())).convert("RGB")
@@ -512,10 +535,12 @@ def main():
                 tgt.SetVisibility(t < x["T_xfer"])
                 paths[j].SetVisibility(ph in ("out", "dwell", "load")
                                        and not is_fault_wait)
+                rpaths[j].SetVisibility(ph == "back")
                 fpath.SetVisibility(is_fault_wait)
             else:
                 carried[j].SetVisibility(False)
                 paths[j].SetVisibility(False)
+                rpaths[j].SetVisibility(False)
             placed_b[j].SetVisibility(t >= x["T_xfer"])
             placed_l[j].SetVisibility(t >= x["T_xfer"])
         if tr is None:
