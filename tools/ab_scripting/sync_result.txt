@@ -38,7 +38,7 @@ SYNCED: GVL_WeightPolicy (gvl, decl 622 ch, impl - ch, via replace())
 --- summary: synced=35 fail=0 absent=[] missing_in_src=[]
 active_application: ScriptObject{ScriptRecipeManContainer, NoRecipeManObject, NoRecipeDefinitionObject, NoScriptTraceObject, NoDeviceObject, NoExplicitConnectorObject, NoSymbolConfigObject, ScriptApplicationSymbolConfigExtension, NoLibManObject, LibManObjectContainer, ScriptNoProjectInfoMarker, ScriptApplication, ScriptNonTextualObject, ScriptIecLanguageObjectContainerObject, NoTaskConfigObject, NoTaskObject, ScriptImagePoolContainer, NoImagePoolObject, ScriptTextListContainer, NoTextListObject, ScriptVisualObjectContainer}(Project=0, Name=Application, guid=74993588-6e2e-4450-94f1-a27f72e3ded1)
 BUILD_CALLED
-MSG_ERR: Compile complete -- 0 errors, 0 warnings
+MSG_ERR: Compile complete -- 0 errors, 1 warnings
 MSG_ERR: Additional code checks complete -- 0 errors
 message-scan error-like lines: 2
 SAVE_OK
