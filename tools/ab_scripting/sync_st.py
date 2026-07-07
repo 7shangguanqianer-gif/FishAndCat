@@ -196,6 +196,10 @@ def create_missing(proj, name, kind, decl):
         obj = app.create_gvl(name)
         log("CREATED_GVL:", name)
         return obj
+    if kind == "dut":                        # 0707 补:DUT 分支(create_dut 动态 API 已证可用;
+        obj = app.create_dut(name)           #   缺此分支时 DUT 会误落到下方 pou 分支建成 FB)
+        log("CREATED_DUT:", name)
+        return obj
     m = HEAD_RE.search(decl)
     head = m.group(1) if m else "FUNCTION_BLOCK"
     try:
