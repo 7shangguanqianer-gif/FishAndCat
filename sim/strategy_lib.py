@@ -41,8 +41,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TERMS = {
     "random": dict(en="Random-based storage (RB)", zh="随机存储",
                    anchor="Hausman, Schwarz & Graves 1976, Mgmt Sci 22(6)"),
-    "seq":    dict(en="Fixed-scan first-fit (engineering baseline)", zh="固定扫描序首个可行位",
-                   anchor="题面字面策略;工业对应 SAP EWM Next Empty Bin(正名待拍板)"),
+    "seq":    dict(en="Fixed-Scan First-Fit (engineering baseline)", zh="固定扫描优先(工程基线)",
+                   anchor="题面'连续存放'字面策略,无文献专名——如实标注(0706 拍板①);工业近亲 SAP EWM Next Empty Bin(仅提及不冒认)"),
     "near":   dict(en="Closest Open Location (COL)", zh="最近可用库位",
                    anchor="HSG 1976(与 RB 等价性论断);Reyes et al. 2019 目录 COL"),
     "score":  dict(en="Multi-criteria weighted scoring (frequency-based family)",
@@ -169,6 +169,30 @@ def select_strategy(profile, batch_known=True, objective="holistic"):
     if p["skew"] < 0.35 and p["n"] <= 20:
         return "near"                         # 极小批+无画像:简单规则即可(F18-2)
     return "awra"
+
+
+def recommend(profile, batch_known=True, objective="holistic",
+              prefer_throughput=False):
+    """检测器完整输出(0706 拍板②④⑤落地):
+    strategy      主推策略(④:AWRA 为主;prefer_throughput=True 且高密度时切 CB
+                  ——'企业更重吞吐'的可选配项,报告写成可配置开关)
+    alt           备选策略+切换条件(④附带条件的显式表达)
+    delta_suggest δ 建议值(②条件化:density≥0.70 才开 0.15,否则 0——
+                  F21:低填充 δ 净亏/高压回库失败 -26%)
+    objective     评判档位(⑤三档并存:holistic 全要素默认/speed 纯效率/
+                  lexicographic 词典序,按演示与客户口径切换)"""
+    p = profile
+    strat = select_strategy(p, batch_known, objective)
+    alt = ""
+    if batch_known and p["density"] >= 0.70:
+        if prefer_throughput and objective != "holistic":
+            strat, alt = "cb", "awra(重货层高低4倍/能耗低——安全合规口径)"
+        else:
+            alt = "cb(exp_t 快约8%——吞吐优先口径可选配)"
+    delta = 0.15 if p["density"] >= 0.70 else 0.0
+    return dict(strategy=strat, alt=alt, delta_suggest=delta,
+                objective=objective,
+                note="δ 条件化依据 F21;主推 AWRA、CB 可选配依据 0706 拍板④")
 
 
 def st_ifelse(objective="holistic"):

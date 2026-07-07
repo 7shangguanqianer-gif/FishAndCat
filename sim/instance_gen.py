@@ -76,6 +76,10 @@ SCENARIOS = {
                            vol=("uniform", 0.1, 0.9), desc="偏态减弱(pareto α +30%)"),
     "drift_heavier":  dict(n=120, weight=("uniform", 20, 80), freq=_PARETO,
                            vol=("uniform", 0.1, 0.9), desc="重量整体上移(下界 +30% 量程)"),
+    # -- 鲁棒组(0706 用户质疑:超载有没有考虑) --
+    "illegal_mix":  dict(n=120, legacy="skew", illegal=6,
+                         desc="混入 6 件非法货(3 件超重 w>100 全层不可行+3 件超容积 v>1.0)"
+                              ",验证全策略优雅拒收且不崩溃(B4/A6 边界)"),
 }
 
 # ---------------- 2. 动态层场景轴(T1.4 消费;canonical G2-G4 的扫描版) ----------------
@@ -102,7 +106,18 @@ def gen_instance(name, seed):
     """场景名 + seed → 货物列表(确定性;legacy 走 ws.gen_goods 保位级兼容)。"""
     s = SCENARIOS[name]
     if s.get("legacy"):
-        return ws.gen_goods(s["n"], seed, s["legacy"])
+        goods = ws.gen_goods(s["n"], seed, s["legacy"])
+        k = s.get("illegal", 0)
+        if k:                                  # 前 k 件改造成非法货(超重/超容积各半),
+            rng = random.Random(seed + 31)     # 位置洗牌;全策略对其确定性拒收→placed
+            idx = rng.sample(range(s["n"]), k)  # 集合仍相同,exp_t 可比性保持
+            for j, i in enumerate(idx):
+                g = goods[i]
+                if j % 2 == 0:
+                    g.weight = round(rng.uniform(101.0, 130.0), 1)   # > BASE_CAP,全层不可行
+                else:
+                    g.vol = round(rng.uniform(1.05, 1.30), 2)        # > CELL_VOL,超容积
+        return goods
     rng = random.Random(seed)
     goods = []
     for i in range(s["n"]):                       # 每件按 w→f→v 顺序抽(同 gen_goods)
