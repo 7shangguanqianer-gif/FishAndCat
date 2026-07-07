@@ -24,7 +24,7 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=25**, iFailed=0(T19/T20/T22 是与 Python 的一致性向量,T23 双命令已知值,T24 官方口径预占格数 133,**T25 AWRA-LS 全流程端到端一致性——0707 新增**;iAwraPosDiff 为逐位分歧信息量,预期 0);
+   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=40**, iFailed=0(T19/T20/T22 是与 Python 的一致性向量,T23 双命令已知值,T24 官方口径预占格数 133,T25 AWRA-LS 全流程端到端一致性,**T26-T40 边界扩充——0707 新增:越界/负属性/承重容积边界值/归一分母0保护/优先级单调/选位策略正确性**;iAwraPosDiff 逐位分歧预期 0);
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。
