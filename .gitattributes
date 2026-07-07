@@ -1,0 +1,19 @@
+# 二进制文件:禁用 git 行尾/文本处理,避免"内容未变却标 M"的伪修改
+# 0707 根治 docx 伪 M(正文 XML 逐字节相同、git 仍标 M)问题
+*.docx binary
+*.doc  binary
+*.xlsx binary
+*.xls  binary
+*.pptx binary
+*.ppt  binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.bmp  binary
+*.zip  binary
+*.7z   binary
+*.mp4  binary
+*.mov  binary
+*.project binary
