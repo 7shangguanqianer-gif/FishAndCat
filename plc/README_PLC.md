@@ -14,7 +14,7 @@
 | 04_FB_Warehouse.st | 9 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测)+ **FB_VisuRefresh**(L6 颜色镜像) |
 | 05_PRG_Main.st | 1 个 POU-程序 | 主状态机,挂循环任务 |
 | 06_PRG_Test.st | 1 个 POU-程序 | 23 个边界+一致性用例(T22 加减速向量/T23 双命令) |
-| 07_GVL_Data_generated.st | 1 DUT + 1 GVL + 1 函数 | **生成文件勿手改**,由 sim/export_st_vectors.py 重生(含 ExpTimeAccel) |
+| 07_GVL_Data_generated.st | 2 DUT + 1 GVL + 1 函数 | **生成文件勿手改**,由 sim/export_st_vectors.py 重生(含 ExpTimeAccel + **T25 的 ST_AwraCell/aAwraExpect 终局向量 + LAM/MAX_LS 单源常量**,0707) |
 
 ## 2. 建工程步骤(AB 2.8+/AC500 V3)
 
@@ -24,7 +24,7 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=24**, iFailed=0(T19/T20/T22 是与 Python 的一致性向量,T23 双命令已知值,T24 官方口径预占格数 133——0706 新增;23 用例版本已于 0705 实测通过);
+   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=25**, iFailed=0(T19/T20/T22 是与 Python 的一致性向量,T23 双命令已知值,T24 官方口径预占格数 133,**T25 AWRA-LS 全流程端到端一致性——0707 新增**;iAwraPosDiff 为逐位分歧信息量,预期 0);
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。

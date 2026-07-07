@@ -13,20 +13,24 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 24;                  // 用例总数(加用例先改这里,防空槽误计;0706 +T24 官方口径)
-    aResult   : ARRAY[1..24] OF BOOL;       // 各用例结果(TRUE=通过)
+    N_CASES   : INT := 25;                  // 用例总数(加用例先改这里,防空槽误计;0707 +T25 端到端)
+    aResult   : ARRAY[1..25] OF BOOL;       // 各用例结果(TRUE=通过)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
+    fbAssign  : FB_AssignAllGoods;          // T25 端到端:AWRA 分配状态机
+    fbImprove : FB_LocalSwapImprove;        // T25 端到端:局部搜索状态机
+    fbStats   : FB_Stats;                   // T25 端到端:终局统计
     i, x, y, n : INT;
     rV        : REAL;
     iVecFail  : INT;
+    iAwraPosDiff : INT;                     // T25 逐位分歧计数(信息性;0=终局布局与 sim 逐位一致)
 END_VAR
 
 IF xRunTests THEN
     xRunTests := FALSE;
     iPassed := 0;  iFailed := 0;  sLastFail := '';
-    FOR i := 1 TO 24 DO aResult[i] := TRUE; END_FOR
+    FOR i := 1 TO 25 DO aResult[i] := TRUE; END_FOR
 
     // ---- T01-T04 承重系数:正常/顶层/负钳位/越上钳位 ----
     aResult[1] := ABS(FC_CapCoef(y := 0)  - 1.0)  < 0.0001;
@@ -144,6 +148,53 @@ IF xRunTests THEN
         IF FC_IsPresetOccupied(x := x, y := y, iRule := 3) THEN n := n + 1; END_IF
     END_FOR END_FOR
     aResult[24] := (n = 133);
+
+    // ---- T25 AWRA-LS 全流程终局一致性(端到端护栏;0707,sim/consistency_probe 离线证明可绿) ----
+    // 驱动 Rank+Assign+LS 分片状态机跑到 xDone(WHILE 内推进,测试不计实时性),
+    // 比对终局:①聚合统计容差(主判据,对单双精度局部最优鲁棒,同 T19/T20 哲学)
+    //          ②终局布局逐位(信息性 iAwraPosDiff;G1/G2 零触发时应为 0,见 gap 表)
+    // 向量源:07_GVL_Data_generated.st 的 aAwraExpect / AWRA_EXPT/ENERGY/COG(sum 官方口径,匀速)
+    GVL_Param.xUseAccel := FALSE;                    // 与 export 同口径(匀速)
+    GVL_WH.iGoodsCount := 0;
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);           // sum 官方口径(133 预占)
+    FC_LoadDemoGoods();                              // 20 件 seed2026,与 sim 同源
+    // -- 驱动 AWRA 分配(xUseRank=TRUE 排序模式,score 策略=2) --
+    fbAssign(xStart := FALSE, xUseRank := TRUE, iStrategy := 2);
+    fbAssign(xStart := TRUE,  xUseRank := TRUE, iStrategy := 2);
+    n := 0;
+    WHILE fbAssign.xBusy AND (n < 100000) DO
+        fbAssign(xStart := TRUE, xUseRank := TRUE, iStrategy := 2);
+        n := n + 1;
+    END_WHILE
+    // -- 驱动局部搜索到收敛 --
+    fbImprove(xStart := FALSE);
+    fbImprove(xStart := TRUE);
+    n := 0;
+    WHILE fbImprove.xBusy AND (n < 1000000) DO
+        fbImprove(xStart := TRUE);
+        n := n + 1;
+    END_WHILE
+    // -- 终局统计 --
+    fbStats(xExecute := FALSE);
+    fbStats(xExecute := TRUE);
+    // -- 逐位信息性检查(aGoods 索引==Id,见 FC_LoadDemoGoods) --
+    iAwraPosDiff := 0;
+    FOR i := 1 TO GVL_Data.N_AWRA DO
+        IF (GVL_WH.aGoods[GVL_Data.aAwraExpect[i].Id].X <> GVL_Data.aAwraExpect[i].X)
+        OR (GVL_WH.aGoods[GVL_Data.aAwraExpect[i].Id].Y <> GVL_Data.aAwraExpect[i].Y) THEN
+            iAwraPosDiff := iAwraPosDiff + 1;
+        END_IF
+    END_FOR
+    // -- 主判据:逐位一致(演示批 consistency_probe 证 G1/G2 零触发,故逐位可作主判据)
+    //    + 聚合容差 + 计数精确 + 违规0(多重护栏) --
+    aResult[25] := (iAwraPosDiff = 0)
+       AND (GVL_WH.stStats.PlacedCnt = GVL_Data.AWRA_PLACED)
+       AND (GVL_WH.stStats.FailedCnt = GVL_Data.AWRA_FAILED)
+       AND (ABS(GVL_WH.stStats.ExpRetrieval - GVL_Data.AWRA_EXPT) < 0.001)
+       AND (ABS(GVL_WH.stStats.Energy      - GVL_Data.AWRA_ENERGY) < 0.01)
+       AND (ABS(GVL_WH.stStats.CogHeight   - GVL_Data.AWRA_COG) < 0.001)
+       AND (GVL_WH.stStats.ViolCnt = 0);
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO
