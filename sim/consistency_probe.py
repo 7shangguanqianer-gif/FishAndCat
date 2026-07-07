@@ -4,14 +4,18 @@ consistency_probe.py — T2.1 sim↔ST 一致性审计探针(0707,brainstorm 步
 
 背景:AWRA-LS 的 assign 阶段,Python 用四元组 tie-break (score,travel,tier,col),
 ST FB_SelectSlot 用 (score,travel)+扫描序(col 外 tier 内)兜底。二者仅在 score 与
-travel **同时相等**时可能选不同位置(reloc/swap 两口径同为 score+扫描序,已一致)。
-本探针用数据回答:这个理论 gap 在真实数据下是否触发?
+travel **同时相等**时可能选不同位置。
+盲区记账(0707 独立复核 F2):reloc 选位 sim 用全局精确 min(:355)、ST 用
+`<rBest-1e-6` 逐步阈值(04_FB_Warehouse.st:298),多空位 score 差<1e-6 时可能选不同位;
+本探针的 tie_break 参数只切 assign 的次级序(assign_key),**不模拟 reloc 的阈值选位**,
+故这条 reloc 通道不在探针覆盖内——真正端到端兜底是 T25 AB 实跑(已绿),非本离线探针。
+本探针用数据回答:assign tie-break(G1)+ LS 接受阈值(G2)这两个 gap 在真实数据下是否触发?
 
 方法:同一批货物,分别用 tie_break="full"(现 sim 口径)与 "st"(模拟 ST 语义)跑
 run_awra_ls,逐位比对终局布局。全一致 → gap 零触发,T25 端到端向量会绿;
 有分歧 → 定位到具体货物/位置,决定统一哪边 tie-break。
 
-覆盖:演示批 20 件(seed 2026,T25 用同批)+ 12 场景 × 30 seeds 全量压力。
+覆盖:演示批 20 件(seed 2026,T25 用同批)+ len(SCENARIOS) 场景 × 30 seeds 全量压力。
 运行:python consistency_probe.py
 """
 import os
@@ -91,7 +95,7 @@ def main():
                 if worst is None or len(d) > worst[2]:
                     worst = (name, sd, len(d))
     n = len(ig.SCENARIOS) * 30
-    print(f"\n[全量 {n} 次(12 场景 × 30 seeds)]")
+    print(f"\n[全量 {n} 次({len(ig.SCENARIOS)} 场景 × 30 seeds)]")
     print(f"  G1 tie-break 单独触发: {g1}/{n}(理论 gap,score&travel 需同时相等)")
     print(f"  G2 LS 阈值 单独触发:  {g2}/{n}(单双精度结构性)")
     print(f"  完整 ST 语义布局分歧:  {both}/{n}(共 {diff_items} 件位置不同)")
@@ -107,7 +111,7 @@ def main():
     print("\n结论:")
     print(f"  G1 零/近零触发=理论 gap;G2 {g2}/{n} 触发(单双精度)。但**分歧布局的聚合")
     print(f"  指标差异 ≈ {max_expt_d:.1e}**——sim 与 ST 收敛到 score 完全等价的不同局部最优")
-    print("  (高密度下等价最优解有多个分支),非缺陷 → sim↔ST 数值等价、演示批逐位一致。")
+    print("  (高密度下等价最优解有多个分支),非缺陷 → sim↔ST 聚合近似等价(差 ≤1.1e-2 s 可忽略)、演示批/T25 逐位零差异。")
     print("  G2 不可靠改 ST 消除(单精度精度所限);正确定位=承认等价解,T25 用小批量演示逐位护栏。")
 
 
