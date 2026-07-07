@@ -1,4 +1,4 @@
-parsed objects: 35, missing sections: []
+parsed objects: 36, missing sections: []
 OPEN_OK F:\abb_wh_work\plc\AB_Project\ABB_WH.project
 SYNCED: ST_Good (dut, decl 699 ch, impl - ch, via replace())
 SYNCED: ST_Slot (dut, decl 522 ch, impl - ch, via replace())
@@ -31,11 +31,13 @@ SYNCED: FB_AnimatePath (pou, decl 401 ch, impl 1236 ch, via replace())
 SYNCED: FB_BuildVisuPath (pou, decl 195 ch, impl 897 ch, via replace())
 SYNCED: FB_ScanLoadProbe (pou, decl 286 ch, impl 418 ch, via replace())
 SYNCED: FB_VisuRefresh (pou, decl 123 ch, impl 975 ch, via replace())
-SYNCED: PRG_Main (pou, decl 721 ch, impl 7773 ch, via replace())
-SYNCED: PRG_Test (pou, decl 762 ch, impl 11385 ch, via replace())
+CREATED_POU: FB_GoodsInput type=FUNCTION_BLOCK
+SYNCED: FB_GoodsInput (pou, decl 548 ch, impl 1550 ch, via replace())
+SYNCED: PRG_Main (pou, decl 681 ch, impl 6582 ch, via replace())
+SYNCED: PRG_Test (pou, decl 824 ch, impl 12733 ch, via replace())
 SYNCED: GVL_Data (gvl, decl 2947 ch, impl - ch, via replace())
 SYNCED: GVL_WeightPolicy (gvl, decl 622 ch, impl - ch, via replace())
---- summary: synced=35 fail=0 absent=[] missing_in_src=[]
+--- summary: synced=36 fail=0 absent=[] missing_in_src=[]
 active_application: ScriptObject{ScriptRecipeManContainer, NoRecipeManObject, NoRecipeDefinitionObject, NoScriptTraceObject, NoDeviceObject, NoExplicitConnectorObject, NoSymbolConfigObject, ScriptApplicationSymbolConfigExtension, NoLibManObject, LibManObjectContainer, ScriptNoProjectInfoMarker, ScriptApplication, ScriptNonTextualObject, ScriptIecLanguageObjectContainerObject, NoTaskConfigObject, NoTaskObject, ScriptImagePoolContainer, NoImagePoolObject, ScriptTextListContainer, NoTextListObject, ScriptVisualObjectContainer}(Project=0, Name=Application, guid=74993588-6e2e-4450-94f1-a27f72e3ded1)
 BUILD_CALLED
 MSG_ERR: Compile complete -- 0 errors, 1 warnings

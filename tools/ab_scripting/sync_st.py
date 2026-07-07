@@ -47,6 +47,7 @@ MAP = [
     ("FB_BuildVisuPath",    "04_FB_Warehouse.st", "pou"),
     ("FB_ScanLoadProbe",    "04_FB_Warehouse.st", "pou"),
     ("FB_VisuRefresh",      "04_FB_Warehouse.st", "pou"),
+    ("FB_GoodsInput",       "04_FB_Warehouse.st", "pou"),
     ("PRG_Main",            "05_PRG_Main.st", "pou"),
     ("PRG_Test",            "06_PRG_Test.st", "pou"),
     ("GVL_Data",            "07_GVL_Data_generated.st", "gvl"),

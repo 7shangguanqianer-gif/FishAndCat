@@ -12,16 +12,14 @@ VAR
     fbImprove   : FB_LocalSwapImprove;
     fbStats     : FB_Stats;
     fbPath      : FB_BuildVisuPath;
-    fbSelOne    : FB_SelectSlot;        // 单件交互添加时即时推荐用
+    fbGoodsInput : FB_GoodsInput;       // 交互货物输入封装(0707 T2.2,替代内联逻辑+fbSelOne)
     fbVisu      : FB_VisuRefresh;       // L6:颜色镜像+堆垛机像素坐标,每周期常驻
     fbAnim      : FB_AnimatePath;       // L6:堆垛机沿路径回放动画(CmdAnimate 触发)
     xKickInit, xKickAssign, xKickImprove, xKickStats : BOOL;
     xUseRank    : BOOL;
     iStrat      : INT;
-    i           : INT;
     c2, t2      : INT;                  // 清除推荐高亮用循环变量
-    rWMaxTmp, rFMaxTmp : REAL;
-    xAddOld, xDemoOld, xRunOld, xResetOld : BOOL;
+    xDemoOld, xRunOld, xResetOld : BOOL;
 END_VAR
 
 // ---------- 全局按钮:复位(任意状态可触发) ----------
@@ -54,49 +52,31 @@ CASE eState OF
 
     // ---------- 等待输入(决赛交互:逐件添加 / 载入演示批 / 启动批量) ----------
     E_MainState.STATE_WAIT_INPUT:
-        // 按钮1:添加单件货物(题面五属性),并即时给出推荐仓位(黄色高亮)
-        IF GVL_Visu.CmdAddGood AND NOT xAddOld THEN
-            IF GVL_WH.iGoodsCount >= GVL_Param.MAX_GOODS THEN
-                GVL_Visu.VisuStatusText := 'ERR_GOODS_FULL_400';         // 边界#表满
-                GVL_Visu.VisuAlarm := TRUE;
-            ELSIF GVL_Visu.InGoodWeight < 0.0 OR GVL_Visu.InGoodFreq < 0.0
-                  OR GVL_Visu.InGoodVolume < 0.0 THEN
-                GVL_Visu.VisuStatusText := 'ERR_NEG_INPUT';   // 边界#负输入
-                GVL_Visu.VisuAlarm := TRUE;
+        // 按钮1:添加单件货物(五属性)——逻辑封装进 FB_GoodsInput(0707 T2.2),PRG 只编排可视化
+        fbGoodsInput(xAdd := GVL_Visu.CmdAddGood,
+                     iId := GVL_Visu.InGoodId, sName := GVL_Visu.InGoodName,
+                     rWeight := GVL_Visu.InGoodWeight, rFreq := GVL_Visu.InGoodFreq,
+                     rVolume := GVL_Visu.InGoodVolume);
+        IF fbGoodsInput.xOk THEN
+            IF fbGoodsInput.xFound THEN
+                GVL_Visu.VisuSlotState[fbGoodsInput.iSugX, fbGoodsInput.iSugY] := 3;  // 黄:推荐
+                fbPath(xExecute := TRUE,  iToX := fbGoodsInput.iSugX, iToY := fbGoodsInput.iSugY);
+                fbPath(xExecute := FALSE, iToX := fbGoodsInput.iSugX, iToY := fbGoodsInput.iSugY);
+                GVL_Visu.VisuStatusText := CONCAT('SUGGEST_X=',
+                    CONCAT(INT_TO_STRING(fbGoodsInput.iSugX),
+                    CONCAT('_Y=', INT_TO_STRING(fbGoodsInput.iSugY))));
+                GVL_Visu.VisuAlarm := FALSE;                   // 推荐成功清报警灯
             ELSE
-                GVL_WH.iGoodsCount := GVL_WH.iGoodsCount + 1;
-                GVL_WH.aGoods[GVL_WH.iGoodsCount].Id     := GVL_Visu.InGoodId;
-                GVL_WH.aGoods[GVL_WH.iGoodsCount].Name   := GVL_Visu.InGoodName;
-                GVL_WH.aGoods[GVL_WH.iGoodsCount].Weight := GVL_Visu.InGoodWeight;
-                GVL_WH.aGoods[GVL_WH.iGoodsCount].Freq   := GVL_Visu.InGoodFreq;
-                GVL_WH.aGoods[GVL_WH.iGoodsCount].Volume := GVL_Visu.InGoodVolume;
-                GVL_WH.aGoods[GVL_WH.iGoodsCount].Assigned := FALSE;
-                // 即时推荐(演示脚本第2/3步:输入高频轻货→近位;重货→低层)
-                rWMaxTmp := MAX(GVL_Visu.InGoodWeight, 1.0);
-                rFMaxTmp := MAX(GVL_Visu.InGoodFreq, 1.0);
-                FOR i := 1 TO GVL_WH.iGoodsCount DO
-                    IF GVL_WH.aGoods[i].Weight > rWMaxTmp THEN rWMaxTmp := GVL_WH.aGoods[i].Weight; END_IF
-                    IF GVL_WH.aGoods[i].Freq   > rFMaxTmp THEN rFMaxTmp := GVL_WH.aGoods[i].Freq;   END_IF
-                END_FOR
-                fbSelOne(iStrategy := 2,
-                         rGoodW := GVL_Visu.InGoodWeight, rGoodF := GVL_Visu.InGoodFreq,
-                         rGoodV := GVL_Visu.InGoodVolume,
-                         rWMax := rWMaxTmp, rFMax := rFMaxTmp);
-                IF fbSelOne.xFound THEN
-                    GVL_Visu.VisuSlotState[fbSelOne.iBestX, fbSelOne.iBestY] := 3;  // 黄:推荐
-                    fbPath(xExecute := TRUE, iToX := fbSelOne.iBestX, iToY := fbSelOne.iBestY);
-                    fbPath(xExecute := FALSE, iToX := fbSelOne.iBestX, iToY := fbSelOne.iBestY);
-                    GVL_Visu.VisuStatusText := CONCAT('SUGGEST_X=',
-                        CONCAT(INT_TO_STRING(fbSelOne.iBestX),
-                        CONCAT('_Y=', INT_TO_STRING(fbSelOne.iBestY))));
-                    GVL_Visu.VisuAlarm := FALSE;               // 推荐成功清报警灯
-                ELSE
-                    GVL_Visu.VisuStatusText := 'ALARM_NO_FEASIBLE_SLOT';   // 边界#9 可视化报警
-                    GVL_Visu.VisuAlarm := TRUE;                // 红灯亮(演示第6步:超重货)
-                END_IF
+                GVL_Visu.VisuStatusText := 'ALARM_NO_FEASIBLE_SLOT';   // 边界#9 超重货无位
+                GVL_Visu.VisuAlarm := TRUE;                    // 红灯(演示第6步)
             END_IF
+        ELSIF fbGoodsInput.iErrId = 1 THEN
+            GVL_Visu.VisuStatusText := 'ERR_GOODS_FULL_400';   // 边界:满仓
+            GVL_Visu.VisuAlarm := TRUE;
+        ELSIF fbGoodsInput.iErrId = 2 THEN
+            GVL_Visu.VisuStatusText := 'ERR_NEG_INPUT';        // 边界:负输入
+            GVL_Visu.VisuAlarm := TRUE;
         END_IF
-        xAddOld := GVL_Visu.CmdAddGood;
 
         // 按钮2:载入演示批次(GVL_Data,由 Python seed=2026 导出,保证与仿真同源)
         IF GVL_Visu.CmdLoadDemo AND NOT xDemoOld THEN

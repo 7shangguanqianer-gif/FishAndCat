@@ -618,3 +618,70 @@ GVL_Visu.VisuCraneXpx := GVL_Param.GRID_X0 + GVL_Visu.VisuCurrentX * GVL_Param.C
 GVL_Visu.VisuCraneYpx := GVL_Param.GRID_Y0
     + (GVL_Param.TIERS - 1 - GVL_Visu.VisuCurrentY) * GVL_Param.CELL_PX_H;
 END_FUNCTION_BLOCK
+
+
+(* ---------- FB_GoodsInput:交互货物输入封装(评分细则6/7;0707 T2.2 从 PRG_Main 抽取) ----------
+   功能:题面五属性(序号/名称/重量/频次/体积)输入 → 边界校验 → 写入货物表 → 即时推荐仓位。
+         把"关键交互算法封装为功能块,IO 参数设计合理"(评分细则6)显式化。
+   输入:xAdd 上升沿触发;iId/sName/rWeight/rFreq/rVolume = 题面五属性。
+   输出:xOk 成功入表;xFound 有推荐位;iSugX/iSugY 推荐列/层;
+         iErrId 错误码 0=ok / 1=满仓 / 2=负输入 / 3=无可行位。
+   边界:满仓(≥MAX_GOODS)→iErrId=1;任一属性<0→iErrId=2;无可行位(如超重货)→iErrId=3。
+   示例:xAdd 上升沿+合法轻货 → xOk=TRUE,xFound=TRUE,iSug=近位;超重货 → xOk=TRUE,iErrId=3。
+   分层:可视化(推荐高亮/路径叠加/状态文本/报警灯)由调用方 PRG_Main 按本 FB 输出编排——
+         本 FB 只算(可单元测试),PRG_Main 只画(画面职责)。 *)
+FUNCTION_BLOCK FB_GoodsInput
+VAR_INPUT
+    xAdd    : BOOL;             // 添加触发(上升沿)
+    iId     : INT;
+    sName   : STRING[32];
+    rWeight : REAL;
+    rFreq   : REAL;
+    rVolume : REAL;
+END_VAR
+VAR_OUTPUT
+    xOk     : BOOL;             // 本次是否成功入表
+    xFound  : BOOL;             // 是否有推荐仓位
+    iSugX   : INT;              // 推荐列
+    iSugY   : INT;              // 推荐层
+    iErrId  : INT;             // 0=ok 1=满仓 2=负输入 3=无可行位
+END_VAR
+VAR
+    xOld    : BOOL;
+    i       : INT;
+    rWMaxTmp, rFMaxTmp : REAL;
+    fbSel   : FB_SelectSlot;
+END_VAR
+
+xOk := FALSE;  xFound := FALSE;  iErrId := 0;  iSugX := -1;  iSugY := -1;
+IF xAdd AND NOT xOld THEN
+    IF GVL_WH.iGoodsCount >= GVL_Param.MAX_GOODS THEN
+        iErrId := 1;                                    // 边界:满仓拒收
+    ELSIF rWeight < 0.0 OR rFreq < 0.0 OR rVolume < 0.0 THEN
+        iErrId := 2;                                    // 边界:负属性拒收
+    ELSE
+        GVL_WH.iGoodsCount := GVL_WH.iGoodsCount + 1;
+        GVL_WH.aGoods[GVL_WH.iGoodsCount].Id       := iId;
+        GVL_WH.aGoods[GVL_WH.iGoodsCount].Name     := sName;
+        GVL_WH.aGoods[GVL_WH.iGoodsCount].Weight   := rWeight;
+        GVL_WH.aGoods[GVL_WH.iGoodsCount].Freq     := rFreq;
+        GVL_WH.aGoods[GVL_WH.iGoodsCount].Volume   := rVolume;
+        GVL_WH.aGoods[GVL_WH.iGoodsCount].Assigned := FALSE;
+        xOk := TRUE;
+        // 即时推荐(归一分母取当前批次最大,与 score 口径一致)
+        rWMaxTmp := MAX(rWeight, 1.0);  rFMaxTmp := MAX(rFreq, 1.0);
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            IF GVL_WH.aGoods[i].Weight > rWMaxTmp THEN rWMaxTmp := GVL_WH.aGoods[i].Weight; END_IF
+            IF GVL_WH.aGoods[i].Freq   > rFMaxTmp THEN rFMaxTmp := GVL_WH.aGoods[i].Freq;   END_IF
+        END_FOR
+        fbSel(iStrategy := 2, rGoodW := rWeight, rGoodF := rFreq, rGoodV := rVolume,
+              rWMax := rWMaxTmp, rFMax := rFMaxTmp);
+        IF fbSel.xFound THEN
+            xFound := TRUE;  iSugX := fbSel.iBestX;  iSugY := fbSel.iBestY;
+        ELSE
+            iErrId := 3;                                // 无可行位(如超重货连底层都放不下)
+        END_IF
+    END_IF
+END_IF
+xOld := xAdd;
+END_FUNCTION_BLOCK

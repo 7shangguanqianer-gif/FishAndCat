@@ -13,14 +13,15 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 40;                  // 用例总数(0707 +T26-T40 边界+选位策略扩充)
-    aResult   : ARRAY[1..40] OF BOOL;       // 各用例结果(TRUE=通过;预留至40+)
+    N_CASES   : INT := 41;                  // 用例总数(0707 +T41 FB_GoodsInput 封装)
+    aResult   : ARRAY[1..45] OF BOOL;       // 各用例结果(TRUE=通过;预留至45)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
     fbAssign  : FB_AssignAllGoods;          // T25 端到端:AWRA 分配状态机
     fbImprove : FB_LocalSwapImprove;        // T25 端到端:局部搜索状态机
     fbStats   : FB_Stats;                   // T25 端到端:终局统计
+    fbGoodsInputT : FB_GoodsInput;          // T41:货物输入封装测试
     i, x, y, n : INT;
     rV        : REAL;
     iVecFail  : INT;
@@ -30,7 +31,7 @@ END_VAR
 IF xRunTests THEN
     xRunTests := FALSE;
     iPassed := 0;  iFailed := 0;  sLastFail := '';
-    FOR i := 1 TO 40 DO aResult[i] := TRUE; END_FOR
+    FOR i := 1 TO 45 DO aResult[i] := TRUE; END_FOR
 
     // ---- T01-T04 承重系数:正常/顶层/负钳位/越上钳位 ----
     aResult[1] := ABS(FC_CapCoef(y := 0)  - 1.0)  < 0.0001;
@@ -248,6 +249,25 @@ IF xRunTests THEN
     x := fbSel.iBestX;  y := fbSel.iBestY;
     fbSel(iStrategy := 2, rGoodW := 25.0, rGoodF := 8.0, rGoodV := 0.5, rWMax := 25.0, rFMax := 8.0);
     aResult[40] := (fbSel.iBestX = x) AND (fbSel.iBestY = y);
+
+    // ---- T41 FB_GoodsInput 封装(评分细则6/7;0707 T2.2 抽取):正常/负输入/超重无位 三分支 ----
+    GVL_WH.iGoodsCount := 0;
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    // (a) 正常轻货 → xOk & xFound & 入表(count=1)
+    fbGoodsInputT(xAdd := FALSE, iId := 1, sName := 'A', rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    fbGoodsInputT(xAdd := TRUE,  iId := 1, sName := 'A', rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    aResult[41] := fbGoodsInputT.xOk AND fbGoodsInputT.xFound AND (GVL_WH.iGoodsCount = 1);
+    // (b) 负输入 → 拒收 iErrId=2,不入表(count 仍 1;新上升沿=先落再起)
+    fbGoodsInputT(xAdd := FALSE, iId := 2, sName := 'B', rWeight := -1.0, rFreq := 5.0, rVolume := 0.5);
+    fbGoodsInputT(xAdd := TRUE,  iId := 2, sName := 'B', rWeight := -1.0, rFreq := 5.0, rVolume := 0.5);
+    aResult[41] := aResult[41] AND (NOT fbGoodsInputT.xOk) AND (fbGoodsInputT.iErrId = 2)
+                   AND (GVL_WH.iGoodsCount = 1);
+    // (c) 超重货 150kg → 入表但无可行位 iErrId=3、xFound=FALSE(新上升沿)
+    fbGoodsInputT(xAdd := FALSE, iId := 3, sName := 'C', rWeight := 150.0, rFreq := 5.0, rVolume := 0.5);
+    fbGoodsInputT(xAdd := TRUE,  iId := 3, sName := 'C', rWeight := 150.0, rFreq := 5.0, rVolume := 0.5);
+    aResult[41] := aResult[41] AND fbGoodsInputT.xOk AND (NOT fbGoodsInputT.xFound)
+                   AND (fbGoodsInputT.iErrId = 3);
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

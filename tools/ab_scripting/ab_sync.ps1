@@ -22,7 +22,7 @@ function Run-ABScript($scriptName, $resultName, $timeoutSec) {
     if (Test-Path $res) { Get-Content $res -Encoding UTF8 } else { Write-Output "!! no result file ($scriptName)" }
 }
 
-Write-Output "=== [1/2] sync_st.py: .st -> AB project (35 objects) + build + save ==="
+Write-Output "=== [1/2] sync_st.py: .st -> AB project (36 objects) + build + save ==="
 $out1 = Run-ABScript "sync_st.py" "sync_result.txt" 300
 $out1 | Select-String -Pattern "summary|MSG_ERR|Compile|SAVE|ABSENT|CREATED"
 if (-not ($out1 -match "Compile complete -- 0 errors")) {
@@ -34,10 +34,10 @@ if (-not $SyncOnly) {
     Write-Output "=== [2/2] run_test.py: online run PRG_Test ==="
     $out2 = Run-ABScript "run_test.py" "runtest_result.txt" 300
     $out2 | Select-String -Pattern "LOGIN|STATE|iPassed|iFailed|xAllPass|LOGOUT"
-    if ($out2 -match "iPassed = INT#40" -and $out2 -match "iFailed = INT#0") {
-        Write-Output "=== ALL GREEN: iPassed=40 iFailed=0 ==="
+    if ($out2 -match "iPassed = INT#41" -and $out2 -match "iFailed = INT#0") {
+        Write-Output "=== ALL GREEN: iPassed=41 iFailed=0 ==="
     } else {
-        Write-Output "!! online test not 40/0 (full log: runtest_result.txt)"
+        Write-Output "!! online test not 41/0 (full log: runtest_result.txt)"
         exit 2
     }
 }
