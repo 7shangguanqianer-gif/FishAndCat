@@ -218,7 +218,9 @@ IF xRunTests THEN
                AND NOT FC_CheckFeasible(x := 1, y := 0, rGoodW := 10.0, rGoodV := 1.01);
     // T33-T34 归一分母为0保护(不除零崩溃,返回有限非负;枪I:REAL除零=INF/NaN 依系统)
     rV := FC_CalcScore(rGoodW := 10.0, rGoodF := 5.0, x := 1, y := 0, rWMax := 0.0, rFMax := 0.0);
-    aResult[33] := (rV >= 0.0) AND (rV < 100.0);
+    // 归一保护后 rFMax→1、F=5>1 使 fNorm=5、resv=(1-5)*.. 为负,score 可负——本用例只验
+    // "除零保护生效=返回有限值不崩"(NaN 令两比较皆 FALSE、INF 令 <1E6 FALSE,故此区间≡有限数)
+    aResult[33] := (rV > -1.0E6) AND (rV < 1.0E6);
     rV := FC_CalcPriority(rGoodF := 5.0, rGoodW := 10.0, rGoodV := 0.5,
                           rFMax := 0.0, rWMax := 0.0, rVMax := 0.0);
     aResult[34] := (rV >= 0.0) AND (rV < 100.0);

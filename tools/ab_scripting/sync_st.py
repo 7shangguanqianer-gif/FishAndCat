@@ -21,6 +21,7 @@ MAP = [
     ("ST_Stats",            "01_DUTs.st", "dut"),
     ("E_MainState",         "01_DUTs.st", "dut"),
     ("ST_TestVec",          "07_GVL_Data_generated.st", "dut"),
+    ("ST_AwraCell",         "07_GVL_Data_generated.st", "dut"),
     ("GVL_Param",           "02_GVL.st", "gvl"),
     ("GVL_WH",              "02_GVL.st", "gvl"),
     ("GVL_Visu",            "02_GVL.st", "gvl"),

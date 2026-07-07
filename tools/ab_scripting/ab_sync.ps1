@@ -32,10 +32,10 @@ if (-not $SyncOnly) {
     Write-Output "=== [2/2] run_test.py: 仿真在线跑 PRG_Test ==="
     $out2 = Run-ABScript "run_test.py" "runtest_result.txt" 300
     $out2 | Select-String -Pattern "LOGIN|STATE|iPassed|iFailed|xAllPass|LOGOUT"
-    if ($out2 -match "iPassed = INT#24" -and $out2 -match "iFailed = INT#0") {
-        Write-Output "=== ALL GREEN: iPassed=24 iFailed=0 ==="
+    if ($out2 -match "iPassed = INT#40" -and $out2 -match "iFailed = INT#0") {
+        Write-Output "=== ALL GREEN: iPassed=40 iFailed=0 ==="
     } else {
-        Write-Output "!! 在线测试未达 24/0(完整日志 runtest_result.txt)"
+        Write-Output "!! 在线测试未达 40/0(完整日志 runtest_result.txt)"
         exit 2
     }
 }
