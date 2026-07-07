@@ -306,13 +306,16 @@ def run_online(strategy, goods, rule, score_fn):
 
 # ---------------- 批量组:AWRA-LS(Rank -> Assign -> Local Search) ----------------
 def run_awra_ls(goods, rule, score_fn, w_max, f_max,
-                lam=(0.50, 0.35, 0.15), max_iter=5):
+                lam=(0.50, 0.35, 0.15), max_iter=5, tie_break="full", ls_eps=1e-12):
     """自适应加权排序分配+局部搜索(资料包推荐架构,对应文献 Rank-and-Assign 思想):
     Rank   先按优先级排序:高频、重、大体积优先(λ=0.50/0.35/0.15),
            把"随机到达"转成"重要者先挑",天然缓解在线贪心的先占问题;
     Assign 按序逐件选 score 最小的可行位(与在线 score 同一目标函数,便于比 gap);
     LS     两类邻域迭代改进:①重定位(移到更优空位)②成对交换(互换后总分下降),
            每步换位前重查承重/容积约束(边界清单要求),直至无改进或达 max_iter 轮。
+    tie_break: "full"=(score,travel,tier,col) 四元组(默认,历史口径);
+               "st"=(score,travel) 二元组+扫描序兜底(模拟 ST FB_SelectSlot 语义,
+               T2.1 一致性审计用;仅 assign 阶段,reloc/swap 两口径同为 score+扫描序)。
     """
     v_max = max(g.vol for g in goods)
     l1, l2, l3 = lam
@@ -322,6 +325,11 @@ def run_awra_ls(goods, rule, score_fn, w_max, f_max,
 
     order = sorted(goods, key=lambda g: (-priority(g), g.gid))   # Rank(平局按序号,确定性)
 
+    def assign_key(g, s):                                        # assign tie-break(可切 ST 语义)
+        if tie_break == "st":
+            return (score_fn(g, *s), travel_time(*s))
+        return (score_fn(g, *s), travel_time(*s), s[1], s[0])
+
     wh = Warehouse(rule)
     pos_of, failed = {}, []
     for g in order:                                               # Assign
@@ -329,7 +337,7 @@ def run_awra_ls(goods, rule, score_fn, w_max, f_max,
         if not slots:
             failed.append(g)
             continue
-        best = min(slots, key=lambda s: (score_fn(g, *s), travel_time(*s), s[1], s[0]))
+        best = min(slots, key=lambda s: assign_key(g, s))
         wh.put(best[0], best[1], g)
         pos_of[g.gid] = best
 
@@ -345,7 +353,7 @@ def run_awra_ls(goods, rule, score_fn, w_max, f_max,
             if not slots:
                 continue
             best = min(slots, key=lambda s: score_fn(g, *s))
-            if score_fn(g, *best) < cur - 1e-12:
+            if score_fn(g, *best) < cur - ls_eps:
                 wh.remove(c0, t0)
                 wh.put(best[0], best[1], g)
                 pos_of[g.gid] = best
@@ -361,7 +369,7 @@ def run_awra_ls(goods, rule, score_fn, w_max, f_max,
                     continue                                      # 交换后必须仍满足承重/容积
                 old = score_fn(gi, *pi) + score_fn(gj, *pj)
                 new = score_fn(gi, *pj) + score_fn(gj, *pi)
-                if new < old - 1e-12:
+                if new < old - ls_eps:
                     wh.grid[pi[0]][pi[1]], wh.grid[pj[0]][pj[1]] = gj, gi
                     pos_of[gi.gid], pos_of[gj.gid] = pj, pi
                     improved = True

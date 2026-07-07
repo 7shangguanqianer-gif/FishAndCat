@@ -40,6 +40,16 @@ for g, (c, t) in zip(goods[:10], probe_slots):
     ws.ACCEL = False
     vecs.append((g.weight, g.freq, c, t, w_max, f_max, sc, t_uni, t_acc))
 
+# ---- AWRA-LS 全流程终局向量(T25 端到端护栏;0707,匀速+sum官方口径)----
+ws.ACCEL = False
+LAM = (0.50, 0.35, 0.15)
+MAX_LS = 5
+wh_a, placed_a, failed_a = ws.run_awra_ls(goods, "sum", score_fn, w_max, f_max,
+                                          lam=LAM, max_iter=MAX_LS)
+pos_by_id = {g.gid: (c, t) for g, (c, t) in placed_a}
+awra_cells = [(gid, pos_by_id[gid][0], pos_by_id[gid][1]) for gid in sorted(pos_by_id)]
+m_a = ws.metrics(wh_a, placed_a, failed_a)
+
 L = []
 L.append("(* ============================================================")
 L.append("   07_GVL_Data_generated.st — 生成文件,勿手改!")
@@ -63,10 +73,26 @@ L.append("    ExpTimeAccel : REAL;   // Python 期望时间(L1 梯形加减速�
 L.append("END_STRUCT")
 L.append("END_TYPE")
 L.append("")
+L.append("(* ---------- DUT:ST_AwraCell(T25 终局布局向量) ---------- *)")
+L.append("TYPE ST_AwraCell :")
+L.append("STRUCT")
+L.append("    Id : INT;    // 货物序号")
+L.append("    X  : INT;    // 终局列")
+L.append("    Y  : INT;    // 终局层")
+L.append("END_STRUCT")
+L.append("END_TYPE")
+L.append("")
 L.append("(* ---------- GVL:GVL_Data ---------- *)")
 L.append("VAR_GLOBAL CONSTANT")
 L.append(f"    N_DEMO    : INT := {N_DEMO};")
 L.append(f"    N_TESTVEC : INT := {len(vecs)};")
+L.append(f"    N_AWRA    : INT := {len(awra_cells)};   // T25 终局向量件数")
+L.append(f"    AWRA_PLACED : INT := {m_a['n'] - m_a['fail']};")
+L.append(f"    AWRA_FAILED : INT := {m_a['fail']};")
+L.append(f"    LAM_F : REAL := {LAM[0]};   // Rank λ 频次(单源,ST FC_CalcPriority 应引用)")
+L.append(f"    LAM_W : REAL := {LAM[1]};   // Rank λ 重量")
+L.append(f"    LAM_V : REAL := {LAM[2]};   // Rank λ 体积")
+L.append(f"    MAX_LS_ROUNDS : INT := {MAX_LS};   // LS 最大轮数(单源,ST nMaxLsRounds 应引用)")
 L.append("END_VAR")
 L.append("VAR_GLOBAL")
 L.append("    aTestVec : ARRAY[1..10] OF ST_TestVec := [")
@@ -76,6 +102,15 @@ for i, (w, f, c, t, wm, fm, es, et, eta) in enumerate(vecs):
              f"WMax := {wm}, FMax := {fm}, "
              f"ExpScore := {es:.6f}, ExpTime := {et:.6f}, ExpTimeAccel := {eta:.6f}){sep}")
 L.append("    ];")
+# ---- T25 终局布局向量 + 期望聚合统计 ----
+L.append(f"    aAwraExpect : ARRAY[1..{len(awra_cells)}] OF ST_AwraCell := [")
+for i, (gid, cx, cy) in enumerate(awra_cells):
+    sep = "," if i < len(awra_cells) - 1 else ""
+    L.append(f"        (Id := {gid}, X := {cx}, Y := {cy}){sep}")
+L.append("    ];")
+L.append(f"    AWRA_EXPT   : REAL := {m_a['exp_t']:.6f};   // 期望取货时间(ExpRetrieval 比对,容差1e-3)")
+L.append(f"    AWRA_ENERGY : REAL := {m_a['energy']:.6f};  // 能耗 kg·m(Energy 比对)")
+L.append(f"    AWRA_COG    : REAL := {m_a['cog']:.6f};     // 重心高(CogHeight 比对)")
 L.append("END_VAR")
 L.append("")
 L.append("(* ---------- FC_LoadDemoGoods:载入演示批次(与 Python 仿真同源同 seed) ---------- *)")
@@ -99,6 +134,8 @@ with open(out, "w", encoding="utf-8") as fp:
     fp.write("\n".join(L) + "\n")
 print(f"已生成 {os.path.normpath(out)}")
 print(f"演示批次 {N_DEMO} 件(seed={SEED}),测试向量 {len(vecs)} 条(含加减速期望值)")
+print(f"AWRA 终局向量 {len(awra_cells)} 件(sum 口径,placed={m_a['n']-m_a['fail']} "
+      f"failed={m_a['fail']} exp_t={m_a['exp_t']:.3f} energy={m_a['energy']:.1f})")
 for i, (w, f, c, t, wm, fm, es, et, eta) in enumerate(vecs[:3], 1):
     print(f"  vec{i}: W={w} F={f} slot=({c},{t}) -> score={es:.6f} "
           f"t_uni={et:.3f} t_acc={eta:.3f}")

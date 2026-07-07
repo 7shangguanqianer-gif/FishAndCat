@@ -20,10 +20,26 @@ STRUCT
 END_STRUCT
 END_TYPE
 
+(* ---------- DUT:ST_AwraCell(T25 终局布局向量) ---------- *)
+TYPE ST_AwraCell :
+STRUCT
+    Id : INT;    // 货物序号
+    X  : INT;    // 终局列
+    Y  : INT;    // 终局层
+END_STRUCT
+END_TYPE
+
 (* ---------- GVL:GVL_Data ---------- *)
 VAR_GLOBAL CONSTANT
     N_DEMO    : INT := 20;
     N_TESTVEC : INT := 10;
+    N_AWRA    : INT := 20;   // T25 终局向量件数
+    AWRA_PLACED : INT := 20;
+    AWRA_FAILED : INT := 0;
+    LAM_F : REAL := 0.5;   // Rank λ 频次(单源,ST FC_CalcPriority 应引用)
+    LAM_W : REAL := 0.35;   // Rank λ 重量
+    LAM_V : REAL := 0.15;   // Rank λ 体积
+    MAX_LS_ROUNDS : INT := 5;   // LS 最大轮数(单源,ST nMaxLsRounds 应引用)
 END_VAR
 VAR_GLOBAL
     aTestVec : ARRAY[1..10] OF ST_TestVec := [
@@ -38,6 +54,31 @@ VAR_GLOBAL
         (W := 78.5, F := 9.82, X := 2, Y := 18, WMax := 80.0, FMax := 9.82, ExpScore := 1.876974, ExpTime := 36.000000, ExpTimeAccel := 37.666667),
         (W := 80.0, F := 1.86, X := 12, Y := 7, WMax := 80.0, FMax := 9.82, ExpScore := 0.514996, ExpTime := 14.000000, ExpTimeAccel := 15.666667)
     ];
+    aAwraExpect : ARRAY[1..20] OF ST_AwraCell := [
+        (Id := 1, X := 4, Y := 1),
+        (Id := 2, X := 17, Y := 0),
+        (Id := 3, X := 10, Y := 0),
+        (Id := 4, X := 7, Y := 0),
+        (Id := 5, X := 8, Y := 0),
+        (Id := 6, X := 16, Y := 0),
+        (Id := 7, X := 1, Y := 1),
+        (Id := 8, X := 14, Y := 0),
+        (Id := 9, X := 1, Y := 0),
+        (Id := 10, X := 11, Y := 0),
+        (Id := 11, X := 3, Y := 1),
+        (Id := 12, X := 4, Y := 0),
+        (Id := 13, X := 19, Y := 0),
+        (Id := 14, X := 6, Y := 1),
+        (Id := 15, X := 13, Y := 0),
+        (Id := 16, X := 5, Y := 0),
+        (Id := 17, X := 2, Y := 0),
+        (Id := 18, X := 0, Y := 1),
+        (Id := 19, X := 19, Y := 1),
+        (Id := 20, X := 18, Y := 1)
+    ];
+    AWRA_EXPT   : REAL := 2.810626;   // 期望取货时间(ExpRetrieval 比对,容差1e-3)
+    AWRA_ENERGY : REAL := 210.400000;  // 能耗 kg·m(Energy 比对)
+    AWRA_COG    : REAL := 0.227632;     // 重心高(CogHeight 比对)
 END_VAR
 
 (* ---------- FC_LoadDemoGoods:载入演示批次(与 Python 仿真同源同 seed) ---------- *)
