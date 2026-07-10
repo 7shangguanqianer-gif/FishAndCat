@@ -219,6 +219,72 @@ try:
 except Exception:
     pass
 
+# δ 悬崖-平台数字(F15;δ 作用于在线评分,score 列)
+D_CLIFF = D_PLAT_LO = D_PLAT_HI = MISS
+try:
+    _d = {float(r["value"]): float(r["expt_score"])
+          for r in SENS if r["factor"] == "delta"}
+    D_CLIFF = reg("sensitivity:δ=0悬崖", f"{_d[0.0]:.2f}")
+    _plat = [v for k, v in _d.items() if 0.10 <= k <= 0.30]
+    D_PLAT_LO = reg("sensitivity:δ平台min", f"{min(_plat):.2f}")
+    D_PLAT_HI = reg("sensitivity:δ平台max", f"{max(_plat):.2f}")
+except Exception:
+    pass
+
+# 自适应权重增益(F13;与 adaptive_weights.py 同逻辑重算:查表最优 vs 固定默认 δ0.15/βγ1.0)
+ADW_GAIN_MEAN = ADW_GAIN_PEAK = MISS
+try:
+    _aw = load_rows("adaptive_weights.csv")
+    _sc = {}
+    for r in _aw:
+        _sc.setdefault((r["density"], r["case"], r["mode"]), []).append(
+            (float(r["delta"]), float(r["bg"]), float(r["exp_mean"])))
+    _gains = []
+    for combos in _sc.values():
+        best = min(e for _, _, e in combos)
+        dft = [e for d, b, e in combos if abs(d - 0.15) < 1e-9 and abs(b - 1.0) < 1e-9]
+        if dft:
+            _gains.append((dft[0] - best) / dft[0] * 100)
+    if _gains:
+        ADW_GAIN_MEAN = reg("adaptive_weights:平均增益%",
+                            f"{sum(_gains) / len(_gains):.2f}")
+        ADW_GAIN_PEAK = reg("adaptive_weights:峰值增益%", f"{max(_gains):.2f}")
+except Exception:
+    pass
+
+# δ 生命周期定论(F21;两组文件,0710 修缮:45% 主组与 90% 高压组分名不再互覆)
+def _lc_pair(rows, turnover):
+    d15 = {r["seed"]: r for r in rows
+           if r["turnover"] == turnover and float(r["delta"]) == 0.15}
+    d0 = {r["seed"]: r for r in rows
+          if r["turnover"] == turnover and float(r["delta"]) == 0.0}
+    seeds = sorted(set(d15) & set(d0))
+    if not seeds:
+        return None
+    diffs = [float(d15[s]["retr_mean"]) - float(d0[s]["retr_mean"]) for s in seeds]
+    return (sum(diffs) / len(diffs),
+            sum(int(d15[s]["fails"]) for s in seeds),
+            sum(int(d0[s]["fails"]) for s in seeds), len(seeds))
+
+
+LC_LOW_D10 = LC_LOW_D3 = LC_HP_F15 = LC_HP_F0 = LC_HP_FDROP = MISS
+try:
+    _lc = load_rows("lifecycle_delta.csv")
+    _r10 = _lc_pair(_lc, "10")
+    _r3 = _lc_pair(_lc, "3")
+    if _r10:
+        LC_LOW_D10 = reg("lifecycle:45%汰换10%差s", f"{_r10[0]:+.2f}")
+    if _r3:
+        LC_LOW_D3 = reg("lifecycle:45%汰换33%差s", f"{_r3[0]:+.2f}")
+    _hp = _lc_pair(load_rows("lifecycle_delta_240.csv"), "3")
+    if _hp:
+        LC_HP_F15 = reg("lifecycle_240:δ组回库失败", str(_hp[1]))
+        LC_HP_F0 = reg("lifecycle_240:无δ回库失败", str(_hp[2]))
+        LC_HP_FDROP = reg("lifecycle_240:失败降幅%",
+                          f"{(_hp[2] - _hp[1]) / _hp[2] * 100:.0f}")
+except Exception:
+    pass
+
 # 敏感性结论(与 sensitivity.py 同逻辑重算,数据同源)
 SENS_D = [r for r in SENS if r["factor"] == "delta"]
 SENS_A = [r for r in SENS if r["factor"] == "acc_scale"]
@@ -352,20 +418,60 @@ def main():
         "开创性论文的原文假设)与中国现行行业标准名录(JB/T 7016-2017《巷道堆垛起重机》)"
         "——每个取值可回溯到公开出处或显式声明为情景假设,引用体系分三层列于附录 D。")
 
-    # ---------------- 2 双层算法 ----------------
+    # ---------------- 2 双层算法(0710 样章化:δ 证据链专节) ----------------
     r.h("2 双层优化架构:在线评分与批量 AWRA-LS", 1)
+    r.h("2.1 在线层:四项加权评分", 2)
     r.p("在线层面向决赛交互场景:货物逐件到达,不预知未来,PLC 在一个扫描周期内完成 400 "
         "仓位全扫描评分并给出推荐位。评分函数为四项加权:效率项(频次×行程时间)、稳定项"
         "(重量×层高)、能耗项(提升做功)与位置价值预留项 δ(冷门货占近位受罚)。"
-        "δ 是在线决策的关键:其为 0 时策略退化为就近贪心,占位集合与 near 完全重合"
-        "(实验发现 F2,并在第 4.4 节敏感性分析中参数化重现)。")
+        "前三项为当前货物找好位置,δ 为未来货物留位置——它是四项中唯一带前瞻性的一项,"
+        "也是本文投入验证最重的一项,其完整证据链见 §2.3。")
+    r.h("2.2 批量层:AWRA-LS 与 gap 分析", 2)
     r.p(f"批量层 AWRA-LS(Rank→Assign→Local Search)在全部货物已知时给出优化上界:先按"
         f"频次/重量/体积加权优先级排序,再按同一评分函数逐件分配,最后以重定位与成对交换"
         f"两类邻域做局部搜索。批量层较在线评分再降 {GAP_ONLINE}%,该差距即'信息完备程度'"
-        f"的价值,连接两层的 gap 分析构成报告主线。权重按场景(密度×货物分布×模式)查表"
-        f"自适应,策略表由多 seed 标定并经留出集验证,PLC 侧以同一张表落地(三处同源)。")
+        f"的价值,连接两层的 gap 分析构成报告主线:在线层回答'现在能做到多好',批量层"
+        f"回答'信息拉满还能好多少',两者之差给重排机制(§4.3)定价。")
     r.fig("fig1_策略对比.png", "图 1  五策略主指标对比(复现:python warehouse_sim.py)")
     r.fig("fig2_占用热力图.png", "图 2  典型布局占用热力图(热货聚 I/O 角)")
+
+    r.h("2.3 位置价值预留项 δ:一条自我修正的证据链", 2)
+    r.p("δ 的机理是给稀缺资源定价:近位有限,冷门货占据一格,热门货就少一格。围绕"
+        "这一项,本文积累了五步相互独立的证据;其中最后一步修正了此前的解读。链条"
+        "按发生顺序如实呈现,包括被修正的部分。")
+    r.p(f"第一步,存在性(F2):δ=0 时,在线评分的占位集合与最近开放位规则(closest "
+        f"open location)完全重合——删掉 δ,多目标评分便退化为换了写法的最近位规则。"
+        f"§4.4 的参数化扫描复现同一现象并给出形状:δ=0 处在线评分期望取货 {D_CLIFF} s"
+        f"(悬崖),δ∈[0.10,0.30] 内稳定于 {D_PLAT_LO}–{D_PLAT_HI} s(平台)。")
+    r.p(f"第二步,稳健性(F15):平台的存在说明取 δ=0.15 不是脆弱甜点,0.10–0.30 内"
+        f"结论不动。第三步,密度弹性(F13):18 场景网格标定显示在线 δ 的最优值随填充"
+        f"密度上升(约 0.1 升至 0.2)——仓位越稀缺,预留越值钱,机制解释获得第三条"
+        f"独立证据;批量模式下 δ 恒小,因为 Rank 阶段的全局排序替代了预留功能。")
+    r.p(f"第四步,反向探测(F16):以轻量策略梯度 RL 为对照,同预算训练后 RL 收敛于"
+        f"'距离与层高主导'的策略(评测期望取货 {RL_FINAL} s,较随机起点 {RL_RAND} s "
+        f"提升过半,但距手工标定评分 {RL_SCORE} s 仍差 {RL_GAP}%),且学得方向与标定"
+        f"方向的余弦仅 {RL_COS}——RL 没有自发发现 δ 结构。当时的解读是:终局回报难以"
+        f"把'为未来留位'的功劳归因到单步决策(信用分配难),前瞻性预留是设计出来的。")
+    r.p(f"第五步,边界与修正(F21):全生命周期实验(200 周期循环访问+汰换+夜间重排,"
+        f"30 seeds CRN 配对)给出更完整的图景——45% 填充下 δ 是净亏的:出库响应配对差 "
+        f"{LC_LOW_D10} s(汰换 10%)至 {LC_LOW_D3} s(汰换 33%),p<0.001,近位不"
+        f"紧缺时预留没有对象,只剩把冷门货推远的日常代价;90% 高压下 δ 的价值兑现在"
+        f"'放得进'维度:回库失败 {LC_HP_F15} 对 {LC_HP_F0} 次(少 {LC_HP_FDROP}%),"
+        f"效率指标持平。δ 由此重新定位:它是高压场景的可行性保险,不是全场景的效率"
+        f"工具,场景检测器据此仅在高密度档启用 δ。这一步同时修正了第四步的解读:"
+        f"RL 训练发生在低压场景,该场景下 δ 本身净亏,'不学'是正确判断——把它归因"
+        f"于信用分配难度属于过度解读。")
+    r.p("这条链的价值不在每步都支持最初设计,而在每步都改变了对这一项的认识:从"
+        "'δ 是核心创新'到'δ 是有明确适用边界的可行性保险'。主动划定自家创新点的"
+        "边界,本文视为方法论的一部分。")
+
+    r.h("2.4 场景自适应权重:从标定到 PLC 落地", 2)
+    r.p(f"四项权重不是一组拍定的常数,而是按场景查表:18 场景(密度×货物分布×模式)"
+        f"×15 权重组合网格标定生成策略表,查表较固定默认权重平均增益 {ADW_GAIN_MEAN}%、"
+        f"峰值 {ADW_GAIN_PEAK}%(同分布内标定口径,泛化经留出 seed 验证为全正增益)。"
+        f"标定同时暴露三条规律:在线 δ 随密度升(§2.3 第三步)、批量 δ 恒小、β 与 γ "
+        f"只认其和(§4.4 敏感性视角复验)。策略表三处同源落地:Python 查表函数、本报告"
+        f"附表、PLC 侧生成文件(场景在线判档即查表切换)——'自适应'从名字变成机制。")
     r.fig("fig12_自适应权重.png", "图 12  场景自适应权重与固定权重对照")
 
     # ---------------- 3 运动与作业模型 ----------------
@@ -552,7 +658,7 @@ def main():
     # ---------------- 8 创新点与工程取舍 ----------------
     r.h("8 创新点与工程取舍", 1)
     r.table(["创新点", "证据位置"], [
-        ["位置价值预留项 δ 及其证据链(δ=0 退化→标定→敏感性平台)", "§2/§4.4,F2→F5→F13"],
+        ["位置价值预留项 δ 及其自我修正证据链(存在性→稳健→密度弹性→RL 反向探测→生命周期边界)", "§2.3/§4.4,F2→F5/F13→F15→F16→F21"],
         ["场景自适应权重查表(多 seed 标定+留出集验证+PLC 同源落地)", "§2,fig12"],
         ["扫描周期分片:优化算法非阻塞运行于 10ms 实时任务", "§5"],
         ["双实现同源+一致性向量的轻量数字孪生验证方法", "§6"],
@@ -661,7 +767,16 @@ def main():
     for k, v in USED:
         print(f"  {k:<38} {v}")
     miss = sum(1 for _, v in USED if v == MISS)
-    print(f"\n共注入 {len(USED)} 个数字,待补 {miss} 个;正文无硬编码性能数字。")
+    # 正文实扫(0710 修盲区):派生值 try/except 失败不进 USED,只数 USED 会虚报"待补 0"
+    # ——以成文文本里的 MISS 出现次数为准(段落+表格双扫)
+    body_miss = sum(p.text.count(MISS) for p in r.d.paragraphs)
+    for tb in r.d.tables:
+        body_miss += sum(c.text.count(MISS) for row in tb.rows for c in row.cells)
+    print(f"\n共注入 {len(USED)} 个数字,来源清单待补 {miss} 个,"
+          f"正文实扫待补 {body_miss} 处;正文无硬编码性能数字。")
+    if body_miss > miss:
+        print(f"⚠️ 有 {body_miss - miss} 处派生值缺数据(未进来源清单)——"
+              f"检查上游 CSV 是否就绪后重跑本脚本。")
 
 
 if __name__ == "__main__":

@@ -181,12 +181,16 @@ def main():
               f";重排件数 δ组 {st.mean([r['moves'] for r in res[0.15]]):.1f}"
               f" / 无δ {st.mean([r['moves'] for r in res[0.0]]):.1f}")
 
-    with open(os.path.join(OUT, "lifecycle_delta.csv"), "w", newline="",
+    # 文件名按组区分(0710 修缮):默认组(120=45% 填充)沿用原名;其他 n_init 加后缀
+    # ——此前两组共用一名互相覆盖,报告生成器永远只能注入后跑的一组
+    fname = ("lifecycle_delta.csv" if a.n_init == N_INIT
+             else f"lifecycle_delta_{a.n_init}.csv")
+    with open(os.path.join(OUT, fname), "w", newline="",
               encoding="utf-8-sig") as fp:
         w = csv.DictWriter(fp, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
-    print(f"\nCSV:{OUT}\\lifecycle_delta.csv({len(rows)} 行)")
+    print(f"\nCSV:{OUT}\\{fname}({len(rows)} 行)")
 
 
 if __name__ == "__main__":
