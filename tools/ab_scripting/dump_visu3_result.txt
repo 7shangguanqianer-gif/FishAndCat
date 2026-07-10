@@ -1,0 +1,28 @@
+app: True
+===== hasattr(proj, X) =====
+  export_native: True
+  import_native: True
+  export_xml: True
+  import_xml: True
+  save: True
+  save_as: True
+  get_children: True
+  find: True
+  create_folder: True
+  export_plcopenxml: False
+  import_plcopenxml: False
+===== hasattr(app, X) =====
+  create_pou: True
+  create_dut: True
+  create_gvl: True
+  create_visualization: False
+  create_visualisation: False
+  create_visu: False
+  create_object: False
+  add_object: False
+  create_folder: True
+  import_native: True
+  export_native: True
+  get_children: True
+  create_task_configuration: True
+=== DUMP_VISU3_DONE ===

@@ -1,0 +1,8 @@
+app create* methods: []
+existing ST_AwraCell: ScriptObject{NoRecipeManObject, NoRecipeDefinitionObject, NoScriptTraceObject, N
+  remove-ish: []
+  removed via remove
+created DUT via create_dut
+BUILD_CALLED
+SAVED_OK
+=== FIX_DONE ===

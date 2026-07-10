@@ -1,0 +1,11 @@
+Application found: True
+===== Application dir() =====
+
+
+factory/io candidates: 
+no method: create_visualization
+no method: create_visualisation
+no method: create_visu
+
+project import/export methods: 
+=== DUMP_VISU2_DONE ===
