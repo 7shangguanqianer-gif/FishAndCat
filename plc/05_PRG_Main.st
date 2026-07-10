@@ -15,11 +15,14 @@ VAR
     fbGoodsInput : FB_GoodsInput;       // 交互货物输入封装(0707 T2.2,替代内联逻辑+fbSelOne)
     fbVisu      : FB_VisuRefresh;       // L6:颜色镜像+堆垛机像素坐标,每周期常驻
     fbAnim      : FB_AnimatePath;       // L6:堆垛机沿路径回放动画(CmdAnimate 触发)
+    fbQuery     : FB_QueryGood;         // 块3 P3:单件查询(细则8,常驻)
+    fbRecPage   : FB_RecordPage;        // 块3 P2:记录页 10 行窗口(细则8,常驻)
     xKickInit, xKickAssign, xKickImprove, xKickStats : BOOL;
     xUseRank    : BOOL;
     iStrat      : INT;
     c2, t2      : INT;                  // 清除推荐高亮用循环变量
     xDemoOld, xRunOld, xResetOld : BOOL;
+    xSnapOld    : BOOL;                 // 块3:快照按钮沿检测
 END_VAR
 
 // ---------- 全局按钮:复位(任意状态可触发) ----------
@@ -168,6 +171,21 @@ CASE eState OF
 END_CASE
 
 // ---------- L6 常驻段(每周期,与状态机无关) ----------
+// 块3 P2/P3:记录页窗口+单件查询(常驻:DONE 后评委翻表/查询仍可用)
+fbRecPage(xPageUp := GVL_Visu.CmdPageUp, xPageDown := GVL_Visu.CmdPageDown);
+fbQuery(xQuery := GVL_Visu.CmdQuery, iId := GVL_Visu.InQueryId);
+// 块3 方向9:快照保存(上升沿把当前布局冻结为对比基准,CmdCompareMode 切换显示)
+IF GVL_Visu.CmdSaveSnap AND NOT xSnapOld THEN
+    GVL_Visu.aSnapState := GVL_Visu.VisuSlotState;      // 同型数组整体赋值
+    GVL_Visu.xSnapValid := TRUE;
+    GVL_Visu.VisuStatusText := 'SNAP_SAVED';
+END_IF
+xSnapOld := GVL_Visu.CmdSaveSnap;
+// 块3:名称下拉同步(ComboBox 写入下标,消费即复位=一次性写入不锁手输)
+IF GVL_Visu.iNameSel >= 0 AND GVL_Visu.iNameSel <= 9 THEN
+    GVL_Visu.InGoodName := GVL_Visu.astrNames[GVL_Visu.iNameSel];
+    GVL_Visu.iNameSel := -1;
+END_IF
 // 动画回放:CmdAnimate 上升沿触发,堆垛机图元沿当前 VisuPath 走到目标格
 // (rCycleTime 与本任务周期一致:10ms 任务填 0.01;改任务周期须同步这里)
 fbAnim(xStart := GVL_Visu.CmdAnimate, rCycleTime := 0.01, rSpeedScale := 5.0);

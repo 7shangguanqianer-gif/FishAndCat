@@ -595,23 +595,32 @@ VAR
 END_VAR
 
 // 1) 状态→颜色 + 上下翻转(显示行 r=0 是画面顶=层19)
+//    块3 方向9:对比模式(CmdCompareMode 且已存快照)色源=aSnapState 冻结布局,
+//    否则=实时 VisuSlotState;色表仍 FC_StateToColor 单源(画面标准 §2)
 FOR c := 0 TO GVL_Param.COLS - 1 DO
     FOR rw := 0 TO GVL_Param.TIERS - 1 DO
-        GVL_Visu.VisuSlotColor[c, rw] :=
-            FC_StateToColor(iState := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - rw]);
+        IF GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid THEN
+            iSt := GVL_Visu.aSnapState[c, GVL_Param.TIERS - 1 - rw];
+        ELSE
+            iSt := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - rw];
+        END_IF
+        GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := iSt);
     END_FOR
 END_FOR
 
-// 2) 路径叠加(蓝):只画在空闲/预占格上,已占/推荐格保持原色
-FOR k := 0 TO GVL_Visu.VisuPathCount - 1 DO
-    IF k > 39 THEN EXIT; END_IF                       // 路径数组上限 40 点,防越界
-    iSt := GVL_Visu.VisuSlotState[GVL_Visu.VisuPathX[k], GVL_Visu.VisuPathY[k]];
-    IF iSt = 0 OR iSt = 1 THEN
-        GVL_Visu.VisuSlotColor[GVL_Visu.VisuPathX[k],
-                               GVL_Param.TIERS - 1 - GVL_Visu.VisuPathY[k]] :=
-            FC_StateToColor(iState := 4);
-    END_IF
-END_FOR
+// 2) 路径叠加(蓝):只画在空闲/预占格上,已占/推荐格保持原色;
+//    对比模式跳过——快照是纯布局对比,叠实时路径会误导(块3)
+IF NOT (GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid) THEN
+    FOR k := 0 TO GVL_Visu.VisuPathCount - 1 DO
+        IF k > 39 THEN EXIT; END_IF                   // 路径数组上限 40 点,防越界
+        iSt := GVL_Visu.VisuSlotState[GVL_Visu.VisuPathX[k], GVL_Visu.VisuPathY[k]];
+        IF iSt = 0 OR iSt = 1 THEN
+            GVL_Visu.VisuSlotColor[GVL_Visu.VisuPathX[k],
+                                   GVL_Param.TIERS - 1 - GVL_Visu.VisuPathY[k]] :=
+                FC_StateToColor(iState := 4);
+        END_IF
+    END_FOR
+END_IF
 
 // 3) 堆垛机格坐标 → 像素坐标(图元锚点=左上角,大小=一个单元格)
 GVL_Visu.VisuCraneXpx := GVL_Param.GRID_X0 + GVL_Visu.VisuCurrentX * GVL_Param.CELL_PX_W;
@@ -684,4 +693,137 @@ IF xAdd AND NOT xOld THEN
     END_IF
 END_IF
 xOld := xAdd;
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_QueryGood:单件查询(评分细则8"统计信息";块3 P3 查询页) ----------
+   功能:按序号扫货物表 → 五属性+位置+路径长/行程时间(存量口径)+载货行程/装卸档
+        (U2 拟真对照,调参区改 rLadenFactorVY/装卸三档此二值实时变)→ 网格青色高亮。
+   输入:xQuery 上升沿触发;iId 查询序号。
+   输出:直接写 GVL_Visu.Qry* 组(画面服务 FB,同 FB_VisuRefresh 先例);
+        高亮=VisuSlotState 置 6,旧高亮恢复为 2(命中货必 Assigned=原状态已占用)。
+   边界:iId<=0 → QryFound=FALSE;未找到 → 全字段清零;未分配货 → 位置=-1、时间组=0。
+   示例:查演示批 Id=1 → QryFound=TRUE,位置/时间齐,该格变青;查 Id=999 → FALSE。 *)
+FUNCTION_BLOCK FB_QueryGood
+VAR_INPUT
+    xQuery : BOOL;              // 查询触发(上升沿)
+    iId    : INT;               // 查询序号
+END_VAR
+VAR
+    xOld   : BOOL;
+    i      : INT;
+    iLastX : INT := -1;         // 上次高亮列(-1=无,清除用)
+    iLastY : INT := -1;         // 上次高亮层
+END_VAR
+
+IF xQuery AND NOT xOld THEN
+    // 清上次青色高亮(只清仍=6 的格,防误清其他状态;恢复为 2=已占用)
+    IF iLastX >= 0 AND iLastY >= 0 THEN
+        IF GVL_Visu.VisuSlotState[iLastX, iLastY] = 6 THEN
+            GVL_Visu.VisuSlotState[iLastX, iLastY] := 2;
+        END_IF
+        iLastX := -1;  iLastY := -1;
+    END_IF
+    // 输出组清零(未命中时字段不残留上次结果)
+    GVL_Visu.QryFound := FALSE;
+    GVL_Visu.QryX := -1;            GVL_Visu.QryY := -1;
+    GVL_Visu.QryName := '';         GVL_Visu.QryWeight := 0.0;
+    GVL_Visu.QryFreq := 0.0;        GVL_Visu.QryVolume := 0.0;
+    GVL_Visu.QryPathLen := 0.0;     GVL_Visu.QryExecTime := 0.0;
+    GVL_Visu.QryTravelLaden := 0.0; GVL_Visu.QryHandleT := 0.0;
+    IF iId > 0 THEN                                   // 边界:非正序号直接未找到
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            IF GVL_WH.aGoods[i].Id = iId THEN
+                GVL_Visu.QryFound  := TRUE;
+                GVL_Visu.QryName   := GVL_WH.aGoods[i].Name;
+                GVL_Visu.QryWeight := GVL_WH.aGoods[i].Weight;
+                GVL_Visu.QryFreq   := GVL_WH.aGoods[i].Freq;
+                GVL_Visu.QryVolume := GVL_WH.aGoods[i].Volume;
+                IF GVL_WH.aGoods[i].Assigned THEN
+                    GVL_Visu.QryX        := GVL_WH.aGoods[i].X;
+                    GVL_Visu.QryY        := GVL_WH.aGoods[i].Y;
+                    GVL_Visu.QryPathLen  := GVL_WH.aGoods[i].PathLength;
+                    GVL_Visu.QryExecTime := GVL_WH.aGoods[i].ExecTime;
+                    // U2 拟真对照:载货行程(垂直折减)+ 装卸三档(调参区实时联动)
+                    GVL_Visu.QryTravelLaden := FC_TravelLaden(
+                        x0 := 0, y0 := 0,
+                        x1 := GVL_WH.aGoods[i].X, y1 := GVL_WH.aGoods[i].Y,
+                        xSimXY := GVL_Param.xSimultaneousXY);
+                    GVL_Visu.QryHandleT := FC_HandleTime(rW := GVL_WH.aGoods[i].Weight);
+                    // 青色高亮 + 记住位置供下次清除
+                    GVL_Visu.VisuSlotState[GVL_WH.aGoods[i].X, GVL_WH.aGoods[i].Y] := 6;
+                    iLastX := GVL_WH.aGoods[i].X;
+                    iLastY := GVL_WH.aGoods[i].Y;
+                END_IF
+                EXIT;                                 // 序号唯一,命中即止
+            END_IF
+        END_FOR
+    END_IF
+END_IF
+xOld := xQuery;
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_RecordPage:统计记录页 10 行窗口(评分细则8;块3 P2) ----------
+   功能:aGoods 全表 → 10 行显示窗口(aRow* 并行数组),翻页上升沿±10 并钳位;
+        每周期常驻刷新(数据总最新;40 次数组访问,微秒级)。
+   设计:窗口映射而非 400 行整表 —— WebVisu 渲染预算(画面标准 §6)+ 一屏一焦点(§3)。
+   输入:xPageUp/xPageDown 翻页按钮(上升沿)。
+   输出:直接写 GVL_Visu.aRow*/iRecTop/iRecTotal(画面服务 FB)。
+   边界:iRecTop 钳位 [1, max(1, iGoodsCount-9)];窗口越界行 Id=0(画面按 0 显示空行);
+        未分配货位置=-1、数值=0(与查询页口径一致)。
+   示例:120 件表,iRecTop=1 显示 1..10;PageDown→11..20;拉到底 111..120 后再按不动。 *)
+FUNCTION_BLOCK FB_RecordPage
+VAR_INPUT
+    xPageUp   : BOOL;           // 上翻(上升沿,-10)
+    xPageDown : BOOL;           // 下翻(上升沿,+10)
+END_VAR
+VAR
+    xUpOld, xDnOld : BOOL;
+    k, idx         : INT;
+END_VAR
+
+// 翻页(上升沿)
+IF xPageUp AND NOT xUpOld THEN
+    GVL_Visu.iRecTop := GVL_Visu.iRecTop - 10;
+END_IF
+IF xPageDown AND NOT xDnOld THEN
+    GVL_Visu.iRecTop := GVL_Visu.iRecTop + 10;
+END_IF
+xUpOld := xPageUp;
+xDnOld := xPageDown;
+
+// 钳位:上限先于下限(空表时两界都收敛到 1)
+IF GVL_Visu.iRecTop > GVL_WH.iGoodsCount - 9 THEN
+    GVL_Visu.iRecTop := GVL_WH.iGoodsCount - 9;
+END_IF
+IF GVL_Visu.iRecTop < 1 THEN
+    GVL_Visu.iRecTop := 1;
+END_IF
+GVL_Visu.iRecTotal := GVL_WH.iGoodsCount;
+
+// 10 行窗口映射(常驻:批量分配进行中翻表也能看到最新位置)
+FOR k := 0 TO 9 DO
+    idx := GVL_Visu.iRecTop + k;
+    IF idx >= 1 AND idx <= GVL_WH.iGoodsCount THEN
+        GVL_Visu.aRowId[k] := GVL_WH.aGoods[idx].Id;
+        IF GVL_WH.aGoods[idx].Assigned THEN
+            GVL_Visu.aRowX[k]       := GVL_WH.aGoods[idx].X;
+            GVL_Visu.aRowY[k]       := GVL_WH.aGoods[idx].Y;
+            GVL_Visu.aRowPathLen[k] := GVL_WH.aGoods[idx].PathLength;
+            GVL_Visu.aRowExecT[k]   := GVL_WH.aGoods[idx].ExecTime;
+        ELSE
+            GVL_Visu.aRowX[k]       := -1;    // 未分配:位置=-1(画面显示 "-")
+            GVL_Visu.aRowY[k]       := -1;
+            GVL_Visu.aRowPathLen[k] := 0.0;
+            GVL_Visu.aRowExecT[k]   := 0.0;
+        END_IF
+    ELSE
+        GVL_Visu.aRowId[k]      := 0;         // 越界:空行(Id=0 约定)
+        GVL_Visu.aRowX[k]       := -1;
+        GVL_Visu.aRowY[k]       := -1;
+        GVL_Visu.aRowPathLen[k] := 0.0;
+        GVL_Visu.aRowExecT[k]   := 0.0;
+    END_IF
+END_FOR
 END_FUNCTION_BLOCK

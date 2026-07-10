@@ -245,7 +245,69 @@ CASE iState OF
     3: FC_StateToColor := 16#00FFC107;   // 当前推荐:黄
     4: FC_StateToColor := 16#0042A5F5;   // 路径:蓝
     5: FC_StateToColor := 16#00E53935;   // 报警:红
+    6: FC_StateToColor := 16#0026C6DA;   // 查询高亮:青(块3 P3,FB_QueryGood 置位)
 ELSE
     FC_StateToColor := 16#00FF00FF;      // 未知状态:品红(醒目,便于发现bug)
 END_CASE
+END_FUNCTION
+
+
+(* ---------- FC_TravelLaden:载货行程时间(U2 载重运动学,块3 拟真对照) ----------
+   功能:垂直轴速度 × GVL_Param.rLadenFactorVY(满载折减,默认0.80),水平不折减;
+        xUseAccel/xSimXY 开关行为与 FC_CalcTravelTime 完全同构(sim travel_time_laden 一字对齐)。
+   输入:x0,y0,x1,y1 格坐标;xSimXY TRUE=切比雪夫 FALSE=顺序模型
+   输出:载货行程时间 s(纯行程,不含装卸——装卸另用 FC_HandleTime,避免双计 rTLoad)
+   边界:速度/折减系数非法(<=0)钳回安全值;dx/dy 由 ABS 保证非负
+   示例:laden(0,0→10,10) 主口径 vy=0.5×0.8=0.4 → MAX(10/2, 10/0.4)=25.0s(空载 20.0s,T45 锚)
+   消费:FB_QueryGood(QryTravelLaden);不进评分/分配链路(零回归设计) *)
+FUNCTION FC_TravelLaden : REAL
+VAR_INPUT
+    x0, y0, x1, y1  : INT;      // 起点/终点(格坐标)
+    xSimXY          : BOOL;     // TRUE=切比雪夫 FALSE=顺序
+END_VAR
+VAR
+    dx, dy, tx, ty : REAL;
+    vx, vy         : REAL;
+END_VAR
+dx := ABS(INT_TO_REAL(x1 - x0)) * GVL_Param.CELL_W;
+dy := ABS(INT_TO_REAL(y1 - y0)) * GVL_Param.CELL_H;
+// 边界:速度与折减系数非法保护(调参区可被改出非法值,拒绝依赖画面侧校验)
+vx := GVL_Param.rVx;  IF vx <= 0.0 THEN vx := 1.0; END_IF
+vy := GVL_Param.rVy;  IF vy <= 0.0 THEN vy := 1.0; END_IF
+IF GVL_Param.rLadenFactorVY > 0.0 AND GVL_Param.rLadenFactorVY <= 1.0 THEN
+    vy := vy * GVL_Param.rLadenFactorVY;    // 满载垂直折减(仅垂直,U2 口径)
+END_IF
+IF GVL_Param.xUseAccel THEN
+    tx := FC_AxisTime(d := dx, vmax := vx, acc := GVL_Param.rAx);
+    ty := FC_AxisTime(d := dy, vmax := vy, acc := GVL_Param.rAy);
+ELSE
+    tx := dx / vx;
+    ty := dy / vy;
+END_IF
+IF xSimXY THEN
+    FC_TravelLaden := MAX(tx, ty);
+ELSE
+    FC_TravelLaden := tx + ty;
+END_IF
+END_FUNCTION
+
+
+(* ---------- FC_HandleTime:装卸时间三档(U2 可变装卸,块3 拟真对照) ----------
+   功能:按货物重量查三档装卸时长(轻<=W1→T1 / 中<=W2→T2 / 重>W2→T3);
+        档界与时长全部 GVL_Param 参数化 = 画面调参区旋钮(改档界/时长,查询页数字实时变)。
+   输入:rW 货物重量 kg(定义域>=0;负值落轻货档,入口校验由 FB_GoodsInput iErrId=2 兜底)
+   输出:单次装卸时间 s(货叉全循环;sim handle_time 一字对齐,默认档 6.0/8.5/12.5)
+   边界:档界被调成 W1>W2 时按 ELSIF 顺序自然判定(W1 优先),无崩溃路径
+   示例:29.9→6.0 / 30.1→8.5 / 60.1→12.5(T44 三档边界锚,0.1 间隙避单精度) *)
+FUNCTION FC_HandleTime : REAL
+VAR_INPUT
+    rW : REAL;                  // 货物重量 kg
+END_VAR
+IF rW <= GVL_Param.rHandleW1 THEN
+    FC_HandleTime := GVL_Param.rHandleT1;
+ELSIF rW <= GVL_Param.rHandleW2 THEN
+    FC_HandleTime := GVL_Param.rHandleT2;
+ELSE
+    FC_HandleTime := GVL_Param.rHandleT3;
+END_IF
 END_FUNCTION

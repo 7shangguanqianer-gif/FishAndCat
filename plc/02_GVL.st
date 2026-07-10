@@ -34,6 +34,15 @@ VAR_GLOBAL
     rAx             : REAL := 0.5;      // 水平加减速 m/s²
     rAy             : REAL := 0.3;      // 垂直加减速 m/s²
 
+    // ---- U2 载重运动学(块3 拟真调参区,画面可调;默认=canonical U2/sim 同值) ----
+    // 消费者:FC_TravelLaden(垂直折减)/FC_HandleTime(装卸三档);不进现有评分/测试链路(零回归)
+    rLadenFactorVY  : REAL := 0.80;     // 满载垂直速度折减(Mecalux 0.818 圆整,水平不折减=行业惯例)
+    rHandleW1       : REAL := 30.0;     // 装卸档界1:轻货上限 kg
+    rHandleW2       : REAL := 60.0;     // 装卸档界2:中货上限 kg(>W2 为重货)
+    rHandleT1       : REAL := 6.0;      // 轻货装卸 s(单次货叉全循环)
+    rHandleT2       : REAL := 8.5;      // 中货装卸 s
+    rHandleT3       : REAL := 12.5;     // 重货装卸 s
+
     // ---- 预占用规则(B1;2026-07-06 官方答复后默认=3,四解读全保留可切) ----
     iPreRule        : INT := 3;         // 3=x+y被3整除(133格,官方口径) 0=且(49格) 1=或(231格) 2=线性(134格)
 
@@ -103,4 +112,38 @@ VAR_GLOBAL
     VisuCraneYpx    : INT;                  // 堆垛机图元 Y 像素(含上下翻转)
     VisuAlarm       : BOOL;                 // 报警灯:超重/负输入/无可行位=TRUE(演示第6步,红灯元件)
     CmdAnimate      : BOOL;                 // 按钮:堆垛机沿当前路径回放动画(FB_AnimatePath)
+    // ---- 块3 P3 单件查询页(评分细则8"单件查询";FB_QueryGood 填充,状态6=青色高亮) ----
+    InQueryId       : INT;                  // 查询输入:货物序号
+    CmdQuery        : BOOL;                 // 按钮:执行查询
+    QryFound        : BOOL;                 // 查到与否(FALSE 时下方字段无效)
+    QryX            : INT;                  // 位置列
+    QryY            : INT;                  // 位置层
+    QryName         : STRING[32];
+    QryWeight       : REAL;
+    QryFreq         : REAL;
+    QryVolume       : REAL;
+    QryPathLen      : REAL;                 // 路径长度 m(曼哈顿,C2)
+    QryExecTime     : REAL;                 // 行程时间 s(切比雪夫单程,存量口径)
+    QryTravelLaden  : REAL;                 // 载货行程 s(垂直×rLadenFactorVY,U2 拟真对照)
+    QryHandleT      : REAL;                 // 单次装卸 s(三档,U2)——调参区改档界/时长此值实时变
+    // ---- 块3 P2 统计记录页(评分细则8;FB_RecordPage 10 行窗口映射,禁 400 行整表压渲染) ----
+    iRecTop         : INT;                  // 窗口顶行(1 基,指向 aGoods 下标)
+    CmdPageUp       : BOOL;                 // 按钮:上翻 10 行
+    CmdPageDown     : BOOL;                 // 按钮:下翻 10 行
+    iRecTotal       : INT;                  // 总行数(=iGoodsCount,表头"共 N 件"用)
+    aRowId          : ARRAY[0..9] OF INT;   // 10 行窗口:序号(0=空行)
+    aRowX           : ARRAY[0..9] OF INT;   // 位置列(未分配=-1)
+    aRowY           : ARRAY[0..9] OF INT;   // 位置层
+    aRowPathLen     : ARRAY[0..9] OF REAL;  // 路径长度 m
+    aRowExecT       : ARRAY[0..9] OF REAL;  // 行程时间 s
+    // ---- 块3 快照对比(方向9:一键切换"优化前 vs 优化后",D 档叙事) ----
+    CmdSaveSnap     : BOOL;                 // 按钮:把当前布局存为对比基准(如 seq 基线)
+    CmdCompareMode  : BOOL;                 // 开关:TRUE=显示快照 FALSE=显示实时(FB_VisuRefresh 选源)
+    xSnapValid      : BOOL;                 // 已存过快照(未存时 CompareMode 无效,防显示垃圾)
+    aSnapState      : ARRAY[0..19, 0..19] OF INT;  // 快照:VisuSlotState 的冻结副本
+    // ---- 块3 名称下拉+手输(ComboBox Array 写 INT 下标,PRG 同步回 InGoodName) ----
+    iNameSel        : INT := -1;            // ComboBox 选中下标(-1=未选,手输优先)
+    astrNames       : ARRAY[0..9] OF STRING[32] :=
+        ['BEARING','MOTOR','GEARBOX','VALVE','PUMP','SENSOR','CABLE','PANEL','FILTER','RELAY'];
+        // 常用货物名(ASCII,C0555 规避;演示可选,亦可 Keypad 手输)
 END_VAR

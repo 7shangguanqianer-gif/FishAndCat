@@ -13,8 +13,8 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 41;                  // 用例总数(0707 +T41 FB_GoodsInput 封装)
-    aResult   : ARRAY[1..45] OF BOOL;       // 各用例结果(TRUE=通过;预留至45)
+    N_CASES   : INT := 45;                  // 用例总数(0708 块3 +T42查询/T43记录页/T44装卸/T45载货)
+    aResult   : ARRAY[1..45] OF BOOL;       // 各用例结果(TRUE=通过)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
@@ -22,6 +22,8 @@ VAR
     fbImprove : FB_LocalSwapImprove;        // T25 端到端:局部搜索状态机
     fbStats   : FB_Stats;                   // T25 端到端:终局统计
     fbGoodsInputT : FB_GoodsInput;          // T41:货物输入封装测试
+    fbQueryT  : FB_QueryGood;               // T42:单件查询测试(块3)
+    fbRecPageT : FB_RecordPage;             // T43:记录页窗口测试(块3)
     i, x, y, n : INT;
     rV        : REAL;
     iVecFail  : INT;
@@ -268,6 +270,84 @@ IF xRunTests THEN
     fbGoodsInputT(xAdd := TRUE,  iId := 3, sName := 'C', rWeight := 150.0, rFreq := 5.0, rVolume := 0.5);
     aResult[41] := aResult[41] AND fbGoodsInputT.xOk AND (NOT fbGoodsInputT.xFound)
                    AND (fbGoodsInputT.iErrId = 3);
+
+    // ---- T42-T45 块3 画面服务(0708;前置=T41 留下的表:aGoods[1]=Id1轻货/aGoods[2]=Id3超重,count=2) ----
+    GVL_Param.xUseAccel := FALSE;           // 测试自给自足:显式匀速口径(防前序用例遗留开关)
+    GVL_Param.xSimultaneousXY := TRUE;      // 同上:显式切比雪夫主口径(T42 拟真锚 7.5s 依赖)
+
+    // T42 FB_QueryGood:未分配/已分配+高亮+拟真字段/未找到清旧高亮/非正Id 四分支
+    // (a) 未分配货:找得到,属性对,位置=-1
+    fbQueryT(xQuery := FALSE, iId := 1);
+    fbQueryT(xQuery := TRUE,  iId := 1);
+    aResult[42] := GVL_Visu.QryFound AND (ABS(GVL_Visu.QryWeight - 10.0) < 0.001)
+                   AND (GVL_Visu.QryX = -1);
+    // (b) 手工落位 (2,3) 再查:位置/路径/高亮/拟真对照全齐
+    //     手算锚:laden(0,0→2,3)=MAX(2/2, 3/(0.5×0.8))=MAX(1.0,7.5)=7.5s;10kg→轻档 6.0s
+    GVL_WH.aGoods[1].Assigned := TRUE;
+    GVL_WH.aGoods[1].X := 2;   GVL_WH.aGoods[1].Y := 3;
+    GVL_WH.aGoods[1].PathLength := 5.0;  GVL_WH.aGoods[1].ExecTime := 6.0;
+    fbQueryT(xQuery := FALSE, iId := 1);
+    fbQueryT(xQuery := TRUE,  iId := 1);
+    aResult[42] := aResult[42] AND GVL_Visu.QryFound
+                   AND (GVL_Visu.QryX = 2) AND (GVL_Visu.QryY = 3)
+                   AND (ABS(GVL_Visu.QryPathLen - 5.0) < 0.001)
+                   AND (GVL_Visu.VisuSlotState[2, 3] = 6)
+                   AND (ABS(GVL_Visu.QryTravelLaden - 7.5) < 0.001)
+                   AND (ABS(GVL_Visu.QryHandleT - 6.0) < 0.001);
+    // (c) 查不存在 Id:Found=FALSE 且旧青色高亮恢复为已占用 2
+    fbQueryT(xQuery := FALSE, iId := 999);
+    fbQueryT(xQuery := TRUE,  iId := 999);
+    aResult[42] := aResult[42] AND (NOT GVL_Visu.QryFound)
+                   AND (GVL_Visu.VisuSlotState[2, 3] = 2);
+    // (d) 非正 Id:直接未找到(边界)
+    fbQueryT(xQuery := FALSE, iId := -1);
+    fbQueryT(xQuery := TRUE,  iId := -1);
+    aResult[42] := aResult[42] AND (NOT GVL_Visu.QryFound);
+
+    // T43 FB_RecordPage:窗口映射/空行约定/小表钳位/大表翻页钳位
+    // (a) 2 件小表:顶行=1,行0=Id1(已落位 X=2),行1=Id3(未分配 X=-1),行2=空(Id=0)
+    fbRecPageT(xPageUp := FALSE, xPageDown := FALSE);
+    aResult[43] := (GVL_Visu.iRecTop = 1) AND (GVL_Visu.aRowId[0] = 1)
+                   AND (GVL_Visu.aRowX[0] = 2) AND (GVL_Visu.aRowId[1] = 3)
+                   AND (GVL_Visu.aRowX[1] = -1) AND (GVL_Visu.aRowId[2] = 0)
+                   AND (GVL_Visu.iRecTotal = 2);
+    // (b) 小表下翻:钳位拉回 1(2 件表无第二页)
+    fbRecPageT(xPageUp := FALSE, xPageDown := TRUE);
+    aResult[43] := aResult[43] AND (GVL_Visu.iRecTop = 1);
+    // (c) 造 25 件大表验证翻页链:1→11→16(25-9 钳位)→6(上翻);毕恢复 count=2
+    GVL_WH.iGoodsCount := 25;
+    fbRecPageT(xPageUp := FALSE, xPageDown := FALSE);   // 沿复位
+    fbRecPageT(xPageUp := FALSE, xPageDown := TRUE);
+    aResult[43] := aResult[43] AND (GVL_Visu.iRecTop = 11);
+    fbRecPageT(xPageUp := FALSE, xPageDown := FALSE);
+    fbRecPageT(xPageUp := FALSE, xPageDown := TRUE);
+    aResult[43] := aResult[43] AND (GVL_Visu.iRecTop = 16);
+    fbRecPageT(xPageUp := FALSE, xPageDown := FALSE);
+    fbRecPageT(xPageUp := TRUE,  xPageDown := FALSE);
+    aResult[43] := aResult[43] AND (GVL_Visu.iRecTop = 6);
+    GVL_WH.iGoodsCount := 2;
+
+    // T44 FC_HandleTime 三档边界(0.1 间隙避单精度,块2 惯例):29.9轻/30.1中/60.0中含/60.1重
+    aResult[44] := (ABS(FC_HandleTime(rW := 29.9) - 6.0)  < 0.001)
+                   AND (ABS(FC_HandleTime(rW := 30.1) - 8.5)  < 0.001)
+                   AND (ABS(FC_HandleTime(rW := 60.0) - 8.5)  < 0.001)
+                   AND (ABS(FC_HandleTime(rW := 60.1) - 12.5) < 0.001);
+
+    // T45 FC_TravelLaden:垂直折减/水平不折减/顺序分支/非法系数保护
+    // 手算锚(匀速):laden(0,0→10,10)切比雪夫=MAX(10/2, 10/0.4)=25.0(空载同点=20.0)
+    aResult[45] := (ABS(FC_TravelLaden(x0:=0, y0:=0, x1:=10, y1:=10, xSimXY:=TRUE) - 25.0) < 0.001)
+                   AND (ABS(FC_CalcTravelTime(x0:=0, y0:=0, x1:=10, y1:=10, xSimXY:=TRUE) - 20.0) < 0.001);
+    // 水平纯移动:折减只作用垂直 → 与空载同值 5.0
+    aResult[45] := aResult[45]
+                   AND (ABS(FC_TravelLaden(x0:=0, y0:=0, x1:=10, y1:=0, xSimXY:=TRUE) - 5.0) < 0.001);
+    // 顺序模型分支:5+25=30.0
+    aResult[45] := aResult[45]
+                   AND (ABS(FC_TravelLaden(x0:=0, y0:=0, x1:=10, y1:=10, xSimXY:=FALSE) - 30.0) < 0.001);
+    // 非法折减系数保护:0.0 → 不折减(=空载 20.0);毕恢复默认 0.80
+    GVL_Param.rLadenFactorVY := 0.0;
+    aResult[45] := aResult[45]
+                   AND (ABS(FC_TravelLaden(x0:=0, y0:=0, x1:=10, y1:=10, xSimXY:=TRUE) - 20.0) < 0.001);
+    GVL_Param.rLadenFactorVY := 0.80;
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO
