@@ -24,7 +24,7 @@ powershell -File F:\abb_wh_work\tools\ab_scripting\ab_sync.ps1
 
 | 框 | Input type | Min / Max(拒绝式:超范围不写入) |
 |---|---|---|
-| 编号 InGoodId | `VisuDialogs.Numpad` | 1 / 400 |
+| 编号 InGoodId | `VisuDialogs.Numpad` | 1 / —(⚠️0710 有意决策:**不设上限**,演示数据含 901/902/903,PLC 侧亦无此上限;勿无依据改回 400) |
 | 名称 InGoodName | `VisuDialogs.Keypad`(字母键盘) | — |
 | 重量 InGoodWeight | `VisuDialogs.Numpad` | 0 / 200 |
 | 频次 InGoodFreq | `VisuDialogs.Numpad` | 0 / 100 |

@@ -1,48 +1,15 @@
 OPEN_OK
 BUILD_CALLED
-categories: 4
---- category d761e059-71f4-4adb-9568-0d8dd074ca31 msgs: 1
-  [?] The connection to the PLC is currently not encrypted. Please consider switching on encrypted communication in the PLCs communication settings. | 
---- category 194b48a9-ab51-43ae-b9a9-51d3edaaddf3 msgs: 5
+categories: 3
+--- category 194b48a9-ab51-43ae-b9a9-51d3edaaddf3 msgs: 3
   [?] OPEN_OK | 
   [?] BUILD_CALLED | 
-  [?] categories: 4 | 
-  [?] --- category d761e059-71f4-4adb-9568-0d8dd074ca31 msgs: 1 | 
-  [?] [?] The connection to the PLC is currently not encrypted. Please consider switching on encrypted communication in the PLCs communication settings. | | 
---- category 97f48d64-a2a3-4856-b640-75c046e37ea9 msgs: 31
+  [?] categories: 3 | 
+--- category 97f48d64-a2a3-4856-b640-75c046e37ea9 msgs: 4
   [?] ------ Build started: Application: PLC_AC500_V3.Sim.PLC_AC500_V3.Application ------- | 
   [?] Typify code... | 
-  [?] 'TO' expected instead of 'r' | 
-  [?] 'DO' expected instead of 'r' | 
-  [?] Expression expected instead of 'r' | 
-  [?] Counter initialisation expected | 
-  [?] Expression expected instead of 'r' | 
-  [?] Unexpected token 'r' found | 
-  [?] ';' expected instead of ':=' | 
-  [?] Unexpected token ':=' found | 
-  [?] ';' expected instead of '0' | 
-  [?] Unexpected token '0' found | 
-  [?] ';' expected instead of 'TO' | 
-  [?] Unexpected token 'TO' found | 
-  [?] ';' expected instead of 'GVL_Param' | 
-  [?] ';' expected instead of 'DO' | 
-  [?] '(GVL_Param.TIERS - 1);
-' is no valid statement | 
-  [?] Unexpected token 'DO' found | 
-  [?] ';' expected instead of 'GVL_Visu' | 
-  [?] ';' expected instead of ']' | 
-  [?] The code 'GVL_Visu.VisuSlotColor[c, !!!'ERROR'!!!];
-' has no effect. Is this the intent? | 
-  [?] ',' or ']' expected instead of 'r' | 
-  [?] Expression expected instead of 'r' | 
-  [?] Unexpected token ']' found | 
-  [?] ';' expected instead of ':=' | 
-  [?] Unexpected token ':=' found | 
-  [?] ';' expected instead of 'FC_StateToColor' | 
-  [?] ',' or ')' expected instead of ']' | 
-  [?] ',' or ']' expected instead of 'r' | 
-  [?] Expression expected instead of 'r' | 
-  [?] Compile complete -- 27 errors, 1 warnings | 
+  [?] The connection to the PLC is currently not encrypted. Please consider switching on encrypted communication in the PLCs communication settings. | 
+  [?] Compile complete -- 0 errors, 1 warnings | 
 --- category 220493a1-f49b-4416-9a3f-a545db707cbe msgs: 2
   [?] Additional code checks ... | 
   [?] Additional code checks complete -- 0 errors | 

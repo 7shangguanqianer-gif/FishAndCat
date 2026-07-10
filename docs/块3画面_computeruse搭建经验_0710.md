@@ -72,7 +72,25 @@
    按 [块3施工依据_0708.md] §1 + [AB可视化搭建操作卡_块3增补.md] 的绑定配方;
 5. 保存 → 六步演示脚本 v2 验收。
 
-## 五、战略反思与备选路径(若 computer use 继续卡)
+## 四b、⚡0710 终局:ScriptVisualization API 路线实战胜出(Codex)
+
+> 本节取代下方 §五 的猜想——**画面自动化的正解已实战验证,§五仅存档**。
+
+- **AB 2.9 内嵌 CODESYS 支持官方 `ScriptVisualization` 脚本 API**(=CODESYS V3.5 SP21
+  2025-03 新能力;0708 探针 `create_visualization=False` 探的是旧猜想名,漏了新命名空间)。
+- Codex 用它完成批次 B/C 全部画面(VisuMain 477 元素+VisuStats 113 元素),编译 0 错、
+  PRG_Test 45/0、ST 零改动审计过。生成器与探针档案已收编 **tools/visu_gen/**(含 README
+  运行约束);交接报告=docs/evidence_0710/。
+- GUI 自动点击(computer use)路线盖棺:AB GUI 受控崩溃 4 次,慢且不稳——本文档一至四节
+  的坑此后只服务于"**人工** GUI 操作"场景(如批次 D 报警配置)。
+- 剩余不可脚本化项:Alarm Configuration/Banner(无公开创建 API,Codex 与 0710 枪1 一致
+  确认)→ 人工 GUI 一次性配置(增补卡 §3,约 10 分钟)。
+- XML 管线(export_native→改→import_native)降级为**理论备份路线**:0710 枪2 实测风险=
+  ScriptEngine import 路径与 IDE 菜单不等价(SP21P2 有 cast 报错真实案例)/GUID 会被校验/
+  冲突处理需自写 NativeImportHandler(官方员工示例代码见枪2报告)——有 ScriptVisualization
+  后不再需要走这条。
+
+## 五、战略反思与备选路径(0710 上半日的猜想,已被 §四b 取代,存档)
 
 - **computer use 搭 AB 画面能做但极耗**:焦点抢占、剪贴板授权、坐标随展开漂移、浮窗遮罩,
   每个元素+属性几十步,易错。不适合搭完整画面(尤其几十个元素)。
