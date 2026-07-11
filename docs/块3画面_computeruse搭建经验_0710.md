@@ -155,9 +155,10 @@
 4. **脉冲命令卡 TRUE 风暴**:OnMouseDown/Up 设计在 MouseUp 事件丢失时命令卡 TRUE
    (Load demo 风暴 N=260,"Reset 清了又被瞬间装满"假象=全部按钮"失效"的元凶之一);
    另有输入积压在 download 后突发重放。疫苗=05 段尾消费即复位(0711 已写入)。
-5. **IDE 在线画面输入间歇性全哑(未解,攻坚中)**:显示活/输入死/冷启复活/运行一段再死;
-   全网同构案例零根因零修复。最强线索="GUI 洗过的动作疑似免疫"。弹药清单与首选路线
-   =攻坚文档 §3/§4。**临时运维:每轮演示前冷启 AB(健康窗口够录屏)。**
+5. **IDE 在线画面输入间歇性全哑(0711 深夜:路线A执行完毕,长跑通过,转观察期)**:
+   显示活/输入死/冷启复活/运行一段再死;全网同构案例零根因零修复。
+   → P1 全部 21 处动作 GUI 洗后 10.7 分钟 45+ 次交互(含 5 连击压力)零失效,
+   与"P2 洗后免疫"互证。定案与执行记录=攻坚文档 §7。再发作按攻坚文档 §4 采证。
 
 ## 六、关键坐标/事实备查
 
@@ -166,3 +167,27 @@
 - Fill color 编辑:勾 Advanced → Color variables → Normal state → Fill color → 双击 Value。
 - 打字:double_click+type 必须同 batch;clipboardWrite 已授权。
 - 别 open_application AB(开新实例);别最大化 AB(工具箱被浮窗遮罩)。
+  (0711 补:AB **完全关闭**时 open_application 合法=开唯一实例;最大化在只用
+  Properties 面板的洗动作管线里无害——工具箱遮罩告诫只针对拖元素工序。)
+
+## 七、computer use 洗动作管线(0711 深夜实战,21 处一遍过)
+
+1. **权限**:request_access("Automation Builder 2.9") 实测给 **full tier**——键盘
+   (Ctrl+S/F11/F5)、右键全可用。每步截图核对仍是纪律。
+2. **画布坐标映射**(窗口最大化,缩放 100%):编辑态 `screen = design×0.707 + (206,123)`;
+   **在线态偏移不同** `screen = design×0.707 + (189,119)`。换态用 2-3 个已知元素重标定;
+   AB 状态栏实时回显选中元素设计坐标(X: Y:),是免费的标定校验器。
+3. **洗动作路径**(全左键):单击选中(**勿双击**=进文字编辑)→ View→Element properties →
+   Input configuration 分类 → 事件行 **Configure...** → 对话框不改直接 OK。
+   ⊕ 展开标记指示哪行有动作:tap 按钮=OnMouseDown+Up 两行都洗;导航/翻转/写变量=单行。
+   Properties 滚动位置跨元素保持,但按钮类与输入框类的事件行 y 不同,换类先核一张截图。
+4. **右键画布元素=系统文本编辑菜单**(实坑):会进编辑态弹输入法菜单,Esc×2 退。
+   要菜单走 View 主菜单,不右键画布。
+5. **被遮罩的弹窗用 Win32 读**:licensing 弹窗被安全遮罩时,PowerShell EnumWindows/
+   EnumChildWindows(FindWindow '#32770')读标题、文本、按钮 rect;物理坐标×0.707=截图坐标,
+   看清内容再点。坑:PS 非托管回调里 Write-Output 会丢,用 $script:数组收集;
+   Add-Type 与调用必须同一条命令(shell 状态不持久)。
+6. **在线操作节奏**:visu 内 Numpad/Keypad 对键盘 Escape 免疫,要点画面内 ESC 按钮;
+   Numpad 数字键坐标固定可批量;每 batch 尾截图或 zoom 验证一次。
+7. **AB 许可**:每次 Login 弹 "expiration in N days"(0711 实测 N=22,**约 8/2 到期,
+   8/26 决赛前必须续期**——已列待办)。

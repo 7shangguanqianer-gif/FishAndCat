@@ -1,0 +1,10 @@
+FRAMES_OK 4 groups
+HEADER_BG=3 (expect 5)
+NOTE_TEXT_OK
+LAMP_TRY Image settings.Image FAIL ValueError('The property <Image settings.Image> was not found.',)
+LAMP_TRY Image settings.Image FAIL ValueError('The property <Image settings.Image> was not found.',)
+LAMP_TRY Image FAIL ValueError('The property <Image> was not found.',)
+LAMP_TRY Lamp image FAIL ValueError('The property <Lamp image> was not found.',)
+LAMP_TRY Image settings.Lamp FAIL ValueError('The property <Image settings.Lamp> was not found.',)
+SAVE_OK total=133
+=== RELAYOUT_P2_DONE ===

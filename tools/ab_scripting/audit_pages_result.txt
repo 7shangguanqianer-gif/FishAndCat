@@ -1,0 +1,644 @@
+PAGE	IDX	TYPE	NAME	X	Y	W	H	TEXT
+MAIN	0	ScriptVisualElement	GenElemInst_805	40	4	560	30	Smart Storage Control - Warehouse Slot Optimization
+MAIN	1	ScriptVisualElement	GenElemInst_807	620	40	560	30	Status: %s
+MAIN	2	ScriptVisualElement	GenElemInst_808	1200	38	32	32	
+MAIN	3	ScriptVisualElement	GenElemInst_809	628	108	60	26	ID
+MAIN	4	ScriptVisualElement	GenElemInst_811	628	140	60	26	Name
+MAIN	5	ScriptVisualElement	GenElemInst_813	628	172	60	26	Weight
+MAIN	6	ScriptVisualElement	GenElemInst_815	628	204	60	26	Freq
+MAIN	7	ScriptVisualElement	GenElemInst_817	628	236	60	26	Volume
+MAIN	8	ScriptVisualElement	GenElemInst_819	960	108	128	32	Add goods
+MAIN	9	ScriptVisualElement	GenElemInst_820	1100	108	128	32	Load demo
+MAIN	10	ScriptVisualElement	GenElemInst_821	960	148	128	32	Reset
+MAIN	11	ScriptVisualElement	GenElemInst_823	628	308	90	32	FIFO
+MAIN	12	ScriptVisualElement	GenElemInst_824	726	308	90	32	Nearest
+MAIN	13	ScriptVisualElement	GenElemInst_825	824	308	90	32	Score
+MAIN	14	ScriptVisualElement	GenElemInst_826	922	308	100	32	AWRA-LS
+MAIN	15	ScriptVisualElement	GenElemInst_827	1032	308	150	32	Current strategy: %d
+MAIN	16	ScriptVisualElement	GenElemInst_828	960	188	128	32	Run assign
+MAIN	17	ScriptVisualElement	GenElemInst_829	1100	188	128	32	Animate
+MAIN	18	ScriptVisualElement	GenElemInst_830	960	228	128	32	Save snapshot
+MAIN	19	ScriptVisualElement	GenElemInst_831	1100	228	128	32	Live/Snapshot
+MAIN	20	ScriptVisualElement	GenElemInst_832	784	552	20	20	
+MAIN	21	ScriptVisualElement	GenElemInst_833	628	552	150	24	Snapshot valid
+MAIN	22	ScriptVisualElement	GenElemInst_834	1100	148	128	32	P2 Records
+MAIN	23	ScriptVisualElement	GenElemInst_835	628	388	70	24	Target X
+MAIN	24	ScriptVisualElement	GenElemInst_836	702	388	50	24	%d
+MAIN	25	ScriptVisualElement	GenElemInst_837	760	388	70	24	Target Y
+MAIN	26	ScriptVisualElement	GenElemInst_838	834	388	50	24	%d
+MAIN	27	ScriptVisualElement	GenElemInst_839	892	388	60	24	Path m
+MAIN	28	ScriptVisualElement	GenElemInst_840	956	388	60	24	%.1f
+MAIN	29	ScriptVisualElement	GenElemInst_841	1024	388	64	24	Travel s
+MAIN	30	ScriptVisualElement	GenElemInst_842	1092	388	60	24	%.1f
+MAIN	31	ScriptVisualElement	GenElemInst_843	628	412	150	24	Total inbound / s
+MAIN	32	ScriptVisualElement	GenElemInst_844	784	412	100	24	%.1f
+MAIN	33	ScriptVisualElement	GenElemInst_845	628	440	150	24	Average item / s
+MAIN	34	ScriptVisualElement	GenElemInst_846	784	440	100	24	%.1f
+MAIN	35	ScriptVisualElement	GenElemInst_847	628	468	150	24	Space utilization / %
+MAIN	36	ScriptVisualElement	GenElemInst_848	784	468	100	24	%.1f
+MAIN	37	ScriptVisualElement	GenElemInst_849	628	496	150	24	Total path / m
+MAIN	38	ScriptVisualElement	GenElemInst_850	784	496	100	24	%.1f
+MAIN	39	ScriptVisualElement	GenElemInst_851	628	524	150	24	Violations
+MAIN	40	ScriptVisualElement	GenElemInst_852	784	524	100	24	%d
+MAIN	41	ScriptVisualElement	GenElemInst_853	900	412	330	140	State codes READY / SUGGEST / ASSIGN_RUN IMPROVE / DONE_OK ERR_* / ALARM_* Cyan=query, Blue=path
+MAIN	42	ScriptVisualElement	GenElemInst_854	624	616	92	24	Alpha eff.
+MAIN	43	ScriptVisualElement	GenElemInst_856	778	616	92	24	Beta stab.
+MAIN	44	ScriptVisualElement	GenElemInst_858	932	616	92	24	Gamma en.
+MAIN	45	ScriptVisualElement	GenElemInst_860	1086	616	92	24	Delta res.
+MAIN	46	ScriptVisualElement	GenElemInst_862	620	652	300	18	Defaults: A=1.0 B=0.6 G=0.4 D=0.15
+MAIN	47	ScriptVisualElement	GenElemInst_863	936	652	304	18	Tests all green | sim-ST cross-check | dwell=I/O
+MAIN	48	ScriptVisualElement	GenElemInst_864	48	445	28	18	0
+MAIN	49	ScriptVisualElement	GenElemInst_865	188	445	28	18	5
+MAIN	50	ScriptVisualElement	GenElemInst_866	328	445	28	18	10
+MAIN	51	ScriptVisualElement	GenElemInst_867	468	445	28	18	15
+MAIN	52	ScriptVisualElement	GenElemInst_868	580	445	28	18	19
+MAIN	53	ScriptVisualElement	GenElemInst_869	8	42	28	18	19
+MAIN	54	ScriptVisualElement	GenElemInst_870	8	122	28	18	15
+MAIN	55	ScriptVisualElement	GenElemInst_871	8	222	28	18	10
+MAIN	56	ScriptVisualElement	GenElemInst_872	8	322	28	18	5
+MAIN	57	ScriptVisualElement	GenElemInst_873	8	422	28	18	0
+MAIN	58	ScriptVisualElement	GenElemInst_874	40	466	560	20	Columns 0..19 -> Tier 0 at bottom (max capacity), I/O at lower left
+MAIN	59	ScriptVisualElement	GenElemInst_875	40	492	265	22	0 Empty (light gray)
+MAIN	60	ScriptVisualElement	GenElemInst_876	315	492	265	22	1 Preset (dark gray)
+MAIN	61	ScriptVisualElement	GenElemInst_877	40	518	265	22	2 Occupied (green)
+MAIN	62	ScriptVisualElement	GenElemInst_878	315	518	265	22	3 Recommended (yellow)
+MAIN	63	ScriptVisualElement	GenElemInst_879	40	544	265	22	4 Path (blue)
+MAIN	64	ScriptVisualElement	GenElemInst_880	315	544	265	22	5 Alarm (red)
+MAIN	65	ScriptVisualElement	GenElemInst_881	40	570	265	22	6 Query (cyan)
+MAIN	66	ScriptVisualElement	GenElemInst_882	694	108	238	26	%d
+MAIN	67	ScriptVisualElement	GenElemInst_883	694	140	238	26	%s
+MAIN	68	ScriptVisualElement	GenElemInst_884	694	172	238	26	%.1f
+MAIN	69	ScriptVisualElement	GenElemInst_885	694	204	238	26	%.1f
+MAIN	70	ScriptVisualElement	GenElemInst_886	694	236	238	26	%.2f
+MAIN	71	ScriptVisualElement	GenElemInst_887	720	616	56	24	%.2f
+MAIN	72	ScriptVisualElement	GenElemInst_888	874	616	56	24	%.2f
+MAIN	73	ScriptVisualElement	GenElemInst_889	1028	616	56	24	%.2f
+MAIN	74	ScriptVisualElement	GenElemInst_890	1182	616	56	24	%.2f
+MAIN	75	ScriptVisualElement	GenElemInst_895	40	680	1200	32	
+MAIN	76	ScriptVisualElement	GenElemInst_897	40	40	28	20	
+MAIN	77	ScriptVisualElement	GenElemInst_898	68	40	28	20	
+MAIN	78	ScriptVisualElement	GenElemInst_899	96	40	28	20	
+MAIN	79	ScriptVisualElement	GenElemInst_900	124	40	28	20	
+MAIN	80	ScriptVisualElement	GenElemInst_901	152	40	28	20	
+MAIN	81	ScriptVisualElement	GenElemInst_902	180	40	28	20	
+MAIN	82	ScriptVisualElement	GenElemInst_903	208	40	28	20	
+MAIN	83	ScriptVisualElement	GenElemInst_904	236	40	28	20	
+MAIN	84	ScriptVisualElement	GenElemInst_905	264	40	28	20	
+MAIN	85	ScriptVisualElement	GenElemInst_906	292	40	28	20	
+MAIN	86	ScriptVisualElement	GenElemInst_907	320	40	28	20	
+MAIN	87	ScriptVisualElement	GenElemInst_908	348	40	28	20	
+MAIN	88	ScriptVisualElement	GenElemInst_909	376	40	28	20	
+MAIN	89	ScriptVisualElement	GenElemInst_910	404	40	28	20	
+MAIN	90	ScriptVisualElement	GenElemInst_911	432	40	28	20	
+MAIN	91	ScriptVisualElement	GenElemInst_912	460	40	28	20	
+MAIN	92	ScriptVisualElement	GenElemInst_913	488	40	28	20	
+MAIN	93	ScriptVisualElement	GenElemInst_914	516	40	28	20	
+MAIN	94	ScriptVisualElement	GenElemInst_915	544	40	28	20	
+MAIN	95	ScriptVisualElement	GenElemInst_916	572	40	28	20	
+MAIN	96	ScriptVisualElement	GenElemInst_917	40	60	28	20	
+MAIN	97	ScriptVisualElement	GenElemInst_918	68	60	28	20	
+MAIN	98	ScriptVisualElement	GenElemInst_919	96	60	28	20	
+MAIN	99	ScriptVisualElement	GenElemInst_920	124	60	28	20	
+MAIN	100	ScriptVisualElement	GenElemInst_921	152	60	28	20	
+MAIN	101	ScriptVisualElement	GenElemInst_922	180	60	28	20	
+MAIN	102	ScriptVisualElement	GenElemInst_923	208	60	28	20	
+MAIN	103	ScriptVisualElement	GenElemInst_924	236	60	28	20	
+MAIN	104	ScriptVisualElement	GenElemInst_925	264	60	28	20	
+MAIN	105	ScriptVisualElement	GenElemInst_926	292	60	28	20	
+MAIN	106	ScriptVisualElement	GenElemInst_927	320	60	28	20	
+MAIN	107	ScriptVisualElement	GenElemInst_928	348	60	28	20	
+MAIN	108	ScriptVisualElement	GenElemInst_929	376	60	28	20	
+MAIN	109	ScriptVisualElement	GenElemInst_930	404	60	28	20	
+MAIN	110	ScriptVisualElement	GenElemInst_931	432	60	28	20	
+MAIN	111	ScriptVisualElement	GenElemInst_932	460	60	28	20	
+MAIN	112	ScriptVisualElement	GenElemInst_933	488	60	28	20	
+MAIN	113	ScriptVisualElement	GenElemInst_934	516	60	28	20	
+MAIN	114	ScriptVisualElement	GenElemInst_935	544	60	28	20	
+MAIN	115	ScriptVisualElement	GenElemInst_936	572	60	28	20	
+MAIN	116	ScriptVisualElement	GenElemInst_937	40	80	28	20	
+MAIN	117	ScriptVisualElement	GenElemInst_938	68	80	28	20	
+MAIN	118	ScriptVisualElement	GenElemInst_939	96	80	28	20	
+MAIN	119	ScriptVisualElement	GenElemInst_940	124	80	28	20	
+MAIN	120	ScriptVisualElement	GenElemInst_941	152	80	28	20	
+MAIN	121	ScriptVisualElement	GenElemInst_942	180	80	28	20	
+MAIN	122	ScriptVisualElement	GenElemInst_943	208	80	28	20	
+MAIN	123	ScriptVisualElement	GenElemInst_944	236	80	28	20	
+MAIN	124	ScriptVisualElement	GenElemInst_945	264	80	28	20	
+MAIN	125	ScriptVisualElement	GenElemInst_946	292	80	28	20	
+MAIN	126	ScriptVisualElement	GenElemInst_947	320	80	28	20	
+MAIN	127	ScriptVisualElement	GenElemInst_948	348	80	28	20	
+MAIN	128	ScriptVisualElement	GenElemInst_949	376	80	28	20	
+MAIN	129	ScriptVisualElement	GenElemInst_950	404	80	28	20	
+MAIN	130	ScriptVisualElement	GenElemInst_951	432	80	28	20	
+MAIN	131	ScriptVisualElement	GenElemInst_952	460	80	28	20	
+MAIN	132	ScriptVisualElement	GenElemInst_953	488	80	28	20	
+MAIN	133	ScriptVisualElement	GenElemInst_954	516	80	28	20	
+MAIN	134	ScriptVisualElement	GenElemInst_955	544	80	28	20	
+MAIN	135	ScriptVisualElement	GenElemInst_956	572	80	28	20	
+MAIN	136	ScriptVisualElement	GenElemInst_957	40	100	28	20	
+MAIN	137	ScriptVisualElement	GenElemInst_958	68	100	28	20	
+MAIN	138	ScriptVisualElement	GenElemInst_959	96	100	28	20	
+MAIN	139	ScriptVisualElement	GenElemInst_960	124	100	28	20	
+MAIN	140	ScriptVisualElement	GenElemInst_961	152	100	28	20	
+MAIN	141	ScriptVisualElement	GenElemInst_962	180	100	28	20	
+MAIN	142	ScriptVisualElement	GenElemInst_963	208	100	28	20	
+MAIN	143	ScriptVisualElement	GenElemInst_964	236	100	28	20	
+MAIN	144	ScriptVisualElement	GenElemInst_965	264	100	28	20	
+MAIN	145	ScriptVisualElement	GenElemInst_966	292	100	28	20	
+MAIN	146	ScriptVisualElement	GenElemInst_967	320	100	28	20	
+MAIN	147	ScriptVisualElement	GenElemInst_968	348	100	28	20	
+MAIN	148	ScriptVisualElement	GenElemInst_969	376	100	28	20	
+MAIN	149	ScriptVisualElement	GenElemInst_970	404	100	28	20	
+MAIN	150	ScriptVisualElement	GenElemInst_971	432	100	28	20	
+MAIN	151	ScriptVisualElement	GenElemInst_972	460	100	28	20	
+MAIN	152	ScriptVisualElement	GenElemInst_973	488	100	28	20	
+MAIN	153	ScriptVisualElement	GenElemInst_974	516	100	28	20	
+MAIN	154	ScriptVisualElement	GenElemInst_975	544	100	28	20	
+MAIN	155	ScriptVisualElement	GenElemInst_976	572	100	28	20	
+MAIN	156	ScriptVisualElement	GenElemInst_977	40	120	28	20	
+MAIN	157	ScriptVisualElement	GenElemInst_978	68	120	28	20	
+MAIN	158	ScriptVisualElement	GenElemInst_979	96	120	28	20	
+MAIN	159	ScriptVisualElement	GenElemInst_980	124	120	28	20	
+MAIN	160	ScriptVisualElement	GenElemInst_981	152	120	28	20	
+MAIN	161	ScriptVisualElement	GenElemInst_982	180	120	28	20	
+MAIN	162	ScriptVisualElement	GenElemInst_983	208	120	28	20	
+MAIN	163	ScriptVisualElement	GenElemInst_984	236	120	28	20	
+MAIN	164	ScriptVisualElement	GenElemInst_985	264	120	28	20	
+MAIN	165	ScriptVisualElement	GenElemInst_986	292	120	28	20	
+MAIN	166	ScriptVisualElement	GenElemInst_987	320	120	28	20	
+MAIN	167	ScriptVisualElement	GenElemInst_988	348	120	28	20	
+MAIN	168	ScriptVisualElement	GenElemInst_989	376	120	28	20	
+MAIN	169	ScriptVisualElement	GenElemInst_990	404	120	28	20	
+MAIN	170	ScriptVisualElement	GenElemInst_991	432	120	28	20	
+MAIN	171	ScriptVisualElement	GenElemInst_992	460	120	28	20	
+MAIN	172	ScriptVisualElement	GenElemInst_993	488	120	28	20	
+MAIN	173	ScriptVisualElement	GenElemInst_994	516	120	28	20	
+MAIN	174	ScriptVisualElement	GenElemInst_995	544	120	28	20	
+MAIN	175	ScriptVisualElement	GenElemInst_996	572	120	28	20	
+MAIN	176	ScriptVisualElement	GenElemInst_997	40	140	28	20	
+MAIN	177	ScriptVisualElement	GenElemInst_998	68	140	28	20	
+MAIN	178	ScriptVisualElement	GenElemInst_999	96	140	28	20	
+MAIN	179	ScriptVisualElement	GenElemInst_1000	124	140	28	20	
+MAIN	180	ScriptVisualElement	GenElemInst_1001	152	140	28	20	
+MAIN	181	ScriptVisualElement	GenElemInst_1002	180	140	28	20	
+MAIN	182	ScriptVisualElement	GenElemInst_1003	208	140	28	20	
+MAIN	183	ScriptVisualElement	GenElemInst_1004	236	140	28	20	
+MAIN	184	ScriptVisualElement	GenElemInst_1005	264	140	28	20	
+MAIN	185	ScriptVisualElement	GenElemInst_1006	292	140	28	20	
+MAIN	186	ScriptVisualElement	GenElemInst_1007	320	140	28	20	
+MAIN	187	ScriptVisualElement	GenElemInst_1008	348	140	28	20	
+MAIN	188	ScriptVisualElement	GenElemInst_1009	376	140	28	20	
+MAIN	189	ScriptVisualElement	GenElemInst_1010	404	140	28	20	
+MAIN	190	ScriptVisualElement	GenElemInst_1011	432	140	28	20	
+MAIN	191	ScriptVisualElement	GenElemInst_1012	460	140	28	20	
+MAIN	192	ScriptVisualElement	GenElemInst_1013	488	140	28	20	
+MAIN	193	ScriptVisualElement	GenElemInst_1014	516	140	28	20	
+MAIN	194	ScriptVisualElement	GenElemInst_1015	544	140	28	20	
+MAIN	195	ScriptVisualElement	GenElemInst_1016	572	140	28	20	
+MAIN	196	ScriptVisualElement	GenElemInst_1017	40	160	28	20	
+MAIN	197	ScriptVisualElement	GenElemInst_1018	68	160	28	20	
+MAIN	198	ScriptVisualElement	GenElemInst_1019	96	160	28	20	
+MAIN	199	ScriptVisualElement	GenElemInst_1020	124	160	28	20	
+MAIN	200	ScriptVisualElement	GenElemInst_1021	152	160	28	20	
+MAIN	201	ScriptVisualElement	GenElemInst_1022	180	160	28	20	
+MAIN	202	ScriptVisualElement	GenElemInst_1023	208	160	28	20	
+MAIN	203	ScriptVisualElement	GenElemInst_1024	236	160	28	20	
+MAIN	204	ScriptVisualElement	GenElemInst_1025	264	160	28	20	
+MAIN	205	ScriptVisualElement	GenElemInst_1026	292	160	28	20	
+MAIN	206	ScriptVisualElement	GenElemInst_1027	320	160	28	20	
+MAIN	207	ScriptVisualElement	GenElemInst_1028	348	160	28	20	
+MAIN	208	ScriptVisualElement	GenElemInst_1029	376	160	28	20	
+MAIN	209	ScriptVisualElement	GenElemInst_1030	404	160	28	20	
+MAIN	210	ScriptVisualElement	GenElemInst_1031	432	160	28	20	
+MAIN	211	ScriptVisualElement	GenElemInst_1032	460	160	28	20	
+MAIN	212	ScriptVisualElement	GenElemInst_1033	488	160	28	20	
+MAIN	213	ScriptVisualElement	GenElemInst_1034	516	160	28	20	
+MAIN	214	ScriptVisualElement	GenElemInst_1035	544	160	28	20	
+MAIN	215	ScriptVisualElement	GenElemInst_1036	572	160	28	20	
+MAIN	216	ScriptVisualElement	GenElemInst_1037	40	180	28	20	
+MAIN	217	ScriptVisualElement	GenElemInst_1038	68	180	28	20	
+MAIN	218	ScriptVisualElement	GenElemInst_1039	96	180	28	20	
+MAIN	219	ScriptVisualElement	GenElemInst_1040	124	180	28	20	
+MAIN	220	ScriptVisualElement	GenElemInst_1041	152	180	28	20	
+MAIN	221	ScriptVisualElement	GenElemInst_1042	180	180	28	20	
+MAIN	222	ScriptVisualElement	GenElemInst_1043	208	180	28	20	
+MAIN	223	ScriptVisualElement	GenElemInst_1044	236	180	28	20	
+MAIN	224	ScriptVisualElement	GenElemInst_1045	264	180	28	20	
+MAIN	225	ScriptVisualElement	GenElemInst_1046	292	180	28	20	
+MAIN	226	ScriptVisualElement	GenElemInst_1047	320	180	28	20	
+MAIN	227	ScriptVisualElement	GenElemInst_1048	348	180	28	20	
+MAIN	228	ScriptVisualElement	GenElemInst_1049	376	180	28	20	
+MAIN	229	ScriptVisualElement	GenElemInst_1050	404	180	28	20	
+MAIN	230	ScriptVisualElement	GenElemInst_1051	432	180	28	20	
+MAIN	231	ScriptVisualElement	GenElemInst_1052	460	180	28	20	
+MAIN	232	ScriptVisualElement	GenElemInst_1053	488	180	28	20	
+MAIN	233	ScriptVisualElement	GenElemInst_1054	516	180	28	20	
+MAIN	234	ScriptVisualElement	GenElemInst_1055	544	180	28	20	
+MAIN	235	ScriptVisualElement	GenElemInst_1056	572	180	28	20	
+MAIN	236	ScriptVisualElement	GenElemInst_1057	40	200	28	20	
+MAIN	237	ScriptVisualElement	GenElemInst_1058	68	200	28	20	
+MAIN	238	ScriptVisualElement	GenElemInst_1059	96	200	28	20	
+MAIN	239	ScriptVisualElement	GenElemInst_1060	124	200	28	20	
+MAIN	240	ScriptVisualElement	GenElemInst_1061	152	200	28	20	
+MAIN	241	ScriptVisualElement	GenElemInst_1062	180	200	28	20	
+MAIN	242	ScriptVisualElement	GenElemInst_1063	208	200	28	20	
+MAIN	243	ScriptVisualElement	GenElemInst_1064	236	200	28	20	
+MAIN	244	ScriptVisualElement	GenElemInst_1065	264	200	28	20	
+MAIN	245	ScriptVisualElement	GenElemInst_1066	292	200	28	20	
+MAIN	246	ScriptVisualElement	GenElemInst_1067	320	200	28	20	
+MAIN	247	ScriptVisualElement	GenElemInst_1068	348	200	28	20	
+MAIN	248	ScriptVisualElement	GenElemInst_1069	376	200	28	20	
+MAIN	249	ScriptVisualElement	GenElemInst_1070	404	200	28	20	
+MAIN	250	ScriptVisualElement	GenElemInst_1071	432	200	28	20	
+MAIN	251	ScriptVisualElement	GenElemInst_1072	460	200	28	20	
+MAIN	252	ScriptVisualElement	GenElemInst_1073	488	200	28	20	
+MAIN	253	ScriptVisualElement	GenElemInst_1074	516	200	28	20	
+MAIN	254	ScriptVisualElement	GenElemInst_1075	544	200	28	20	
+MAIN	255	ScriptVisualElement	GenElemInst_1076	572	200	28	20	
+MAIN	256	ScriptVisualElement	GenElemInst_1077	40	220	28	20	
+MAIN	257	ScriptVisualElement	GenElemInst_1078	68	220	28	20	
+MAIN	258	ScriptVisualElement	GenElemInst_1079	96	220	28	20	
+MAIN	259	ScriptVisualElement	GenElemInst_1080	124	220	28	20	
+MAIN	260	ScriptVisualElement	GenElemInst_1081	152	220	28	20	
+MAIN	261	ScriptVisualElement	GenElemInst_1082	180	220	28	20	
+MAIN	262	ScriptVisualElement	GenElemInst_1083	208	220	28	20	
+MAIN	263	ScriptVisualElement	GenElemInst_1084	236	220	28	20	
+MAIN	264	ScriptVisualElement	GenElemInst_1085	264	220	28	20	
+MAIN	265	ScriptVisualElement	GenElemInst_1086	292	220	28	20	
+MAIN	266	ScriptVisualElement	GenElemInst_1087	320	220	28	20	
+MAIN	267	ScriptVisualElement	GenElemInst_1088	348	220	28	20	
+MAIN	268	ScriptVisualElement	GenElemInst_1089	376	220	28	20	
+MAIN	269	ScriptVisualElement	GenElemInst_1090	404	220	28	20	
+MAIN	270	ScriptVisualElement	GenElemInst_1091	432	220	28	20	
+MAIN	271	ScriptVisualElement	GenElemInst_1092	460	220	28	20	
+MAIN	272	ScriptVisualElement	GenElemInst_1093	488	220	28	20	
+MAIN	273	ScriptVisualElement	GenElemInst_1094	516	220	28	20	
+MAIN	274	ScriptVisualElement	GenElemInst_1095	544	220	28	20	
+MAIN	275	ScriptVisualElement	GenElemInst_1096	572	220	28	20	
+MAIN	276	ScriptVisualElement	GenElemInst_1097	40	240	28	20	
+MAIN	277	ScriptVisualElement	GenElemInst_1098	68	240	28	20	
+MAIN	278	ScriptVisualElement	GenElemInst_1099	96	240	28	20	
+MAIN	279	ScriptVisualElement	GenElemInst_1100	124	240	28	20	
+MAIN	280	ScriptVisualElement	GenElemInst_1101	152	240	28	20	
+MAIN	281	ScriptVisualElement	GenElemInst_1102	180	240	28	20	
+MAIN	282	ScriptVisualElement	GenElemInst_1103	208	240	28	20	
+MAIN	283	ScriptVisualElement	GenElemInst_1104	236	240	28	20	
+MAIN	284	ScriptVisualElement	GenElemInst_1105	264	240	28	20	
+MAIN	285	ScriptVisualElement	GenElemInst_1106	292	240	28	20	
+MAIN	286	ScriptVisualElement	GenElemInst_1107	320	240	28	20	
+MAIN	287	ScriptVisualElement	GenElemInst_1108	348	240	28	20	
+MAIN	288	ScriptVisualElement	GenElemInst_1109	376	240	28	20	
+MAIN	289	ScriptVisualElement	GenElemInst_1110	404	240	28	20	
+MAIN	290	ScriptVisualElement	GenElemInst_1111	432	240	28	20	
+MAIN	291	ScriptVisualElement	GenElemInst_1112	460	240	28	20	
+MAIN	292	ScriptVisualElement	GenElemInst_1113	488	240	28	20	
+MAIN	293	ScriptVisualElement	GenElemInst_1114	516	240	28	20	
+MAIN	294	ScriptVisualElement	GenElemInst_1115	544	240	28	20	
+MAIN	295	ScriptVisualElement	GenElemInst_1116	572	240	28	20	
+MAIN	296	ScriptVisualElement	GenElemInst_1117	40	260	28	20	
+MAIN	297	ScriptVisualElement	GenElemInst_1118	68	260	28	20	
+MAIN	298	ScriptVisualElement	GenElemInst_1119	96	260	28	20	
+MAIN	299	ScriptVisualElement	GenElemInst_1120	124	260	28	20	
+MAIN	300	ScriptVisualElement	GenElemInst_1121	152	260	28	20	
+MAIN	301	ScriptVisualElement	GenElemInst_1122	180	260	28	20	
+MAIN	302	ScriptVisualElement	GenElemInst_1123	208	260	28	20	
+MAIN	303	ScriptVisualElement	GenElemInst_1124	236	260	28	20	
+MAIN	304	ScriptVisualElement	GenElemInst_1125	264	260	28	20	
+MAIN	305	ScriptVisualElement	GenElemInst_1126	292	260	28	20	
+MAIN	306	ScriptVisualElement	GenElemInst_1127	320	260	28	20	
+MAIN	307	ScriptVisualElement	GenElemInst_1128	348	260	28	20	
+MAIN	308	ScriptVisualElement	GenElemInst_1129	376	260	28	20	
+MAIN	309	ScriptVisualElement	GenElemInst_1130	404	260	28	20	
+MAIN	310	ScriptVisualElement	GenElemInst_1131	432	260	28	20	
+MAIN	311	ScriptVisualElement	GenElemInst_1132	460	260	28	20	
+MAIN	312	ScriptVisualElement	GenElemInst_1133	488	260	28	20	
+MAIN	313	ScriptVisualElement	GenElemInst_1134	516	260	28	20	
+MAIN	314	ScriptVisualElement	GenElemInst_1135	544	260	28	20	
+MAIN	315	ScriptVisualElement	GenElemInst_1136	572	260	28	20	
+MAIN	316	ScriptVisualElement	GenElemInst_1137	40	280	28	20	
+MAIN	317	ScriptVisualElement	GenElemInst_1138	68	280	28	20	
+MAIN	318	ScriptVisualElement	GenElemInst_1139	96	280	28	20	
+MAIN	319	ScriptVisualElement	GenElemInst_1140	124	280	28	20	
+MAIN	320	ScriptVisualElement	GenElemInst_1141	152	280	28	20	
+MAIN	321	ScriptVisualElement	GenElemInst_1142	180	280	28	20	
+MAIN	322	ScriptVisualElement	GenElemInst_1143	208	280	28	20	
+MAIN	323	ScriptVisualElement	GenElemInst_1144	236	280	28	20	
+MAIN	324	ScriptVisualElement	GenElemInst_1145	264	280	28	20	
+MAIN	325	ScriptVisualElement	GenElemInst_1146	292	280	28	20	
+MAIN	326	ScriptVisualElement	GenElemInst_1147	320	280	28	20	
+MAIN	327	ScriptVisualElement	GenElemInst_1148	348	280	28	20	
+MAIN	328	ScriptVisualElement	GenElemInst_1149	376	280	28	20	
+MAIN	329	ScriptVisualElement	GenElemInst_1150	404	280	28	20	
+MAIN	330	ScriptVisualElement	GenElemInst_1151	432	280	28	20	
+MAIN	331	ScriptVisualElement	GenElemInst_1152	460	280	28	20	
+MAIN	332	ScriptVisualElement	GenElemInst_1153	488	280	28	20	
+MAIN	333	ScriptVisualElement	GenElemInst_1154	516	280	28	20	
+MAIN	334	ScriptVisualElement	GenElemInst_1155	544	280	28	20	
+MAIN	335	ScriptVisualElement	GenElemInst_1156	572	280	28	20	
+MAIN	336	ScriptVisualElement	GenElemInst_1157	40	300	28	20	
+MAIN	337	ScriptVisualElement	GenElemInst_1158	68	300	28	20	
+MAIN	338	ScriptVisualElement	GenElemInst_1159	96	300	28	20	
+MAIN	339	ScriptVisualElement	GenElemInst_1160	124	300	28	20	
+MAIN	340	ScriptVisualElement	GenElemInst_1161	152	300	28	20	
+MAIN	341	ScriptVisualElement	GenElemInst_1162	180	300	28	20	
+MAIN	342	ScriptVisualElement	GenElemInst_1163	208	300	28	20	
+MAIN	343	ScriptVisualElement	GenElemInst_1164	236	300	28	20	
+MAIN	344	ScriptVisualElement	GenElemInst_1165	264	300	28	20	
+MAIN	345	ScriptVisualElement	GenElemInst_1166	292	300	28	20	
+MAIN	346	ScriptVisualElement	GenElemInst_1167	320	300	28	20	
+MAIN	347	ScriptVisualElement	GenElemInst_1168	348	300	28	20	
+MAIN	348	ScriptVisualElement	GenElemInst_1169	376	300	28	20	
+MAIN	349	ScriptVisualElement	GenElemInst_1170	404	300	28	20	
+MAIN	350	ScriptVisualElement	GenElemInst_1171	432	300	28	20	
+MAIN	351	ScriptVisualElement	GenElemInst_1172	460	300	28	20	
+MAIN	352	ScriptVisualElement	GenElemInst_1173	488	300	28	20	
+MAIN	353	ScriptVisualElement	GenElemInst_1174	516	300	28	20	
+MAIN	354	ScriptVisualElement	GenElemInst_1175	544	300	28	20	
+MAIN	355	ScriptVisualElement	GenElemInst_1176	572	300	28	20	
+MAIN	356	ScriptVisualElement	GenElemInst_1177	40	320	28	20	
+MAIN	357	ScriptVisualElement	GenElemInst_1178	68	320	28	20	
+MAIN	358	ScriptVisualElement	GenElemInst_1179	96	320	28	20	
+MAIN	359	ScriptVisualElement	GenElemInst_1180	124	320	28	20	
+MAIN	360	ScriptVisualElement	GenElemInst_1181	152	320	28	20	
+MAIN	361	ScriptVisualElement	GenElemInst_1182	180	320	28	20	
+MAIN	362	ScriptVisualElement	GenElemInst_1183	208	320	28	20	
+MAIN	363	ScriptVisualElement	GenElemInst_1184	236	320	28	20	
+MAIN	364	ScriptVisualElement	GenElemInst_1185	264	320	28	20	
+MAIN	365	ScriptVisualElement	GenElemInst_1186	292	320	28	20	
+MAIN	366	ScriptVisualElement	GenElemInst_1187	320	320	28	20	
+MAIN	367	ScriptVisualElement	GenElemInst_1188	348	320	28	20	
+MAIN	368	ScriptVisualElement	GenElemInst_1189	376	320	28	20	
+MAIN	369	ScriptVisualElement	GenElemInst_1190	404	320	28	20	
+MAIN	370	ScriptVisualElement	GenElemInst_1191	432	320	28	20	
+MAIN	371	ScriptVisualElement	GenElemInst_1192	460	320	28	20	
+MAIN	372	ScriptVisualElement	GenElemInst_1193	488	320	28	20	
+MAIN	373	ScriptVisualElement	GenElemInst_1194	516	320	28	20	
+MAIN	374	ScriptVisualElement	GenElemInst_1195	544	320	28	20	
+MAIN	375	ScriptVisualElement	GenElemInst_1196	572	320	28	20	
+MAIN	376	ScriptVisualElement	GenElemInst_1197	40	340	28	20	
+MAIN	377	ScriptVisualElement	GenElemInst_1198	68	340	28	20	
+MAIN	378	ScriptVisualElement	GenElemInst_1199	96	340	28	20	
+MAIN	379	ScriptVisualElement	GenElemInst_1200	124	340	28	20	
+MAIN	380	ScriptVisualElement	GenElemInst_1201	152	340	28	20	
+MAIN	381	ScriptVisualElement	GenElemInst_1202	180	340	28	20	
+MAIN	382	ScriptVisualElement	GenElemInst_1203	208	340	28	20	
+MAIN	383	ScriptVisualElement	GenElemInst_1204	236	340	28	20	
+MAIN	384	ScriptVisualElement	GenElemInst_1205	264	340	28	20	
+MAIN	385	ScriptVisualElement	GenElemInst_1206	292	340	28	20	
+MAIN	386	ScriptVisualElement	GenElemInst_1207	320	340	28	20	
+MAIN	387	ScriptVisualElement	GenElemInst_1208	348	340	28	20	
+MAIN	388	ScriptVisualElement	GenElemInst_1209	376	340	28	20	
+MAIN	389	ScriptVisualElement	GenElemInst_1210	404	340	28	20	
+MAIN	390	ScriptVisualElement	GenElemInst_1211	432	340	28	20	
+MAIN	391	ScriptVisualElement	GenElemInst_1212	460	340	28	20	
+MAIN	392	ScriptVisualElement	GenElemInst_1213	488	340	28	20	
+MAIN	393	ScriptVisualElement	GenElemInst_1214	516	340	28	20	
+MAIN	394	ScriptVisualElement	GenElemInst_1215	544	340	28	20	
+MAIN	395	ScriptVisualElement	GenElemInst_1216	572	340	28	20	
+MAIN	396	ScriptVisualElement	GenElemInst_1217	40	360	28	20	
+MAIN	397	ScriptVisualElement	GenElemInst_1218	68	360	28	20	
+MAIN	398	ScriptVisualElement	GenElemInst_1219	96	360	28	20	
+MAIN	399	ScriptVisualElement	GenElemInst_1220	124	360	28	20	
+MAIN	400	ScriptVisualElement	GenElemInst_1221	152	360	28	20	
+MAIN	401	ScriptVisualElement	GenElemInst_1222	180	360	28	20	
+MAIN	402	ScriptVisualElement	GenElemInst_1223	208	360	28	20	
+MAIN	403	ScriptVisualElement	GenElemInst_1224	236	360	28	20	
+MAIN	404	ScriptVisualElement	GenElemInst_1225	264	360	28	20	
+MAIN	405	ScriptVisualElement	GenElemInst_1226	292	360	28	20	
+MAIN	406	ScriptVisualElement	GenElemInst_1227	320	360	28	20	
+MAIN	407	ScriptVisualElement	GenElemInst_1228	348	360	28	20	
+MAIN	408	ScriptVisualElement	GenElemInst_1229	376	360	28	20	
+MAIN	409	ScriptVisualElement	GenElemInst_1230	404	360	28	20	
+MAIN	410	ScriptVisualElement	GenElemInst_1231	432	360	28	20	
+MAIN	411	ScriptVisualElement	GenElemInst_1232	460	360	28	20	
+MAIN	412	ScriptVisualElement	GenElemInst_1233	488	360	28	20	
+MAIN	413	ScriptVisualElement	GenElemInst_1234	516	360	28	20	
+MAIN	414	ScriptVisualElement	GenElemInst_1235	544	360	28	20	
+MAIN	415	ScriptVisualElement	GenElemInst_1236	572	360	28	20	
+MAIN	416	ScriptVisualElement	GenElemInst_1237	40	380	28	20	
+MAIN	417	ScriptVisualElement	GenElemInst_1238	68	380	28	20	
+MAIN	418	ScriptVisualElement	GenElemInst_1239	96	380	28	20	
+MAIN	419	ScriptVisualElement	GenElemInst_1240	124	380	28	20	
+MAIN	420	ScriptVisualElement	GenElemInst_1241	152	380	28	20	
+MAIN	421	ScriptVisualElement	GenElemInst_1242	180	380	28	20	
+MAIN	422	ScriptVisualElement	GenElemInst_1243	208	380	28	20	
+MAIN	423	ScriptVisualElement	GenElemInst_1244	236	380	28	20	
+MAIN	424	ScriptVisualElement	GenElemInst_1245	264	380	28	20	
+MAIN	425	ScriptVisualElement	GenElemInst_1246	292	380	28	20	
+MAIN	426	ScriptVisualElement	GenElemInst_1247	320	380	28	20	
+MAIN	427	ScriptVisualElement	GenElemInst_1248	348	380	28	20	
+MAIN	428	ScriptVisualElement	GenElemInst_1249	376	380	28	20	
+MAIN	429	ScriptVisualElement	GenElemInst_1250	404	380	28	20	
+MAIN	430	ScriptVisualElement	GenElemInst_1251	432	380	28	20	
+MAIN	431	ScriptVisualElement	GenElemInst_1252	460	380	28	20	
+MAIN	432	ScriptVisualElement	GenElemInst_1253	488	380	28	20	
+MAIN	433	ScriptVisualElement	GenElemInst_1254	516	380	28	20	
+MAIN	434	ScriptVisualElement	GenElemInst_1255	544	380	28	20	
+MAIN	435	ScriptVisualElement	GenElemInst_1256	572	380	28	20	
+MAIN	436	ScriptVisualElement	GenElemInst_1257	40	400	28	20	
+MAIN	437	ScriptVisualElement	GenElemInst_1258	68	400	28	20	
+MAIN	438	ScriptVisualElement	GenElemInst_1259	96	400	28	20	
+MAIN	439	ScriptVisualElement	GenElemInst_1260	124	400	28	20	
+MAIN	440	ScriptVisualElement	GenElemInst_1261	152	400	28	20	
+MAIN	441	ScriptVisualElement	GenElemInst_1262	180	400	28	20	
+MAIN	442	ScriptVisualElement	GenElemInst_1263	208	400	28	20	
+MAIN	443	ScriptVisualElement	GenElemInst_1264	236	400	28	20	
+MAIN	444	ScriptVisualElement	GenElemInst_1265	264	400	28	20	
+MAIN	445	ScriptVisualElement	GenElemInst_1266	292	400	28	20	
+MAIN	446	ScriptVisualElement	GenElemInst_1267	320	400	28	20	
+MAIN	447	ScriptVisualElement	GenElemInst_1268	348	400	28	20	
+MAIN	448	ScriptVisualElement	GenElemInst_1269	376	400	28	20	
+MAIN	449	ScriptVisualElement	GenElemInst_1270	404	400	28	20	
+MAIN	450	ScriptVisualElement	GenElemInst_1271	432	400	28	20	
+MAIN	451	ScriptVisualElement	GenElemInst_1272	460	400	28	20	
+MAIN	452	ScriptVisualElement	GenElemInst_1273	488	400	28	20	
+MAIN	453	ScriptVisualElement	GenElemInst_1274	516	400	28	20	
+MAIN	454	ScriptVisualElement	GenElemInst_1275	544	400	28	20	
+MAIN	455	ScriptVisualElement	GenElemInst_1276	572	400	28	20	
+MAIN	456	ScriptVisualElement	GenElemInst_1277	40	420	28	20	
+MAIN	457	ScriptVisualElement	GenElemInst_1278	68	420	28	20	
+MAIN	458	ScriptVisualElement	GenElemInst_1279	96	420	28	20	
+MAIN	459	ScriptVisualElement	GenElemInst_1280	124	420	28	20	
+MAIN	460	ScriptVisualElement	GenElemInst_1281	152	420	28	20	
+MAIN	461	ScriptVisualElement	GenElemInst_1282	180	420	28	20	
+MAIN	462	ScriptVisualElement	GenElemInst_1283	208	420	28	20	
+MAIN	463	ScriptVisualElement	GenElemInst_1284	236	420	28	20	
+MAIN	464	ScriptVisualElement	GenElemInst_1285	264	420	28	20	
+MAIN	465	ScriptVisualElement	GenElemInst_1286	292	420	28	20	
+MAIN	466	ScriptVisualElement	GenElemInst_1287	320	420	28	20	
+MAIN	467	ScriptVisualElement	GenElemInst_1288	348	420	28	20	
+MAIN	468	ScriptVisualElement	GenElemInst_1289	376	420	28	20	
+MAIN	469	ScriptVisualElement	GenElemInst_1290	404	420	28	20	
+MAIN	470	ScriptVisualElement	GenElemInst_1291	432	420	28	20	
+MAIN	471	ScriptVisualElement	GenElemInst_1292	460	420	28	20	
+MAIN	472	ScriptVisualElement	GenElemInst_1293	488	420	28	20	
+MAIN	473	ScriptVisualElement	GenElemInst_1294	516	420	28	20	
+MAIN	474	ScriptVisualElement	GenElemInst_1295	544	420	28	20	
+MAIN	475	ScriptVisualElement	GenElemInst_1296	572	420	28	20	
+MAIN	476	ScriptVisualElement	GenElemInst_1297	0	0	28	20	
+MAIN	477	ScriptVisualElement	GenElemInst_1299	621	80	85	18	GOODS INPUT
+MAIN	478	ScriptVisualElement	GenElemInst_1301	952	80	85	18	COMMANDS
+MAIN	479	ScriptVisualElement	GenElemInst_1303	621	278	66	18	STRATEGY
+MAIN	480	ScriptVisualElement	GenElemInst_1305	621	358	59	18	RESULTS
+MAIN	481	ScriptVisualElement	GenElemInst_1307	620	586	110	18	SCORE WEIGHTS
+MAIN	482	ScriptVisualElement	GenElemInst_1308	44	495	16	16	
+MAIN	483	ScriptVisualElement	GenElemInst_1309	319	495	16	16	
+MAIN	484	ScriptVisualElement	GenElemInst_1310	44	521	16	16	
+MAIN	485	ScriptVisualElement	GenElemInst_1311	319	521	16	16	
+MAIN	486	ScriptVisualElement	GenElemInst_1312	44	547	16	16	
+MAIN	487	ScriptVisualElement	GenElemInst_1313	319	547	16	16	
+MAIN	488	ScriptVisualElement	GenElemInst_1314	44	573	16	16	
+MAIN	489	ScriptVisualElement	GenElemInst_1315	620	96	320	2	
+MAIN	490	ScriptVisualElement	GenElemInst_1316	620	266	320	2	
+MAIN	491	ScriptVisualElement	GenElemInst_1317	620	96	2	172	
+MAIN	492	ScriptVisualElement	GenElemInst_1318	938	96	2	172	
+MAIN	493	ScriptVisualElement	GenElemInst_1319	952	96	288	2	
+MAIN	494	ScriptVisualElement	GenElemInst_1320	952	266	288	2	
+MAIN	495	ScriptVisualElement	GenElemInst_1321	952	96	2	172	
+MAIN	496	ScriptVisualElement	GenElemInst_1322	1238	96	2	172	
+MAIN	497	ScriptVisualElement	GenElemInst_1323	620	296	620	2	
+MAIN	498	ScriptVisualElement	GenElemInst_1324	620	346	620	2	
+MAIN	499	ScriptVisualElement	GenElemInst_1325	620	296	2	52	
+MAIN	500	ScriptVisualElement	GenElemInst_1326	1238	296	2	52	
+MAIN	501	ScriptVisualElement	GenElemInst_1327	620	376	620	2	
+MAIN	502	ScriptVisualElement	GenElemInst_1328	620	578	620	2	
+MAIN	503	ScriptVisualElement	GenElemInst_1329	620	376	2	204	
+MAIN	504	ScriptVisualElement	GenElemInst_1330	1238	376	2	204	
+MAIN	505	ScriptVisualElement	GenElemInst_1331	620	605	620	2	
+MAIN	506	ScriptVisualElement	GenElemInst_1332	620	642	620	2	
+MAIN	507	ScriptVisualElement	GenElemInst_1333	620	605	2	39	
+MAIN	508	ScriptVisualElement	GenElemInst_1334	1238	605	2	39	
+STATS	0	ScriptVisualElement	GenElemInst_1	40	16	400	30	P2 - Records, Query and Model Parameters
+STATS	1	ScriptVisualElement	GenElemInst_2	40	60	90	26	Goods ID
+STATS	2	ScriptVisualElement	GenElemInst_3	150	60	90	26	Column X
+STATS	3	ScriptVisualElement	GenElemInst_4	260	60	90	26	Tier Y
+STATS	4	ScriptVisualElement	GenElemInst_5	370	60	110	26	Path / m
+STATS	5	ScriptVisualElement	GenElemInst_6	500	60	110	26	Travel / s
+STATS	6	ScriptVisualElement	GenElemInst_7	40	90	90	24	%d
+STATS	7	ScriptVisualElement	GenElemInst_8	150	90	90	24	%d
+STATS	8	ScriptVisualElement	GenElemInst_9	260	90	90	24	%d
+STATS	9	ScriptVisualElement	GenElemInst_10	370	90	110	24	%.1f
+STATS	10	ScriptVisualElement	GenElemInst_11	500	90	110	24	%.2f
+STATS	11	ScriptVisualElement	GenElemInst_12	40	118	90	24	%d
+STATS	12	ScriptVisualElement	GenElemInst_13	150	118	90	24	%d
+STATS	13	ScriptVisualElement	GenElemInst_14	260	118	90	24	%d
+STATS	14	ScriptVisualElement	GenElemInst_15	370	118	110	24	%.1f
+STATS	15	ScriptVisualElement	GenElemInst_16	500	118	110	24	%.2f
+STATS	16	ScriptVisualElement	GenElemInst_17	40	146	90	24	%d
+STATS	17	ScriptVisualElement	GenElemInst_18	150	146	90	24	%d
+STATS	18	ScriptVisualElement	GenElemInst_19	260	146	90	24	%d
+STATS	19	ScriptVisualElement	GenElemInst_20	370	146	110	24	%.1f
+STATS	20	ScriptVisualElement	GenElemInst_21	500	146	110	24	%.2f
+STATS	21	ScriptVisualElement	GenElemInst_22	40	174	90	24	%d
+STATS	22	ScriptVisualElement	GenElemInst_23	150	174	90	24	%d
+STATS	23	ScriptVisualElement	GenElemInst_24	260	174	90	24	%d
+STATS	24	ScriptVisualElement	GenElemInst_25	370	174	110	24	%.1f
+STATS	25	ScriptVisualElement	GenElemInst_26	500	174	110	24	%.2f
+STATS	26	ScriptVisualElement	GenElemInst_27	40	202	90	24	%d
+STATS	27	ScriptVisualElement	GenElemInst_28	150	202	90	24	%d
+STATS	28	ScriptVisualElement	GenElemInst_29	260	202	90	24	%d
+STATS	29	ScriptVisualElement	GenElemInst_30	370	202	110	24	%.1f
+STATS	30	ScriptVisualElement	GenElemInst_31	500	202	110	24	%.2f
+STATS	31	ScriptVisualElement	GenElemInst_32	40	230	90	24	%d
+STATS	32	ScriptVisualElement	GenElemInst_33	150	230	90	24	%d
+STATS	33	ScriptVisualElement	GenElemInst_34	260	230	90	24	%d
+STATS	34	ScriptVisualElement	GenElemInst_35	370	230	110	24	%.1f
+STATS	35	ScriptVisualElement	GenElemInst_36	500	230	110	24	%.2f
+STATS	36	ScriptVisualElement	GenElemInst_37	40	258	90	24	%d
+STATS	37	ScriptVisualElement	GenElemInst_38	150	258	90	24	%d
+STATS	38	ScriptVisualElement	GenElemInst_39	260	258	90	24	%d
+STATS	39	ScriptVisualElement	GenElemInst_40	370	258	110	24	%.1f
+STATS	40	ScriptVisualElement	GenElemInst_41	500	258	110	24	%.2f
+STATS	41	ScriptVisualElement	GenElemInst_42	40	286	90	24	%d
+STATS	42	ScriptVisualElement	GenElemInst_43	150	286	90	24	%d
+STATS	43	ScriptVisualElement	GenElemInst_44	260	286	90	24	%d
+STATS	44	ScriptVisualElement	GenElemInst_45	370	286	110	24	%.1f
+STATS	45	ScriptVisualElement	GenElemInst_46	500	286	110	24	%.2f
+STATS	46	ScriptVisualElement	GenElemInst_47	40	314	90	24	%d
+STATS	47	ScriptVisualElement	GenElemInst_48	150	314	90	24	%d
+STATS	48	ScriptVisualElement	GenElemInst_49	260	314	90	24	%d
+STATS	49	ScriptVisualElement	GenElemInst_50	370	314	110	24	%.1f
+STATS	50	ScriptVisualElement	GenElemInst_51	500	314	110	24	%.2f
+STATS	51	ScriptVisualElement	GenElemInst_52	40	342	90	24	%d
+STATS	52	ScriptVisualElement	GenElemInst_53	150	342	90	24	%d
+STATS	53	ScriptVisualElement	GenElemInst_54	260	342	90	24	%d
+STATS	54	ScriptVisualElement	GenElemInst_55	370	342	110	24	%.1f
+STATS	55	ScriptVisualElement	GenElemInst_56	500	342	110	24	%.2f
+STATS	56	ScriptVisualElement	GenElemInst_57	40	378	570	24	Paged aGoods records. Run batch assign on P1 first, then view here.
+STATS	57	ScriptVisualElement	GenElemInst_58	40	410	100	34	Previous
+STATS	58	ScriptVisualElement	GenElemInst_59	150	410	100	34	Next
+STATS	59	ScriptVisualElement	GenElemInst_60	270	410	160	34	First row: %d
+STATS	60	ScriptVisualElement	GenElemInst_61	440	410	170	34	Total goods: %d
+STATS	61	ScriptVisualElement	GenElemInst_62	650	16	570	30	Query by business ID (supports demo IDs 901/902/903)
+STATS	62	ScriptVisualElement	GenElemInst_63	650	60	130	30	Query ID
+STATS	63	ScriptVisualElement	GenElemInst_65	970	60	100	30	Query
+STATS	64	ScriptVisualElement	GenElemInst_66	1080	60	32	30	
+STATS	65	ScriptVisualElement	GenElemInst_67	1118	60	102	30	Found
+STATS	66	ScriptVisualElement	GenElemInst_68	650	104	150	24	Name
+STATS	67	ScriptVisualElement	GenElemInst_69	806	104	250	24	%s
+STATS	68	ScriptVisualElement	GenElemInst_70	650	132	150	24	Weight / kg
+STATS	69	ScriptVisualElement	GenElemInst_71	806	132	250	24	%.1f
+STATS	70	ScriptVisualElement	GenElemInst_72	650	160	150	24	Frequency
+STATS	71	ScriptVisualElement	GenElemInst_73	806	160	250	24	%.1f
+STATS	72	ScriptVisualElement	GenElemInst_74	650	188	150	24	Volume / m3
+STATS	73	ScriptVisualElement	GenElemInst_75	806	188	250	24	%.2f
+STATS	74	ScriptVisualElement	GenElemInst_76	650	216	150	24	Position X
+STATS	75	ScriptVisualElement	GenElemInst_77	806	216	250	24	%d
+STATS	76	ScriptVisualElement	GenElemInst_78	650	244	150	24	Position Y
+STATS	77	ScriptVisualElement	GenElemInst_79	806	244	250	24	%d
+STATS	78	ScriptVisualElement	GenElemInst_80	650	272	150	24	Path / m
+STATS	79	ScriptVisualElement	GenElemInst_81	806	272	250	24	%.1f
+STATS	80	ScriptVisualElement	GenElemInst_82	650	300	150	24	Travel / s
+STATS	81	ScriptVisualElement	GenElemInst_83	806	300	250	24	%.2f
+STATS	82	ScriptVisualElement	GenElemInst_84	650	328	150	24	Loaded travel / s
+STATS	83	ScriptVisualElement	GenElemInst_85	806	328	250	24	%.2f
+STATS	84	ScriptVisualElement	GenElemInst_86	650	356	150	24	Handling / s
+STATS	85	ScriptVisualElement	GenElemInst_87	806	356	250	24	%.2f
+STATS	86	ScriptVisualElement	GenElemInst_88	650	400	570	26	Physical model parameters (press Query again after editing)
+STATS	87	ScriptVisualElement	GenElemInst_89	650	434	170	26	Vertical load factor
+STATS	88	ScriptVisualElement	GenElemInst_91	650	466	170	26	Light/medium W1
+STATS	89	ScriptVisualElement	GenElemInst_93	650	498	170	26	Medium/heavy W2
+STATS	90	ScriptVisualElement	GenElemInst_95	950	434	170	26	Light handling T1
+STATS	91	ScriptVisualElement	GenElemInst_97	950	466	170	26	Medium handling T2
+STATS	92	ScriptVisualElement	GenElemInst_99	950	498	170	26	Heavy handling T3
+STATS	93	ScriptVisualElement	GenElemInst_101	40	472	570	28	Current batch summary
+STATS	94	ScriptVisualElement	GenElemInst_102	40	506	190	24	Total inbound / s
+STATS	95	ScriptVisualElement	GenElemInst_103	236	506	180	24	%.1f
+STATS	96	ScriptVisualElement	GenElemInst_104	40	534	190	24	Average item / s
+STATS	97	ScriptVisualElement	GenElemInst_105	236	534	180	24	%.1f
+STATS	98	ScriptVisualElement	GenElemInst_106	40	562	190	24	Space utilization / %
+STATS	99	ScriptVisualElement	GenElemInst_107	236	562	180	24	%.1f
+STATS	100	ScriptVisualElement	GenElemInst_108	40	590	190	24	Total path / m
+STATS	101	ScriptVisualElement	GenElemInst_109	236	590	180	24	%.1f
+STATS	102	ScriptVisualElement	GenElemInst_110	40	618	190	24	Violations
+STATS	103	ScriptVisualElement	GenElemInst_111	236	618	180	24	%d
+STATS	104	ScriptVisualElement	GenElemInst_112	1100	640	120	34	Back to P1
+STATS	105	ScriptVisualElement	GenElemInst_113	40	688	1180	28	Alarm Banner area: not visible in Simulation; Batch D accepts config + zero compile errors.
+STATS	106	ScriptVisualElement	GenElemInst_350	826	434	100	26	%.2f
+STATS	107	ScriptVisualElement	GenElemInst_351	826	466	100	26	%.2f
+STATS	108	ScriptVisualElement	GenElemInst_352	826	498	100	26	%.2f
+STATS	109	ScriptVisualElement	GenElemInst_353	1126	434	100	26	%.2f
+STATS	110	ScriptVisualElement	GenElemInst_354	1126	466	100	26	%.2f
+STATS	111	ScriptVisualElement	GenElemInst_355	1126	498	100	26	%.2f
+STATS	112	ScriptVisualElement	GenElemInst_357	790	60	170	30	%d
+STATS	113	ScriptVisualElement	GenElemInst_358	32	52	620	2	
+STATS	114	ScriptVisualElement	GenElemInst_359	32	446	620	2	
+STATS	115	ScriptVisualElement	GenElemInst_360	32	52	2	396	
+STATS	116	ScriptVisualElement	GenElemInst_361	650	52	2	396	
+STATS	117	ScriptVisualElement	GenElemInst_362	40	43	59	18	RECORDS
+STATS	118	ScriptVisualElement	GenElemInst_363	32	464	620	2	
+STATS	119	ScriptVisualElement	GenElemInst_364	32	652	620	2	
+STATS	120	ScriptVisualElement	GenElemInst_365	32	464	2	190	
+STATS	121	ScriptVisualElement	GenElemInst_366	650	464	2	190	
+STATS	122	ScriptVisualElement	GenElemInst_367	40	455	59	18	SUMMARY
+STATS	123	ScriptVisualElement	GenElemInst_368	642	52	598	2	
+STATS	124	ScriptVisualElement	GenElemInst_369	642	386	598	2	
+STATS	125	ScriptVisualElement	GenElemInst_370	642	52	2	336	
+STATS	126	ScriptVisualElement	GenElemInst_371	1238	52	2	336	
+STATS	127	ScriptVisualElement	GenElemInst_372	650	43	46	18	QUERY
+STATS	128	ScriptVisualElement	GenElemInst_373	642	400	598	2	
+STATS	129	ScriptVisualElement	GenElemInst_374	642	546	598	2	
+STATS	130	ScriptVisualElement	GenElemInst_375	642	400	2	148	
+STATS	131	ScriptVisualElement	GenElemInst_376	1238	400	2	148	
+STATS	132	ScriptVisualElement	GenElemInst_377	650	391	92	18	MODEL PARAMS
+=== AUDIT_PAGES_DONE ===

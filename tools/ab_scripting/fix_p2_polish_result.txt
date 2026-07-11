@@ -1,0 +1,5 @@
+HEADER_BG_ADDED=2 (expect 2, total now 5)
+MODELPARAMS_TITLE_OK -> (754,391,466,18)
+BADGE_OK 45 chars = 292px < 304px
+SAVE_OK
+=== FIX_P2_POLISH_DONE ===
