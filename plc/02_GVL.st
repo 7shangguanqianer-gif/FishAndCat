@@ -20,6 +20,9 @@ VAR_GLOBAL CONSTANT
     GRID_Y0     : INT := 40;        // 仓位网格左上角 Y(顶部留标题)
     CELL_PX_W   : INT := 28;        // 单格宽(20列=560px,网格右缘 x=600)
     CELL_PX_H   : INT := 20;        // 单格高(20层=400px,网格下缘 y=440)
+    // ---- A4 两级权限(0711):演示 PIN,非真实凭据;变量层方案依据=内置 visu
+    //      Access Rights 无 ScriptEngine 接口,无法被画面生成管线驱动(官方文档核实) ----
+    ADMIN_PIN   : INT := 2026;      // 管理员登录码(演示口径;生产化换 visu UserMgmt)
 END_VAR
 
 VAR_GLOBAL
@@ -70,6 +73,10 @@ VAR_GLOBAL
     iGoodsCount : INT := 0;                          // 当前货物数
     aRankIdx    : ARRAY[1..400] OF INT;              // Rank阶段排序后的货物下标
     stStats     : ST_Stats;                          // 统计结果
+    // ---- A3 检修挂起(0711):独立于 aSlots 的物理状态层,Reset/重分配不清
+    //      语义=SAP EWM bin blocking 的 putaway block:禁新入库(选位/分配/交换均排除),
+    //      已有货物原地冻结、查询照常;非 RETAIN(断电清零=演示安全默认) ----
+    aMaintBlock : ARRAY[0..19, 0..19] OF BOOL;       // TRUE=该格检修挂起
 END_VAR
 
 (* ---------- GVL_Visu:可视化接口(决赛 CODESYS Visualization 绑定这里) ----------
@@ -151,7 +158,27 @@ VAR_GLOBAL
     dwCraneColor    : DWORD := 16#FFFF6D00;         // 堆垛机橙
     dwTransparent   : DWORD := 16#00FFFFFF;         // 全透明填充(分组框矩形只显边线,不盖内容)
     dwHeaderBg      : DWORD := 16#FFE8EAF0;         // P2 记录表表头底纹(版1 排版,0711)
-    aLegendColor    : ARRAY[0..6] OF DWORD :=       // 图例色样,与 FC_StateToColor 状态 0..6 一致
+    aLegendColor    : ARRAY[0..7] OF DWORD :=       // 图例色样,与 FC_StateToColor 状态 0..7 一致
         [16#FFE8E8E8, 16#FF707070, 16#FF43A047, 16#FFFFC107,
-         16#FF42A5F5, 16#FFE53935, 16#FF26C6DA];
+         16#FF42A5F5, 16#FFE53935, 16#FF26C6DA, 16#FF8E24AA];
+    // ---- A2 场景检测器(0711 驾驶舱连击:批次画像→推荐策略;FB_SceneDetect 填充) ----
+    VisuProfN       : INT;                  // 画像:批量大小
+    VisuProfDensity : REAL;                 // 画像:密度 n/267(sum 口径可用位)
+    VisuProfSkew    : REAL;                 // 画像:频次偏斜度(top20% 件频次占比)
+    VisuProfWMean   : REAL;                 // 画像:重量均值 kg
+    VisuProfWHeavy  : REAL;                 // 画像:重货(>60kg)占比
+    VisuRecStrategy : INT := -1;            // 推荐策略档位(SelStrategy 语义;-1=无数据)
+    VisuRecText     : STRING[64];           // 推荐文本(ASCII 状态码,画面静态中文标签对照)
+    xAutoStrategy   : BOOL := FALSE;        // 开关:TRUE=推荐自动写入 SelStrategy(人工覆盖=关)
+    // ---- A3 检修画面接口 ----
+    InMaintX        : INT;                  // 检修目标列
+    InMaintY        : INT;                  // 检修目标层
+    CmdMaintToggle  : BOOL;                 // 按钮:挂起/恢复翻转(需管理员)
+    VisuMaintCount  : INT;                  // 当前检修格数
+    // ---- A4 两级权限画面接口(变量层双闸:画面元素锁定 + ST 侧参数守卫回滚) ----
+    InPinCode       : INT;                  // 登录码输入(消费即清,画面不放回显元件)
+    CmdLogin        : BOOL;                 // 按钮:登录
+    CmdLogout       : BOOL;                 // 按钮:登出
+    iUserLevel      : INT := 0;             // 0=操作员 1=管理员(画面锁定绑定源;非 RETAIN)
+    VisuUserText    : STRING[32];           // 'USER=OPERATOR' / 'USER=ADMIN' / 'LOGIN_FAIL'
 END_VAR

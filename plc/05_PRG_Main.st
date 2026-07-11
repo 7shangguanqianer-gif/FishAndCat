@@ -17,12 +17,17 @@ VAR
     fbAnim      : FB_AnimatePath;       // L6:堆垛机沿路径回放动画(CmdAnimate 触发)
     fbQuery     : FB_QueryGood;         // 块3 P3:单件查询(细则8,常驻)
     fbRecPage   : FB_RecordPage;        // 块3 P2:记录页 10 行窗口(细则8,常驻)
+    fbSceneDet  : FB_SceneDetect;       // A2:场景检测器(画像→推荐,常驻自动重算)
+    fbAuth      : FB_UserAuth;          // A4:两级权限登录(常驻)
+    fbGuard     : FB_ParamGuard;        // A4:调参守卫(常驻,双闸之二)
     xKickInit, xKickAssign, xKickImprove, xKickStats : BOOL;
     xUseRank    : BOOL;
     iStrat      : INT;
     c2, t2      : INT;                  // 清除推荐高亮用循环变量
     xDemoOld, xRunOld, xResetOld : BOOL;
     xSnapOld    : BOOL;                 // 块3:快照按钮沿检测
+    xMaintOld   : BOOL;                 // A3:检修按钮沿检测
+    iMaintRet   : INT;                  // A3:FC_MaintToggle 返回码
 END_VAR
 
 // ---------- 全局按钮:复位(任意状态可触发) ----------
@@ -184,6 +189,36 @@ END_CASE
 // 块3 P2/P3:记录页窗口+单件查询(常驻:DONE 后评委翻表/查询仍可用)
 fbRecPage(xPageUp := GVL_Visu.CmdPageUp, xPageDown := GVL_Visu.CmdPageDown);
 fbQuery(xQuery := GVL_Visu.CmdQuery, iId := GVL_Visu.InQueryId);
+// A2 场景检测器:货物表变化自动重算画像+推荐;Auto 开=推荐直写策略档(人工覆盖=关 Auto)
+fbSceneDet();
+IF fbSceneDet.xValid AND GVL_Visu.xAutoStrategy THEN
+    GVL_Visu.SelStrategy := fbSceneDet.iRecBatch;
+END_IF
+// A4 登录/登出+调参守卫;PIN 消费即清(登录动作当周期已用,不留回显/重放)
+fbAuth(xLogin := GVL_Visu.CmdLogin, iPin := GVL_Visu.InPinCode,
+       xLogout := GVL_Visu.CmdLogout);
+GVL_Visu.iUserLevel := fbAuth.iLevel;
+GVL_Visu.VisuUserText := fbAuth.sUserText;
+IF GVL_Visu.CmdLogin OR GVL_Visu.CmdLogout THEN
+    GVL_Visu.InPinCode := 0;
+END_IF
+fbGuard(iLevel := fbAuth.iLevel);
+// A3 检修挂起/恢复(需管理员;putaway block 语义:禁新入库,存量冻结可查询)
+IF GVL_Visu.CmdMaintToggle AND NOT xMaintOld THEN
+    iMaintRet := FC_MaintToggle(x := GVL_Visu.InMaintX, y := GVL_Visu.InMaintY,
+                                iLevel := fbAuth.iLevel);
+    CASE iMaintRet OF
+        0: GVL_Visu.VisuStatusText := CONCAT('MAINT_SET_X=',
+               CONCAT(INT_TO_STRING(GVL_Visu.InMaintX),
+               CONCAT('_Y=', INT_TO_STRING(GVL_Visu.InMaintY))));
+        1: GVL_Visu.VisuStatusText := CONCAT('MAINT_CLR_X=',
+               CONCAT(INT_TO_STRING(GVL_Visu.InMaintX),
+               CONCAT('_Y=', INT_TO_STRING(GVL_Visu.InMaintY))));
+        2: GVL_Visu.VisuStatusText := 'ERR_MAINT_NEED_ADMIN';
+        3: GVL_Visu.VisuStatusText := 'ERR_MAINT_RANGE';
+    END_CASE
+END_IF
+xMaintOld := GVL_Visu.CmdMaintToggle;
 // 块3 方向9:快照保存(上升沿把当前布局冻结为对比基准,CmdCompareMode 切换显示)
 IF GVL_Visu.CmdSaveSnap AND NOT xSnapOld THEN
     GVL_Visu.aSnapState := GVL_Visu.VisuSlotState;      // 同型数组整体赋值
@@ -202,7 +237,7 @@ fbAnim(xStart := GVL_Visu.CmdAnimate, rCycleTime := 0.01, rSpeedScale := 5.0);
 // ---------- 0711 疫苗:脉冲命令消费即复位(段尾,所有消费者已跑完) ----------
 // 防两类实测事故:①MouseUp 事件丢失致命令卡 TRUE(Load demo 风暴 N=260)
 // ②输入积压在 download 后突发重放。复位后命令只存活一个扫描周期,天然免疫。
-// 注意:CmdCompareMode 是翻转开关、SelStrategy 是 INT 档位,均不得复位。
+// 注意:CmdCompareMode/xAutoStrategy 是翻转开关、SelStrategy 是 INT 档位,均不得复位。
 GVL_Visu.CmdAddGood   := FALSE;
 GVL_Visu.CmdLoadDemo  := FALSE;
 GVL_Visu.CmdRunAssign := FALSE;
@@ -212,6 +247,9 @@ GVL_Visu.CmdSaveSnap  := FALSE;
 GVL_Visu.CmdQuery     := FALSE;
 GVL_Visu.CmdPageUp    := FALSE;
 GVL_Visu.CmdPageDown  := FALSE;
+GVL_Visu.CmdLogin     := FALSE;     // A4(0711)
+GVL_Visu.CmdLogout    := FALSE;
+GVL_Visu.CmdMaintToggle := FALSE;   // A3(0711)
 // 颜色镜像+堆垛机像素坐标刷新(画面所有动态元件的数据源,必须在 fbAnim 之后)
 fbVisu();
 END_PROGRAM

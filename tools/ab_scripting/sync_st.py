@@ -39,6 +39,7 @@ MAP = [
     ("FC_StateToColor",     "03_Functions.st", "pou"),
     ("FC_TravelLaden",      "03_Functions.st", "pou"),
     ("FC_HandleTime",       "03_Functions.st", "pou"),
+    ("FC_MaintToggle",      "03_Functions.st", "pou"),   # A3 检修翻转(0711)
     ("FC_LoadDemoGoods",    "07_GVL_Data_generated.st", "pou"),
     ("FB_InitWarehouse",    "04_FB_Warehouse.st", "pou"),
     ("FB_SelectSlot",       "04_FB_Warehouse.st", "pou"),
@@ -52,6 +53,9 @@ MAP = [
     ("FB_GoodsInput",       "04_FB_Warehouse.st", "pou"),
     ("FB_QueryGood",        "04_FB_Warehouse.st", "pou"),
     ("FB_RecordPage",       "04_FB_Warehouse.st", "pou"),
+    ("FB_SceneDetect",      "04_FB_Warehouse.st", "pou"),   # A2 场景检测器(0711)
+    ("FB_UserAuth",         "04_FB_Warehouse.st", "pou"),   # A4 两级权限登录(0711)
+    ("FB_ParamGuard",       "04_FB_Warehouse.st", "pou"),   # A4 调参守卫(0711)
     ("PRG_Main",            "05_PRG_Main.st", "pou"),
     ("PRG_Test",            "06_PRG_Test.st", "pou"),
     ("GVL_Data",            "07_GVL_Data_generated.st", "gvl"),

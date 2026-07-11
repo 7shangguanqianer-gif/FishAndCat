@@ -13,8 +13,8 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 45;                  // 用例总数(0708 块3 +T42查询/T43记录页/T44装卸/T45载货)
-    aResult   : ARRAY[1..45] OF BOOL;       // 各用例结果(TRUE=通过)
+    N_CASES   : INT := 56;                  // 用例总数(0711 A2-A4 +T46-T48检修/T49-T53检测器/T54-T55权限/T56检修权限门)
+    aResult   : ARRAY[1..56] OF BOOL;       // 各用例结果(TRUE=通过)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
@@ -24,6 +24,10 @@ VAR
     fbGoodsInputT : FB_GoodsInput;          // T41:货物输入封装测试
     fbQueryT  : FB_QueryGood;               // T42:单件查询测试(块3)
     fbRecPageT : FB_RecordPage;             // T43:记录页窗口测试(块3)
+    fbDetT    : FB_SceneDetect;             // T49-T53:场景检测器测试(A2,0711)
+    fbAuthT   : FB_UserAuth;                // T54:两级权限测试(A4,0711)
+    fbGuardT  : FB_ParamGuard;              // T55:调参守卫测试(A4,0711)
+    iRet      : INT;                        // T56:FC_MaintToggle 返回码
     i, x, y, n : INT;
     rV        : REAL;
     iVecFail  : INT;
@@ -33,7 +37,7 @@ END_VAR
 IF xRunTests THEN
     xRunTests := FALSE;
     iPassed := 0;  iFailed := 0;  sLastFail := '';
-    FOR i := 1 TO 45 DO aResult[i] := TRUE; END_FOR
+    FOR i := 1 TO 56 DO aResult[i] := TRUE; END_FOR
 
     // ---- T01-T04 承重系数:正常/顶层/负钳位/越上钳位 ----
     aResult[1] := ABS(FC_CapCoef(y := 0)  - 1.0)  < 0.0001;
@@ -348,6 +352,113 @@ IF xRunTests THEN
     aResult[45] := aResult[45]
                    AND (ABS(FC_TravelLaden(x0:=0, y0:=0, x1:=10, y1:=10, xSimXY:=TRUE) - 20.0) < 0.001);
     GVL_Param.rLadenFactorVY := 0.80;
+
+    // ============ 0711 A2-A4:T46-T56(检修挂起/场景检测器/两级权限) ============
+
+    // ---- T46-T48 检修挂起(A3,putaway block 语义;干净仓:sum 口径 133 预占) ----
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
+    // T46 挂起→选位不可行;恢复→立即回池(挂起/恢复双向)
+    GVL_WH.aMaintBlock[1, 0] := TRUE;
+    aResult[46] := NOT FC_CheckFeasible(x := 1, y := 0, rGoodW := 10.0, rGoodV := 0.5);
+    GVL_WH.aMaintBlock[1, 0] := FALSE;
+    aResult[46] := aResult[46]
+                   AND FC_CheckFeasible(x := 1, y := 0, rGoodW := 10.0, rGoodV := 0.5);
+    // T47 集成:near 轻货首选 (1,0)(t=0.5s);挂起后绕行次优 (2,0)(t=1.0s);恢复后回 (1,0)
+    GVL_WH.aMaintBlock[1, 0] := TRUE;
+    fbSel(iStrategy := 1, rGoodW := 10.0, rGoodF := 50.0, rGoodV := 0.5,
+          rWMax := 100.0, rFMax := 100.0);
+    aResult[47] := fbSel.xFound AND (fbSel.iBestX = 2) AND (fbSel.iBestY = 0);
+    GVL_WH.aMaintBlock[1, 0] := FALSE;
+    fbSel(iStrategy := 1, rGoodW := 10.0, rGoodF := 50.0, rGoodV := 0.5,
+          rWMax := 100.0, rFMax := 100.0);
+    aResult[47] := aResult[47] AND fbSel.xFound AND (fbSel.iBestX = 1) AND (fbSel.iBestY = 0);
+    // T48 交换目标位检修=禁入(FC_FitsPhysical;检修位存量可换走、新货不得换进)
+    GVL_WH.aMaintBlock[2, 0] := TRUE;
+    aResult[48] := NOT FC_FitsPhysical(x := 2, y := 0, rGoodW := 10.0, rGoodV := 0.5);
+    GVL_WH.aMaintBlock[2, 0] := FALSE;
+    aResult[48] := aResult[48]
+                   AND FC_FitsPhysical(x := 2, y := 0, rGoodW := 10.0, rGoodV := 0.5);
+
+    // ---- T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖) ----
+    // 5 件手工批:freq 10/20/30/40/100(和=200),w 10/20/30/70/80 → n=5;
+    // density=5/267=0.018727;top=MAX(1,5/5)=1 件 → skew=100/200=0.5;
+    // w_mean=210/5=42.0;w_heavy(>60kg)=2/5=0.4
+    FOR i := 1 TO 5 DO
+        GVL_WH.aGoods[i].Id := i;  GVL_WH.aGoods[i].Volume := 0.5;
+        GVL_WH.aGoods[i].Assigned := FALSE;
+    END_FOR
+    GVL_WH.aGoods[1].Freq := 10.0;   GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[2].Freq := 20.0;   GVL_WH.aGoods[2].Weight := 20.0;
+    GVL_WH.aGoods[3].Freq := 30.0;   GVL_WH.aGoods[3].Weight := 30.0;
+    GVL_WH.aGoods[4].Freq := 40.0;   GVL_WH.aGoods[4].Weight := 70.0;
+    GVL_WH.aGoods[5].Freq := 100.0;  GVL_WH.aGoods[5].Weight := 80.0;
+    GVL_WH.iGoodsCount := 5;
+    FOR i := 1 TO 10 DO fbDetT(xForce := FALSE); IF fbDetT.xValid THEN EXIT; END_IF END_FOR
+    // T49 画像位级(容差 1e-3,块2 一致性惯例)
+    aResult[49] := fbDetT.xValid
+                   AND (GVL_Visu.VisuProfN = 5)
+                   AND (ABS(GVL_Visu.VisuProfDensity - 0.018727) < 0.001)
+                   AND (ABS(GVL_Visu.VisuProfSkew - 0.5) < 0.001)
+                   AND (ABS(GVL_Visu.VisuProfWMean - 42.0) < 0.001)
+                   AND (ABS(GVL_Visu.VisuProfWHeavy - 0.4) < 0.001);
+    // T50 批量推荐:skew 0.5>=0.35 → AWRA(holistic 全要素档)
+    aResult[50] := (fbDetT.iRecBatch = 3);
+    // T51 在线推荐:n=5<=20 → near(F18-2 极小批降级)
+    aResult[51] := (fbDetT.iRecOnline = 1);
+    // T52 均匀批(freq 全 50→skew=0.2<0.35 且 n<=20):批量/在线均 near;xForce 重算路径
+    FOR i := 1 TO 5 DO GVL_WH.aGoods[i].Freq := 50.0; END_FOR
+    fbDetT(xForce := FALSE);
+    FOR i := 1 TO 10 DO fbDetT(xForce := TRUE); IF fbDetT.xValid THEN EXIT; END_IF END_FOR
+    aResult[52] := fbDetT.xValid AND (fbDetT.iRecBatch = 1) AND (fbDetT.iRecOnline = 1)
+                   AND (ABS(GVL_Visu.VisuProfSkew - 0.2) < 0.001);
+    // T53 大批高偏(n=21>20,skew=(100+10*3)/300=0.4333>=0.35):批量 AWRA/在线 score
+    FOR i := 1 TO 20 DO
+        GVL_WH.aGoods[i].Id := i;      GVL_WH.aGoods[i].Freq := 10.0;
+        GVL_WH.aGoods[i].Weight := 50.0;  GVL_WH.aGoods[i].Volume := 0.5;
+    END_FOR
+    GVL_WH.aGoods[21].Id := 21;  GVL_WH.aGoods[21].Freq := 100.0;
+    GVL_WH.aGoods[21].Weight := 50.0;  GVL_WH.aGoods[21].Volume := 0.5;
+    GVL_WH.iGoodsCount := 21;
+    FOR i := 1 TO 10 DO fbDetT(xForce := FALSE); IF fbDetT.xValid THEN EXIT; END_IF END_FOR
+    aResult[53] := fbDetT.xValid AND (fbDetT.iRecBatch = 3) AND (fbDetT.iRecOnline = 2)
+                   AND (ABS(GVL_Visu.VisuProfSkew - 0.43333) < 0.001);
+    GVL_WH.iGoodsCount := 2;                        // 对齐 T43 尾惯例,防状态外溢
+
+    // ---- T54-T55 两级权限(A4:登录三段 + 守卫回滚) ----
+    // T54 错码拒登(计数+1)→ 对码升管理员 → 登出回操作员
+    fbAuthT(xLogin := FALSE, iPin := 0, xLogout := FALSE);
+    fbAuthT(xLogin := TRUE,  iPin := 1111, xLogout := FALSE);
+    aResult[54] := (fbAuthT.iLevel = 0) AND (fbAuthT.iFailCnt = 1);
+    fbAuthT(xLogin := FALSE, iPin := 0, xLogout := FALSE);
+    fbAuthT(xLogin := TRUE,  iPin := GVL_Param.ADMIN_PIN, xLogout := FALSE);
+    aResult[54] := aResult[54] AND (fbAuthT.iLevel = 1);
+    fbAuthT(xLogin := FALSE, iPin := 0, xLogout := TRUE);
+    aResult[54] := aResult[54] AND (fbAuthT.iLevel = 0);
+    // T55 守卫:管理员改参被保持;操作员级越权改动一周期内回滚
+    fbGuardT(iLevel := 1);                          // 首 call:快照=现值(0.15)
+    GVL_Param.rDelta := 0.99;                       // 管理员改参
+    fbGuardT(iLevel := 1);                          // 快照刷新=0.99
+    fbGuardT(iLevel := 0);                          // 降级:合法值保持
+    aResult[55] := (ABS(GVL_Param.rDelta - 0.99) < 0.001);
+    GVL_Param.rDelta := 0.5;                        // 操作员越权改
+    fbGuardT(iLevel := 0);                          // 守卫回滚到 0.99
+    aResult[55] := aResult[55] AND (ABS(GVL_Param.rDelta - 0.99) < 0.001);
+    GVL_Param.rDelta := 0.15;                       // 恢复默认并刷快照(防外溢)
+    fbGuardT(iLevel := 1);
+
+    // ---- T56 检修权限门(FC_MaintToggle 四分支:需管理员/挂起/恢复/越界) ----
+    n := GVL_Visu.VisuMaintCount;                   // 相对基准(在线演示可能已有检修格)
+    iRet := FC_MaintToggle(x := 5, y := 5, iLevel := 0);
+    aResult[56] := (iRet = 2) AND NOT GVL_WH.aMaintBlock[5, 5];
+    iRet := FC_MaintToggle(x := 5, y := 5, iLevel := 1);
+    aResult[56] := aResult[56] AND (iRet = 0) AND GVL_WH.aMaintBlock[5, 5]
+                   AND (GVL_Visu.VisuMaintCount = n + 1);
+    iRet := FC_MaintToggle(x := 5, y := 5, iLevel := 1);
+    aResult[56] := aResult[56] AND (iRet = 1) AND NOT GVL_WH.aMaintBlock[5, 5]
+                   AND (GVL_Visu.VisuMaintCount = n);
+    iRet := FC_MaintToggle(x := -1, y := 0, iLevel := 1);
+    aResult[56] := aResult[56] AND (iRet = 3);
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

@@ -57,9 +57,10 @@ VAR_INPUT
     rGoodV     : REAL;          // 货物体积
 END_VAR
 FC_CheckFeasible := FALSE;
-// 边界清单:越界 / 负属性 / 占用(含预占) / 超重 / 超容积
+// 边界清单:越界 / 负属性 / 检修挂起 / 占用(含预占) / 超重 / 超容积
 IF x < 0 OR x > GVL_Param.COLS - 1 OR y < 0 OR y > GVL_Param.TIERS - 1 THEN RETURN; END_IF
 IF rGoodW < 0.0 OR rGoodV < 0.0 THEN RETURN; END_IF
+IF GVL_WH.aMaintBlock[x, y] THEN RETURN; END_IF      // A3 putaway block:检修位禁新入库
 IF GVL_WH.aSlots[x, y].Occupied THEN RETURN; END_IF
 IF rGoodW > GVL_WH.aSlots[x, y].MaxWeight THEN RETURN; END_IF
 IF rGoodV > GVL_WH.aSlots[x, y].MaxVolume THEN RETURN; END_IF
@@ -78,6 +79,9 @@ END_VAR
 FC_FitsPhysical := FALSE;
 IF x < 0 OR x > GVL_Param.COLS - 1 OR y < 0 OR y > GVL_Param.TIERS - 1 THEN RETURN; END_IF
 IF rGoodW < 0.0 OR rGoodV < 0.0 THEN RETURN; END_IF
+// A3:交换目标位检修中=禁入(检修位上的货可被换走,但别的货不得换进来——
+//     与 SAP EWM putaway block"存量可出、新增禁入"语义一致)
+IF GVL_WH.aMaintBlock[x, y] THEN RETURN; END_IF
 IF rGoodW > GVL_WH.aSlots[x, y].MaxWeight THEN RETURN; END_IF
 IF rGoodV > GVL_WH.aSlots[x, y].MaxVolume THEN RETURN; END_IF
 FC_FitsPhysical := TRUE;
@@ -249,9 +253,40 @@ CASE iState OF
     4: FC_StateToColor := 16#FF42A5F5;   // 路径:蓝
     5: FC_StateToColor := 16#FFE53935;   // 报警:红
     6: FC_StateToColor := 16#FF26C6DA;   // 查询高亮:青(块3 P3,FB_QueryGood 置位)
+    7: FC_StateToColor := 16#FF8E24AA;   // 检修挂起:紫(A3,FB_VisuRefresh 按 aMaintBlock 叠加)
 ELSE
     FC_StateToColor := 16#FFFF00FF;      // 未知状态:品红(醒目,便于发现bug)
 END_CASE
+END_FUNCTION
+
+
+(* ---------- FC_MaintToggle:检修挂起/恢复翻转(A3,0711) ----------
+   语义=SAP EWM bin blocking 的 putaway block:挂起只禁"新入库"(FC_CheckFeasible/
+   FC_FitsPhysical 已排除),已有货物原地冻结、查询照常;恢复即重新入分配池。
+   需管理员(iLevel>=1)——检修是设备物理操作,权限门与 A4 联动。
+   返回码:0=已挂起 1=已恢复 2=需管理员 3=坐标越界。
+   带副作用(写 GVL_WH.aMaintBlock / GVL_Visu.VisuMaintCount),风格同 FC_LoadDemoGoods。 *)
+FUNCTION FC_MaintToggle : INT
+VAR_INPUT
+    x      : INT;
+    y      : INT;
+    iLevel : INT;               // 当前用户级(FB_UserAuth 输出)
+END_VAR
+IF iLevel < 1 THEN
+    FC_MaintToggle := 2;  RETURN;
+END_IF
+IF x < 0 OR x > GVL_Param.COLS - 1 OR y < 0 OR y > GVL_Param.TIERS - 1 THEN
+    FC_MaintToggle := 3;  RETURN;
+END_IF
+IF GVL_WH.aMaintBlock[x, y] THEN
+    GVL_WH.aMaintBlock[x, y] := FALSE;
+    GVL_Visu.VisuMaintCount := GVL_Visu.VisuMaintCount - 1;
+    FC_MaintToggle := 1;
+ELSE
+    GVL_WH.aMaintBlock[x, y] := TRUE;
+    GVL_Visu.VisuMaintCount := GVL_Visu.VisuMaintCount + 1;
+    FC_MaintToggle := 0;
+END_IF
 END_FUNCTION
 
 

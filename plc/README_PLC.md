@@ -10,8 +10,8 @@
 |---|---|---|
 | 01_DUTs.st | 4 个 DUT(每个 TYPE 一个) | ST_Good / ST_Slot / ST_Stats / E_MainState |
 | 02_GVL.st | 3 个 GVL | GVL_Param(常量段+变量段合一个,含 L1 加减速参数)/ GVL_WH / GVL_Visu |
-| 03_Functions.st | 12 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表) |
-| 04_FB_Warehouse.st | 9 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测)+ **FB_VisuRefresh**(L6 颜色镜像) |
+| 03_Functions.st | 13 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表)+ **FC_MaintToggle**(A3 检修翻转,0711) |
+| 04_FB_Warehouse.st | 12 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测)+ **FB_VisuRefresh**(L6 颜色镜像)+ **FB_SceneDetect / FB_UserAuth / FB_ParamGuard**(A2 检测器/A4 两级权限,0711) |
 | 05_PRG_Main.st | 1 个 POU-程序 | 主状态机,挂循环任务 |
 | 06_PRG_Test.st | 1 个 POU-程序 | 23 个边界+一致性用例(T22 加减速向量/T23 双命令) |
 | 07_GVL_Data_generated.st | 2 DUT + 1 GVL + 1 函数 | **生成文件勿手改**,由 sim/export_st_vectors.py 重生(含 ExpTimeAccel + **T25 的 ST_AwraCell/aAwraExpect 终局向量 + LAM/MAX_LS 单源常量**,0707) |
@@ -24,7 +24,7 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=41**, iFailed=0(T19/T20/T22 一致性向量,T23 双命令,T24 预占格数 133,T25 AWRA 端到端,T26-T40 边界扩充,**T41 FB_GoodsInput 封装三分支[正常/负输入/超重无位]——0707 T2.2 抽取**;iAwraPosDiff 逐位分歧预期 0);已由 ScriptEngine 管线 `ab_sync.ps1` 实跑验证 41/0;
+   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=56**, iFailed=0(T19/T20/T22 一致性向量,T23 双命令,T24 预占格数 133,T25 AWRA 端到端,T26-T40 边界扩充,T41 FB_GoodsInput 封装,T42-T45 块3 查询/翻页/装卸/载货,**T46-T56 检修挂起/场景检测器/两级权限——0711 A2-A4**;iAwraPosDiff 逐位分歧预期 0);由 ScriptEngine 管线 `ab_sync.ps1` 实跑验证(判定串同步 56/0);
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。
@@ -37,6 +37,11 @@
   验证报告里的数字与 PLC 演示互相背书。
 - **边界判断成体系**:越界/负输入/超重/超容/预占/满仓/无可行位报警,全部有用例(T01-T18)。
 - **口径开关**:xSimultaneousXY 切换切比雪夫(主口径)/顺序模型(对照),现场可演示两者差异。
+- **操作侧完备性(0711 A2-A4,对标同类赛项原文要求项)**:场景检测器(FB_SceneDetect,
+  批次画像→推荐策略,sim 侧 A1 实验证 lex 档达 oracle 98.5%,ST 版=holistic 全要素档)+
+  人工覆盖开关(xAutoStrategy)/ 检修挂起(FC_MaintToggle,SAP EWM putaway block 语义:
+  禁新入库、存量冻结可查询,Reset 不清)/ 两级权限(FB_UserAuth+FB_ParamGuard 变量层双闸:
+  画面元素锁定+越权改动一周期内回滚;内置 visu Access Rights 无脚本接口故不采用)。
 
 ## 4. 已知注意项
 

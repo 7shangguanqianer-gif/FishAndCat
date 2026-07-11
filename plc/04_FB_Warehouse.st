@@ -627,6 +627,16 @@ IF NOT (GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid) THEN
     END_FOR
 END_IF
 
+// 2b) A3 检修叠加(优先级最高恒显:检修是物理状态,独立于布局/快照/路径;
+//     色源=GVL_WH.aMaintBlock 而非 VisuSlotState——Reset 重建布局不清检修)
+FOR c := 0 TO GVL_Param.COLS - 1 DO
+    FOR rw := 0 TO GVL_Param.TIERS - 1 DO
+        IF GVL_WH.aMaintBlock[c, GVL_Param.TIERS - 1 - rw] THEN
+            GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := 7);
+        END_IF
+    END_FOR
+END_FOR
+
 // 3) 堆垛机格坐标 → 像素坐标(图元锚点=左上角,大小=一个单元格)
 GVL_Visu.VisuCraneXpx := GVL_Param.GRID_X0 + GVL_Visu.VisuCurrentX * GVL_Param.CELL_PX_W;
 GVL_Visu.VisuCraneYpx := GVL_Param.GRID_Y0
@@ -831,4 +841,209 @@ FOR k := 0 TO 9 DO
         GVL_Visu.aRowExecT[k]   := 0.0;
     END_IF
 END_FOR
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_SceneDetect:场景检测器(A2 驾驶舱连击,0711) ----------
+   sim/strategy_lib.py 的 batch_profile + select_strategy(holistic 档)忠实 ST 化:
+   批次画像(n/density/skew/w_mean/w_heavy)一次遍历+分片排序算出,阈值级联推荐策略。
+   档位说明:holistic=题面全要素默认档(重货低层 C6/能耗 C4 权重高,AWRA 主推,
+   极小批+无画像信息降级简单规则=F18-2);lex/speed 档推荐 TOB/CB,PLC 策略库未含
+   (sim 层 A1 实验已证 lex 档达 oracle 98.5%),ST 版按主打叙事实现 holistic 档。
+   skew=top20% 件频次占比:需频次降序排序——插入排序按件分片(每周期 nPerCycle 件,
+   单件插入最坏 O(n) 步,n=400 时单周期约 2 万步 REAL 比较,远低于分片先例
+   nPairsPerCycle=200 对评分的量级,不触发看门狗)。
+   触发:iGoodsCount 变化自动重算(演示:载批/加件即刷新);xForce 强制重算
+   (货物属性原地变更时用,如测试)。运行中数据再变=丢弃重来(以终值为准)。
+   输出推荐档位用 SelStrategy 语义:1=near(COL) 2=score 3=AWRA-LS。 *)
+FUNCTION_BLOCK FB_SceneDetect
+VAR_INPUT
+    xForce      : BOOL;             // 上升沿:强制重算(iGoodsCount 未变但属性变了)
+END_VAR
+VAR_OUTPUT
+    xValid      : BOOL;             // 画像+推荐已就绪(n=0 时 FALSE)
+    iRecBatch   : INT := -1;        // 批量模式推荐(整批画像已知,演示主口径)
+    iRecOnline  : INT := -1;        // 在线模式推荐(逐件到货口径,F18-2)
+END_VAR
+VAR
+    iStep       : INT := 0;         // 0=空闲 1=排序分片中 2=完成
+    iCntLast    : INT := -1;        // 上次看到的货物数(变化检测)
+    xForceOld   : BOOL;
+    aF          : ARRAY[1..400] OF REAL;    // 频次工作数组(降序)
+    iSorted     : INT;              // 已插入排序的件数
+    nPerCycle   : INT := 50;        // 每周期插入件数(分片粒度)
+    i, j, iTop  : INT;
+    rV, rSumAll, rSumTop, rWSum : REAL;
+    iHeavy, nLoc : INT;
+    rSkew       : REAL;
+END_VAR
+
+// 触发检测:货物数变化 或 强制重算 → 从头开始
+IF (GVL_WH.iGoodsCount <> iCntLast) OR (xForce AND NOT xForceOld) THEN
+    iCntLast := GVL_WH.iGoodsCount;
+    IF GVL_WH.iGoodsCount = 0 THEN
+        xValid := FALSE;  iStep := 0;
+        iRecBatch := -1;  iRecOnline := -1;
+        GVL_Visu.VisuProfN := 0;        GVL_Visu.VisuProfDensity := 0.0;
+        GVL_Visu.VisuProfSkew := 0.0;   GVL_Visu.VisuProfWMean := 0.0;
+        GVL_Visu.VisuProfWHeavy := 0.0; GVL_Visu.VisuRecStrategy := -1;
+        GVL_Visu.VisuRecText := 'DET_NO_DATA';
+    ELSE
+        xValid := FALSE;  iStep := 1;  iSorted := 0;
+        rWSum := 0.0;  iHeavy := 0;  rSumAll := 0.0;
+        // 一次遍历:重量均值/重货占比/频次总和(排序前先取齐标量特征)
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            aF[i] := GVL_WH.aGoods[i].Freq;
+            rSumAll := rSumAll + aF[i];
+            rWSum := rWSum + GVL_WH.aGoods[i].Weight;
+            IF GVL_WH.aGoods[i].Weight > 60.0 THEN iHeavy := iHeavy + 1; END_IF
+        END_FOR
+    END_IF
+END_IF
+xForceOld := xForce;
+
+// 分片排序:每周期把 nPerCycle 件插入已排序前缀(降序,稳定=Python sorted 语义)
+IF iStep = 1 THEN
+    nLoc := GVL_WH.iGoodsCount;
+    j := iSorted + 1;
+    WHILE (j <= nLoc) AND (j <= iSorted + nPerCycle) DO
+        rV := aF[j];
+        i := j - 1;
+        WHILE i >= 1 DO                      // IEC AND 不短路:下标判断与访问分离防 aF[0] 越界
+            IF aF[i] < rV THEN               // 严格小于才后移=稳定排序(同值保原序)
+                aF[i + 1] := aF[i];
+                i := i - 1;
+            ELSE
+                EXIT;
+            END_IF
+        END_WHILE
+        aF[i + 1] := rV;
+        j := j + 1;
+    END_WHILE
+    iSorted := j - 1;
+    IF iSorted >= nLoc THEN
+        // ---- 完成拍:算画像 + 阈值级联推荐(与 strategy_lib v1 同逻辑) ----
+        iTop := MAX(1, nLoc / 5);
+        rSumTop := 0.0;
+        FOR i := 1 TO iTop DO rSumTop := rSumTop + aF[i]; END_FOR
+        IF rSumAll > 0.0 THEN rSkew := rSumTop / rSumAll; ELSE rSkew := 0.0; END_IF
+        GVL_Visu.VisuProfN       := nLoc;
+        GVL_Visu.VisuProfDensity := INT_TO_REAL(nLoc) / 267.0;   // sum 口径可用位
+        GVL_Visu.VisuProfSkew    := rSkew;
+        GVL_Visu.VisuProfWMean   := rWSum / INT_TO_REAL(nLoc);
+        GVL_Visu.VisuProfWHeavy  := INT_TO_REAL(iHeavy) / INT_TO_REAL(nLoc);
+        // holistic 批量档:极小批+无画像→near,否则 AWRA(全要素安全档)
+        IF rSkew < 0.35 AND nLoc <= 20 THEN
+            iRecBatch := 1;
+            GVL_Visu.VisuRecText := 'REC=NEAR_TINY_FLAT';
+        ELSE
+            iRecBatch := 3;
+            GVL_Visu.VisuRecText := 'REC=AWRA_HOLISTIC';
+        END_IF
+        // 在线档(F18-2):画像无信息量 或 极小批→near,否则 score
+        IF rSkew < 0.35 OR nLoc <= 20 THEN
+            iRecOnline := 1;
+        ELSE
+            iRecOnline := 2;
+        END_IF
+        GVL_Visu.VisuRecStrategy := iRecBatch;
+        xValid := TRUE;
+        iStep := 2;
+    END_IF
+END_IF
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_UserAuth:两级权限登录(A4 变量层,0711) ----------
+   方案依据(0711 官方文档核实):内置 visu Access Rights 只能 IDE 逐元素手工配、
+   无 ScriptEngine 接口,与画面生成管线不兼容→变量层;画面元素锁定(Deactivated/
+   Invisible 绑 iUserLevel<1)+ FB_ParamGuard 回滚构成双闸。
+   已知坑对策:①PIN 消费即清(PRG_Main 登录后清 InPinCode,画面无回显元件);
+   ②iLevel 非 RETAIN(断电回操作员=安全默认);③单客户端演示口径,多客户端需
+   CurrentClientId 隔离(报告局限性章如实写)。演示 PIN=GVL_Param.ADMIN_PIN,非真实凭据。 *)
+FUNCTION_BLOCK FB_UserAuth
+VAR_INPUT
+    xLogin  : BOOL;                 // 上升沿:按当前 iPin 尝试登录
+    iPin    : INT;
+    xLogout : BOOL;                 // 上升沿:登出回操作员
+END_VAR
+VAR_OUTPUT
+    iLevel    : INT := 0;           // 0=操作员 1=管理员
+    sUserText : STRING[32] := 'USER=OPERATOR';
+    iFailCnt  : INT := 0;           // 失败计数(演示可见,防猜码叙事)
+END_VAR
+VAR
+    xLoginOld, xLogoutOld : BOOL;
+END_VAR
+
+IF xLogin AND NOT xLoginOld THEN
+    IF iPin = GVL_Param.ADMIN_PIN THEN
+        iLevel := 1;
+        sUserText := 'USER=ADMIN';
+    ELSE
+        iFailCnt := iFailCnt + 1;
+        sUserText := 'LOGIN_FAIL';
+    END_IF
+END_IF
+IF xLogout AND NOT xLogoutOld THEN
+    iLevel := 0;
+    sUserText := 'USER=OPERATOR';
+END_IF
+xLoginOld := xLogin;
+xLogoutOld := xLogout;
+END_FUNCTION_BLOCK
+
+
+(* ---------- FB_ParamGuard:调参守卫(A4 双闸之二,0711) ----------
+   变量层权限的 ST 侧闸门:管理员在位时实时快照全部可调参数;操作员级时每周期
+   把参数回滚到快照——即使画面元素锁定被绕过(如元素漏绑权限表达式),
+   非管理员的改动存活不超过一个扫描周期。守卫集=GVL_Param 变量段全部可调项;
+   SelStrategy/xAutoStrategy/检修命令不在守卫集(操作员演示职能,检修另有权限门)。 *)
+FUNCTION_BLOCK FB_ParamGuard
+VAR_INPUT
+    iLevel : INT;                   // 当前用户级(FB_UserAuth.iLevel)
+END_VAR
+VAR
+    xInit : BOOL := TRUE;           // 首周期:快照=现值(防 FB 初值 0 反灌参数)
+    sVx, sVy, sTLoad, sTUnload, sAx, sAy          : REAL;
+    sLadenVY, sHW1, sHW2, sHT1, sHT2, sHT3        : REAL;
+    sAlpha, sBeta, sGamma, sDelta, sL1, sL2, sL3  : REAL;
+    sSimXY, sUseAccel                             : BOOL;
+    sPreRule, sBatchPC, sPairsPC, sMaxLsR         : INT;
+END_VAR
+
+IF xInit OR iLevel >= 1 THEN
+    // 管理员在位(或首周期):放行并持续刷新快照——管理员改的值即新基准
+    sVx := GVL_Param.rVx;                  sVy := GVL_Param.rVy;
+    sTLoad := GVL_Param.rTLoad;            sTUnload := GVL_Param.rTUnload;
+    sAx := GVL_Param.rAx;                  sAy := GVL_Param.rAy;
+    sLadenVY := GVL_Param.rLadenFactorVY;
+    sHW1 := GVL_Param.rHandleW1;           sHW2 := GVL_Param.rHandleW2;
+    sHT1 := GVL_Param.rHandleT1;           sHT2 := GVL_Param.rHandleT2;
+    sHT3 := GVL_Param.rHandleT3;
+    sAlpha := GVL_Param.rAlpha;            sBeta := GVL_Param.rBeta;
+    sGamma := GVL_Param.rGamma;            sDelta := GVL_Param.rDelta;
+    sL1 := GVL_Param.rLambda1;             sL2 := GVL_Param.rLambda2;
+    sL3 := GVL_Param.rLambda3;
+    sSimXY := GVL_Param.xSimultaneousXY;   sUseAccel := GVL_Param.xUseAccel;
+    sPreRule := GVL_Param.iPreRule;        sBatchPC := GVL_Param.nBatchPerCycle;
+    sPairsPC := GVL_Param.nPairsPerCycle;  sMaxLsR := GVL_Param.nMaxLsRounds;
+    xInit := FALSE;
+ELSE
+    // 操作员级:任何参数偏离快照即回滚(下周期生效,画面可见值跳回)
+    GVL_Param.rVx := sVx;                  GVL_Param.rVy := sVy;
+    GVL_Param.rTLoad := sTLoad;            GVL_Param.rTUnload := sTUnload;
+    GVL_Param.rAx := sAx;                  GVL_Param.rAy := sAy;
+    GVL_Param.rLadenFactorVY := sLadenVY;
+    GVL_Param.rHandleW1 := sHW1;           GVL_Param.rHandleW2 := sHW2;
+    GVL_Param.rHandleT1 := sHT1;           GVL_Param.rHandleT2 := sHT2;
+    GVL_Param.rHandleT3 := sHT3;
+    GVL_Param.rAlpha := sAlpha;            GVL_Param.rBeta := sBeta;
+    GVL_Param.rGamma := sGamma;            GVL_Param.rDelta := sDelta;
+    GVL_Param.rLambda1 := sL1;             GVL_Param.rLambda2 := sL2;
+    GVL_Param.rLambda3 := sL3;
+    GVL_Param.xSimultaneousXY := sSimXY;   GVL_Param.xUseAccel := sUseAccel;
+    GVL_Param.iPreRule := sPreRule;        GVL_Param.nBatchPerCycle := sBatchPC;
+    GVL_Param.nPairsPerCycle := sPairsPC;  GVL_Param.nMaxLsRounds := sMaxLsR;
+END_IF
 END_FUNCTION_BLOCK
