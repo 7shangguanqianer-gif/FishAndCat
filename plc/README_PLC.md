@@ -61,6 +61,9 @@
   not defined"的说法不成立,勿写进报告。
 - 局部交换阶段 O(n²) 对数在 n=400 时约 8 万对/轮,按 nPairsPerCycle=200 需 ~400 周期/轮(10ms 任务 ≈ 4s/轮),
   演示可接受;若嫌慢调大 nPairsPerCycle(单周期 200 对评分 ≈ 微秒级,余量巨大)。
+- **IEC ST 的 AND/OR 不短路**(两侧都求值,与 C/Python 直觉相反):`WHILE i >= 1 AND aF[i] < v`
+  在 i=0 时仍会访问 aF[0] → 下标越界。守卫条件与数组访问必须分离(嵌套 IF + EXIT),
+  见 FB_SceneDetect 插入排序(0711 首写即在自查中抓获)。AND_THEN 是 3.5 扩展,为可移植性不用。
 
 ## 4b. L4 负载实测怎么跑(W3,AB 仿真在线状态)
 

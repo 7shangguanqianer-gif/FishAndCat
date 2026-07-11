@@ -1,0 +1,17 @@
+OPEN_OK
+BUILD(probe): Compile complete -- 0 errors, 1 warnings
+login+start state=run
+[S20] n=20 nBatch=10 nPairs=200 ok=True status='DONE_OK' cycles=192 wall=0.37s per-item=96.00ms placed=20 failed=0
+[S120] n=120 nBatch=10 nPairs=200 ok=True status='DONE_OK' cycles=560 wall=1.82s per-item=46.67ms placed=120 failed=0
+[S240] n=240 nBatch=10 nPairs=200 ok=True status='DONE_OK' cycles=2056 wall=7.02s per-item=85.67ms placed=240 failed=0
+[S240b] n=240 nBatch=20 nPairs=2000 ok=True status='DONE_OK' cycles=1880 wall=7.15s per-item=78.33ms placed=240 failed=0
+[S1] single-item suggest latency(wall upper bound) = 230ms status='SUGGEST_X=1_Y=0'
+restored+saved
+
+===== A5 执行时间表(AB 仿真任务级实测;10ms 任务标称;演示批追加装货) =====
+组 | 件数 | nBatch | nPairs | 完成周期数 | 挂钟 s | ms/件 | placed | failed | DONE_OK
+S20 | 20 | 10 | 200 | 192 | 0.37 | 96.00 | 20 | 0 | True
+S120 | 120 | 10 | 200 | 560 | 1.82 | 46.67 | 120 | 0 | True
+S240 | 240 | 10 | 200 | 2056 | 7.02 | 85.67 | 240 | 0 | True
+S240b | 240 | 20 | 2000 | 1880 | 7.15 | 78.33 | 240 | 0 | True
+=== L4C_DONE ===

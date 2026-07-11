@@ -1,4 +1,4 @@
-parsed objects: 40, missing sections: []
+parsed objects: 44, missing sections: []
 OPEN_OK F:\abb_wh_work\plc\AB_Project\ABB_WH.project
 SYNCED: ST_Good (dut, decl 699 ch, impl - ch, via replace())
 SYNCED: ST_Slot (dut, decl 522 ch, impl - ch, via replace())
@@ -6,13 +6,13 @@ SYNCED: ST_Stats (dut, decl 706 ch, impl - ch, via replace())
 SYNCED: E_MainState (dut, decl 481 ch, impl - ch, via replace())
 SYNCED: ST_TestVec (dut, decl 428 ch, impl - ch, via replace())
 SYNCED: ST_AwraCell (dut, decl 174 ch, impl - ch, via replace())
-SYNCED: GVL_Param (gvl, decl 2721 ch, impl - ch, via replace())
-SYNCED: GVL_WH (gvl, decl 397 ch, impl - ch, via replace())
-SYNCED: GVL_Visu (gvl, decl 4757 ch, impl - ch, via replace())
+SYNCED: GVL_Param (gvl, decl 2916 ch, impl - ch, via replace())
+SYNCED: GVL_WH (gvl, decl 645 ch, impl - ch, via replace())
+SYNCED: GVL_Visu (gvl, decl 6035 ch, impl - ch, via replace())
 SYNCED: FC_CapCoef (pou, decl 114 ch, impl 182 ch, via replace())
 SYNCED: FC_IsPresetOccupied (pou, decl 174 ch, impl 574 ch, via replace())
-SYNCED: FC_CheckFeasible (pou, decl 192 ch, impl 409 ch, via replace())
-SYNCED: FC_FitsPhysical (pou, decl 123 ch, impl 317 ch, via replace())
+SYNCED: FC_CheckFeasible (pou, decl 192 ch, impl 497 ch, via replace())
+SYNCED: FC_FitsPhysical (pou, decl 123 ch, impl 453 ch, via replace())
 SYNCED: FC_AxisTime (pou, decl 179 ch, impl 278 ch, via replace())
 SYNCED: FC_CalcTravelTime (pou, decl 231 ch, impl 638 ch, via replace())
 SYNCED: FC_CalcDualCycleTime (pou, decl 130 ch, impl 431 ch, via replace())
@@ -20,9 +20,11 @@ SYNCED: FC_CalcPathLen (pou, decl 74 ch, impl 126 ch, via replace())
 SYNCED: FC_TMax (pou, decl 23 ch, impl 167 ch, via replace())
 SYNCED: FC_CalcScore (pou, decl 341 ch, impl 681 ch, via replace())
 SYNCED: FC_CalcPriority (pou, decl 163 ch, impl 291 ch, via replace())
-SYNCED: FC_StateToColor (pou, decl 68 ch, impl 466 ch, via replace())
+SYNCED: FC_StateToColor (pou, decl 68 ch, impl 553 ch, via replace())
 SYNCED: FC_TravelLaden (pou, decl 214 ch, impl 709 ch, via replace())
 SYNCED: FC_HandleTime (pou, decl 90 ch, impl 208 ch, via replace())
+CREATED_POU: FC_MaintToggle type=FUNCTION ret=INT
+SYNCED: FC_MaintToggle (pou, decl 140 ch, impl 468 ch, via replace())
 SYNCED: FC_LoadDemoGoods (pou, decl 57 ch, impl 4262 ch, via replace())
 SYNCED: FB_InitWarehouse (pou, decl 308 ch, impl 1191 ch, via replace())
 SYNCED: FB_SelectSlot (pou, decl 414 ch, impl 1807 ch, via replace())
@@ -32,15 +34,21 @@ SYNCED: FB_Stats (pou, decl 193 ch, impl 2684 ch, via replace())
 SYNCED: FB_AnimatePath (pou, decl 401 ch, impl 1236 ch, via replace())
 SYNCED: FB_BuildVisuPath (pou, decl 195 ch, impl 897 ch, via replace())
 SYNCED: FB_ScanLoadProbe (pou, decl 286 ch, impl 418 ch, via replace())
-SYNCED: FB_VisuRefresh (pou, decl 123 ch, impl 1403 ch, via replace())
+SYNCED: FB_VisuRefresh (pou, decl 123 ch, impl 1763 ch, via replace())
 SYNCED: FB_GoodsInput (pou, decl 548 ch, impl 1550 ch, via replace())
 SYNCED: FB_QueryGood (pou, decl 271 ch, impl 2212 ch, via replace())
 SYNCED: FB_RecordPage (pou, decl 205 ch, impl 1432 ch, via replace())
-SYNCED: PRG_Main (pou, decl 865 ch, impl 8123 ch, via replace())
-SYNCED: PRG_Test (pou, decl 950 ch, impl 16927 ch, via replace())
+CREATED_POU: FB_SceneDetect type=FUNCTION_BLOCK
+SYNCED: FB_SceneDetect (pou, decl 733 ch, impl 2767 ch, via replace())
+CREATED_POU: FB_UserAuth type=FUNCTION_BLOCK
+SYNCED: FB_UserAuth (pou, decl 389 ch, impl 360 ch, via replace())
+CREATED_POU: FB_ParamGuard type=FUNCTION_BLOCK
+SYNCED: FB_ParamGuard (pou, decl 477 ch, impl 1942 ch, via replace())
+SYNCED: PRG_Main (pou, decl 1167 ch, impl 9594 ch, via replace())
+SYNCED: PRG_Test (pou, decl 1244 ch, impl 22930 ch, via replace())
 SYNCED: GVL_Data (gvl, decl 2947 ch, impl - ch, via replace())
 SYNCED: GVL_WeightPolicy (gvl, decl 622 ch, impl - ch, via replace())
---- summary: synced=40 fail=0 absent=[] missing_in_src=[]
+--- summary: synced=44 fail=0 absent=[] missing_in_src=[]
 active_application: ScriptObject{ScriptRecipeManContainer, NoRecipeManObject, NoRecipeDefinitionObject, NoScriptTraceObject, NoDeviceObject, NoExplicitConnectorObject, NoSymbolConfigObject, ScriptApplicationSymbolConfigExtension, NoLibManObject, LibManObjectContainer, ScriptNoProjectInfoMarker, ScriptApplication, ScriptNonTextualObject, ScriptIecLanguageObjectContainerObject, NoTaskConfigObject, NoTaskObject, ScriptImagePoolContainer, NoImagePoolObject, ScriptTextListContainer, NoTextListObject, ScriptVisualObjectContainer}(Project=0, Name=Application, guid=74993588-6e2e-4450-94f1-a27f72e3ded1)
 BUILD_CALLED
 MSG_ERR: Compile complete -- 0 errors, 1 warnings
