@@ -3,6 +3,8 @@
 .pytest_cache/
 sim/out/
 sim/figs/
+# ScriptEngine 诊断 XML dump(可再生:tools/ab_scripting/dump_visu*.py 等)
+tools/ab_scripting/*.xml
 
 
 # AB 工程:只跟踪主工程文件,缓存/锁/备份排除
