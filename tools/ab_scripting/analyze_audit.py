@@ -11,7 +11,8 @@ import io
 import sys
 
 TSV = r"F:\abb_wh_work\tools\ab_scripting\audit_pages_result.txt"
-CANVAS = {"MAIN": (1280, 720), "STATS": (1280, 720)}  # 假设画布;超界仍报 max extent 供人判断
+CANVAS = {"MAIN": (1280, 720), "STATS": (1280, 720),
+          "ADMIN": (1280, 720)}  # 假设画布;超界仍报 max extent 供人判断
 PX_PER_CHAR = 6.5
 
 rows = []
@@ -59,7 +60,7 @@ def label(r):
     return u"#%d(%d,%d %dx%d)%r" % (r["idx"], r["x"], r["y"], r["w"], r["h"], t)
 
 
-for page in ["MAIN", "STATS"]:
+for page in ["MAIN", "STATS", "ADMIN"]:
     els = [r for r in rows if r["page"] == page]
     print(u"\n===== %s: %d elements =====" % (page, len(els)))
     cw, ch = CANVAS[page]

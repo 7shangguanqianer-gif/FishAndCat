@@ -28,7 +28,8 @@ def clean(v):
 proj = projects.open(PROJ)  # noqa: F821
 
 log(u"PAGE\tIDX\tTYPE\tNAME\tX\tY\tW\tH\tTEXT")
-for page, objname in [(u"MAIN", "VisuMain"), (u"STATS", "VisuStats")]:
+for page, objname in [(u"MAIN", "VisuMain"), (u"STATS", "VisuStats"),
+                      (u"ADMIN", "VisuAdmin")]:
     hits = proj.find(objname, True)
     if not hits:
         log(u"%s\t-\tNOT_FOUND\t\t\t\t\t\t" % page)

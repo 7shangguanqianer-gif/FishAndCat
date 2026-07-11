@@ -24,9 +24,7 @@ SYNCED: FC_StateToColor (pou, decl 68 ch, impl 553 ch, via replace())
 SYNCED: FC_TravelLaden (pou, decl 214 ch, impl 709 ch, via replace())
 SYNCED: FC_HandleTime (pou, decl 90 ch, impl 208 ch, via replace())
 SYNCED: FC_MaintToggle (pou, decl 140 ch, impl 468 ch, via replace())
-CREATED_POU: FC_HeatColor type=FUNCTION ret=DWORD
 SYNCED: FC_HeatColor (pou, decl 190 ch, impl 783 ch, via replace())
-CREATED_POU: FC_BlendLight type=FUNCTION ret=DWORD
 SYNCED: FC_BlendLight (pou, decl 98 ch, impl 442 ch, via replace())
 SYNCED: FC_LoadDemoGoods (pou, decl 57 ch, impl 4262 ch, via replace())
 SYNCED: FB_InitWarehouse (pou, decl 308 ch, impl 1275 ch, via replace())

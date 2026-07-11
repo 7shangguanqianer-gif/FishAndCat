@@ -1,0 +1,7 @@
+OPEN_OK
+BASE_OK P1 count=509
+ADDED=31 total=540
+BUILD: Compile complete -- 0 errors, 1 warnings
+SAVE_OK
+ERRORS=0
+=== COCKPIT_DONE ===

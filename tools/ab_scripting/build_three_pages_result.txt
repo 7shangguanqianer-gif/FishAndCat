@@ -1,0 +1,32 @@
+OPEN_OK
+P1_BASE count=540 (expect 540)
+P1_DELETED=64 (expect 64)
+P1_MOVE_OK
+P1_DONE count=505
+P2_BASE count=133
+P2_DONE count=134
+P3_CREATED VisuAdmin
+P3_DONE count=67
+BUILD: Compile complete -- 0 errors, 1 warnings
+SAVE_OK
+ERRORS=0
+
+==== WASH LIST (17) ====
+P1 (312,8) nav P3 Admin
+P1 (628,374) Auto strategy toggle
+P1 (920,374) View cycle (state/freq/wear)
+P1 (1144,374) Tier select input
+P2 (312,8) nav P3 Admin
+P3 (40,8) nav P1 Console
+P3 (176,8) nav P2 Records
+P3 (116,148) PIN input
+P3 (52,184) Login tap
+P3 (160,184) Logout tap
+P3 (476,116) Maint X input
+P3 (576,116) Maint Y input
+P3 (452,156) Maint Set/Clear tap
+P3 (946,116) weight Alpha efficiency
+P3 (1126,116) weight Beta stability
+P3 (946,156) weight Gamma energy
+P3 (1126,156) weight Delta reserve
+=== THREE_PAGES_DONE ===
