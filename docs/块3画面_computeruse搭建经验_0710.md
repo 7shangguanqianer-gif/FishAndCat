@@ -102,6 +102,25 @@
 - **备选 C:computer use 只放裸元素(它可靠),变量绑定+400格复制走 XML/Multiply**。
 - **前置永远先做**:请用户彻底关掉那个置顶浮窗;保持 AB 窗口化不最大化。
 
+## 五b、0710 深夜:34 编译错修复战 + 批次 D 人工实配(经验增量)
+
+- **"库归属冲突"病例**:GUI 完整 Build 报 197 条 `could not open library ... already belongs to
+  another library manager object` → 根因=**POUs 视图(Pool)多出一个 Library Manager**,内含与
+  Application 重复的全套 VisuElem 库(脚本建画面的副产物)。修法=删 Pool 里 13 个重复库+
+  **必须完全重启 AB**(Clean all 不重置进程内对象图,同类案例证实单 Clean 无效)。
+  全网检索此报错零命中——我们的独家病例,已被本修法治愈。
+- **ScriptEngine 编译≠GUI 完整编译**:ab_sync/脚本的 `app.build()` 看不到 visu 编译错误
+  (Codex 与 Claude 的"0 错"都是 IEC 口径)。**画面改动的终验必须 GUI F11**。
+- **create_write_variable 两坑**(34 错根因):①title 参数=IEC 表达式,裸文本要包单引号
+  `'Goods ID'` ②input_type 要全限定 `VisuDialogs.Numpad`(短名生成 Numpad_VISU_STRUCT 未知
+  类型)+工程需有 VisuDialogs 库(脚本可 `libman.add_library("VisuDialogs, * (System)")` 注入)。
+- **ScriptVisualization 改不了已有输入动作**(无 remove_input_action/无枚举)→ 修法=
+  `vel.remove_id` 删元素+原参数重建(tools/ab_scripting/fix_input_titles.py,坐标匹配防错删)。
+- **GUI 小坑三连**(批次 D 人工实配):①编辑器标签开满会报 "maximum allowed number of opened
+  editors" → Window→Close All Editors;②Alarm Class 确认方式无 "REQ",选 **REP_ACK**;
+  ③Banner 属性无 "Filter=Newest" 项,Alarm groups 勾 AG_WH 即可。元素定位手法=随手放+
+  属性面板 Position 填精确数。
+
 ## 六、关键坐标/事实备查
 
 - 工具箱 Basic 元素缩略图(AB 窗口化、面板拖高后):Rectangle 在缩略图区左上第一个。

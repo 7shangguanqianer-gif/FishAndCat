@@ -1,0 +1,74 @@
+[1] vel type=ScriptVisualElementList
+[1] vel dir=GetEnumerator, add_element, add_element_copy, remove, remove_at, remove_id
+[1] len(vel)=477
+[2] get(Texts.Text)=''
+[2] get(Position.X)=40
+[2] get(Inputconfiguration) FAIL ValueError('The property <Inputconfiguration> was not found.',)
+[2] get(Input configuration)=''
+[2] get(Inputconfiguration.OnMouseClick) FAIL ValueError('The property <Inputconfiguration.OnMouseClick> was not found.',)
+[2] elem id=400 text='Smart Storage Control - Warehouse Slot Optimization'
+[2] elem id=402 text='Status: %s'
+[2] elem id=404 text='ID'
+[2] elem id=405 text='%d'
+[2] elem id=406 text='Name'
+[2] elem id=407 text='%s'
+[2] elem id=408 text='Weight'
+[2] elem id=409 text='%.1f'
+[2] elem id=410 text='Freq'
+[2] elem id=411 text='%.1f'
+[2] elem id=412 text='Volume'
+[2] elem id=413 text='%.2f'
+[2] ... (truncated)
+[2] scanned=413
+[3] app child: CheckConfigurationObject type=ExtendedObject[IScriptObject]
+[3] app child: TaskConfiguration type=ExtendedObject[IScriptObject]
+[3] app child: PLC_PRG type=ExtendedObject[IScriptObject]
+[3] app child: Library Manager type=ExtendedObject[IScriptObject]
+[3] LIBMAN dir=
+[3] app child: ST_Good type=ExtendedObject[IScriptObject]
+[3] app child: FC_CapCoef type=ExtendedObject[IScriptObject]
+[3] app child: ST_Slot type=ExtendedObject[IScriptObject]
+[3] app child: GVL_Param type=ExtendedObject[IScriptObject]
+[3] app child: Diagnosis type=ExtendedObject[IScriptObject]
+[3] app child: ST_Stats type=ExtendedObject[IScriptObject]
+[3] app child: E_MainState type=ExtendedObject[IScriptObject]
+[3] app child: ST_TestVec type=ExtendedObject[IScriptObject]
+[3] app child: GVL_WH type=ExtendedObject[IScriptObject]
+[3] app child: GVL_Visu type=ExtendedObject[IScriptObject]
+[3] app child: GVL_Data type=ExtendedObject[IScriptObject]
+[3] app child: FC_IsPresetOccupied type=ExtendedObject[IScriptObject]
+[3] app child: FC_CheckFeasible type=ExtendedObject[IScriptObject]
+[3] app child: FC_FitsPhysical type=ExtendedObject[IScriptObject]
+[3] app child: FC_AxisTime type=ExtendedObject[IScriptObject]
+[3] app child: FC_CalcTravelTime type=ExtendedObject[IScriptObject]
+[3] app child: FC_CalcDualCycleTime type=ExtendedObject[IScriptObject]
+[3] app child: FC_CalcPathLen type=ExtendedObject[IScriptObject]
+[3] app child: FC_TMax type=ExtendedObject[IScriptObject]
+[3] app child: FC_CalcScore type=ExtendedObject[IScriptObject]
+[3] app child: FC_CalcPriority type=ExtendedObject[IScriptObject]
+[3] app child: FC_LoadDemoGoods type=ExtendedObject[IScriptObject]
+[3] app child: FB_InitWarehouse type=ExtendedObject[IScriptObject]
+[3] app child: FB_SelectSlot type=ExtendedObject[IScriptObject]
+[3] app child: FB_AssignAllGoods type=ExtendedObject[IScriptObject]
+[3] app child: FB_LocalSwapImprove type=ExtendedObject[IScriptObject]
+[3] app child: FB_Stats type=ExtendedObject[IScriptObject]
+[3] app child: FB_AnimatePath type=ExtendedObject[IScriptObject]
+[3] app child: FB_BuildVisuPath type=ExtendedObject[IScriptObject]
+[3] app child: FB_ScanLoadProbe type=ExtendedObject[IScriptObject]
+[3] app child: PRG_Main type=ExtendedObject[IScriptObject]
+[3] app child: PRG_Test type=ExtendedObject[IScriptObject]
+[3] app child: FB_VisuRefresh type=ExtendedObject[IScriptObject]
+[3] app child: GVL_WeightPolicy type=ExtendedObject[IScriptObject]
+[3] app child: FC_StateToColor type=ExtendedObject[IScriptObject]
+[3] app child: FB_ScanLoadProbeNs type=ExtendedObject[IScriptObject]
+[3] app child: ST_AwraCell type=ExtendedObject[IScriptObject]
+[3] app child: FB_GoodsInput type=ExtendedObject[IScriptObject]
+[3] app child: FC_TravelLaden type=ExtendedObject[IScriptObject]
+[3] app child: FC_HandleTime type=ExtendedObject[IScriptObject]
+[3] app child: FB_QueryGood type=ExtendedObject[IScriptObject]
+[3] app child: FB_RecordPage type=ExtendedObject[IScriptObject]
+[3] app child: VisuMain type=ExtendedObject[IScriptObject]
+[3] app child: Visualization Manager type=ExtendedObject[IScriptObject]
+[3] app child: VisuStats type=ExtendedObject[IScriptObject]
+[3] app child: __VisualizationStyle type=ExtendedObject[IScriptObject]
+=== PROBE_FIX_API_DONE ===

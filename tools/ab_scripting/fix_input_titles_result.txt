@@ -1,0 +1,11 @@
+VisuMain: expect=9 matched=9 (total elements=477)
+VisuMain: removed+rebuilt 9, now total=477
+VisuStats: expect=7 matched=7 (total elements=113)
+VisuStats: removed+rebuilt 7, now total=113
+libman.add_placeholder hasattr=True
+libman.add_library hasattr=True
+libman.add_managed_library hasattr=False
+LIB_ADD_FAIL add_placeholder ('VisuDialogs',) -> TypeError('add_placeholder() takes exactly 2 arguments (1 given)',)
+LIB_ADD_OK via add_library ('VisuDialogs, * (System)',)
+SAVE_OK
+=== FIX_DONE ===
