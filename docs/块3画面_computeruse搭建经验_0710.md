@@ -121,6 +121,27 @@
   ③Banner 属性无 "Filter=Newest" 项,Alarm groups 勾 AG_WH 即可。元素定位手法=随手放+
   属性面板 Position 填精确数。
 
+## 五c、"400 格全白"四层病理(0710 深夜;每层一个独立根因,逐层剥离才见色)
+
+> 症状:数据链全通(在线可见 VisuSlotColor 值正确)、文本变量正常,矩形填色全白。
+> 教训总纲:**多层故障会互相掩护——上层修掉后症状不变≠修错了,是下一层接管了**。
+
+| 层 | 根因 | 判定手段 | 修法 |
+|---|---|---|---|
+| 1 | Pool 级重复 Library Manager(197 编译错,先挡住一切) | 完整错误文本+POUs 视图侦察 | 删 13 重复库+**重启 AB** |
+| 2 | 输入动作 title 裸文本+Numpad 短名(34 编译错) | 错误逐条与生成器源码对照 | fix_input_titles.py 删 16 重建 |
+| 3 | **元素"外观来源"=STYLE 模式**(Id 1225741287='VISU_ST_STYLE',GUI 模板默认;样式接管外观,颜色变量被压制) | **同画面"脚本新元素 vs GUI 元素"逐属性 diff**(probe_color_slots.xml,排除几何噪音后唯一实质差异) | fix_element_look.py 删 400 格按几何反推重建(脚本新元素默认 RELATIVE;property 通道无"外观"路径,原地改不可行) |
+| 4 | **颜色前导字节 16#00=全透明**(官方 RGBA:FF=不透明 00=透明;Visualization Manager"半透明绘制"默认开启,前导字节按 alpha 解释) | 定向枪→官方一手文档逐字+论坛 3 个同款案例(官方员工确认) | FC_StateToColor 八处 16#00RRGGBB→**16#FFRRGGBB** |
+
+- 官方语义备查(0710 枪,均一手逐字):①"The normal state is in effect if Toggle color is
+  **not defined** or FALSE"——颜色变量**不需要**绑 Toggle 即生效(toggle 假设被证伪);
+  ②RGBA "16#FF for opaque and 16#00 for transparent";③另一潜在压制源=Appearance→
+  Fill attributes 设为 Invisible 时填充永不显示(本案未中,备查)。
+- 探测方法论:**"对照元素 diff"是画面疑难杂症的终极手段**——同画面放一个已知配置的
+  脚本元素,export XML 与病灶元素逐属性 diff,排除几何噪音后的差异就是开关位。
+- 时序陷阱:Force 实验在"层3 未修"时测层4(FF 前缀)会得到假阴性——**多层故障下,
+  单变量实验必须在剥掉上层后重做**。
+
 ## 六、关键坐标/事实备查
 
 - 工具箱 Basic 元素缩略图(AB 窗口化、面板拖高后):Rectangle 在缩略图区左上第一个。

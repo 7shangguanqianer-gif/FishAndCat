@@ -231,7 +231,10 @@ END_FUNCTION
 
 
 (* ---------- FC_StateToColor:仓位状态码 → 画面填充色(L6 可视化) ----------
-   颜色 DWORD 格式 16#00RRGGBB(CODESYS 颜色变量约定);
+   颜色 DWORD 格式 = RGBA 16#AARRGGBB,前导字节 AA 为透明度:FF=不透明,00=全透明
+   (官方 "Color definition in RGBA color space";AB2.9 Visualization Manager 的
+   半透明绘制默认开启,前导字节按 alpha 解释——0710 实证:16#00RRGGBB 渲染为全透明,
+   画面 400 格因此"看不见颜色",修为 16#FF 前缀)。
    状态编码与 GVL_Visu.VisuSlotState 注释一一对应:0空闲/1预占/2占用/3推荐/4路径/5报警。
    改配色只改这里——画面 400 个矩形元件不写死任何颜色(单一真相源)。 *)
 FUNCTION FC_StateToColor : DWORD
@@ -239,15 +242,15 @@ VAR_INPUT
     iState : INT;
 END_VAR
 CASE iState OF
-    0: FC_StateToColor := 16#00E8E8E8;   // 空闲:浅灰
-    1: FC_StateToColor := 16#00707070;   // 预占用:深灰
-    2: FC_StateToColor := 16#0043A047;   // 已占用:绿
-    3: FC_StateToColor := 16#00FFC107;   // 当前推荐:黄
-    4: FC_StateToColor := 16#0042A5F5;   // 路径:蓝
-    5: FC_StateToColor := 16#00E53935;   // 报警:红
-    6: FC_StateToColor := 16#0026C6DA;   // 查询高亮:青(块3 P3,FB_QueryGood 置位)
+    0: FC_StateToColor := 16#FFE8E8E8;   // 空闲:浅灰
+    1: FC_StateToColor := 16#FF707070;   // 预占用:深灰
+    2: FC_StateToColor := 16#FF43A047;   // 已占用:绿
+    3: FC_StateToColor := 16#FFFFC107;   // 当前推荐:黄
+    4: FC_StateToColor := 16#FF42A5F5;   // 路径:蓝
+    5: FC_StateToColor := 16#FFE53935;   // 报警:红
+    6: FC_StateToColor := 16#FF26C6DA;   // 查询高亮:青(块3 P3,FB_QueryGood 置位)
 ELSE
-    FC_StateToColor := 16#00FF00FF;      // 未知状态:品红(醒目,便于发现bug)
+    FC_StateToColor := 16#FFFF00FF;      // 未知状态:品红(醒目,便于发现bug)
 END_CASE
 END_FUNCTION
 

@@ -1,0 +1,7 @@
+MARK_NORMAL_FILL => Color variables.Normal state.Fill color
+MARK_ALARM_FILL => Color variables.Alarm state.Fill color
+TRY_FAIL Color variables.Toggle color variable <- MARK_TOGGLE : ValueError('The property <Color variables.Toggle color variable> was not found.',)
+MARK_TOGGLE => Color variables.Toggle color
+MARK_FRAME_N => Color variables.Normal state.Frame color
+EXPORT_OK
+=== PROBE_COLOR_SLOTS_DONE ===

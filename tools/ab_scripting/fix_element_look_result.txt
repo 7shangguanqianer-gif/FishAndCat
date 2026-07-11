@@ -1,0 +1,35 @@
+probe get(Element look)=None
+probe set(Element look,Relative) FAIL ValueError('The property <Element look> was not found.',)
+probe set(Element look,VISU_ST_RELATIVE) FAIL ValueError('The property <Element look> was not found.',)
+probe set(Element look,relative) FAIL ValueError('The property <Element look> was not found.',)
+probe get(Element Look)=None
+probe set(Element Look,Relative) FAIL ValueError('The property <Element Look> was not found.',)
+probe set(Element Look,VISU_ST_RELATIVE) FAIL ValueError('The property <Element Look> was not found.',)
+probe set(Element Look,relative) FAIL ValueError('The property <Element Look> was not found.',)
+probe get(Look)=None
+probe set(Look,Relative) FAIL ValueError('The property <Look> was not found.',)
+probe set(Look,VISU_ST_RELATIVE) FAIL ValueError('The property <Look> was not found.',)
+probe set(Look,relative) FAIL ValueError('The property <Look> was not found.',)
+probe get(Element behavior)=None
+probe set(Element behavior,Relative) FAIL ValueError('The property <Element behavior> was not found.',)
+probe set(Element behavior,VISU_ST_RELATIVE) FAIL ValueError('The property <Element behavior> was not found.',)
+probe set(Element behavior,relative) FAIL ValueError('The property <Element behavior> was not found.',)
+probe get(Elementlook)=None
+probe set(Elementlook,Relative) FAIL ValueError('The property <Elementlook> was not found.',)
+probe set(Elementlook,VISU_ST_RELATIVE) FAIL ValueError('The property <Elementlook> was not found.',)
+probe set(Elementlook,relative) FAIL ValueError('The property <Elementlook> was not found.',)
+probe get(Element style)=None
+probe set(Element style,Relative) FAIL ValueError('The property <Element style> was not found.',)
+probe set(Element style,VISU_ST_RELATIVE) FAIL ValueError('The property <Element style> was not found.',)
+probe set(Element style,relative) FAIL ValueError('The property <Element style> was not found.',)
+probe get(Style)=None
+probe set(Style,Relative) FAIL ValueError('The property <Style> was not found.',)
+probe set(Style,VISU_ST_RELATIVE) FAIL ValueError('The property <Style> was not found.',)
+probe set(Style,relative) FAIL ValueError('The property <Style> was not found.',)
+COMBO=None
+grid matched=400 crane=401
+fallback B: rebuild grid
+crane fill int FAIL ValueError('The property <Colors.Fill color> was not found.',)
+B done, total=478
+SAVE_OK mode=B
+=== FIX_LOOK_DONE ===
