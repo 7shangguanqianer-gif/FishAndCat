@@ -44,7 +44,10 @@ IF xExecute AND NOT xOld THEN
     END_FOR
     xDone := TRUE;
 END_IF
-xOld := xExecute;
+// 0711 修:完成即撤沿。本 FB 是"单拍完成+完成拍输入仍 TRUE+完成后停止调用"模式,
+// 旧写法 xOld:=xExecute 会把 xOld 冻结在 TRUE,Reset 二次进入时沿失效→仓库不重建、
+// xDone 残留 TRUE 令状态机瞬转(实测:Reset 后 aSlots 旧占位残留/统计跳算的根因之一)。
+xOld := xExecute AND NOT xDone;
 END_FUNCTION_BLOCK
 
 
@@ -445,7 +448,9 @@ IF xExecute AND NOT xOld THEN
     GVL_Visu.VisuViolationCount   := GVL_WH.stStats.ViolCnt;
     xDone := TRUE;
 END_IF
-xOld := xExecute;
+// 0711 修:完成即撤沿(同 FB_InitWarehouse)。旧写法在"单拍完成+完成拍 xExecute=TRUE+
+// 完成后不再被调用"下冻结 xOld→第二次批量统计跳算,显示残留 Reset 清的 0(实测复现)。
+xOld := xExecute AND NOT xDone;
 END_FUNCTION_BLOCK
 
 

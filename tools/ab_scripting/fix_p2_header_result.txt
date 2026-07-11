@@ -1,0 +1,4 @@
+REMOVED=5 (expect 5)
+REBUILT=5 (expect 5)
+SAVE_OK total=133
+=== FIX_P2_HEADER_DONE ===
