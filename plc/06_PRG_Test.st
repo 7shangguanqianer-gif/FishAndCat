@@ -13,8 +13,8 @@ VAR
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 56;                  // 用例总数(0711 A2-A4 +T46-T48检修/T49-T53检测器/T54-T55权限/T56检修权限门)
-    aResult   : ARRAY[1..56] OF BOOL;       // 各用例结果(TRUE=通过)
+    N_CASES   : INT := 59;                  // 用例总数(0711 A2-A4 T46-56;C1/C2/C6 T57-59)
+    aResult   : ARRAY[1..59] OF BOOL;       // 各用例结果(TRUE=通过)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
@@ -27,7 +27,9 @@ VAR
     fbDetT    : FB_SceneDetect;             // T49-T53:场景检测器测试(A2,0711)
     fbAuthT   : FB_UserAuth;                // T54:两级权限测试(A4,0711)
     fbGuardT  : FB_ParamGuard;              // T55:调参守卫测试(A4,0711)
+    fbVisuT   : FB_VisuRefresh;             // T59:层高亮/层计数测试(C1,0711)
     iRet      : INT;                        // T56:FC_MaintToggle 返回码
+    dwBefore  : DWORD;                      // T59:高亮前色值(相对锚)
     i, x, y, n : INT;
     rV        : REAL;
     iVecFail  : INT;
@@ -37,7 +39,7 @@ END_VAR
 IF xRunTests THEN
     xRunTests := FALSE;
     iPassed := 0;  iFailed := 0;  sLastFail := '';
-    FOR i := 1 TO 56 DO aResult[i] := TRUE; END_FOR
+    FOR i := 1 TO 59 DO aResult[i] := TRUE; END_FOR
 
     // ---- T01-T04 承重系数:正常/顶层/负钳位/越上钳位 ----
     aResult[1] := ABS(FC_CapCoef(y := 0)  - 1.0)  < 0.0001;
@@ -459,6 +461,53 @@ IF xRunTests THEN
                    AND (GVL_Visu.VisuMaintCount = n);
     iRet := FC_MaintToggle(x := -1, y := 0, iLevel := 1);
     aResult[56] := aResult[56] AND (iRet = 3);
+
+    // ============ 0711 C1/C2/C6:T57-T59(热力色阶/仓位履历/层高亮) ============
+
+    // ---- T57 FC_HeatColor 三段端点 + 防除 + FC_BlendLight 黑白极值(手算锚) ----
+    aResult[57] := (FC_HeatColor(rVal := 0.0,   rMax := 100.0) = DWORD#16#FF1565C0)
+               AND (FC_HeatColor(rVal := 50.0,  rMax := 100.0) = DWORD#16#FFFFD600)
+               AND (FC_HeatColor(rVal := 100.0, rMax := 100.0) = DWORD#16#FFE53935)
+               AND (FC_HeatColor(rVal := 5.0,   rMax := 0.0)   = DWORD#16#FF1565C0)
+               AND (FC_BlendLight(dw := DWORD#16#FF000000) = DWORD#16#FF737373)
+               AND (FC_BlendLight(dw := DWORD#16#FFFFFFFF) = DWORD#16#FFFFFFFF);
+
+    // ---- T58 aSlotOps 履历 + aSlotFreq 布局态(小批端到端:2 件 score 落位) ----
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);              // aSlotFreq 随批清;aSlotOps 履历保留
+    aResult[58] := (ABS(GVL_WH.aSlotFreq[10, 10]) < 0.0001);   // init 后布局态干净
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 5.0;  GVL_WH.aGoods[1].Volume := 0.5;
+    GVL_WH.aGoods[1].Assigned := FALSE;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Weight := 20.0;
+    GVL_WH.aGoods[2].Freq := 3.0;  GVL_WH.aGoods[2].Volume := 0.5;
+    GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 2;
+    fbAssign(xStart := FALSE, xUseRank := FALSE, iStrategy := 2);
+    fbAssign(xStart := TRUE,  xUseRank := FALSE, iStrategy := 2);
+    n := 0;
+    WHILE fbAssign.xBusy AND (n < 100000) DO
+        fbAssign(xStart := TRUE, xUseRank := FALSE, iStrategy := 2);
+        n := n + 1;
+    END_WHILE
+    aResult[58] := aResult[58] AND GVL_WH.aGoods[1].Assigned
+               AND (ABS(GVL_WH.aSlotFreq[GVL_WH.aGoods[1].X, GVL_WH.aGoods[1].Y] - 5.0) < 0.0001)
+               AND (GVL_WH.aSlotOps[GVL_WH.aGoods[1].X, GVL_WH.aGoods[1].Y] >= 1)
+               AND (GVL_WH.aSlotOps[GVL_WH.aGoods[2].X, GVL_WH.aGoods[2].Y] >= 1);
+
+    // ---- T59 层高亮集成:计数正确 + 高亮色=FC_BlendLight(原色)(相对锚,免猜状态色) ----
+    GVL_Visu.InTierSel := -1;
+    fbVisuT();                                          // 无高亮基准帧
+    x := GVL_WH.aGoods[1].X;  y := GVL_WH.aGoods[1].Y;
+    dwBefore := GVL_Visu.VisuSlotColor[x, GVL_Param.TIERS - 1 - y];
+    aResult[59] := (GVL_Visu.VisuTierOcc = 0);
+    GVL_Visu.InTierSel := y;
+    fbVisuT();                                          // 高亮该层
+    aResult[59] := aResult[59] AND (GVL_Visu.VisuTierOcc >= 1)
+               AND (GVL_Visu.VisuSlotColor[x, GVL_Param.TIERS - 1 - y]
+                    = FC_BlendLight(dw := dwBefore));
+    GVL_Visu.InTierSel := -1;                           // 恢复,防外溢
+    GVL_WH.iGoodsCount := 2;
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

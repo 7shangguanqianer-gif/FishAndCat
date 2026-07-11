@@ -77,6 +77,10 @@ VAR_GLOBAL
     //      语义=SAP EWM bin blocking 的 putaway block:禁新入库(选位/分配/交换均排除),
     //      已有货物原地冻结、查询照常;非 RETAIN(断电清零=演示安全默认) ----
     aMaintBlock : ARRAY[0..19, 0..19] OF BOOL;       // TRUE=该格检修挂起
+    // ---- C2/C6 热力图数据层(0711 批次前置令) ----
+    aSlotFreq   : ARRAY[0..19, 0..19] OF REAL;       // C2:格上货物频次(布局态,fbInit 清)
+    aSlotOps    : ARRAY[0..19, 0..19] OF INT;        // C6:存取履历计数(放置/搬移/交换各+1;
+                                                     //     物理履历,Reset 不清,同 aMaintBlock 语义)
 END_VAR
 
 (* ---------- GVL_Visu:可视化接口(决赛 CODESYS Visualization 绑定这里) ----------
@@ -175,6 +179,11 @@ VAR_GLOBAL
     InMaintY        : INT;                  // 检修目标层
     CmdMaintToggle  : BOOL;                 // 按钮:挂起/恢复翻转(需管理员)
     VisuMaintCount  : INT;                  // 当前检修格数
+    // ---- C1/C2/C6 视图层(0711 批次前置令:层高亮+双热力图,画面终局一次施工) ----
+    iViewMode       : INT := 0;             // 0=状态视图 1=频次热力(C2) 2=损耗热力(C6)
+    CmdViewCycle    : BOOL;                 // 按钮:视图循环切换(脉冲)
+    InTierSel       : INT := -1;            // C1 层高亮选择(-1=关,0..19=该层加亮)
+    VisuTierOcc     : INT;                  // C1:选中层的在货格数(FB_VisuRefresh 计)
     // ---- A4 两级权限画面接口(变量层双闸:画面元素锁定 + ST 侧参数守卫回滚) ----
     InPinCode       : INT;                  // 登录码输入(消费即清,画面不放回显元件)
     CmdLogin        : BOOL;                 // 按钮:登录

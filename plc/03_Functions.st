@@ -290,6 +290,61 @@ END_IF
 END_FUNCTION
 
 
+(* ---------- FC_HeatColor:热力色阶(C2/C6,0711) ----------
+   值→蓝(冷)→黄(中)→红(热)三段线性插值,工业监控惯例。
+   端点:0=16#FF1565C0 蓝 / 0.5=16#FFFFD600 黄 / 1=16#FFE53935 红;rMax<=0 返回蓝(防除)。
+   RGBA 前导 FF=不透明(0710 实证:00 前缀渲染全透明)。 *)
+FUNCTION FC_HeatColor : DWORD
+VAR_INPUT
+    rVal : REAL;
+    rMax : REAL;
+END_VAR
+VAR
+    rT, rSeg : REAL;       // 勿用 t/d 等单字母(TIME/DATE 字面量前缀保留,同 0706 r/s 教训)
+    iR, iG, iB : INT;
+END_VAR
+IF rMax <= 0.0 THEN
+    FC_HeatColor := 16#FF1565C0;  RETURN;
+END_IF
+rT := rVal / rMax;
+IF rT < 0.0 THEN rT := 0.0; END_IF
+IF rT > 1.0 THEN rT := 1.0; END_IF
+IF rT < 0.5 THEN
+    rSeg := rT * 2.0;                            // 蓝(21,101,192)→黄(255,214,0)
+    iR := REAL_TO_INT(21.0  + (255.0 - 21.0)  * rSeg);
+    iG := REAL_TO_INT(101.0 + (214.0 - 101.0) * rSeg);
+    iB := REAL_TO_INT(192.0 + (0.0   - 192.0) * rSeg);
+ELSE
+    rSeg := (rT - 0.5) * 2.0;                    // 黄(255,214,0)→红(229,57,53)
+    iR := REAL_TO_INT(255.0 + (229.0 - 255.0) * rSeg);
+    iG := REAL_TO_INT(214.0 + (57.0  - 214.0) * rSeg);
+    iB := REAL_TO_INT(0.0   + (53.0  - 0.0)   * rSeg);
+END_IF
+FC_HeatColor := 16#FF000000
+    OR SHL(INT_TO_DWORD(iR), 16) OR SHL(INT_TO_DWORD(iG), 8) OR INT_TO_DWORD(iB);
+END_FUNCTION
+
+
+(* ---------- FC_BlendLight:向白混色 45%(C1 层高亮,0711) ----------
+   任意底色(状态/热力)上的选中层加亮通道:每通道 c := c + (255-c)*0.45。 *)
+FUNCTION FC_BlendLight : DWORD
+VAR_INPUT
+    dw : DWORD;
+END_VAR
+VAR
+    iR, iG, iB : INT;
+END_VAR
+iR := DWORD_TO_INT(SHR(dw, 16) AND 16#FF);
+iG := DWORD_TO_INT(SHR(dw, 8) AND 16#FF);
+iB := DWORD_TO_INT(dw AND 16#FF);
+iR := REAL_TO_INT(INT_TO_REAL(iR) + (255.0 - INT_TO_REAL(iR)) * 0.45);
+iG := REAL_TO_INT(INT_TO_REAL(iG) + (255.0 - INT_TO_REAL(iG)) * 0.45);
+iB := REAL_TO_INT(INT_TO_REAL(iB) + (255.0 - INT_TO_REAL(iB)) * 0.45);
+FC_BlendLight := 16#FF000000
+    OR SHL(INT_TO_DWORD(iR), 16) OR SHL(INT_TO_DWORD(iG), 8) OR INT_TO_DWORD(iB);
+END_FUNCTION
+
+
 (* ---------- FC_TravelLaden:载货行程时间(U2 载重运动学,块3 拟真对照) ----------
    功能:垂直轴速度 × GVL_Param.rLadenFactorVY(满载折减,默认0.80),水平不折减;
         xUseAccel/xSimXY 开关行为与 FC_CalcTravelTime 完全同构(sim travel_time_laden 一字对齐)。

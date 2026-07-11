@@ -34,6 +34,7 @@ IF xExecute AND NOT xOld THEN
             GVL_WH.aSlots[x, y].PresetOcc := FC_IsPresetOccupied(x := x, y := y, iRule := iRule);
             GVL_WH.aSlots[x, y].Occupied  := GVL_WH.aSlots[x, y].PresetOcc;
             GVL_WH.aSlots[x, y].GoodsId   := 0;
+            GVL_WH.aSlotFreq[x, y]        := 0.0;    // C2 布局态随批清;aSlotOps 履历不清(C6)
             IF GVL_WH.aSlots[x, y].PresetOcc THEN
                 iPreCount := iPreCount + 1;
                 GVL_Visu.VisuSlotState[x, y] := 1;   // 深灰:预占用
@@ -206,6 +207,8 @@ CASE iPhase OF
             IF fbSel.xFound THEN
                 GVL_WH.aSlots[fbSel.iBestX, fbSel.iBestY].Occupied := TRUE;
                 GVL_WH.aSlots[fbSel.iBestX, fbSel.iBestY].GoodsId  := GVL_WH.aGoods[iG].Id;
+                GVL_WH.aSlotFreq[fbSel.iBestX, fbSel.iBestY] := GVL_WH.aGoods[iG].Freq;   // C2
+                GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] := GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] + 1;  // C6 履历
                 GVL_WH.aGoods[iG].Assigned   := TRUE;
                 GVL_WH.aGoods[iG].X          := fbSel.iBestX;
                 GVL_WH.aGoods[iG].Y          := fbSel.iBestY;
@@ -308,9 +311,12 @@ CASE iPhase OF
                     // 搬移:旧位腾空,新位占用,货物记录/可视化联动
                     GVL_WH.aSlots[GVL_WH.aGoods[iGi].X, GVL_WH.aGoods[iGi].Y].Occupied := FALSE;
                     GVL_WH.aSlots[GVL_WH.aGoods[iGi].X, GVL_WH.aGoods[iGi].Y].GoodsId  := 0;
+                    GVL_WH.aSlotFreq[GVL_WH.aGoods[iGi].X, GVL_WH.aGoods[iGi].Y] := 0.0;   // C2 腾空
                     GVL_Visu.VisuSlotState[GVL_WH.aGoods[iGi].X, GVL_WH.aGoods[iGi].Y] := 0;
                     GVL_WH.aSlots[iBx, iBy].Occupied := TRUE;
                     GVL_WH.aSlots[iBx, iBy].GoodsId  := GVL_WH.aGoods[iGi].Id;
+                    GVL_WH.aSlotFreq[iBx, iBy] := GVL_WH.aGoods[iGi].Freq;                 // C2
+                    GVL_WH.aSlotOps[iBx, iBy] := GVL_WH.aSlotOps[iBx, iBy] + 1;            // C6 搬移=一次存取
                     GVL_Visu.VisuSlotState[iBx, iBy] := 2;
                     GVL_WH.aGoods[iGi].X := iBx;  GVL_WH.aGoods[iGi].Y := iBy;
                     GVL_WH.aGoods[iGi].Score := rBest;
@@ -349,6 +355,10 @@ CASE iPhase OF
                     IF rNew < rOld - 0.000001 THEN
                         GVL_WH.aSlots[xiA, yiA].GoodsId := GVL_WH.aGoods[iGj].Id;
                         GVL_WH.aSlots[xjA, yjA].GoodsId := GVL_WH.aGoods[iGi].Id;
+                        GVL_WH.aSlotFreq[xiA, yiA] := GVL_WH.aGoods[iGj].Freq;   // C2 互换
+                        GVL_WH.aSlotFreq[xjA, yjA] := GVL_WH.aGoods[iGi].Freq;
+                        GVL_WH.aSlotOps[xiA, yiA] := GVL_WH.aSlotOps[xiA, yiA] + 1;  // C6 交换=两格各一次存取
+                        GVL_WH.aSlotOps[xjA, yjA] := GVL_WH.aSlotOps[xjA, yjA] + 1;
                         GVL_WH.aGoods[iGi].X := xjA;  GVL_WH.aGoods[iGi].Y := yjA;
                         GVL_WH.aGoods[iGj].X := xiA;  GVL_WH.aGoods[iGj].Y := yiA;
                         GVL_WH.aGoods[iGi].ExecTime := FC_CalcTravelTime(x0 := 0, y0 := 0,
@@ -597,25 +607,67 @@ END_FUNCTION_BLOCK
 FUNCTION_BLOCK FB_VisuRefresh
 VAR
     c, rw, k, iSt : INT;   // rw=显示行(r/s 是 IEC 置复位保留字,不可作变量名——0706 无头编译揪出的潜伏 bug)
+    iT       : INT;        // 设计坐标层(=TIERS-1-rw)
+    rHeatMax : REAL;       // C2 频次热力归一分母
+    nOpsMax  : INT;        // C6 履历热力归一分母
 END_VAR
 
-// 1) 状态→颜色 + 上下翻转(显示行 r=0 是画面顶=层19)
-//    块3 方向9:对比模式(CmdCompareMode 且已存快照)色源=aSnapState 冻结布局,
-//    否则=实时 VisuSlotState;色表仍 FC_StateToColor 单源(画面标准 §2)
+// 0) C2/C6 热力归一分母(每周期 400 扫;量级远低于既有双重渲染循环)
+IF GVL_Visu.iViewMode = 1 THEN
+    rHeatMax := 0.0;
+    FOR c := 0 TO GVL_Param.COLS - 1 DO
+        FOR iT := 0 TO GVL_Param.TIERS - 1 DO
+            IF GVL_WH.aSlotFreq[c, iT] > rHeatMax THEN rHeatMax := GVL_WH.aSlotFreq[c, iT]; END_IF
+        END_FOR
+    END_FOR
+ELSIF GVL_Visu.iViewMode = 2 THEN
+    nOpsMax := 0;
+    FOR c := 0 TO GVL_Param.COLS - 1 DO
+        FOR iT := 0 TO GVL_Param.TIERS - 1 DO
+            IF GVL_WH.aSlotOps[c, iT] > nOpsMax THEN nOpsMax := GVL_WH.aSlotOps[c, iT]; END_IF
+        END_FOR
+    END_FOR
+END_IF
+
+// 1) 色源三视图 + 上下翻转(显示行 rw=0 是画面顶=层19)
+//    优先级:快照对比(CmdCompareMode)> 热力视图(iViewMode 1/2)> 状态视图;
+//    热力视图=分析视图:有货格按热力色阶,无货格降级灰系(推荐黄/路径蓝不叠,
+//    检修紫仍由 2b 恒显);色表仍 FC_StateToColor/FC_HeatColor 单源。
 FOR c := 0 TO GVL_Param.COLS - 1 DO
     FOR rw := 0 TO GVL_Param.TIERS - 1 DO
+        iT := GVL_Param.TIERS - 1 - rw;
         IF GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid THEN
-            iSt := GVL_Visu.aSnapState[c, GVL_Param.TIERS - 1 - rw];
-        ELSE
-            iSt := GVL_Visu.VisuSlotState[c, GVL_Param.TIERS - 1 - rw];
+            GVL_Visu.VisuSlotColor[c, rw] :=
+                FC_StateToColor(iState := GVL_Visu.aSnapState[c, iT]);
+        ELSIF GVL_Visu.iViewMode = 1 THEN            // C2 频次热力
+            IF GVL_WH.aSlots[c, iT].GoodsId > 0 THEN
+                GVL_Visu.VisuSlotColor[c, rw] :=
+                    FC_HeatColor(rVal := GVL_WH.aSlotFreq[c, iT], rMax := rHeatMax);
+            ELSIF GVL_WH.aSlots[c, iT].PresetOcc THEN
+                GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := 1);
+            ELSE
+                GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := 0);
+            END_IF
+        ELSIF GVL_Visu.iViewMode = 2 THEN            // C6 损耗履历热力
+            IF GVL_WH.aSlotOps[c, iT] > 0 THEN
+                GVL_Visu.VisuSlotColor[c, rw] :=
+                    FC_HeatColor(rVal := INT_TO_REAL(GVL_WH.aSlotOps[c, iT]),
+                                 rMax := INT_TO_REAL(nOpsMax));
+            ELSIF GVL_WH.aSlots[c, iT].PresetOcc THEN
+                GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := 1);
+            ELSE
+                GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := 0);
+            END_IF
+        ELSE                                          // 状态视图(原逻辑)
+            GVL_Visu.VisuSlotColor[c, rw] :=
+                FC_StateToColor(iState := GVL_Visu.VisuSlotState[c, iT]);
         END_IF
-        GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := iSt);
     END_FOR
 END_FOR
 
-// 2) 路径叠加(蓝):只画在空闲/预占格上,已占/推荐格保持原色;
-//    对比模式跳过——快照是纯布局对比,叠实时路径会误导(块3)
-IF NOT (GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid) THEN
+// 2) 路径叠加(蓝):仅状态视图;只画在空闲/预占格上;对比模式跳过(快照是纯布局对比)
+IF GVL_Visu.iViewMode = 0
+   AND NOT (GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid) THEN
     FOR k := 0 TO GVL_Visu.VisuPathCount - 1 DO
         IF k > 39 THEN EXIT; END_IF                   // 路径数组上限 40 点,防越界
         iSt := GVL_Visu.VisuSlotState[GVL_Visu.VisuPathX[k], GVL_Visu.VisuPathY[k]];
@@ -627,8 +679,7 @@ IF NOT (GVL_Visu.CmdCompareMode AND GVL_Visu.xSnapValid) THEN
     END_FOR
 END_IF
 
-// 2b) A3 检修叠加(优先级最高恒显:检修是物理状态,独立于布局/快照/路径;
-//     色源=GVL_WH.aMaintBlock 而非 VisuSlotState——Reset 重建布局不清检修)
+// 2b) A3 检修叠加(恒显:物理状态,独立于布局/快照/路径/热力;Reset 不清)
 FOR c := 0 TO GVL_Param.COLS - 1 DO
     FOR rw := 0 TO GVL_Param.TIERS - 1 DO
         IF GVL_WH.aMaintBlock[c, GVL_Param.TIERS - 1 - rw] THEN
@@ -636,6 +687,18 @@ FOR c := 0 TO GVL_Param.COLS - 1 DO
         END_IF
     END_FOR
 END_FOR
+
+// 2c) C1 层高亮(选中层整行向白混色 45%,叠在一切色源之上;顺带数该层在货格)
+GVL_Visu.VisuTierOcc := 0;
+IF GVL_Visu.InTierSel >= 0 AND GVL_Visu.InTierSel <= GVL_Param.TIERS - 1 THEN
+    rw := GVL_Param.TIERS - 1 - GVL_Visu.InTierSel;
+    FOR c := 0 TO GVL_Param.COLS - 1 DO
+        GVL_Visu.VisuSlotColor[c, rw] := FC_BlendLight(dw := GVL_Visu.VisuSlotColor[c, rw]);
+        IF GVL_WH.aSlots[c, GVL_Visu.InTierSel].GoodsId > 0 THEN
+            GVL_Visu.VisuTierOcc := GVL_Visu.VisuTierOcc + 1;
+        END_IF
+    END_FOR
+END_IF
 
 // 3) 堆垛机格坐标 → 像素坐标(图元锚点=左上角,大小=一个单元格)
 GVL_Visu.VisuCraneXpx := GVL_Param.GRID_X0 + GVL_Visu.VisuCurrentX * GVL_Param.CELL_PX_W;

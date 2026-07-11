@@ -10,7 +10,7 @@
 |---|---|---|
 | 01_DUTs.st | 4 个 DUT(每个 TYPE 一个) | ST_Good / ST_Slot / ST_Stats / E_MainState |
 | 02_GVL.st | 3 个 GVL | GVL_Param(常量段+变量段合一个,含 L1 加减速参数)/ GVL_WH / GVL_Visu |
-| 03_Functions.st | 13 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表)+ **FC_MaintToggle**(A3 检修翻转,0711) |
+| 03_Functions.st | 15 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表)+ **FC_MaintToggle**(A3 检修翻转)+ **FC_HeatColor / FC_BlendLight**(C2/C6 热力色阶、C1 层高亮混色,0711) |
 | 04_FB_Warehouse.st | 12 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测)+ **FB_VisuRefresh**(L6 颜色镜像)+ **FB_SceneDetect / FB_UserAuth / FB_ParamGuard**(A2 检测器/A4 两级权限,0711) |
 | 05_PRG_Main.st | 1 个 POU-程序 | 主状态机,挂循环任务 |
 | 06_PRG_Test.st | 1 个 POU-程序 | 23 个边界+一致性用例(T22 加减速向量/T23 双命令) |
@@ -24,7 +24,7 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=56**, iFailed=0(T19/T20/T22 一致性向量,T23 双命令,T24 预占格数 133,T25 AWRA 端到端,T26-T40 边界扩充,T41 FB_GoodsInput 封装,T42-T45 块3 查询/翻页/装卸/载货,**T46-T56 检修挂起/场景检测器/两级权限——0711 A2-A4**;iAwraPosDiff 逐位分歧预期 0);由 ScriptEngine 管线 `ab_sync.ps1` 实跑验证(判定串同步 56/0);
+   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=59**, iFailed=0(T19/T20/T22 一致性向量,T23 双命令,T24 预占格数 133,T25 AWRA 端到端,T26-T40 边界扩充,T41 FB_GoodsInput 封装,T42-T45 块3 查询/翻页/装卸/载货,T46-T56 检修挂起/场景检测器/两级权限,**T57-T59 热力色阶/仓位履历/层高亮——0711 A2-A4+C1/C2/C6**;iAwraPosDiff 逐位分歧预期 0);由 ScriptEngine 管线 `ab_sync.ps1` 实跑验证(判定串同步 59/0);
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。

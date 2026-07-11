@@ -28,6 +28,7 @@ VAR
     xSnapOld    : BOOL;                 // 块3:快照按钮沿检测
     xMaintOld   : BOOL;                 // A3:检修按钮沿检测
     iMaintRet   : INT;                  // A3:FC_MaintToggle 返回码
+    xViewOld    : BOOL;                 // C2/C6:视图循环按钮沿检测
 END_VAR
 
 // ---------- 全局按钮:复位(任意状态可触发) ----------
@@ -219,6 +220,16 @@ IF GVL_Visu.CmdMaintToggle AND NOT xMaintOld THEN
     END_CASE
 END_IF
 xMaintOld := GVL_Visu.CmdMaintToggle;
+// C2/C6 视图循环:状态→频次热力→损耗热力→状态(操作员可用,分析视图)
+IF GVL_Visu.CmdViewCycle AND NOT xViewOld THEN
+    GVL_Visu.iViewMode := (GVL_Visu.iViewMode + 1) MOD 3;
+    CASE GVL_Visu.iViewMode OF
+        0: GVL_Visu.VisuStatusText := 'VIEW_STATE';
+        1: GVL_Visu.VisuStatusText := 'VIEW_HEAT_FREQ';
+        2: GVL_Visu.VisuStatusText := 'VIEW_HEAT_WEAR';
+    END_CASE
+END_IF
+xViewOld := GVL_Visu.CmdViewCycle;
 // 块3 方向9:快照保存(上升沿把当前布局冻结为对比基准,CmdCompareMode 切换显示)
 IF GVL_Visu.CmdSaveSnap AND NOT xSnapOld THEN
     GVL_Visu.aSnapState := GVL_Visu.VisuSlotState;      // 同型数组整体赋值
@@ -250,6 +261,7 @@ GVL_Visu.CmdPageDown  := FALSE;
 GVL_Visu.CmdLogin     := FALSE;     // A4(0711)
 GVL_Visu.CmdLogout    := FALSE;
 GVL_Visu.CmdMaintToggle := FALSE;   // A3(0711)
+GVL_Visu.CmdViewCycle := FALSE;     // C2/C6(0711;iViewMode 是档位、InTierSel 是数值,均不复位)
 // 颜色镜像+堆垛机像素坐标刷新(画面所有动态元件的数据源,必须在 fbAnim 之后)
 fbVisu();
 END_PROGRAM

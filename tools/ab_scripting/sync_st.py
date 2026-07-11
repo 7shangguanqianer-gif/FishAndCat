@@ -40,6 +40,8 @@ MAP = [
     ("FC_TravelLaden",      "03_Functions.st", "pou"),
     ("FC_HandleTime",       "03_Functions.st", "pou"),
     ("FC_MaintToggle",      "03_Functions.st", "pou"),   # A3 检修翻转(0711)
+    ("FC_HeatColor",        "03_Functions.st", "pou"),   # C2/C6 热力色阶(0711)
+    ("FC_BlendLight",       "03_Functions.st", "pou"),   # C1 层高亮混色(0711)
     ("FC_LoadDemoGoods",    "07_GVL_Data_generated.st", "pou"),
     ("FB_InitWarehouse",    "04_FB_Warehouse.st", "pou"),
     ("FB_SelectSlot",       "04_FB_Warehouse.st", "pou"),
@@ -169,6 +171,16 @@ def parse_all():
             result[name] = (kind, decl, impl)
         else:                            # gvl / dut:全段即 declaration
             result[name] = (kind, seg.strip(u"\n"), None)
+    # 0711 护栏:源文件里存在、MAP 未登记的 POU 一律点名(防"新 POU 忘登记→同步
+    # 静默跳过→编译 not defined 级联"复发;当日 FC_HeatColor/FC_BlendLight 实案 43 错)
+    mapped = set(n for n, _f, _k in MAP)
+    for fname in cache:
+        secs = split_sections(cache[fname])
+        if not secs:
+            continue
+        for sec_name in secs:
+            if sec_name not in mapped:
+                log("NOT_IN_MAP:", sec_name, "(in %s) -- add it to MAP!" % fname)
     return result, missing
 
 
