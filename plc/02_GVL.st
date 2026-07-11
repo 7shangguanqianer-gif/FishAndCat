@@ -146,4 +146,11 @@ VAR_GLOBAL
     astrNames       : ARRAY[0..9] OF STRING[32] :=
         ['BEARING','MOTOR','GEARBOX','VALVE','PUMP','SENSOR','CABLE','PANEL','FILTER','RELAY'];
         // 常用货物名(ASCII,C0555 规避;演示可选,亦可 Keypad 手输)
+    // ---- 块3 画面排版 B(0710):装饰/图例常量——脚本设不了静态填色(0710 实证),
+    //      全部走已验证的 Color variables 动态通道;RGBA 前导 FF=不透明,00=全透明 ----
+    dwCraneColor    : DWORD := 16#FFFF6D00;         // 堆垛机橙
+    dwTransparent   : DWORD := 16#00FFFFFF;         // 全透明填充(分组框矩形只显边线,不盖内容)
+    aLegendColor    : ARRAY[0..6] OF DWORD :=       // 图例色样,与 FC_StateToColor 状态 0..6 一致
+        [16#FFE8E8E8, 16#FF707070, 16#FF43A047, 16#FFFFC107,
+         16#FF42A5F5, 16#FFE53935, 16#FF26C6DA];
 END_VAR
