@@ -34,6 +34,16 @@ IF GVL_Visu.CmdReset AND NOT xResetOld THEN
     GVL_Visu.VisuPathCount := 0;                    // 复位清路径叠加
     GVL_Visu.VisuCurrentX := 0;                     // 堆垛机归位 I/O 口(左下角)
     GVL_Visu.VisuCurrentY := 0;
+    // 0711 修:复位同时清统计/路径显示残留(旧版遗留 186.0/370 等旧批数字误导评委)
+    GVL_Visu.VisuTotalTime := 0.0;
+    GVL_Visu.VisuAvgTime := 0.0;
+    GVL_Visu.VisuSpaceUtilization := 0.0;
+    GVL_Visu.VisuWearIndex := 0.0;
+    GVL_Visu.VisuViolationCount := 0;
+    GVL_Visu.VisuPathLen := 0.0;
+    GVL_Visu.VisuExecTime := 0.0;
+    GVL_Visu.VisuTargetX := 0;
+    GVL_Visu.VisuTargetY := 0;
     eState := E_MainState.STATE_INIT;
 END_IF
 xResetOld := GVL_Visu.CmdReset;
@@ -189,6 +199,19 @@ END_IF
 // 动画回放:CmdAnimate 上升沿触发,堆垛机图元沿当前 VisuPath 走到目标格
 // (rCycleTime 与本任务周期一致:10ms 任务填 0.01;改任务周期须同步这里)
 fbAnim(xStart := GVL_Visu.CmdAnimate, rCycleTime := 0.01, rSpeedScale := 5.0);
+// ---------- 0711 疫苗:脉冲命令消费即复位(段尾,所有消费者已跑完) ----------
+// 防两类实测事故:①MouseUp 事件丢失致命令卡 TRUE(Load demo 风暴 N=260)
+// ②输入积压在 download 后突发重放。复位后命令只存活一个扫描周期,天然免疫。
+// 注意:CmdCompareMode 是翻转开关、SelStrategy 是 INT 档位,均不得复位。
+GVL_Visu.CmdAddGood   := FALSE;
+GVL_Visu.CmdLoadDemo  := FALSE;
+GVL_Visu.CmdRunAssign := FALSE;
+GVL_Visu.CmdReset     := FALSE;
+GVL_Visu.CmdAnimate   := FALSE;
+GVL_Visu.CmdSaveSnap  := FALSE;
+GVL_Visu.CmdQuery     := FALSE;
+GVL_Visu.CmdPageUp    := FALSE;
+GVL_Visu.CmdPageDown  := FALSE;
 // 颜色镜像+堆垛机像素坐标刷新(画面所有动态元件的数据源,必须在 fbAnim 之后)
 fbVisu();
 END_PROGRAM

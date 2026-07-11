@@ -1,0 +1,7 @@
+gen before=12, elements=113
+gen after +3 dummies=15
+dummies used=228, removed all
+input boxes matched=7 (expect 7)
+gen final=18, elements=113
+SAVE_OK
+=== FIX_P2_GEN_DONE ===

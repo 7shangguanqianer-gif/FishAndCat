@@ -150,6 +150,7 @@ VAR_GLOBAL
     //      全部走已验证的 Color variables 动态通道;RGBA 前导 FF=不透明,00=全透明 ----
     dwCraneColor    : DWORD := 16#FFFF6D00;         // 堆垛机橙
     dwTransparent   : DWORD := 16#00FFFFFF;         // 全透明填充(分组框矩形只显边线,不盖内容)
+    dwHeaderBg      : DWORD := 16#FFE8EAF0;         // P2 记录表表头底纹(版1 排版,0711)
     aLegendColor    : ARRAY[0..6] OF DWORD :=       // 图例色样,与 FC_StateToColor 状态 0..6 一致
         [16#FFE8E8E8, 16#FF707070, 16#FF43A047, 16#FFFFC107,
          16#FF42A5F5, 16#FFE53935, 16#FF26C6DA];
