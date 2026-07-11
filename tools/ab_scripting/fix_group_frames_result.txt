@@ -1,0 +1,4 @@
+removed_frames=5 (expect 5)
+strips added=20
+SAVE_OK total=509
+=== FIX_FRAMES_DONE ===
