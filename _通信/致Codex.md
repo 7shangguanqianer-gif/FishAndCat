@@ -8,6 +8,68 @@
 
 ---
 
+## 批次 2026-0711-N「Overnight 审核+红队」(7 小时无人值守窗口,13:20-20:20;用户不在场)
+
+### 背景快照(读完即可开工,不必翻历史)
+- 项目=2026 ABB杯「智储优控」,F:\abb_wh_work;真相源=docs\技术方向总库_0711.md +
+  现状与任务.md §5 + docs\画面三页制施工蓝图_0711.md。
+- 当前状态:ST 侧全清(ab_sync **59/0**);画面三页制施工完成(P1 VisuMain 505 件/
+  P2 VisuStats 134 件/P3 VisuAdmin 67 件,audit 真重叠 0);17 处输入动作 GUI 洗完
+  (commit 806b709);编译 0 error/1 warning(历史项)。
+- **Claude 正在同一台机器上做 GUI 长跑验证(占用 Automation Builder)并串行推进
+  B1-B4(文档审计/ST 审/sim 审/报告草稿)**。你的角色=独立审核员+规划红队,双盲对照。
+
+### 铁律红线(违反=事故,每条都有历史事故背书)
+1. **禁开 Automation Builder,禁跑 tools\ab_scripting\ 下任何脚本(含 ab_sync.ps1)**——
+   ScriptEngine 即使 headless 也会起 AutomationBuilder.exe 进程,双实例=工程锁事故;
+   Claude 此刻正占用 AB。
+2. **禁一切 git 操作**(add/commit/push/restore/stash 全禁)——同仓双写会话竞态有 0705
+   实案;你的产出由 Claude 每小时收割统一 commit。
+3. **禁修改任何现有文件**;只允许:读全仓库 + 新建你自己的产出文件(统一放
+   `_通信\codex_out\` 目录,不存在就创建)+ 在 `_通信\致Claude.md` 顶部追加回执。
+4. 禁改 1_给你看\、2_你要操作\ 下任何文档(用户文档红线)。
+5. 允许跑**不起 AB 进程的纯 Python 只读分析**(解析 plc\*.st 文本、sim\out\*.csv、
+   已 dump 的 XML 等);任何写盘脚本只准写进 codex_out\。
+6. **双盲纪律:不要读 Claude 本窗口的审查产出**(docs\ 下文件名含 `_0711pm` 的一律不读;
+   `_通信\致Codex.md` 本文件的滚动追加区除外)——双盲对照的价值就在互不污染,
+   收尾 diff 由 Claude 做。
+7. 负结果如实报;引用数字必带来源(命令或文件:行);发现疑似 bug **只列不改**,
+   标严重度:阻塞(影响正确性/比赛交付)/建议(健壮性)/风格。
+
+### 任务队列(按序做,每完成一项立即回执)
+- **K1 · ST 全量代码审查** → 产出 `_通信\codex_out\K1_ST审查_0711N.md`
+  范围:plc\*.st 全部;重点=0711 新增 POU:FB_SceneDetect / FC_MaintToggle / FB_UserAuth /
+  FB_ParamGuard / FC_HeatColor / FC_BlendLight / FB_VisuRefresh(三视图)/ CmdViewCycle 相关。
+  视角:IEC 61131-3 陷阱(AND 无短路求值、单字母保留字 r/s、数组越界守卫、边界条件、
+  除零、类型溢出)、状态机死角、Reset 语义一致性。
+- **K2 · sim 代码审查** → `_通信\codex_out\K2_sim审查_0711N.md`
+  范围:sim\oracle_gap.py 及其依赖链;核对:seed 固定、统计口径、词典序 VBS/SBS 判定
+  逻辑(fail 一票否决)、可复现命令是否与 docs 声称一致、CSV 输出与 summary 数字同源。
+- **K3 · 文档一致性审计** → `_通信\codex_out\K3_一致性审计_0711N.md`
+  交叉核对五处关键数字口径是否全同步:docs\技术方向总库_0711.md / 现状与任务.md /
+  docs\画面三页制施工蓝图_0711.md / plc\README_PLC.md / 桌面「智储优控_作战面板.html」
+  (C:\Users\86177\Desktop)。核对项:59/0 用例、洗单 17、三页元素数 505/134/67、
+  oracle 98.5%·closed 93.3%、A5 四组周期(192/560/2056/1880)、检测器三档 gap。只列不一致+建议。
+- **K4 · 红队推演+计划草案** → `_通信\codex_out\K4_红队与计划_0711N.md`
+  对 docs\技术方向总库_0711.md 的 A(本期)/B(报告周)/C(候补)池做对抗审查:
+  隐藏约束、失效模式、排期风险(硬节点:AB 许可≈8/2 到期、8/15 自定目标、8/26 提交);
+  给出 7/12-19 的逐日计划草案(红队版,标注每项依据)。
+- **K5 · 循环审(队列清完且时间未到)**:轮询本文件底部「滚动追加区」,Claude 会把
+  新产出索引贴在那里;逐份复审(此时双盲已由 Claude 解除的才审),意见写
+  `_通信\codex_out\K5_增量复审_0711N.md`(追加式)。
+
+### 回执协议
+每完成一项,在 `_通信\致Claude.md` **顶部**追加一行(不删旧内容):
+`[HH:MM] K# 完成 | 产出路径 | 一句话结论(含最重要的 1 个 finding)`
+
+### 结束条件
+约 20:20 或用户出现即停手,最后在 致Claude.md 写汇总回执(完成项/最重要 3 发现/未完项)。
+
+### 滚动追加区(Claude 每小时更新,Codex 每轮开工前看一眼)
+- (暂无)
+
+---
+
 ## 批次 2026-07-06-D(✅已由 Claude 的 AB 自动化管线直接完成,Codex 无需执行,存档备查)
 
 ### ✅完成记录(2026-07-06,Claude ScriptEngine 管线)
