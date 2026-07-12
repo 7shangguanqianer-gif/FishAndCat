@@ -1,0 +1,30 @@
+{
+  "seed_provenance": {
+    "calibration": [2026, 7],
+    "declared_holdout": [42, 123, 999],
+    "headline": [2026, 7, 42, 123, 999],
+    "headline_is_union": true,
+    "untouched_final_test_seeds": []
+  },
+  "headline_H": {
+    "awra_values": [8.6232110072, 7.8086815515, 8.7588670565, 7.9740207456, 8.8471608376],
+    "awra_mean": 8.4023882397,
+    "awra_sample_sd": 0.4768775647,
+    "awra_ci95": [7.8103614619, 8.9944150174],
+    "awra_ci95_halfwidth": 0.5920267778,
+    "paired_drop_pct_values": [58.0745, 65.7104, 59.4320, 66.5820, 59.3970],
+    "paired_drop_pct_mean": 61.8391811840,
+    "paired_drop_pct_ci95": [56.8962154941, 66.7821468740],
+    "leave_one_out_awra_mean_range": [8.2911950902, 8.5508149117],
+    "leave_one_out_drop_pct_range": [60.7499530401, 62.9072547220]
+  },
+  "main_scene_tuning": {
+    "scene": "120/skew",
+    "candidates_per_mode": 15,
+    "online_seed_2026_best": {"delta": 0.10, "bg": 1.0},
+    "online_seed_7_best": {"delta": 0.05, "bg": 0.6},
+    "online_two_seed_best": {"delta": 0.10, "bg": 1.0},
+    "batch_seed_2026_best": {"delta": 0.05, "bg": 0.6},
+    "batch_seed_7_best": {"delta": 0.05, "bg": 0.6}
+  }
+}

@@ -1,0 +1,35 @@
+# A1 oracle gap 实验判读(oracle_gap.py 自动生成;数据=instgen_detail 13场景×30seed)
+
+- VBS(词典序 oracle:fail 最小→exp_t 最小);unrestricted oracle 更低的实例 58/390(纯速度下界,含 fail>0 漏件失真,只做参考不进叙事)。
+- SBS(词典序最优固定策略:excess_fail 总数→gap 均值)= **awra**,全局平均 gap 24.69%;其最差三场景:tiny_light 47.0%、illegal_mix 45.6%、L120_skew 39.5%。
+- 固定策略 excess_fail 总账(30 实例累计,>0=有漏件假优势不可作 SBS):random=0 seq=0 near=355 score=302 awra=0 cb=0 tob=397。
+
+- 检测器[holistic]:全局 gap 24.69%,达 oracle 81.6%,closed gap 0.0%,excess_fail 均值 0.00,heavy_tier 0.57,energy 17685
+- 检测器[lexicographic]:全局 gap 1.65%,达 oracle 98.5%,closed gap 93.3%,excess_fail 均值 0.00,heavy_tier 3.42,energy 25738
+- 检测器[speed]:全局 gap 0.15%,达 oracle 99.9%,closed gap 99.4%,excess_fail 均值 0.00,heavy_tier 3.71,energy 25891
+
+## 双预案落笔(0711 授权)
+
+**预案①成立**:检测器(词典序档)以零在线学习、单次查表的近零延迟达 oracle 98.5%——在 PLC 10ms 扫描周期的硬实时约束下,并行试跑多策略再择优不可行(L4 实测:单件推荐含 400 格全扫在 1 个任务周期内完成,多策略并行意味着 N 倍计算×统计窗口,违反入库节拍),查表式检测器是该约束下的工程最优形态。
+**预案②成立**:场景间最优策略差异显著——词典序可用的最优固定策略 awra 在最差场景落后 oracle 47.0%(tiny_light),最差固定策略 random 全局 gap 370.7%;纯速度候选 tob 虽 gap 低但在 dense 场景漏件 397 件(题面'存放准确性'一票否决)——单一策略存在结构性风险,场景检测是硬需而非锦上添花。
+
+## holistic 档的 gap = 有意支付的安全溢价(多目标护栏,防单目标误读)
+
+- oracle gap 只量 exp_t 单目标;holistic 档(主打 AWRA)全局 gap 24.7% 的对价:重货平均层高 0.57 vs speed 档 3.71(低 6.6 倍),能耗代理 17685 vs 25891(低 32%)。
+- 报告口径:速度敏感客户用词典序/speed 档(达 oracle 98%+),安全合规口径用 holistic 档(题面 C6 重货低层/C4 能耗权重高)——检测器三档并存,目标口径是输入(F18-3),不是单点押注。
+
+## 检测器逐场景推荐核查(lexicographic 档 vs 0706 标定表 detector_rules.md)
+
+- L120_uniform: tob
+- L120_skew: tob
+- L120_heavy: tob
+- tiny_light: tob
+- light_sparse: awra
+- light_full: tob
+- flat_info: tob
+- dense_200: cb
+- dense_240: cb
+- heavy_sparse: awra
+- drift_skewless: tob
+- drift_heavier: tob
+- illegal_mix: tob

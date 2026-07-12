@@ -1,0 +1,37 @@
+{
+  "scope": {"runs": 390, "scenarios": 13, "seeds": 30},
+  "near_tie_rule": {
+    "changed_runs": 390,
+    "changed_items_total": 12540,
+    "max_items_one_run": 34,
+    "worst": ["L120_uniform", 2026],
+    "max_abs_exp_t_delta_s": 0.0,
+    "max_energy_relative_delta": 0.12184146763586012,
+    "demo20_layout_diff": 10,
+    "demo20_exp_t_delta_s": 0.0,
+    "equal_time_pair": {
+      "slots": [[0, 1], [4, 0]],
+      "travel_s": [2.0, 2.0],
+      "python_choice": [4, 0],
+      "st_scan_choice": [0, 1]
+    }
+  },
+  "real32_proxy": {
+    "scope_runs": 13,
+    "scope_seeds": [2026],
+    "changed_runs": 1,
+    "changed_items_total": 2,
+    "max_items_one_run": 2,
+    "worst": ["illegal_mix", 2026],
+    "max_abs_exp_t_delta_s": 0.009925797436638462,
+    "max_energy_relative_delta": 0.0007170428349326452,
+    "priority_order_changed_runs": 0,
+    "demo20_layout_diff": 0,
+    "demo20_exp_t_delta_s": 0.0
+  },
+  "rank_tie_nonsequential_ids": {
+    "python_gid_order": [1, 100],
+    "st_array_index_order": [100, 1],
+    "different": true
+  }
+}
