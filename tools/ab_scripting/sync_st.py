@@ -302,10 +302,18 @@ def run_ab(parsed, missing):
                 continue
             for msg in msgs:
                 s = str(msg)
-                if "error" in s.lower():
+                sev = u""
+                try:
+                    sev = str(msg.severity)
+                except Exception:
+                    pass
+                # 0712 复验课:C0xxx 具体错误行不含"error"字样,旧过滤只剩汇总(8错0明细)。
+                # 三路兜底:severity 含 Error / 文本含 error / 文本带 CODESYS 错误码。
+                if ("error" in s.lower()) or ("rror" in sev) \
+                        or re.search(u"\\bC\\d{4}\\b", s):
                     total_err += 1
-                    if total_err <= 10:
-                        log("MSG_ERR:", s[:200])
+                    if total_err <= 30:
+                        log("MSG_ERR:", (u"[%s] " % sev if sev else u"") + s[:240])
         err_cnt = total_err
         log("message-scan error-like lines:", total_err)
     except Exception as e:

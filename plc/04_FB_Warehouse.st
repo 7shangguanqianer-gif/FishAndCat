@@ -272,6 +272,7 @@ END_VAR
 VAR
     xOld        : BOOL;
     iPhase      : INT;          // 0=空闲 1=初始化 2=货物排序 3=travel缓存 4=仓位排序 5=分类 6=分配 7=完成
+    iModeRun    : INT;          // R7:启动锁存的模式(4/5)——运行中外部改 iMode 不影响本批
     i, j, k     : INT;
     iSortPos    : INT;          // 货物选择排序外层游标
     iBestJ      : INT;
