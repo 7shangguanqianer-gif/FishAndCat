@@ -45,5 +45,6 @@
 ## 数字口径速记
 
 报告 H 是 **sim 设计口径=梯形加减速+场景自适应权重**，不是 PLC H 闭环。头条唯一来源 `python sim\headline.py`：
-**AWRA-LS 8.40±0.48s（5-seed sample SD；回归锚，非U3 30-seed泛化证据），较顺序基线降62.0%，能耗代理降67.3%，重货均层0.57；承重/容积复查0、失败0。**
+**AWRA-LS 8.40±0.48s（5-seed sample SD；回归锚），较顺序基线降62.0%，能耗代理降67.3%，重货均层0.57；承重/容积复查0、失败0。**
+**U3 泛化证据（0712 新增）：30-seed untouched final test（seeds 10001-10030 连续区间，与开发 seed 零交集）AWRA-LS 8.17±0.67s、降61.6%、能耗降67.7%、重货均层0.53，30/30 seed 全正收益（min 52.3%），违规/失败 0——与回归锚差 <0.4pp。来源 `python sim\final_test_30seed.py`（26s 复现）。**
 PLC当前可引用证据边界=**75/0**（0712 轨B 第四轮 AB PC 仿真在线读回=Codex 对抗审查 R1-R8 修复后复验：编译 0 errors+xAllPass=TRUE，日志存档 `tools\ab_scripting\logs\`），范围=核心ST+AWRA/CB/TOB 三套黄金向量逐位锁+**T60-T75 全部真实断言（预留=0）**。CB/TOB 分配、lex 检测路由、near 平局统一、R1-R8 缺口修复均已实现并经 AB 实测。**仍无证据、不得外推**：400件压测/watchdog/三页在线长跑/实体AC500/多客户端隔离。口径查`docs\canonical_assumptions.md`(C11)。运行`python sim\core_smoke.py`只证明其列出的Python门通过，不代表AB、报告渲染或全部专项均已验证。
