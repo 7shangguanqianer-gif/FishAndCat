@@ -9,7 +9,7 @@
 |---|---|---|---|
 | T0 | 环境自检：ab_sync 一轮确认画面洗后 75/0 基线 | ✅ 13:2x | Compile 0 errors + 75/0 全绿 |
 | T1 | 三页在线长跑：8步动线×3遍+11边角input核销+在线稳定观察 | ✅ 13:38 | **全绿零死件**；详录=演示预演记录_0712.md §五；双档对照数字入账（TOB 122s/222m vs AWRA 186s/370m） |
-| T2 | 30-seed 泛化实验（修 N5-17）：AWRA-LS vs 顺序基线，同批数据固定seed | ⬜ | 先探单seed耗时再定规模节奏 |
+| T2 | 30-seed 泛化实验（修 N5-17）：AWRA-LS vs 顺序基线，同批数据固定seed | ✅ 13:42 | **8.17±0.67s 降61.6%**(n=30, seeds 10001-10030 untouched)；30/30 全正收益(min 52.3%)；违规/失败 0；与 5-seed 锚(8.40/62.0%)差 0.4pp<2pp 阈值→按拍板更新草稿；复现=`python sim/final_test_30seed.py`(26s) |
 | T3 | 报告 md 升级：B10 98.5话术+§6空当+30-seed新数字 | ⬜ | 逐处commit可翻案 |
 | T4 | 提交包 manifest/requirements/allowlist 草案 | ⬜ | 新建docs文件 |
 | T5 | 致Codex 暂存任务（30-seed→轨A文档更新），标"待用户转交" | ⬜ | 不生效 |
