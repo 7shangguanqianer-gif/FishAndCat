@@ -1,0 +1,9 @@
+OPEN_OK
+P3_BASE count=79 (expect 79)
+OLD_DELETED=4
+NEW_BUILT=4 (dual-bound Down+Click)
+P3_DONE count=79 (expect 79)
+BUILD: Compile complete -- 0 errors, 1 warnings
+SAVE_OK
+ERRORS=0
+=== FIX_P3_BUTTONS_DONE ===

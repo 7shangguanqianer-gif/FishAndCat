@@ -1,0 +1,15 @@
+OPEN_OK
+P1_BADGE_OK 59/59 -> 75/75
+P3_BASE count=67 (expect 67)
+P3_TITLE_OK + DELETED=2
+P3_DONE count=79 (expect 79)
+BUILD: Compile complete -- 0 errors, 1 warnings
+SAVE_OK
+ERRORS=0
+
+==== GUI VERIFY LIST (4 new buttons, test online) ====
+P3 (940,316) Holistic  -> SelObjective=0
+P3 (1032,316) Lexicographic -> SelObjective=1
+P3 (940,348) CB  -> SelStrategy=4
+P3 (1004,348) TOB -> SelStrategy=5
+=== WASH_VISU_DONE ===
