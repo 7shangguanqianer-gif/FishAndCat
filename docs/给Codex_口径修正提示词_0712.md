@@ -10,7 +10,7 @@
 你现在执行 `F:\abb_wh_work` ABB 杯项目的**口径修正 Phase 1**。唯一权威规格 = `docs/Claude_N2N3复核回执_0712.md`（你自己的 N2/N3 报告已被 Claude 完整复核并全部接受）。先读该回执 + `_通信/codex_out/` 下你的 N2/N3 报告，再动手。
 
 ### 地面真值（不可违反，来自回执 §4 口径字典）
-- **8.40**=5-seed H 均值(sample std)｜**8.6232**=sum H 单seed 回归锁(`test_sim.py:189`)｜**8.757**=加减速+静态 sim 代理(需手动 xUseAccel=TRUE)｜**6.443**=匀速+静态 sim 代理(PLC 默认 xUseAccel=FALSE 口径)｜**7.6202**=legacy and 历史锁(`test_sim.py:204`)。五者全是 **sim 值**，互不混用。
+- **8.40**=5-seed H 均值(sample std)｜**8.6232**=sum H 单seed 回归锁(`test_sim.py:189`)｜**8.757**=**Python 加减速+静态 sim 结果**(评分分母 39.6667；**不是"PLC 可实现代理"、不是与 PLC 数学式同源**，见 N4-01)｜**8.794**=按 ST 固定 FC_TMax(38) 的更近似 Python 只读代理(**只用于揭示 Python↔ST 差异，绝不进头条**)｜**6.443**=匀速+静态 sim 代理(PLC 默认 xUseAccel=FALSE 口径)｜**7.6202**=legacy and 历史锁(`test_sim.py:204`)。全是 **sim 值**，互不混用。
 - **98.5**=sim lexicographic 档；**不是** PLC 实测、**不是**理论上限(speed 99.9/oracle 100)、**不与画面 AWRA_HOLISTIC 绑定**。
 - **81.6**=已部署 holistic 规则在 390 实例的 **sim 评估**（当前≡固定 AWRA）；不是 AC500 现场 attainment。
 - **59/0**=核心 ST 逻辑+**静态匀速黄金向量**在 AB 仿真通过；不证明自适应/lex/speed/H KPI/吞吐/年化能耗在控制器复现。
@@ -21,7 +21,7 @@
 ### 红线
 - **禁改任何 ST 代码（`plc/*.st`）**；禁开 Automation Builder；禁跑 `tools/ab_scripting`/`ab_sync.ps1`；禁跑 git。ST 相关只改"文档里对 ST 能力的描述"。
 - 改 `1_给你看/*.md` 后必须跑 `python tools/make_user_docs.py` 再生同名 DOCX；改 `sim/build_report.py`/`build_ppt.py` 后必须重生 `sim/out/验证报告_draft.docx`/`答辩PPT_draft.pptx` 并做文本抽取+逐页渲染 QA（源改≠二进制自动好）。
-- 每组改完**停下**，输出该组"改动对照表(原句→改句→依据 file:line)"，等 Claude/用户审过再进下一组。历史证据(F1-F17、旧审计、legacy 锁)加历史标签**保留不删**。
+- **执行方式(用户 0712 定)**：**一次性认真改完全部四组**（不是每组停审），末尾统一输出"总改动对照表(原句→改句→依据 file:line，按组分节)"交 Claude 复核一次。历史证据(F1-F17、旧审计、legacy 锁)加历史标签**保留不删**。
 
 ### 执行顺序（回执 §3 四组 + §5 顺序）
 **组 1 真相源**：`canonical_assumptions.md`(C 头部 `:38-41` H 锁 7.6202→8.6232+旧 7.42 头条→8.40/62/67.3/0.57+加"PLC 默认 xUseAccel=FALSE"、E v2、G1 `:98`、变更记录追加更正)；`现状与任务.md:71,202-204`+§5 混新旧；`技术方向总库_0711.md` A1 升核心；根 `README.md:26,27,30,36-37,47-48`；`plc/README_PLC.md:13-16(15/12/23→17/15/59),27,36-37,43-44,68-82(measure_l4b 断链→archive/),87-101`；`sim/headline.py:6,67(and→sum)`、`adaptive_weights.py:6`。
@@ -31,6 +31,19 @@
 **组 3 生成器/二进制**：`build_report.py:386-394,453-456,479-515,580-609,625-698,711-725`；`build_ppt.py:94-104,115-135,155-188,200-203`；重生 3 份用户 DOCX+`验证报告_draft.docx`(旧 45 项)+`答辩PPT_draft.pptx`(旧 23/24)+渲染 QA。**sim 方法(P2-F1 failed 选优/P2-F2 共用 arrivals)先只加限定语、暂不改算法**（改算法会动在线高密度策略表+需重算 P50/P95，另行拍板）。
 
 **组 4 渲染/审计**：桌面 `智储优控_作战面板.html:78-83,101,107,121,127,133,163,173,177`(8.76/81.6/98.5/20.6s/三页已验收/方案甲 8 处 全改)；`一致性审计_0711pm.md` 顶部加 superseded；`visu_gen/README.md`+两操作卡+`ab_scripting/README.md`(24/59、40/46、两页/三页)标历史/改现值；三页在线长跑标"待验证"(需用户在场，不代跑)；最终对源码文本+DOCX 抽取+PPTX 抽取重跑指定 grep，只留三类命中(sim 事实/历史证据/实现边界)。
+
+### ★ N4 增量（并入本轮，权威=`docs/Claude_N4复核回执_0712.md`）
+- **口径再降级**：全工作区(含 Claude 的 D2量化/sim_plc第二层/报告草稿_B6B7B11/答辩QA卡/接手任务表/作战面板 + 我的 N2N3 回执)把 8.757/8.76 称"PLC 可实现代理/AC500 真跑"处，全改为"**Python 加减速+静态 sim 结果**"；8.794 仅解释 Python↔ST 分母差异、不进头条。
+- **图源顺序铁律(N4-27)**：**先改 `sim/plots.py`/`experiments.py` 的口径标签与数据源(fig1/4/5 图内 and→sum、静态匀速须标 motion/weights/rule/seed_count)，再改报告/PPT 生成器，最后重生二进制。绝不先重生二进制再修图源。**
+- **假绿收窄(N4-13/26/40)**：删/限定"一键复现全部/全量回归/收尾全绿/每个数字一键复现"(`build_report.py:695-698`/`build_ppt.py:200-204`/根 README/作战面板)；run_all 拆 core_smoke/report_rebuild/artifact_verify 三名；doc_check 当前 exit1(11 断链+1 过时)不得称全绿。
+- **违规口径(N4-20)**：报告"约束违规 0"改"承重/容积复查为 0"，不外推全约束。
+- **生成链/二进制(N4-28/29/30)**：`项目全景说明书.docx` 孤儿(7.42/356/45项)归档加水印或重建源；`验证报告_draft.docx` 45→59、改生成器后重生；build_report 缺输入须 exit1 而非 save+exit0。
+- **sim 方法(P2-F1/F2，用户 Q9 定)**：**Codex 先评估"改算法(failed 选优/共用 arrivals)会牵动哪些报告数字与 P50/P95"的影响面并交 Claude/用户，再动手改**（不是默认只加限定语，也不是默认硬改）。
+- **提交包(N4-35~39)**：起草 requirements/lock、manifest、提交 allowlist、LICENSE/第三方清单**计划**（不代跑打包、不代跑 secret/PII scanner——涉密待用户）。
+
+### 🔒 单列待用户确认（本轮 Codex 不动手）
+- **PLC ST 修复(N4-14 guard 前置/N4-15 LoadDemo 容量/N4-16 ID 契约/N4-17 策略锁存/N4-18 分片钳位/N4-19 批次快照/N4-20 ViolCnt/N4-23 检修源位冻结/N4-24 除零)**：改 ST+补测试+ab_sync，属方案乙同类，Codex 只出逐文件补丁计划+测试反例，不改 ST。
+- **AB 实跑(N4-21 400 件压测/N4-07 watchdog/N4-P5 六组反例)**：需 AB，只列待验，禁开 AB。
 
 ### 停手条件
 组 4 完成即停，不续做其他。三页在线长跑、ST 代码修复(A3 源位冻结/A4 画面锁)、sim 方法算法改、方案乙 D-1 CB/TOB 补实现——均**不在本轮**，等用户单独授权。
