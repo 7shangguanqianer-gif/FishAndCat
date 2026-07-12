@@ -1,3 +1,49 @@
+## 0712 轨B ST 对抗审查回执（Codex，06:44）
+
+只读终审已完成，全文：`_通信/codex_out/轨B_ST对抗审查_0712.md`。
+
+**裁决：部分接受，阶段3尚不能标“全规格闭环”。** 默认匀速固定参数下，CB `min(start,len-1)` 与 Python 等价（420 个差分实例 0 分歧），CB/TOB 当前生成向量 20/20 逐位同源，主程序策略锁存、Guard 前置、快照纯态重建及新增生产路径的 IEC 下标防护成立；最后一轮现存 AB 原始日志也确为 Compile 0 errors/1 warning、75/0。
+
+需优先修三项：① `FB_GoodsInput` 守唯一 ID，但 `FC_LoadDemoGoods` 可重复追加固定 1..20，第二次载入即破坏契约；② `FB_Stats` 只做 good→slot 单向检查，未实现计划要求的 slot→good/一货一位，幽灵格和重复 ID 可保持 ViolCnt=0；③完整批次参数快照未落地，TOB 及 CB 的 Score/ExecTime 仍读实时参数，管理员中途改参可产生混合口径。
+
+其余缺口：`FC_TMax` 对非法速度用 0.001、行程分子用 1.0，T74 只验“>0”；`aSlotOps` 五个写点仍无 UDINT 饱和；状态文本漏 `RelocCnt`；CT FB 可 busy 中二次沿重启且未内部锁 `iMode`；测试初始化仍只清 1..59，T75 恒 TRUE，nPairs/nMax/跨批清零/锁存/快照/饱和缺自动锚；T58/T59 失败路径仍有 IEC 非短路越界风险。T60 只证明默认精确等时向量，报告另给出任意可调速度下 REAL32 舍入反例。
+
+证据边界：当前文件系统只有最后一组会覆盖的 `sync_result.txt` + `runtest_result.txt`；“最新 75/0”可独立复核，“75/0 × 三轮”没有三份独立原始日志可重建，只能依赖登记文档。未开 AB、未运行 ab_scripting、未做 git、未改 PLC/sim/docs/用户文件。
+
+---
+
+## 0712 三合一合并修复最终回执（Codex，04:44 -05:00）
+
+口径修正 + N5 Python/文档修复 + sim方法F1/F2 + 体检增补已全部落盘；未开Automation Builder、未运行 tools/ab_scripting、未做git写、未改PLC可执行ST、未扩N6。
+
+- 总对照：_通信/codex_out/0712_合并修复_总改动对照表.md
+- sim数字变化：_通信/codex_out/0712_sim数字变更表.md
+- 二进制/渲染：_通信/codex_out/0712_二进制与渲染QA.md
+- 验证日志：_通信/codex_out/0712_合并修复_验证日志.md
+- 给Claude终审提示词：_通信/codex_out/给Claude_复核0712合并修复最终结果.md
+
+最终门：core_smoke 32/32 PASS；doc_check PASS；artifact_verify PASS；报告/PPT及14份用户DOCX OOXML验证PASS。WPS实际渲染：报告20页、PPT18张、项目导览21页、AB卡9页，重点页无溢出/遮挡/乱码。
+
+最终二进制：报告SHA256=4709CD5553583A8DECC2CF0BFF86E223D79A9A04A275DA29116A9AECA5C45D7F；PPT SHA256=633F264257A997998998188A3861B2B4E951BC9E2C5CE7AEB043ADFB97F482F6。文本抽取见0712_验证报告文本抽取.md与0712_答辩PPT文本抽取.md。
+
+**并发源码最终校准（请重点复核）**：当前源码已不是N2-N5审查时状态。N_CASES=75；T60-T69为10项真实断言，T70-T75为6项恒TRUE预留；near平局、ParamGuard前置、LoadDemo容量护栏、CB/TOB执行器与lex路由均已写入源码。但本轮没有新AB读回，所以证据仍只报59/0。正确话术是“源码已实现/新增断言未验证/AB证据59/0”，既不能再写“PLC未实现CB/TOB”，也不能写“75/0已通过”。
+
+sim结论：H=8.40±0.48（5-seed sample SD，CI半宽0.592）/62.0%/67.3%/0.57；sum锁8.6232、legacy and锁7.6202；0.5306、545.4→278.9、省266.5kWh/48.9%/约141.4kg；共同arrivals后档3near P95=651.1低于AWRA=667.0；6个高密online权重格INFEASIBLE；lifecycle drain后120件δ=0.15总时高2.69%～4.53%；98.5/99.9只在excess_fail=0 sim可比域。
+
+请按终审提示词逐条回源，输出接受/部分接受/不同意与file:line。不要按旧补丁计划覆盖已落ST，也不要把源码存在升级成AB证据。
+
+---
+
+[23:59] 给Claude Code的N5增量复核提示词已落盘 | `_通信\codex_out\给Claude_N5独立复核提示词_0712.md` | 要求以当前并发磁盘为准，逐条裁决N5-01～35（接受/部分/不同意/当前已修/需AB），优先亲验平局total-order、失败表、共同arrival、生命周期flush、最终holdout、年化单位/CO2、多客户端全局权限、oracle>100%；只复核不盲改，禁AB/ab_scripting/git/子代理，输出Claude_N5复核回执后停止。
+
+[23:57] N5独立复核全部完成 | `_通信\codex_out\N5_汇总回执_0712.md` | P1-P8共35项（1阻塞/16高/10中/8正面），5份JSON可解析、5个只读探针全部重跑PASS、编号01-35连续。最高优先：高密在线权重15候选均无零失败；Python/ST平局total-order分叉；跨批统计泄漏/INT寿命；common-arrival翻P95赢家与lifecycle尾部截断；无untouched final test；500次年化2倍歧义/CO2因子边界；全局权限跨客户端；oracle失败更多时显示attain>100%。仅写codex_out+本回执，未开AB/未跑ab_scripting/未git/未改项目文件；检测到Claude/AB并发改docs、d2_quantify与.~u，复核须以当前磁盘为准。
+
+[23:53] N5-P8 CSV/日志完整性复核完成 | `_通信\codex_out\N5_P8_CSV日志产物结构与完整性复核_0712.md` + `N5_P8_量化证据_0712.json` | 37份CSV无空/NaN/Inf/重复行/已知主键重复，主要detail↔agg基数与均值链通过；但6份CSV内塞两种schema，通用解析会错列。consistency_probe.log仍是修复前“12×30=390”旧日志。更重要：oracle明细58行attain>100%且gap<0，58/58都伴随excess_fail>0；dense200 TOB达128%只是“失败更多但时间短”，应置N/A而非称超过oracle。未开AB/未跑ab_scripting。
+
+[23:47] N5-P7 权限/多客户端/留痕复核完成 | `_通信\codex_out\N5_P7_权限多客户端与留痕复核_0712.md` | A4全部PIN/命令/iUserLevel均为GVL且只有一个fbAuth：A输入PIN、B触发Login会跨客户端消费并把全局管理员位开放给所有客户端，任一Logout也全局登出；T54-56仅测单实例分支，不证明会话隔离。无超时/有效锁定/actor+before-after审计。源码已准确声明“单客户端演示、生产换UserMgmt/CurrentClientId”，应保留该边界。未开AB。
+
+[23:44] N5-P6 能耗/年化/吞吐单位链复核完成 | `_通信\codex_out\N5_P6_能耗年化吞吐单位链复核_0712.md` + `N5_P6_量化证据_0712.json` | 年化代码把“500次/日”解释为500个单操作=250双命令周期，文案未锁单位，另一解读会让绝对量翻倍；230.4次/h是行程-only连续满载sim容量，加15s/操作后117.6、再含1次600s故障107.1。CO2因子0.581不是现行官方2023全国平均0.5306，155kg需改为有边界的情景值；另发现报告草稿546.0→278.9却写省266.5的内部矛盾。未开AB。
+
 [23:38] N5-P5 种子与统计复核完成 | `_通信\codex_out\N5_P5_种子置信区间与选择偏差复核_0712.md` + `N5_P5_量化证据_0712.json` | headline五seed恰为2标定+3已用于策略验收holdout的并集，无untouched final test；8.40±0.477是SD，均值95%CI应为8.402±0.592。120/skew在线权重两标定seed赢家不同；但H相对seq配对降幅CI=56.90%~66.78%，方向仍稳。
 
 [23:35] N5-P4 失败/队列/公平负载复核完成 | `_通信\codex_out\N5_P4_失败队列与公平负载复核_0712.md` + `N5_P4_量化证据_0712.json` | adaptive 18组中6个在线高密度组以失败幸存者选优且15权重均无零失败候选；realism改为共同arrival后P95赢家由AWRA翻为near；lifecycle每组固定截留5件，终局115非120，平均漏计254.85s/1.82%。纯只读反事实，未写sim/out。

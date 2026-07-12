@@ -112,7 +112,7 @@ def main():
     ap.add_argument("--cycles", type=int, default=100, help="混合周期数(默认100)")
     ap.add_argument("--accel", action="store_true", help="用 L1 加减速口径")
     ap.add_argument("--adaptive", action="store_true",
-                    help="A1 自适应权重查表(报告主口径 H = --accel --adaptive)")
+                    help="A1 sim场景权重设计表(H设计口径；非PLC闭环)")
     a = ap.parse_args()
     if a.accel:
         ws.ACCEL = True
@@ -134,7 +134,7 @@ def main():
     print(f"混合作业流:{a.cycles} 周期(每周期1存+1取,共{2*a.cycles}次作业),"
           f"口径={motion},seed={SEED}")
     print(f"{'策略':<16}{'单命令总时(s)':>13}{'双命令总时(s)':>13}{'节省':>7}"
-          f"{'吞吐(双命令,次/h)':>17}{'出库均时(s)':>11}{'失败':>5}{'违规':>5}")
+          f"{'双命令模式单操作/h':>19}{'出库均时(s)':>11}{'失败':>5}{'违规':>5}")
     rows = []
     for s in STRATS:
         m = run_mixed(s, goods, new_goods, requests, fn, w_max, f_max, fn_batch)
@@ -148,7 +148,8 @@ def main():
     print(f"\nawra 布局 vs seq 布局(双命令口径):混合流总时 "
           f"{base['tot_dual']:.0f}→{best['tot_dual']:.0f}s"
           f"(降 {(1-best['tot_dual']/base['tot_dual'])*100:.1f}%),"
-          f"吞吐 {base['thr_dual']:.0f}→{best['thr_dual']:.0f} 次/h"
+          f"单操作吞吐 {base['thr_dual']:.0f}→{best['thr_dual']:.0f} 次/h"
+          f"(awra约{best['thr_dual']/2:.1f}双周期/h)"
           f"(提 {(best['thr_dual']/base['thr_dual']-1)*100:.1f}%)")
     print(f"双命令 vs 单命令(awra 布局):节省 {best['saving']:.1f}% —— 存取联程省空驶")
 
@@ -157,11 +158,13 @@ def main():
     path = os.path.join(HERE, "out", "mixed_ops.csv")
     with open(path, "w", newline="", encoding="utf-8-sig") as fp:
         w = csv.writer(fp)
-        w.writerow(["strategy", "motion", "cycles", "tot_single_s", "tot_dual_s",
-                    "saving_pct", "thr_single_ops_h", "thr_dual_ops_h",
+        w.writerow(["strategy", "motion", "weights", "cycles", "tot_single_s", "tot_dual_s",
+                    "saving_pct", "throughput_single_command_ops_h",
+                    "throughput_dual_command_ops_h",
                     "avg_retrieve_s", "fails", "viol"])
         for s, m in rows:
-            w.writerow([s, "trapezoid" if ws.ACCEL else "uniform", a.cycles,
+            w.writerow([s, "trapezoid" if ws.ACCEL else "uniform",
+                        "adaptive" if a.adaptive else "fixed", a.cycles,
                         round(m["tot_single"], 1), round(m["tot_dual"], 1),
                         round(m["saving"], 2), round(m["thr_single"], 1),
                         round(m["thr_dual"], 1), round(m["avg_retr"], 3),
@@ -197,7 +200,7 @@ def main():
                  va="bottom", fontsize=9)
     axR.set_xticks(list(x))
     axR.set_xticklabels([LBL[s] for s in STRATS], fontsize=8)
-    axR.set_ylabel("吞吐(存取次数/小时,双命令)")
+    axR.set_ylabel("双命令模式吞吐(单操作/小时)")
     axR.set_title("单位时间存取量(题面指标)——布局质量在出库侧兑现")
     axR.spines[["top", "right"]].set_visible(False)
     fig.suptitle(f"L2 存取混合作业流({a.cycles}周期,{motion}口径,seed={SEED})", fontsize=12)

@@ -3,8 +3,8 @@
 plots.py — 验证报告图表生成(matplotlib)
 运行:python plots.py     → 输出 sim/figs/fig1..fig5.png(300dpi,报告直插)
 依赖:matplotlib(pip install matplotlib -i https://mirrors.aliyun.com/pypi/simple/)
-数据:fig1-4 现算(seed=2026 主场景,与 F4/回归测试同口径);
-     fig5 读 out/experiments_agg.csv(先跑 experiments.py)。
+数据:fig1/2/4 现算 H 设计口径(sum+梯形加减速+场景自适应,seed=2026 单 seed);
+     fig3 明标静态固定权重 δ 标定口径；fig5 读 H 设计口径 5-seed 回归矩阵。
 """
 import csv
 import os
@@ -34,11 +34,20 @@ LBL = {"random": "随机", "seq": "顺序基线", "near": "就近贪心",
 STRATS = ["random", "seq", "near", "score", "awra"]
 
 
-def compute(seed=2026, n=120, rule="sum", delta=0.15):
+def compute(seed=2026, n=120, rule="sum", delta=0.15,
+            accel=True, adaptive=True, case="skew"):
     goods = ws.gen_goods(n, seed)
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
-    fn = ws.make_score_fn(1.0, 0.6, 0.4, delta, w_max, f_max)
+    ws.ACCEL = accel
+    if adaptive:
+        d_on, bg_on = ws.lookup_weights(n, case, "online")
+        d_ba, bg_ba = ws.lookup_weights(n, case, "batch")
+        fn = ws.make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
+        fn_batch = ws.make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
+    else:
+        fn = ws.make_score_fn(1.0, 0.6, 0.4, delta, w_max, f_max)
+        fn_batch = fn
     res, whs = {}, {}
     for name, strat in [("random", ws.strat_random(_r.Random(seed + 1))),
                         ("seq", ws.strat_seq), ("near", ws.strat_near),
@@ -46,9 +55,10 @@ def compute(seed=2026, n=120, rule="sum", delta=0.15):
         wh, placed, failed = ws.run_online(strat, goods, rule, fn)
         res[name] = ws.metrics(wh, placed, failed)
         whs[name] = wh
-    wh, placed, failed = ws.run_awra_ls(goods, rule, fn, w_max, f_max)
+    wh, placed, failed = ws.run_awra_ls(goods, rule, fn_batch, w_max, f_max)
     res["awra"] = ws.metrics(wh, placed, failed)
     whs["awra"] = wh
+    ws.ACCEL = False
     return goods, res, whs
 
 
@@ -67,7 +77,7 @@ def fig1(res):
             ax.text(b.get_x() + b.get_width() / 2, v, f"{v:,.1f}" if v < 100 else f"{v:,.0f}",
                     ha="center", va="bottom", fontsize=8)
         ax.spines[["top", "right"]].set_visible(False)
-    fig.suptitle("五策略对比(seed=2026,120件,and 规则;违规均为 0)", fontsize=12)
+    fig.suptitle("五策略对比(H设计口径:sum+梯形加减速+自适应;seed=2026,单seed)", fontsize=12)
     fig.tight_layout()
     fig.savefig(os.path.join(FIGS, "fig1_策略对比.png"), dpi=300)
     plt.close(fig)
@@ -105,7 +115,7 @@ def fig2(goods, whs):
             ax.set_ylabel("层(0=底层)", fontsize=10)
         ax.plot(0, 0, marker="*", color="#1976d2", markersize=11, markeredgecolor="white")
         ax.tick_params(labelsize=9)
-    fig.suptitle("仓位占用热力图(seed=2026,120件;颜色深=访问频次高)", fontsize=12)
+    fig.suptitle("仓位占用热力图(H设计口径:sum+自适应;seed=2026,单seed)", fontsize=12)
     cbar = fig.colorbar(im, ax=axes, shrink=0.8)
     cbar.set_label("货物频次热度(1=最热)", fontsize=10)
     axes[0].legend(handles=[Patch(fc="#8c8c8c", label="预占用格"),
@@ -121,7 +131,7 @@ def fig3():
     deltas = [0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5]
     exp_ts, hot_ts, near_exp, near_hot = [], [], None, None
     for d in deltas:
-        _, res, _ = compute(delta=d)
+        _, res, _ = compute(delta=d, accel=False, adaptive=False)
         exp_ts.append(res["score"]["exp_t"])
         hot_ts.append(res["score"]["hot_t"])
         near_exp = res["near"]["exp_t"]
@@ -134,7 +144,7 @@ def fig3():
     ax.axvspan(0.1, 0.15, color="#c8e6c9", alpha=0.5, label="甜点区 0.10~0.15")
     ax.set_xlabel("δ(位置价值预留权重)")
     ax.set_ylabel("时间 (s)")
-    ax.set_title("δ 标定:δ=0 退化为就近贪心,过大则过度预留(seed=2026)")
+    ax.set_title("δ 静态标定(sum+匀速+固定权重;seed=2026,单seed；非H头条)")
     ax.legend(fontsize=8)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
@@ -152,7 +162,7 @@ def fig4(res):
                     textcoords="offset points", xytext=(8, 4), fontsize=9)
     ax.set_xlabel("期望取货时间 (s) →越小越好")
     ax.set_ylabel("能耗代理 (kg·m) →越小越好")
-    ax.set_title("效率-能耗双目标定位(左下角为优)")
+    ax.set_title("效率-能耗双目标定位(H设计口径;seed=2026,单seed)")
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     fig.savefig(os.path.join(FIGS, "fig4_时间能耗定位.png"), dpi=300)
@@ -183,7 +193,7 @@ def fig5():
     ax.set_xticks(range(3))
     ax.set_xticklabels([case_lbl[c] for c in cases])
     ax.set_ylabel("期望取货时间 (s),均值±σ(5 seeds)")
-    ax.set_title("三类货物分布下的鲁棒性(120件,and 规则)")
+    ax.set_title("三类分布(H设计口径:sum+梯形加减速+自适应;5-seed回归锚)")
     ax.legend(fontsize=8, ncol=5, loc="upper center", bbox_to_anchor=(0.5, -0.12))
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()

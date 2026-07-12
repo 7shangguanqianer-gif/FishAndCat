@@ -213,10 +213,10 @@ class Warehouse:
         return g
 
 
-# ---------------- 场景自适应权重策略表(A1/T11,2026-07-04 拍板①采纳) ----------------
-# 来源:adaptive_weights.py 18场景×15组合×2seeds 标定 + verify_policy.py 留出seed泛化验证通过
-# (批量留出增益均值 6.88% 全正,违规0)。此表是"已定口径"的一部分,与 plc/08 生成文件同源;
-# 重标定必须两处同步并重跑验证。键:(密度档, 分布, 模式) → (δ, β+γ)。
+# ---------------- sim 场景权重设计表(A1/T11) ----------------
+# 0712 fail-first复核后，200/240×三分布的online六格均无fail=0候选，必须显式
+# INFEASIBLE；剩余FEASIBLE格仅是2-seed设计/风险表，不等于生产最优或PLC闭环。
+# 键:(密度档, 分布, 模式) → (δ, β+γ)。
 WEIGHT_POLICY = {
     (120, "uniform", "online"): (0.20, 0.6), (120, "uniform", "batch"): (0.15, 0.6),
     (120, "skew", "online"): (0.10, 1.0),    (120, "skew", "batch"): (0.05, 0.6),
@@ -229,12 +229,20 @@ WEIGHT_POLICY = {
     (240, "heavy", "online"): (0.20, 0.6),   (240, "heavy", "batch"): (0.15, 0.6),
 }
 
+INFEASIBLE_WEIGHT_POLICY = {
+    (dens, case, "online")
+    for dens in (200, 240)
+    for case in ("uniform", "skew", "heavy")
+}
+
 
 def lookup_weights(n_goods, case, mode):
-    """场景→权重查表(PLC 侧对应 plc/08 的 aPolicyDelta/aPolicyBG)。
-    密度档:<160→120档,<220→200档,否则240档(sum口径267可用位;0706重设);未知场景回落固定默认。"""
+    """查sim设计权重；不可行格fail closed，防止把失败幸存者伪装成策略。"""
     dens = 120 if n_goods < 160 else (200 if n_goods < 220 else 240)
-    return WEIGHT_POLICY.get((dens, case, mode), (0.15, 1.0))
+    key = (dens, case, mode)
+    if key in INFEASIBLE_WEIGHT_POLICY:
+        raise ValueError(f"INFEASIBLE adaptive-weight cell: {dens}/{case}/{mode}")
+    return WEIGHT_POLICY.get(key, (0.15, 1.0))
 
 
 # ---------------- 多目标评分(在线 score 与批量 AWRA-LS 共用同一目标函数) ----------------
@@ -464,7 +472,7 @@ def main():
     ap.add_argument("--accel", action="store_true",
                     help="L1:启用梯形速度曲线(加减速)口径;默认匀速(历史口径)")
     ap.add_argument("--adaptive", action="store_true",
-                    help="A1:场景自适应权重查表(报告主口径 H = --accel --adaptive)")
+                    help="A1:sim场景权重设计表；高密度online不可行格会fail closed")
     ap.add_argument("--alpha", type=float, default=1.0, help="评分权重:效率项")
     ap.add_argument("--beta", type=float, default=0.6, help="评分权重:稳定项")
     ap.add_argument("--gamma", type=float, default=0.4, help="评分权重:能耗项")

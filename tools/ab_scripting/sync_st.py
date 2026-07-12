@@ -46,6 +46,7 @@ MAP = [
     ("FB_InitWarehouse",    "04_FB_Warehouse.st", "pou"),
     ("FB_SelectSlot",       "04_FB_Warehouse.st", "pou"),
     ("FB_AssignAllGoods",   "04_FB_Warehouse.st", "pou"),
+    ("FB_AssignClassTurnover", "04_FB_Warehouse.st", "pou"),  # 0712 轨B D-1:CB/TOB 批量分配
     ("FB_LocalSwapImprove", "04_FB_Warehouse.st", "pou"),
     ("FB_Stats",            "04_FB_Warehouse.st", "pou"),
     ("FB_AnimatePath",      "04_FB_Warehouse.st", "pou"),

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>P2 页重构三方案(0711)——选一版,我照施工</title>
+<style>
+  body{font-family:"Microsoft YaHei",sans-serif;background:#f5f6f8;margin:0;padding:24px;color:#222}
+  h1{font-size:22px;margin:0 0 6px}
+  .sub{color:#666;margin-bottom:18px;font-size:14px}
+  .plan{background:#fff;border:1px solid #ddd;border-radius:10px;padding:18px 20px;margin-bottom:26px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .plan h2{margin:0 0 4px;font-size:18px}
+  .tag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}
+  .rec{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+  .meta{font-size:13px;color:#555;margin:6px 0 12px}
+  .mock{position:relative;width:704px;height:396px;border:1px solid #bbb;background:#fff;font-size:7px;overflow:hidden;margin-bottom:10px}
+  .mock *{position:absolute;box-sizing:border-box}
+  .box{border:1px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}
+  .btn{border:1px solid #777;background:linear-gradient(#fdfdfd,#d8d8d8);border-radius:2px;display:flex;align-items:center;justify-content:center}
+  .hdr{background:#e8eaf0;font-weight:bold}
+  .gtitle{background:#fff;color:#369;font-weight:bold;border:0}
+  .gframe{border:1px solid #9ab;background:transparent}
+  .note{font-size:13px;line-height:1.7;margin:8px 0}
+  .note b{color:#1565c0}
+  table{border-collapse:collapse;font-size:13px;margin-top:8px}
+  td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}
+  th{background:#f0f2f5}
+  .warn{background:#fff3e0;border:1px dashed #e65100;padding:8px 12px;border-radius:6px;font-size:13px;margin:10px 0}
+</style>
+</head>
+<body>
+<h1>P2 页重构:三方案对比</h1>
+<div class="sub">公共硬约束:7 个输入框<b>只移动不重建</b>(重建=脚本动作哑的血坑);分组框全用<b>边线条</b>(透明面会吃点击);
+公共修正项(三版都含):报警灯换红色系图像、记录表加"批量分配后查看"提示语、页面标题统一 B 版语言。</div>
+
+<!-- ================= 版 1 ================= -->
+<div class="plan">
+  <h2>版 1 · 对齐 P1 分组风 <span class="tag rec">推荐——两页一套设计语言,评委无切换成本</span></h2>
+  <div class="meta">保持现有结构,套 P1 的分组框体系:RECORDS / QUERY / MODEL PARAMS / SUMMARY 四组,列对齐+表头底纹。改动=纯移动+装饰,<b>~25 分钟</b>。</div>
+  <div class="mock">
+    <div style="left:22px;top:6px;width:340px;height:16px" class="box hdr">P2 - Records, Query and Model Parameters</div>
+    <div style="left:610px;top:6px;width:70px;height:16px" class="btn">Back to P1</div>
+    <!-- RECORDS -->
+    <div style="left:20px;top:36px;width:330px;height:250px" class="gframe"></div>
+    <div style="left:28px;top:30px;width:60px;height:10px" class="gtitle">RECORDS</div>
+    <div style="left:28px;top:48px;width:60px;height:12px" class="box hdr">Goods ID</div>
+    <div style="left:92px;top:48px;width:50px;height:12px" class="box hdr">Col X</div>
+    <div style="left:146px;top:48px;width:50px;height:12px" class="box hdr">Tier Y</div>
+    <div style="left:200px;top:48px;width:60px;height:12px" class="box hdr">Path/m</div>
+    <div style="left:264px;top:48px;width:60px;height:12px" class="box hdr">Travel/s</div>
+    <div style="left:28px;top:64px;width:296px;height:130px;color:#999" class="box">10 行记录(行距加大到 13px)</div>
+    <div style="left:28px;top:206px;width:60px;height:14px" class="btn">Previous</div>
+    <div style="left:94px;top:206px;width:60px;height:14px" class="btn">Next</div>
+    <div style="left:160px;top:206px;width:76px;height:14px" class="box">First row: 1</div>
+    <div style="left:240px;top:206px;width:84px;height:14px" class="box">Total goods: 20</div>
+    <div style="left:28px;top:226px;width:296px;height:12px;color:#a60;border:0" class="box">Tip: run batch assign on P1, then view records here</div>
+    <!-- SUMMARY -->
+    <div style="left:20px;top:296px;width:330px;height:88px" class="gframe"></div>
+    <div style="left:28px;top:290px;width:66px;height:10px" class="gtitle">SUMMARY</div>
+    <div style="left:28px;top:308px;width:150px;height:12px" class="box">Total inbound / s</div><div style="left:182px;top:308px;width:70px;height:12px" class="box">186.0</div>
+    <div style="left:28px;top:324px;width:150px;height:12px" class="box">Average item / s</div><div style="left:182px;top:324px;width:70px;height:12px" class="box">9.3</div>
+    <div style="left:28px;top:340px;width:150px;height:12px" class="box">Space util / %</div><div style="left:182px;top:340px;width:70px;height:12px" class="box">5.0</div>
+    <div style="left:28px;top:356px;width:150px;height:12px" class="box">Total path / m + Violations</div><div style="left:182px;top:356px;width:70px;height:12px" class="box">370 / 0</div>
+    <!-- QUERY -->
+    <div style="left:366px;top:36px;width:318px;height:230px" class="gframe"></div>
+    <div style="left:374px;top:30px;width:46px;height:10px" class="gtitle">QUERY</div>
+    <div style="left:374px;top:48px;width:56px;height:14px" class="box">Query ID</div>
+    <div style="left:434px;top:48px;width:80px;height:14px" class="box">901</div>
+    <div style="left:518px;top:48px;width:50px;height:14px" class="btn">Query</div>
+    <div style="left:572px;top:48px;width:12px;height:12px;border-radius:50%;background:#43a047"></div>
+    <div style="left:588px;top:48px;width:40px;height:14px" class="box">Found</div>
+    <div style="left:374px;top:70px;width:296px;height:186px;color:#999" class="box">10 行结果字段(label 110px + 值 180px)</div>
+    <!-- MODEL PARAMS -->
+    <div style="left:366px;top:276px;width:318px;height:108px" class="gframe"></div>
+    <div style="left:374px;top:270px;width:100px;height:10px" class="gtitle">MODEL PARAMS</div>
+    <div style="left:374px;top:288px;width:296px;height:88px;color:#999" class="box">2×3 调参框(现位置微调对齐;press Query again 提示)</div>
+  </div>
+  <div class="note">要点:结构不动,评委从 P1 切过来看到同一套"细线组+骑缝标题"语言;记录表<b>表头加浅底纹</b>、行距放宽;
+  加一行橙色小字提示"批量分配后查看"(治你提的 Total goods=1 困惑);查询命中灯+Found 排成一行。</div>
+</div>
+
+<!-- ================= 版 2 ================= -->
+<div class="plan">
+  <h2>版 2 · 查询主役型</h2>
+  <div class="meta">评分细则 8 的主角是"单件查询"——把 QUERY 放大置顶(左上),九字段两列大展示;记录表右移,调参压底部横条。<b>~35 分钟</b>,演示动线最戏剧化。</div>
+  <div class="mock">
+    <div style="left:22px;top:6px;width:340px;height:16px" class="box hdr">P2 - Query Center</div>
+    <div style="left:610px;top:6px;width:70px;height:16px" class="btn">Back to P1</div>
+    <!-- QUERY 大区 -->
+    <div style="left:20px;top:36px;width:400px;height:240px" class="gframe" style="border-width:2px"></div>
+    <div style="left:28px;top:30px;width:120px;height:10px" class="gtitle">QUERY BY BUSINESS ID</div>
+    <div style="left:32px;top:52px;width:70px;height:22px" class="box hdr">Query ID</div>
+    <div style="left:106px;top:52px;width:120px;height:22px" class="box"><b>901</b></div>
+    <div style="left:232px;top:52px;width:70px;height:22px" class="btn"><b>Query</b></div>
+    <div style="left:308px;top:54px;width:16px;height:16px;border-radius:50%;background:#43a047"></div>
+    <div style="left:330px;top:52px;width:50px;height:22px" class="box">Found</div>
+    <div style="left:32px;top:86px;width:180px;height:170px;color:#999" class="box">五属性字段(大号)</div>
+    <div style="left:222px;top:86px;width:186px;height:170px;color:#999" class="box">位置+四时间口径(大号)</div>
+    <!-- RECORDS 右 -->
+    <div style="left:436px;top:36px;width:248px;height:240px" class="gframe"></div>
+    <div style="left:444px;top:30px;width:60px;height:10px" class="gtitle">RECORDS</div>
+    <div style="left:444px;top:50px;width:232px;height:180px;color:#999" class="box">紧凑记录表(10 行)+翻页</div>
+    <div style="left:444px;top:240px;width:232px;height:12px;color:#a60;border:0" class="box">Tip: run batch assign first</div>
+    <!-- 调参横条 -->
+    <div style="left:20px;top:288px;width:664px;height:60px" class="gframe"></div>
+    <div style="left:28px;top:282px;width:100px;height:10px" class="gtitle">MODEL PARAMS</div>
+    <div style="left:28px;top:300px;width:648px;height:40px;color:#999" class="box">6 框一行横排(label 短化)</div>
+    <!-- SUMMARY 底条 -->
+    <div style="left:20px;top:356px;width:664px;height:28px" class="gframe"></div>
+    <div style="left:28px;top:350px;width:66px;height:10px" class="gtitle">SUMMARY</div>
+    <div style="left:96px;top:362px;width:560px;height:14px;color:#999;border:0" class="box">五统计量一行横排</div>
+  </div>
+  <div class="note">要点:查询区占 1/3 版面、字段大字号两列展示——评委输入 901 后信息扑面而来;
+  调参 6 框横排一行(label 用 T1/T2/T3/W1/W2/факт 短标签+完整名放组标题行);统计压成一行底条。
+  <b>代价</b>:元素移动量最大(70+),记录表变窄(列名缩写)。</div>
+</div>
+
+<!-- ================= 版 3 ================= -->
+<div class="plan">
+  <h2>版 3 · 双栏审计型</h2>
+  <div class="meta">左栏通高记录表(审计感),右栏上查询下调参;顶部加页面导航条。<b>~30 分钟</b>,信息密度最均衡。</div>
+  <div class="mock">
+    <div style="left:0px;top:0px;width:704px;height:26px;border-bottom:1px solid #888;background:#eef1f5"></div>
+    <div style="left:22px;top:5px;width:220px;height:16px;border:0;font-weight:bold" class="box">P2 · Records / Query / Params</div>
+    <div style="left:540px;top:5px;width:66px;height:16px" class="btn">P1 Main</div>
+    <div style="left:612px;top:5px;width:66px;height:16px" class="btn hdr">P2 (here)</div>
+    <!-- 左栏 RECORDS 通高 -->
+    <div style="left:20px;top:40px;width:320px;height:344px" class="gframe"></div>
+    <div style="left:28px;top:34px;width:60px;height:10px" class="gtitle">RECORDS</div>
+    <div style="left:28px;top:54px;width:304px;height:16px" class="box hdr">Goods ID | Col X | Tier Y | Path | Travel</div>
+    <div style="left:28px;top:74px;width:304px;height:230px;color:#999" class="box">10 行(行高 22px 大行距)</div>
+    <div style="left:28px;top:312px;width:70px;height:16px" class="btn">Previous</div>
+    <div style="left:104px;top:312px;width:70px;height:16px" class="btn">Next</div>
+    <div style="left:180px;top:312px;width:152px;height:16px" class="box">First row: 1 / Total: 20</div>
+    <div style="left:28px;top:336px;width:304px;height:14px;color:#a60;border:0" class="box">Tip: run batch assign on P1 first</div>
+    <div style="left:28px;top:356px;width:304px;height:20px;color:#999" class="box">SUMMARY 五量二行微缩</div>
+    <!-- 右栏 -->
+    <div style="left:356px;top:40px;width:328px;height:196px" class="gframe"></div>
+    <div style="left:364px;top:34px;width:46px;height:10px" class="gtitle">QUERY</div>
+    <div style="left:364px;top:56px;width:312px;height:170px;color:#999" class="box">ID 输入+Query+Found 灯 / 九字段单列</div>
+    <div style="left:356px;top:248px;width:328px;height:136px" class="gframe"></div>
+    <div style="left:364px;top:242px;width:100px;height:10px" class="gtitle">MODEL PARAMS</div>
+    <div style="left:364px;top:262px;width:312px;height:110px;color:#999" class="box">2×3 调参 + 默认值备忘行</div>
+  </div>
+  <div class="note">要点:记录表行高 22px(现 24px 挤 10 行区),通高呈现"审计台账"气质;顶部导航条把 P1/P2 做成"标签页"隐喻
+  (当前页按钮加深)。<b>代价</b>:SUMMARY 被压缩(五量挤两行小字)。</div>
+</div>
+
+<table>
+  <tr><th></th><th>版1 对齐P1(推荐)</th><th>版2 查询主役</th><th>版3 双栏审计</th></tr>
+  <tr><td>移动元素量</td><td>~40</td><td>~75</td><td>~60</td></tr>
+  <tr><td>观感重点</td><td>两页统一</td><td>查询戏剧性</td><td>台账气质</td></tr>
+  <tr><td>工时</td><td>~25 分钟</td><td>~35 分钟</td><td>~30 分钟</td></tr>
+  <tr><td>风险</td><td>低</td><td>低-中(动得最多)</td><td>低-中</td></tr>
+</table>
+
+<div class="warn"><b>三版公共包(选哪版都做)</b>:①报警 Lamp 换红色图像(GUI 一处属性,我给步骤或脚本试)
+②记录表区加橙色小字提示"先批量分配再看"(治 Total goods=1 困惑)③表头底纹(浅灰填充走常量色通道)
+④7 输入框只 move 保动作 ⑤边线条组框。<br>
+<b>回复格式</b>:版号即可(如"版1");有嫁接需求也说(如"版1 + 版2 的查询大字段")。</div>
+</body>
+</html>

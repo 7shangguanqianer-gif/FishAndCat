@@ -8,13 +8,15 @@
    注意:测试会改写仓库状态,跑完请按 CmdReset 重新初始化再演示。
    ============================================================ *)
 PROGRAM PRG_Test
+VAR CONSTANT
+    N_CASES   : INT := 75;                  // 用例总数(0712 轨B扩容 T60-T75;常量化=N4-08,在线不可改)
+END_VAR
 VAR
     xRunTests : BOOL;                       // 置 TRUE 触发(自动复位)
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    N_CASES   : INT := 59;                  // 用例总数(0711 A2-A4 T46-56;C1/C2/C6 T57-59)
-    aResult   : ARRAY[1..59] OF BOOL;       // 各用例结果(TRUE=通过)
+    aResult   : ARRAY[1..75] OF BOOL;       // 各用例结果(TRUE=通过;上界与 N_CASES 同步维护)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
@@ -25,6 +27,7 @@ VAR
     fbQueryT  : FB_QueryGood;               // T42:单件查询测试(块3)
     fbRecPageT : FB_RecordPage;             // T43:记录页窗口测试(块3)
     fbDetT    : FB_SceneDetect;             // T49-T53:场景检测器测试(A2,0711)
+    fbCT      : FB_AssignClassTurnover;     // T63-T65:CB/TOB 批量分配测试(0712 轨B)
     fbAuthT   : FB_UserAuth;                // T54:两级权限测试(A4,0711)
     fbGuardT  : FB_ParamGuard;              // T55:调参守卫测试(A4,0711)
     fbVisuT   : FB_VisuRefresh;             // T59:层高亮/层计数测试(C1,0711)
@@ -34,12 +37,13 @@ VAR
     rV        : REAL;
     iVecFail  : INT;
     iAwraPosDiff : INT;                     // T25 逐位分歧计数(信息性;0=终局布局与 sim 逐位一致)
+    iCtPosDiff   : INT;                     // T68/T69 CB/TOB 逐位分歧计数(0712 轨B)
 END_VAR
 
 IF xRunTests THEN
     xRunTests := FALSE;
     iPassed := 0;  iFailed := 0;  sLastFail := '';
-    FOR i := 1 TO 59 DO aResult[i] := TRUE; END_FOR
+    FOR i := 1 TO N_CASES DO aResult[i] := TRUE; END_FOR   // R6:全量初始化,防漏写新测试继承旧值
 
     // ---- T01-T04 承重系数:正常/顶层/负钳位/越上钳位 ----
     aResult[1] := ABS(FC_CapCoef(y := 0)  - 1.0)  < 0.0001;
@@ -490,12 +494,21 @@ IF xRunTests THEN
         fbAssign(xStart := TRUE, xUseRank := FALSE, iStrategy := 2);
         n := n + 1;
     END_WHILE
-    aResult[58] := aResult[58] AND GVL_WH.aGoods[1].Assigned
+    // R8:先判两件 Assigned 再做坐标索引(IEC AND 不短路,失败路径 X=-1 会越界读)
+    IF GVL_WH.aGoods[1].Assigned AND GVL_WH.aGoods[2].Assigned THEN
+        aResult[58] := aResult[58]
                AND (ABS(GVL_WH.aSlotFreq[GVL_WH.aGoods[1].X, GVL_WH.aGoods[1].Y] - 5.0) < 0.0001)
                AND (GVL_WH.aSlotOps[GVL_WH.aGoods[1].X, GVL_WH.aGoods[1].Y] >= 1)
                AND (GVL_WH.aSlotOps[GVL_WH.aGoods[2].X, GVL_WH.aGoods[2].Y] >= 1);
+    ELSE
+        aResult[58] := FALSE;
+    END_IF
 
     // ---- T59 层高亮集成:计数正确 + 高亮色=FC_BlendLight(原色)(相对锚,免猜状态色) ----
+    // R8:T58 失败路径(X=-1)防御——未分配则直接判红,不做坐标索引
+    IF NOT GVL_WH.aGoods[1].Assigned THEN
+        aResult[59] := FALSE;
+    ELSE
     GVL_Visu.InTierSel := -1;
     fbVisuT();                                          // 无高亮基准帧
     x := GVL_WH.aGoods[1].X;  y := GVL_WH.aGoods[1].Y;
@@ -508,6 +521,392 @@ IF xRunTests THEN
                     = FC_BlendLight(dw := dwBefore));
     GVL_Visu.InTierSel := -1;                           // 恢复,防外溢
     GVL_WH.iGoodsCount := 2;
+    END_IF                                              // R8:T59 防御分支收口
+
+    // ============ 0712 轨B:T60-T75(平局统一/容量护栏/CB-TOB/隐患清扫;逐阶段实现) ============
+
+    // ---- T60 near 平局全序=(时间,层,列)=Python(N5-01 统一):等时对(0,1)vs(4,0)须选(4,0) ----
+    //      travel(0,1)=max(0, 1*CELL_H/rVy)=2.0 = travel(4,0)=max(4*CELL_W/rVx, 0)=2.0
+    //      (默认参数 1.0/2.0/0.5;两值均为精确二进制数,REAL 相等判定安全)
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
+    FOR x := 0 TO GVL_Param.COLS - 1 DO
+        FOR y := 0 TO GVL_Param.TIERS - 1 DO
+            GVL_WH.aSlots[x, y].Occupied := TRUE;       // 全库置占,只留两个等时可行位
+        END_FOR
+    END_FOR
+    GVL_WH.aSlots[0, 1].Occupied := FALSE;
+    GVL_WH.aSlots[4, 0].Occupied := FALSE;
+    GVL_WH.aMaintBlock[0, 1] := FALSE;                  // 防御:确保无检修残留
+    GVL_WH.aMaintBlock[4, 0] := FALSE;
+    fbSel(iStrategy := 1, rGoodW := 10.0, rGoodF := 5.0, rGoodV := 0.5,
+          rWMax := 10.0, rFMax := 5.0);
+    aResult[60] := fbSel.xFound AND (fbSel.iBestX = 4) AND (fbSel.iBestY = 0);
+    fbInit(xExecute := FALSE, iRule := 3);              // 恢复干净态(防外溢到后续)
+    fbInit(xExecute := TRUE,  iRule := 3);
+
+    // ---- T61 FC_LoadDemoGoods 满仓护栏(N4-15:395+20>400 拒载不部分写入;空仓正常加载) ----
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
+    GVL_WH.iGoodsCount := 395;
+    aResult[61] := NOT FC_LoadDemoGoods() AND (GVL_WH.iGoodsCount = 395);
+    GVL_WH.iGoodsCount := 0;
+    aResult[61] := aResult[61] AND FC_LoadDemoGoods()
+                   AND (GVL_WH.iGoodsCount = GVL_Data.N_DEMO);
+    // R1:二次载入必须被 ID 冲突拒载(表内已有 Id 1..20),件数不变
+    aResult[61] := aResult[61] AND (NOT FC_LoadDemoGoods())
+                   AND (GVL_WH.iGoodsCount = GVL_Data.N_DEMO);
+
+    // ---- T62 守卫回滚后评分立即用恢复值(N4-14 配套:值级生效;时序前置由 PRG_Main 结构保证) ----
+    fbGuardT(iLevel := 1);                              // 刷快照=现值(0.15,T55 已恢复)
+    rV := FC_CalcScore(rGoodW := 50.0, rGoodF := 50.0, x := 5, y := 5,
+                       rWMax := 100.0, rFMax := 100.0); // 合法参数评分基准
+    GVL_Param.rDelta := 0.99;                           // 模拟越权写(非管理员)
+    fbGuardT(iLevel := 0);                              // 守卫回滚 rDelta
+    aResult[62] := (ABS(FC_CalcScore(rGoodW := 50.0, rGoodF := 50.0, x := 5, y := 5,
+                        rWMax := 100.0, rFMax := 100.0) - rV) < 0.0001);
+
+    // ---- T63 CB 类界+空闲序跳过语义(freq 60/25/10/5→A/B/C/C;starts=[0,1,2];
+    //      频次刻意远离 0.70/0.90 边界(acc=60/85/95/100)防 REAL32↔float64 舍入翻类;
+    //      iRule=0=and 口径 49 格预占(x、y 均被3整除,含(0,0)/(3,0));空闲时间序头=
+    //      (1,0),(2,0),(4,0),(0,1),(1,1),(2,1)…;期望坐标由 Python run_class_based(goods,"and")
+    //      机器验证(勿手算):A→(1,0);B skip1→(4,0);C1 skip2→(1,1);C2 skip2→(2,1)) ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 60.0;  GVL_WH.aGoods[1].Volume := 0.5;  GVL_WH.aGoods[1].Assigned := FALSE;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Weight := 10.0;
+    GVL_WH.aGoods[2].Freq := 25.0;  GVL_WH.aGoods[2].Volume := 0.5;  GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.aGoods[3].Id := 3;  GVL_WH.aGoods[3].Weight := 10.0;
+    GVL_WH.aGoods[3].Freq := 10.0;  GVL_WH.aGoods[3].Volume := 0.5;  GVL_WH.aGoods[3].Assigned := FALSE;
+    GVL_WH.aGoods[4].Id := 4;  GVL_WH.aGoods[4].Weight := 10.0;
+    GVL_WH.aGoods[4].Freq := 5.0;   GVL_WH.aGoods[4].Volume := 0.5;  GVL_WH.aGoods[4].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 4;
+    fbCT(xStart := FALSE, iMode := 4);
+    fbCT(xStart := TRUE,  iMode := 4);
+    n := 0;
+    WHILE fbCT.xBusy AND (n < 100000) DO
+        fbCT(xStart := TRUE, iMode := 4);
+        n := n + 1;
+    END_WHILE
+    aResult[63] := (GVL_WH.iCbClass[1] = 0) AND (GVL_WH.iCbClass[2] = 1)
+               AND (GVL_WH.iCbClass[3] = 2) AND (GVL_WH.iCbClass[4] = 2)
+               AND (GVL_WH.aCbStarts[0] = 0) AND (GVL_WH.aCbStarts[1] = 1)
+               AND (GVL_WH.aCbStarts[2] = 2)
+               AND (GVL_WH.aGoods[1].X = 1) AND (GVL_WH.aGoods[1].Y = 0)
+               AND (GVL_WH.aGoods[2].X = 4) AND (GVL_WH.aGoods[2].Y = 0)
+               AND (GVL_WH.aGoods[3].X = 1) AND (GVL_WH.aGoods[3].Y = 1)
+               AND (GVL_WH.aGoods[4].X = 2) AND (GVL_WH.aGoods[4].Y = 1)
+               AND (fbCT.iAssigned = 4) AND (fbCT.iFailed = 0);
+
+    // ---- T64 CB 近满仓:钳位(空闲≤类起点→试最后空闲格)+满仓 fail(freq 60/25/15→A/B/C,
+    //      acc=60/85/100 远离边界;仅留 (0,0),(9,9):A→(0,0);B skip1 空闲仅1→钳位落(9,9);
+    //      C skip2 空闲0→fail) ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    FOR x := 0 TO GVL_Param.COLS - 1 DO
+        FOR y := 0 TO GVL_Param.TIERS - 1 DO
+            GVL_WH.aSlots[x, y].Occupied := TRUE;
+        END_FOR
+    END_FOR
+    GVL_WH.aSlots[0, 0].Occupied := FALSE;
+    GVL_WH.aSlots[9, 9].Occupied := FALSE;
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 60.0;  GVL_WH.aGoods[1].Volume := 0.5;  GVL_WH.aGoods[1].Assigned := FALSE;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Weight := 10.0;
+    GVL_WH.aGoods[2].Freq := 25.0;  GVL_WH.aGoods[2].Volume := 0.5;  GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.aGoods[3].Id := 3;  GVL_WH.aGoods[3].Weight := 10.0;
+    GVL_WH.aGoods[3].Freq := 15.0;  GVL_WH.aGoods[3].Volume := 0.5;  GVL_WH.aGoods[3].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 3;
+    fbCT(xStart := FALSE, iMode := 4);
+    fbCT(xStart := TRUE,  iMode := 4);
+    n := 0;
+    WHILE fbCT.xBusy AND (n < 100000) DO
+        fbCT(xStart := TRUE, iMode := 4);
+        n := n + 1;
+    END_WHILE
+    aResult[64] := (GVL_WH.aGoods[1].X = 0) AND (GVL_WH.aGoods[1].Y = 0)
+               AND (GVL_WH.aGoods[2].X = 9) AND (GVL_WH.aGoods[2].Y = 9)
+               AND (NOT GVL_WH.aGoods[3].Assigned)
+               AND (fbCT.iAssigned = 2) AND (fbCT.iFailed = 1);
+
+    // ---- T65 TOB 周转序(freq 5/50/20→放置序 Id2,Id3,Id1;iRule=0=and 预占含(0,0),
+    //      期望由 Python run_full_turnover(goods,"and") 机器验证:(1,0),(2,0),(4,0)) ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 5.0;   GVL_WH.aGoods[1].Volume := 0.5;  GVL_WH.aGoods[1].Assigned := FALSE;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Weight := 10.0;
+    GVL_WH.aGoods[2].Freq := 50.0;  GVL_WH.aGoods[2].Volume := 0.5;  GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.aGoods[3].Id := 3;  GVL_WH.aGoods[3].Weight := 10.0;
+    GVL_WH.aGoods[3].Freq := 20.0;  GVL_WH.aGoods[3].Volume := 0.5;  GVL_WH.aGoods[3].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 3;
+    fbCT(xStart := FALSE, iMode := 5);
+    fbCT(xStart := TRUE,  iMode := 5);
+    n := 0;
+    WHILE fbCT.xBusy AND (n < 100000) DO
+        fbCT(xStart := TRUE, iMode := 5);
+        n := n + 1;
+    END_WHILE
+    aResult[65] := (GVL_WH.aGoods[2].X = 1) AND (GVL_WH.aGoods[2].Y = 0)
+               AND (GVL_WH.aGoods[3].X = 2) AND (GVL_WH.aGoods[3].Y = 0)
+               AND (GVL_WH.aGoods[1].X = 4) AND (GVL_WH.aGoods[1].Y = 0)
+               AND (fbCT.iAssigned = 3) AND (fbCT.iFailed = 0);
+
+    // ---- T66 检测器 lexicographic 三分支(n=200→CB(4);60→AWRA(3);120→TOB(5)) ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    FOR i := 1 TO 200 DO
+        GVL_WH.aGoods[i].Id := i;  GVL_WH.aGoods[i].Weight := 10.0;
+        GVL_WH.aGoods[i].Freq := 5.0;  GVL_WH.aGoods[i].Volume := 0.5;
+        GVL_WH.aGoods[i].Assigned := FALSE;
+    END_FOR
+    GVL_WH.iGoodsCount := 200;                          // density=200/267=0.749≥0.70
+    n := 0;
+    fbDetT(iObjective := 1);
+    WHILE NOT fbDetT.xValid AND (n < 1000) DO
+        fbDetT(iObjective := 1);
+        n := n + 1;
+    END_WHILE
+    aResult[66] := fbDetT.xValid AND (fbDetT.iRecBatch = 4);
+    GVL_WH.iGoodsCount := 60;                           // density=0.225≤0.25 且 n>20
+    n := 0;
+    fbDetT(iObjective := 1);
+    WHILE NOT fbDetT.xValid AND (n < 1000) DO
+        fbDetT(iObjective := 1);
+        n := n + 1;
+    END_WHILE
+    aResult[66] := aResult[66] AND fbDetT.xValid AND (fbDetT.iRecBatch = 3);
+    GVL_WH.iGoodsCount := 120;                          // density=0.449→主导档
+    n := 0;
+    fbDetT(iObjective := 1);
+    WHILE NOT fbDetT.xValid AND (n < 1000) DO
+        fbDetT(iObjective := 1);
+        n := n + 1;
+    END_WHILE
+    aResult[66] := aResult[66] AND fbDetT.xValid AND (fbDetT.iRecBatch = 5);
+
+    // ---- T67 tiny_light 防回归(n=20,density=0.075:n≤20→TOB(5) 而非 AWRA;
+    //      st_ifelse 旧生成文本漏 n>20 条件曾误路由,权威=select_strategy) ----
+    GVL_WH.iGoodsCount := 20;
+    n := 0;
+    fbDetT(iObjective := 1);
+    WHILE NOT fbDetT.xValid AND (n < 1000) DO
+        fbDetT(iObjective := 1);
+        n := n + 1;
+    END_WHILE
+    aResult[67] := fbDetT.xValid AND (fbDetT.iRecBatch = 5);
+    GVL_WH.iGoodsCount := 0;                            // 清场防外溢
+    fbDetT(iObjective := 0);
+
+    // ---- T68 CB 全流程终局一致性(端到端黄金向量;同 T25 哲学:逐位+聚合+计数+违规0;
+    //      向量源=07_GVL_Data aCbExpect/CB_*(sum 官方口径,匀速,seed2026 20件)) ----
+    GVL_Param.xUseAccel := FALSE;
+    GVL_WH.iGoodsCount := 0;
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);              // sum 官方口径(133 预占)
+    FC_LoadDemoGoods();
+    fbCT(xStart := FALSE, iMode := 4);
+    fbCT(xStart := TRUE,  iMode := 4);
+    n := 0;
+    WHILE fbCT.xBusy AND (n < 100000) DO
+        fbCT(xStart := TRUE, iMode := 4);
+        n := n + 1;
+    END_WHILE
+    fbStats(xExecute := FALSE);
+    fbStats(xExecute := TRUE);
+    iCtPosDiff := 0;
+    FOR i := 1 TO GVL_Data.N_CB DO
+        IF (GVL_WH.aGoods[GVL_Data.aCbExpect[i].Id].X <> GVL_Data.aCbExpect[i].X)
+        OR (GVL_WH.aGoods[GVL_Data.aCbExpect[i].Id].Y <> GVL_Data.aCbExpect[i].Y) THEN
+            iCtPosDiff := iCtPosDiff + 1;
+        END_IF
+    END_FOR
+    aResult[68] := (iCtPosDiff = 0)
+       AND (GVL_WH.stStats.PlacedCnt = GVL_Data.CB_PLACED)
+       AND (GVL_WH.stStats.FailedCnt = GVL_Data.CB_FAILED)
+       AND (ABS(GVL_WH.stStats.ExpRetrieval - GVL_Data.CB_EXPT) < 0.001)
+       AND (ABS(GVL_WH.stStats.Energy      - GVL_Data.CB_ENERGY) < 0.01)
+       AND (GVL_WH.stStats.ViolCnt = 0);
+
+    // ---- T69 TOB 全流程终局一致性(同 T68;向量源=aTobExpect/TOB_*) ----
+    GVL_WH.iGoodsCount := 0;
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
+    FC_LoadDemoGoods();
+    fbCT(xStart := FALSE, iMode := 5);
+    fbCT(xStart := TRUE,  iMode := 5);
+    n := 0;
+    WHILE fbCT.xBusy AND (n < 100000) DO
+        fbCT(xStart := TRUE, iMode := 5);
+        n := n + 1;
+    END_WHILE
+    fbStats(xExecute := FALSE);
+    fbStats(xExecute := TRUE);
+    iCtPosDiff := 0;
+    FOR i := 1 TO GVL_Data.N_TOB DO
+        IF (GVL_WH.aGoods[GVL_Data.aTobExpect[i].Id].X <> GVL_Data.aTobExpect[i].X)
+        OR (GVL_WH.aGoods[GVL_Data.aTobExpect[i].Id].Y <> GVL_Data.aTobExpect[i].Y) THEN
+            iCtPosDiff := iCtPosDiff + 1;
+        END_IF
+    END_FOR
+    aResult[69] := (iCtPosDiff = 0)
+       AND (GVL_WH.stStats.PlacedCnt = GVL_Data.TOB_PLACED)
+       AND (GVL_WH.stStats.FailedCnt = GVL_Data.TOB_FAILED)
+       AND (ABS(GVL_WH.stStats.ExpRetrieval - GVL_Data.TOB_EXPT) < 0.001)
+       AND (ABS(GVL_WH.stStats.Energy      - GVL_Data.TOB_ENERGY) < 0.01)
+       AND (GVL_WH.stStats.ViolCnt = 0);
+    GVL_WH.iGoodsCount := 0;                            // 清场防外溢
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
+
+    // ---- T70 ID 契约(N4-16):iId<=0 拒收;重复 Id 拒收;正常唯一 Id 通过 ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    GVL_WH.iGoodsCount := 0;
+    fbGoodsInputT(xAdd := FALSE, iId := 0, sName := 'X',
+                  rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    fbGoodsInputT(xAdd := TRUE,  iId := 0, sName := 'X',
+                  rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    aResult[70] := (NOT fbGoodsInputT.xOk) AND (fbGoodsInputT.iErrId = 4)
+               AND (GVL_WH.iGoodsCount = 0);
+    fbGoodsInputT(xAdd := FALSE, iId := 7, sName := 'A',
+                  rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    fbGoodsInputT(xAdd := TRUE,  iId := 7, sName := 'A',
+                  rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    aResult[70] := aResult[70] AND fbGoodsInputT.xOk AND (GVL_WH.iGoodsCount = 1);
+    fbGoodsInputT(xAdd := FALSE, iId := 7, sName := 'B',
+                  rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    fbGoodsInputT(xAdd := TRUE,  iId := 7, sName := 'B',
+                  rWeight := 10.0, rFreq := 5.0, rVolume := 0.5);
+    aResult[70] := aResult[70] AND (NOT fbGoodsInputT.xOk)
+               AND (fbGoodsInputT.iErrId = 4) AND (GVL_WH.iGoodsCount = 1);
+
+    // ---- T71 分片钳位(N4-18):nBatchPerCycle=0 时批量仍收敛(MAX(1,·) 防静默挂起) ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    x := GVL_Param.nBatchPerCycle;                      // 暂存,测后恢复
+    GVL_Param.nBatchPerCycle := 0;
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 5.0;  GVL_WH.aGoods[1].Volume := 0.5;
+    GVL_WH.aGoods[1].Assigned := FALSE;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Weight := 20.0;
+    GVL_WH.aGoods[2].Freq := 3.0;  GVL_WH.aGoods[2].Volume := 0.5;
+    GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 2;
+    fbAssign(xStart := FALSE, xUseRank := FALSE, iStrategy := 2);
+    fbAssign(xStart := TRUE,  xUseRank := FALSE, iStrategy := 2);
+    n := 0;
+    WHILE fbAssign.xBusy AND (n < 100000) DO
+        fbAssign(xStart := TRUE, xUseRank := FALSE, iStrategy := 2);
+        n := n + 1;
+    END_WHILE
+    aResult[71] := fbAssign.xDone AND GVL_WH.aGoods[1].Assigned
+               AND GVL_WH.aGoods[2].Assigned;
+    GVL_Param.nBatchPerCycle := x;                      // 恢复
+    // R6:nPairsPerCycle/nMaxLsRounds=0 同样钳位(局搜仍收敛不挂起)
+    x := GVL_Param.nPairsPerCycle;  y := GVL_Param.nMaxLsRounds;
+    GVL_Param.nPairsPerCycle := 0;  GVL_Param.nMaxLsRounds := 0;
+    fbImprove(xStart := FALSE);
+    fbImprove(xStart := TRUE);
+    n := 0;
+    WHILE fbImprove.xBusy AND (n < 100000) DO
+        fbImprove(xStart := TRUE);
+        n := n + 1;
+    END_WHILE
+    aResult[71] := aResult[71] AND fbImprove.xDone;
+    GVL_Param.nPairsPerCycle := x;  GVL_Param.nMaxLsRounds := y;
+
+    // ---- T72 违规一致性扫描(N4-20 扩):干净批=0;手动弄脏一件的记录坐标→检出>=1 ----
+    fbStats(xExecute := FALSE);
+    fbStats(xExecute := TRUE);                          // T71 的 2 件干净布局
+    aResult[72] := (GVL_WH.stStats.ViolCnt = 0);
+    GVL_WH.aGoods[1].X := 15;  GVL_WH.aGoods[1].Y := 15;   // 记录改到无货格(格侧未动)
+    fbStats(xExecute := FALSE);
+    fbStats(xExecute := TRUE);
+    aResult[72] := aResult[72] AND (GVL_WH.stStats.ViolCnt >= 1);
+    // R2:幽灵格((17,18) 非预占;占用+GoodsId 指向不存在货物)由计数平衡现形→违规再+1
+    GVL_WH.aSlots[17, 18].Occupied := TRUE;
+    GVL_WH.aSlots[17, 18].GoodsId := 999;
+    fbStats(xExecute := FALSE);
+    fbStats(xExecute := TRUE);
+    aResult[72] := aResult[72] AND (GVL_WH.stStats.ViolCnt >= 2);
+    GVL_WH.aSlots[17, 18].Occupied := FALSE;            // 清理幽灵格
+    GVL_WH.aSlots[17, 18].GoodsId := 0;
+
+    // ---- T73 检修真冻结(N4-23/A3):冻结源位存量不被重定位搬走;解除后允许搬 ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 50.0;  GVL_WH.aGoods[1].Volume := 0.5;
+    GVL_WH.aGoods[1].Assigned := TRUE;                  // 手动放远位(19,19):高频货在远位=必有更优
+    GVL_WH.aGoods[1].X := 19;  GVL_WH.aGoods[1].Y := 19;
+    GVL_WH.aSlots[19, 19].Occupied := TRUE;
+    GVL_WH.aSlots[19, 19].GoodsId := 1;
+    GVL_WH.aRankIdx[1] := 1;
+    GVL_WH.iGoodsCount := 1;
+    GVL_WH.aMaintBlock[19, 19] := TRUE;                 // 冻结源位
+    fbImprove(xStart := FALSE);
+    fbImprove(xStart := TRUE);
+    n := 0;
+    WHILE fbImprove.xBusy AND (n < 100000) DO
+        fbImprove(xStart := TRUE);
+        n := n + 1;
+    END_WHILE
+    aResult[73] := (GVL_WH.aGoods[1].X = 19) AND (GVL_WH.aGoods[1].Y = 19);  // 未被搬走
+    GVL_WH.aMaintBlock[19, 19] := FALSE;                // 解除冻结
+    fbImprove(xStart := FALSE);
+    fbImprove(xStart := TRUE);
+    n := 0;
+    WHILE fbImprove.xBusy AND (n < 100000) DO
+        fbImprove(xStart := TRUE);
+        n := n + 1;
+    END_WHILE
+    aResult[73] := aResult[73]
+               AND ((GVL_WH.aGoods[1].X <> 19) OR (GVL_WH.aGoods[1].Y <> 19));  // 搬到更优位
+    GVL_WH.iGoodsCount := 0;                            // 清场
+
+    // ---- T74 FC_TMax 除零钳位(N4-24):rVx=0 不炸且>0;恢复后=38.0(max(9.5,38)) ----
+    rV := GVL_Param.rVx;
+    GVL_Param.rVx := 0.0;
+    // R4:非法速度回落 1.0 与行程函数同源→分母恰=38(max(19/1.0, 19/0.5)),非仅">0"
+    aResult[74] := (ABS(FC_TMax() - 38.0) < 0.001);
+    GVL_Param.rVx := rV;
+    aResult[74] := aResult[74] AND (ABS(FC_TMax() - 38.0) < 0.001);
+
+    // ---- T75 CT 忙时重入护栏(R7):运行中二次 xStart 沿+改 iMode 均被忽略——
+    //      不重启(否则重复放置 iAssigned=8)、不切档(否则第3件走 TOB 落 (4,0) 而非 CB 的 (1,1))。
+    //      场景=T63 同款 4 件(and 口径机器验证布局 (1,0)/(4,0)/(1,1)/(2,1))。
+    //      注:计数器饱和(N5-09/10/11)为类型级改动由编译+回归覆盖;PRG_Main 行为项
+    //      (N5-05 清零/N4-17 锁存/N4-22 快照)由演示预演人工验证(PRG_Test 测不到主状态机)。 ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Weight := 10.0;
+    GVL_WH.aGoods[1].Freq := 60.0;  GVL_WH.aGoods[1].Volume := 0.5;  GVL_WH.aGoods[1].Assigned := FALSE;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Weight := 10.0;
+    GVL_WH.aGoods[2].Freq := 25.0;  GVL_WH.aGoods[2].Volume := 0.5;  GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.aGoods[3].Id := 3;  GVL_WH.aGoods[3].Weight := 10.0;
+    GVL_WH.aGoods[3].Freq := 10.0;  GVL_WH.aGoods[3].Volume := 0.5;  GVL_WH.aGoods[3].Assigned := FALSE;
+    GVL_WH.aGoods[4].Id := 4;  GVL_WH.aGoods[4].Weight := 10.0;
+    GVL_WH.aGoods[4].Freq := 5.0;   GVL_WH.aGoods[4].Volume := 0.5;  GVL_WH.aGoods[4].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 4;
+    fbCT(xStart := FALSE, iMode := 4);
+    fbCT(xStart := TRUE,  iMode := 4);                  // 启动(CB)
+    FOR i := 1 TO 3 DO
+        fbCT(xStart := TRUE, iMode := 4);               // 驱动数拍(序表插入排序中,仍 busy)
+    END_FOR
+    fbCT(xStart := FALSE, iMode := 5);                  // 中途落沿+改档
+    fbCT(xStart := TRUE,  iMode := 5);                  // 二次上升沿:应被 iPhase 门忽略
+    n := 0;
+    WHILE fbCT.xBusy AND (n < 100000) DO
+        fbCT(xStart := TRUE, iMode := 5);
+        n := n + 1;
+    END_WHILE
+    aResult[75] := fbCT.xDone AND (fbCT.iAssigned = 4) AND (fbCT.iFailed = 0)
+               AND (GVL_WH.aGoods[3].X = 1) AND (GVL_WH.aGoods[3].Y = 1);   // CB 语义保持=锁存生效
+    GVL_WH.iGoodsCount := 0;                            // 清场
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

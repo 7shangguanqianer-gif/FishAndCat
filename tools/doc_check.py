@@ -34,13 +34,14 @@ SKIP_LINE_HINTS = ("已迁移", "历史路径", "变更记录", "figs/fig", "fig
 STATELESS_DOCS = ["README.md", os.path.join("docs", "ClaudeCode接管提示词.md"),
                   os.path.join("docs", "Codex总对接提示词.md")]
 VOLATILE_RE = re.compile(r"(\d+)\s*(?:个)?\s*(?:用例|任务完成|/1[0-9]\s*任务)")
-VOLATILE_ALLOW = ("iPassed=23",)      # 操作卡验收值属于"ST 代码事实"而非进度,允许
+VOLATILE_ALLOW = ("iPassed=59",)      # 最后一次有证据的AB基线；新计数须另行实跑后更新
 
 
 def iter_md():
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in
-                       (".git", "_ref", "out", "figs", "__pycache__", "AB_Project")]
+                       (".git", "_ref", "out", "figs", "__pycache__", "AB_Project",
+                        "backup_0712_merge")]
         for f in filenames:
             if f.endswith(".md"):
                 yield os.path.join(dirpath, f)

@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-realism.py — L7 拟真度阶梯:三档同管线对比(档1 数据模型 / 档2 主口径H / 档3 工业场景)
+realism.py — L7 拟真度阶梯:三档同管线sim对比(档1 数据模型 / 档2 H设计 / 档3 综合情景)
 设计(docs/L7_拟真度阶梯设计.md,0705 用户拍板"分3档展示"):
   三档共用同一管线 = 初始入库 120 件 + 混合流 100 周期(每周期1存+1取,双命令),
   只差拟真开关,保证跨档可比:
     档1 = 匀速 + 固定权重 + 固定节拍 + 无装卸 + 频次全知 + 无故障(对照口径,文献可比)
-    档2 = 梯形加减速 + 自适应权重(= 主口径 H,复用 mixed_ops.run_mixed 保证数字同源)
+    档2 = 梯形加减速 + 场景权重(= sim H设计口径,复用 mixed_ops.run_mixed 保证数字同源)
     档3 = 档2 物理口径 + 泊松到达(峰谷) + 装卸时间 + 频次估计噪声 + 故障注入
-  档3 定位=「全拟真验证」:证明主口径结论(策略排序/降幅方向/违规0)在最真实场景下成立;
+  档3 定位=在显式情景假设下检查均值/分位/违规；不称“最真实”，也不预设全部策略排序不变。
   头条 H 锁不动,本脚本不进回归门(与 sensitivity.py 同例)。
 跨档可比指标:出库均时(纯行程,C3 流版)/ 双命令服务总时 / 违规;
 档3 专属指标:响应时间 P50/P95(含排队)、利用率、故障停机——工业客户视角(可用性)。
 口径纪律:装卸时间只进"服务时间/忙时",不进"出库行程均时"——后者跨档同定义。
-运行:python realism.py            → out/realism_matrix.csv + figs/fig16_拟真度阶梯.png
+  运行:python realism.py            → out/realism_matrix_data.csv + out/realism_matrix_params.csv
+                                      + figs/fig16_拟真度阶梯.png
      python realism.py --quick    → 30 周期自检
 """
 import argparse
@@ -34,12 +35,12 @@ from mixed_ops import LBL, STRATS, build_workload, initial_layout, run_mixed
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEED, N_INIT, RULE = 2026, 120, "sum"
 
-# ---- 档3 拟真参数(占位值,标注〔G*〕待 deep-research 回填后进 canonical G 节)----
+# ---- 档3参数：G1为推导+扫描；G2-G4为显式情景假设，均非现场标定 ----
 HANDLE_S = 15.0        # 〔G1〕单次存/取的装卸附加时间 s(I/O 侧+货位侧两次货叉循环合计)
 RHO_PEAK = 0.75        # 〔G2〕高峰时段堆垛机目标利用率(决定泊松到达强度)
 RHO_OFF = 0.35         # 〔G2〕低谷时段目标利用率
 FREQ_SIGMA = 0.30      # 〔G3〕访问频次估计噪声:f_est = f_true·exp(N(0,σ²)) 对数正态乘性
-MTBF_S = 3000.0        # 〔G4〕忙时平均无故障时间 s(占位:保证百周期流内可见 1~2 次)
+MTBF_S = 3000.0        # 〔G4〕忙时平均无故障时间情景值 s
 MTTR_S = 600.0         # 〔G4〕平均修复时间 s
 
 
@@ -58,11 +59,44 @@ def noisy_clone(goods, sigma, seed):
     return out
 
 
+def build_arrivals(cycles, seed, reference_pair_s):
+    """生成策略外生的共同到达流。
+
+    ``reference_pair_s`` 只由统一的 seq reference 负载估计一次；不得按待比较
+    策略各自反推，否则响应分位数会混入不同到达强度，失去 CRN 公平性。
+    """
+    if cycles < 0:
+        raise ValueError("cycles must be non-negative")
+    if reference_pair_s <= 0:
+        raise ValueError("reference_pair_s must be positive")
+    rng = random.Random(seed + 23)
+    arrivals, t = [], 0.0
+    for k in range(cycles):
+        rho = RHO_PEAK if k < cycles // 2 else RHO_OFF
+        t += rng.expovariate(rho / reference_pair_s)
+        arrivals.append(t)
+    return arrivals
+
+
+def common_arrivals(goods, new_goods, requests, fn, w_max, f_max,
+                    fn_batch=None, cycles=100, seed=SEED):
+    """以统一 seq reference 估计服务均值并生成四策略共享的到达时刻。"""
+    goods_est = noisy_clone(goods, FREQ_SIGMA, seed + 21)
+    new_est = noisy_clone(new_goods, FREQ_SIGMA, seed + 22)
+    probe = run_mixed("seq", goods_est, new_est, requests, fn, w_max, f_max,
+                      fn_batch)
+    reference_pair_s = probe["tot_dual"] / cycles + 2 * HANDLE_S
+    return build_arrivals(cycles, seed, reference_pair_s), reference_pair_s
+
+
 def run_tier3(strat_name, goods, new_goods, requests, fn, w_max, f_max,
-              fn_batch=None, cycles=100, seed=SEED):
+              fn_batch=None, arrivals=None, cycles=100, seed=SEED):
     """档3 事件驱动混合流:单服务台(1台堆垛机)+ 泊松到达(峰谷交替)+
     装卸常数 + 频次噪声(经克隆注入)+ 故障注入(忙时 Exp(MTBF),修 MTTR)。
-    负载(new_goods/requests 的身份序列)与档1/2 完全相同——只叠拟真层,公平口径。"""
+    负载(new_goods/requests 的身份序列)与档1/2 完全相同；arrivals 必须由调用方
+    一次生成并在所有策略间共享。"""
+    if arrivals is None or len(arrivals) != cycles:
+        raise ValueError("run_tier3 requires one common arrivals vector of length cycles")
     # 决策侧全部用带噪克隆;pos_of 按 gid 记位,取货按 gid 查位,与真值对象解耦
     goods_est = noisy_clone(goods, FREQ_SIGMA, seed + 21)
     new_est = noisy_clone(new_goods, FREQ_SIGMA, seed + 22)
@@ -70,20 +104,7 @@ def run_tier3(strat_name, goods, new_goods, requests, fn, w_max, f_max,
     online = {"seq": ws.strat_seq, "near": ws.strat_near,
               "score": ws.strat_score, "awra": ws.strat_score}[strat_name]
 
-    # 无约束平均"任务对"服务时长(行程+装卸)→ 反推泊松到达强度 λ=ρ/E[pair]
-    #(自适应估计,避免拍第二个脑袋;用档2 同负载的均值近似)
-    probe = run_mixed(strat_name, goods_est, new_est, requests, fn, w_max, f_max,
-                      fn_batch)
-    e_pair = probe["tot_dual"] / cycles + 2 * HANDLE_S
-
-    rng_arr = random.Random(seed + 23)
     rng_fail = random.Random(seed + 29)
-    # 峰谷交替:前半高峰、后半低谷(每档同一到达序列种子,策略间同到达流)
-    arrivals, t = [], 0.0
-    for k in range(cycles):
-        rho = RHO_PEAK if k < cycles // 2 else RHO_OFF
-        t += rng_arr.expovariate(rho / e_pair)
-        arrivals.append(t)
     next_fail_busy = rng_fail.expovariate(1.0 / MTBF_S)   # 按忙时累计触发
 
     crane_free = 0.0
@@ -165,9 +186,14 @@ def tier3(goods, new_goods, requests, cycles):
     d_ba, bg_ba = ws.lookup_weights(N_INIT, "skew", "batch")
     fn = ws.make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
     fnb = ws.make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
-    return {s: run_tier3(s, goods, new_goods, requests, fn, w_max, f_max, fnb,
-                         cycles=cycles)
-            for s in STRATS}
+    arrivals, reference_pair_s = common_arrivals(
+        goods, new_goods, requests, fn, w_max, f_max, fnb, cycles=cycles, seed=SEED)
+    out = {s: run_tier3(s, goods, new_goods, requests, fn, w_max, f_max, fnb,
+                        arrivals=arrivals, cycles=cycles)
+           for s in STRATS}
+    return out, dict(arrival_reference_strategy="seq",
+                     arrival_reference_pair_s=reference_pair_s,
+                     common_arrivals=1)
 
 
 def main():
@@ -186,13 +212,14 @@ def main():
     new_goods, requests = build_workload(goods, cycles, SEED)
 
     print(f"L7 拟真度阶梯:{cycles} 周期混合流,seed={SEED}")
-    print(f"档3 拟真参数(占位,待研究回填):装卸 {HANDLE_S}s/次,ρ峰谷 "
+    print(f"档3 sim参数(G1推导+扫描；G2-G4显式情景假设,非现场标定):装卸 {HANDLE_S}s/次,ρ峰谷 "
           f"{RHO_PEAK}/{RHO_OFF},频次噪声 σ={FREQ_SIGMA},MTBF/MTTR "
           f"{MTBF_S:.0f}/{MTTR_S:.0f}s")
+    tier3_out, arrival_meta = tier3(goods, new_goods, requests, cycles)
     tiers = {1: tier12(1, goods, new_goods, requests, cycles),
              2: tier12(2, goods, new_goods, requests, cycles),
-             3: tier3(goods, new_goods, requests, cycles)}
-    TNAME = {1: "档1 数据模型", 2: "档2 主口径H", 3: "档3 工业场景"}
+             3: tier3_out}
+    TNAME = {1: "档1 数据模型", 2: "档2 sim H设计", 3: "档3 综合sim情景"}
 
     for t in (1, 2, 3):
         print(f"\n—— {TNAME[t]} ——")
@@ -218,12 +245,12 @@ def main():
         < tiers[t]["seq"]["avg_retr"] for t in (1, 2, 3))
     print(f"\n★阶梯结论:awra 较 seq 出库均时降幅 档1 {drops[1]:.1f}% → 档2 "
           f"{drops[2]:.1f}% → 档3 {drops[3]:.1f}%;"
-          f"策略排序三档{'保持' if order_keep else '变化(需定位!)'};"
+          f"AWRA/score/seq行程均值偏序三档{'保持' if order_keep else '变化'}；响应P50/P95另判;"
           f"违规合计 {sum(tiers[t][s]['viol'] for t in tiers for s in STRATS)}")
 
     # ---- CSV ----
     os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
-    path = os.path.join(HERE, "out", "realism_matrix.csv")
+    path = os.path.join(HERE, "out", "realism_matrix_data.csv")
     with open(path, "w", newline="", encoding="utf-8-sig") as fp:
         w = csv.writer(fp)
         w.writerow(["tier", "strategy", "avg_retrieve_s", "travel_dual_s",
@@ -239,15 +266,22 @@ def main():
                             "" if m["util"] is None else round(m["util"], 3),
                             m["n_down"], round(m["downtime"], 1),
                             m["fails"], m["viol"]])
-        w.writerow([])
+    param_path = os.path.join(HERE, "out", "realism_matrix_params.csv")
+    with open(param_path, "w", newline="", encoding="utf-8-sig") as fp:
+        w = csv.writer(fp)
         w.writerow(["param", "value", "note"])
         for k, v, note in [
-            ("handle_s", HANDLE_S, "G1 占位待回填"),
-            ("rho_peak", RHO_PEAK, "G2 占位待回填"),
-            ("rho_off", RHO_OFF, "G2 占位待回填"),
-            ("freq_sigma", FREQ_SIGMA, "G3 占位待回填"),
-            ("mtbf_s", MTBF_S, "G4 占位待回填"),
-            ("mttr_s", MTTR_S, "G4 占位待回填"),
+            ("handle_s", HANDLE_S, "G1推导中值；10/15/20s扫描；非现场实测"),
+            ("rho_peak", RHO_PEAK, "G2显式情景假设；非现场标定"),
+            ("rho_off", RHO_OFF, "G2显式情景假设；非现场标定"),
+            ("freq_sigma", FREQ_SIGMA, "G3显式情景假设；非现场标定"),
+            ("mtbf_s", MTBF_S, "G4显式情景假设；非现场标定"),
+            ("mttr_s", MTTR_S, "G4显式情景假设；非现场标定"),
+            ("arrival_reference_strategy", arrival_meta["arrival_reference_strategy"],
+             "所有策略共享同一外生到达流"),
+            ("arrival_reference_pair_s", round(arrival_meta["arrival_reference_pair_s"], 6),
+             "seq reference 的纯行程均值+两次装卸"),
+            ("common_arrivals", arrival_meta["common_arrivals"], "1=CRN 共同到达流"),
             ("cycles", cycles, ""), ("seed", SEED, "")]:
             w.writerow([k, v, note])
 
@@ -270,7 +304,7 @@ def main():
     axL.set_xticks(xs)
     axL.set_xticklabels([TNAME[t] for t in xs], fontsize=9)
     axL.set_ylabel("出库均时 s(纯行程口径,跨档可比)")
-    axL.set_title("三档拟真下的布局质量:结论方向不变,数字逐档更真")
+    axL.set_title("三档sim下的布局质量:AWRA相对seq行程方向保持")
     axL.legend(fontsize=8)
     axL.spines[["top", "right"]].set_visible(False)
 
@@ -288,11 +322,11 @@ def main():
     axR.legend(fontsize=9)
     axR.spines[["top", "right"]].set_visible(False)
     fig.suptitle(f"L7 拟真度阶梯({cycles}周期混合流,seed={SEED};"
-                 f"档3参数为占位值,待行业数据回填)", fontsize=12)
+                 f"档3参数为显式情景假设,共同到达流)", fontsize=12)
     fig.tight_layout()
     os.makedirs(os.path.join(HERE, "figs"), exist_ok=True)
     fig.savefig(os.path.join(HERE, "figs", "fig16_拟真度阶梯.png"), dpi=300)
-    print(f"输出:{path} + figs/fig16_拟真度阶梯.png")
+    print(f"输出:{path} + {param_path} + figs/fig16_拟真度阶梯.png")
 
 
 if __name__ == "__main__":

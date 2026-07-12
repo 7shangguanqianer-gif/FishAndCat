@@ -2,8 +2,8 @@
 """
 experiments.py — 多 seed × 多分布 × 多场景实验矩阵(验证报告的数据引擎)
 运行:python experiments.py            → 输出 sim/out/experiments_detail.csv + _agg.csv
-矩阵:5 seeds × 3 货物分布(A均匀/B偏态/C重货) × 主场景(and,120件)
-     + 紧库存场景(or,150件,3 seeds)——F3 现象的统计版
+矩阵:5 seeds × 3 货物分布 × H 设计口径主场景(sum+梯形加减速+自适应,120件)
+     + 历史紧库存压力场景(or+匀速+固定,150件,3 seeds)——F3 证据保留。
 口径:全部指标沿 canonical C1-C8;随机全部按 seed 播种(B5)。
 """
 import csv
@@ -25,41 +25,55 @@ STRATS = ["random", "seq", "near", "score", "awra"]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 
 
-def run_matrix(goods, rule, seed):
+def run_matrix(goods, rule, seed, case="skew", accel=False, adaptive=False):
     """跑五策略,返回 {strat: metrics}(与 warehouse_sim.main 同逻辑)。"""
     import random as _r
     w_max = max(g.weight for g in goods)
     f_max = max(g.freq for g in goods)
-    fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
+    ws.ACCEL = accel
+    if adaptive:
+        d_on, bg_on = ws.lookup_weights(len(goods), case, "online")
+        d_ba, bg_ba = ws.lookup_weights(len(goods), case, "batch")
+        fn = ws.make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
+        fn_batch = ws.make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
+    else:
+        fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
+        fn_batch = fn
     res = {}
     for name, strat in [("random", ws.strat_random(_r.Random(seed + 1))),
                         ("seq", ws.strat_seq), ("near", ws.strat_near),
                         ("score", ws.strat_score)]:
         wh, placed, failed = ws.run_online(strat, goods, rule, fn)
         res[name] = ws.metrics(wh, placed, failed)
-    wh, placed, failed = ws.run_awra_ls(goods, rule, fn, w_max, f_max)
+    wh, placed, failed = ws.run_awra_ls(goods, rule, fn_batch, w_max, f_max)
     res["awra"] = ws.metrics(wh, placed, failed)
+    ws.ACCEL = False
     return res
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     rows = []
-    # ---- 主场景:and / 120件 / 3分布 / 5seeds ----
+    # ---- H 设计主场景:sum / 梯形加减速 / 自适应 / 120件 / 3分布 / 5seeds ----
     for case in CASES:
         for seed in SEEDS:
             goods = ws.gen_goods(120, seed, case)
-            for s, m in run_matrix(goods, "sum", seed).items():
+            for s, m in run_matrix(goods, "sum", seed, case,
+                                   accel=True, adaptive=True).items():
                 rows.append(dict(scene="main", case=case, rule="sum", goods=120,
+                                 motion="trapezoid", weights="adaptive",
                                  seed=seed, strat=s, **m))
     # ---- 紧库存场景:or / 150件(F3 统计版) ----
     for seed in SEEDS[:3]:
         goods = ws.gen_goods(150, seed, "skew")
-        for s, m in run_matrix(goods, "or", seed).items():
+        for s, m in run_matrix(goods, "or", seed, "skew",
+                               accel=False, adaptive=False).items():
             rows.append(dict(scene="tight", case="skew", rule="or", goods=150,
+                             motion="constant_speed", weights="fixed",
                              seed=seed, strat=s, **m))
 
-    keys = ["scene", "case", "rule", "goods", "seed", "strat", "n", "fail",
+    keys = ["scene", "case", "rule", "goods", "motion", "weights",
+            "seed", "strat", "n", "fail",
             "tot_time2", "exp_t", "hot_t", "heavy_tier", "energy", "cog",
             "path", "util", "viol"]
     with open(os.path.join(OUT, "experiments_detail.csv"), "w", newline="",
@@ -89,6 +103,8 @@ def main():
                 mean_et = st.mean(et)
                 sd_et = st.stdev(et) if len(et) > 1 else 0.0
                 agg_rows.append(dict(scene=scene, case=case, strat=s,
+                                     rule=sel[0]["rule"], motion=sel[0]["motion"],
+                                     weights=sel[0]["weights"],
                                      exp_t_mean=round(mean_et, 3),
                                      exp_t_std=round(sd_et, 3),
                                      hot_t_mean=round(st.mean([r["hot_t"] for r in sel]), 3),
@@ -112,7 +128,7 @@ def main():
                     and r["case"] == case and r["strat"] == s)[k]
     imp = (1 - g("main", "skew", "awra", "exp_t_mean") / g("main", "skew", "seq", "exp_t_mean")) * 100
     ene = (1 - g("main", "skew", "awra", "energy_mean") / g("main", "skew", "seq", "energy_mean")) * 100
-    print(f"\n[主场景/偏态分布,5 seeds] AWRA-LS vs 题面顺序基线:"
+    print(f"\n[H设计口径主场景/偏态分布,5-seed回归锚] AWRA-LS vs 题面顺序基线:"
           f"期望取货降 {imp:.1f}%,能耗降 {ene:.1f}%")
     print(f"[紧库存,3 seeds] near 平均失败 {g('tight','skew','near','fail_mean'):.1f} 件,"
           f"awra 平均失败 {g('tight','skew','awra','fail_mean'):.1f} 件")

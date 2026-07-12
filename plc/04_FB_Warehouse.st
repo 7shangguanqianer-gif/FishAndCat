@@ -56,7 +56,8 @@ END_FUNCTION_BLOCK
    iStrategy: 0=seq 首个可行位(题面"连续存放"字面基线)
               1=near 行程时间最小
               2=score 多目标评分最小(主线)
-   扫描顺序 x外层/y内层,平局保留先者 —— 与 Python 迭代序/tie-break 一字对齐 *)
+   扫描顺序 x外层/y内层；near 平局已统一为(时间,层,列)=Python 语义(0712 轨B,N5-01,T60 锁定)；
+   score 平局仍为(评分,时间)+扫描序兜底(与 consistency_probe "st"口径一致,未动)。 *)
 FUNCTION_BLOCK FB_SelectSlot
 VAR_INPUT
     iStrategy : INT;
@@ -98,8 +99,11 @@ FOR x := 0 TO GVL_Param.COLS - 1 DO
             rT := FC_CalcTravelTime(x0 := 0, y0 := 0, x1 := x, y1 := y,
                                     xSimXY := GVL_Param.xSimultaneousXY);
             IF iStrategy = 1 THEN
-                // near:按 (时间, 层, 列) 严格更小才替换(平局保先者=Python min 语义)
-                xBetter := rT < rBestTime;
+                // near:(时间,层,列)全序=Python strat_near 语义(0712 轨B统一,N5-01,T60 锁定;
+                //      等时候选来自同公式的精确格点值,REAL 相等判定在测试向量上安全)
+                xBetter := (rT < rBestTime)
+                           OR ((rT = rBestTime) AND (y < iBestY))
+                           OR ((rT = rBestTime) AND (y = iBestY) AND (x < iBestX));
             ELSE
                 // score:按 (评分, 时间) 严格更小;层/列由扫描顺序天然兜底
                 rS := FC_CalcScore(rGoodW := rGoodW, rGoodF := rGoodF, x := x, y := y,
@@ -122,7 +126,11 @@ END_FUNCTION_BLOCK
 (* ---------- FB_AssignAllGoods:批量分配(分片状态机,跨扫描周期) ----------
    xUseRank=TRUE  → AWRA 模式:先按优先级排序(重货/高频先挑),再逐件选位
    xUseRank=FALSE → 在线模式:按到达顺序逐件选位(决赛交互场景等价)
-   每周期只处理 nBatchPerCycle 件(排序阶段每周期 nSortOuter 个外层位),非阻塞 *)
+   每周期只处理 nBatchPerCycle 件(排序阶段每周期 nSortOuter 个外层位),非阻塞。
+   N4-19 边界声明(0712 轨B):本 FB 评分/行程经 FC_CalcScore/FC_CalcTravelTime 读实时
+   GVL_Param——运行中(多扫描周期)改权重/速度会产生混合口径布局。防线=fbGuard 已前置
+   (非管理员写同拍回滚)+分片参数 MAX(1,·) 钳位;管理员中途改参属演示自伤,不做完整
+   参数快照(改 FC 签名会牵动 T19/T25 信任锚,代价>收益;CB/TOB 新 FB 的序表已快照)。 *)
 FUNCTION_BLOCK FB_AssignAllGoods
 VAR_INPUT
     xStart    : BOOL;           // 上升沿启动
@@ -197,7 +205,7 @@ CASE iPhase OF
 
     3:  // ---- Assign:逐件选位(分片:每周期 nBatchPerCycle 件) ----
         k := 0;
-        WHILE (k < GVL_Param.nBatchPerCycle) AND (iCur <= GVL_WH.iGoodsCount) DO
+        WHILE (k < MAX(1, GVL_Param.nBatchPerCycle)) AND (iCur <= GVL_WH.iGoodsCount) DO
             iG := GVL_WH.aRankIdx[iCur];
             fbSel(iStrategy := iStrategy,
                   rGoodW := GVL_WH.aGoods[iG].Weight,
@@ -208,7 +216,9 @@ CASE iPhase OF
                 GVL_WH.aSlots[fbSel.iBestX, fbSel.iBestY].Occupied := TRUE;
                 GVL_WH.aSlots[fbSel.iBestX, fbSel.iBestY].GoodsId  := GVL_WH.aGoods[iG].Id;
                 GVL_WH.aSlotFreq[fbSel.iBestX, fbSel.iBestY] := GVL_WH.aGoods[iG].Freq;   // C2
-                GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] := GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] + 1;  // C6 履历
+                IF GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] < UDINT#4294967295 THEN
+                    GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] := GVL_WH.aSlotOps[fbSel.iBestX, fbSel.iBestY] + 1;  // C6 履历(R5 饱和)
+                END_IF
                 GVL_WH.aGoods[iG].Assigned   := TRUE;
                 GVL_WH.aGoods[iG].X          := fbSel.iBestX;
                 GVL_WH.aGoods[iG].Y          := fbSel.iBestY;
@@ -237,6 +247,269 @@ END_CASE
 END_FUNCTION_BLOCK
 
 
+(* ---------- FB_AssignClassTurnover:CB/TOB 批量分配(0712 轨B D-1,分片状态机) ----------
+   iMode=4 CB 分级存储:货物按频次降序累计占比 70%/90% 分 A/B/C 类;全库仓位按
+          (travel,tier,col) 升序建时间序表;各类从"空闲格序"的类起点偏移开始找
+          首个可行位,段后无果回退从头 —— 与 sim/strategy_lib.run_class_based 一字对齐,
+          含 min(start,len-1) 钳位语义(空闲格不足类起点时先试最后一个空闲格)。
+   iMode=5 TOB 全周转:货物按 (-Freq,Id) 序逐件放"当前最近可行位"=FB_SelectSlot(near)
+          (平局 (时间,层,列) 已于 0712 轨B 统一,与 _slots_by_time 同键) = run_full_turnover。
+   排序键=匀速口径(与 sim _slots_by_time 主口径一致;xUseAccel 只影响统计显示不改选位序)。
+   运动学参数批开工拍快照(rVxSnap/rVySnap):防管理员中途改速把序表改到一半(N4-19 同款)。
+   货物平局按 Goods.Id(=Python gid 语义,非数组下标;N5-03 在新代码中做对)。
+   验收:T63 类界 / T64 回退+钳位 / T65 TOB 序 / T68-T69 端到端黄金向量。 *)
+FUNCTION_BLOCK FB_AssignClassTurnover
+VAR_INPUT
+    xStart : BOOL;              // 上升沿启动
+    iMode  : INT;               // 4=CB 5=TOB(其余值拒绝启动)
+END_VAR
+VAR_OUTPUT
+    xBusy     : BOOL;
+    xDone     : BOOL;
+    iAssigned : INT;
+    iFailed   : INT;
+END_VAR
+VAR
+    xOld        : BOOL;
+    iPhase      : INT;          // 0=空闲 1=初始化 2=货物排序 3=travel缓存 4=仓位排序 5=分类 6=分配 7=完成
+    i, j, k     : INT;
+    iSortPos    : INT;          // 货物选择排序外层游标
+    iBestJ      : INT;
+    iTmp        : INT;
+    iCur        : INT;          // 分配游标(aRankIdx 上)
+    iG          : INT;
+    nSortOuter  : INT := 20;    // 货物排序每周期外层位数(同 FB_AssignAllGoods)
+    nSortSlots  : INT := 25;    // 仓位插入排序每周期新元素数(真机压测若超时可再减)
+    iSlotSorted : INT;          // 仓位排序已排数
+    rWMax, rFMax : REAL;
+    rVxSnap, rVySnap : REAL;    // 批开工快照(防中途改参,N4-19)
+    xSimXYSnap  : BOOL;         // 同上:运动模型开关快照
+    aSlotTravel : ARRAY[1..400] OF REAL;   // 序表同步的 travel 缓存(排序只比缓存,零函数调用)
+    rT_j        : REAL;
+    iCj         : INT;          // 新元素编码 x*100+y
+    iXj, iYj    : INT;
+    rF_tot, rAcc : REAL;
+    iSkip, iIdx, iFree : INT;
+    iLastX, iLastY : INT;       // 钳位语义:最后一个空闲格
+    xPlaced     : BOOL;
+    iPass       : INT;
+    rScoreP, rTimeP : REAL;
+    fbSel       : FB_SelectSlot;
+END_VAR
+
+IF xStart AND NOT xOld THEN
+    // R7:iPhase=0 门=忙时忽略新沿(防中途重启清空进度);iModeRun 启动锁存(防运行中切 4↔5)
+    IF (GVL_WH.iGoodsCount > 0) AND ((iMode = 4) OR (iMode = 5)) AND (iPhase = 0) THEN
+        iModeRun := iMode;
+        iPhase := 1;  xBusy := TRUE;  xDone := FALSE;
+        iAssigned := 0;  iFailed := 0;
+        iCur := 1;  iSortPos := 1;  iSlotSorted := 0;
+    END_IF
+END_IF
+xOld := xStart;
+
+CASE iPhase OF
+    1:  // ---- 初始化:归一分母+索引+运动学快照(单周期 O(n)) ----
+        rWMax := 0.0;  rFMax := 0.0;
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            IF GVL_WH.aGoods[i].Weight > rWMax THEN rWMax := GVL_WH.aGoods[i].Weight; END_IF
+            IF GVL_WH.aGoods[i].Freq   > rFMax THEN rFMax := GVL_WH.aGoods[i].Freq;   END_IF
+            GVL_WH.aRankIdx[i] := i;
+        END_FOR
+        rVxSnap := GVL_Param.rVx;   IF rVxSnap <= 0.0 THEN rVxSnap := 0.001; END_IF  // 除零钳位(N4-24 同款)
+        rVySnap := GVL_Param.rVy;   IF rVySnap <= 0.0 THEN rVySnap := 0.001; END_IF
+        xSimXYSnap := GVL_Param.xSimultaneousXY;
+        iPhase := 2;
+
+    2:  // ---- 货物排序:(-Freq, Id升序) 选择排序(分片;平局按 Id=Python gid 语义) ----
+        k := 0;
+        WHILE (k < nSortOuter) AND (iSortPos < GVL_WH.iGoodsCount) DO
+            iBestJ := iSortPos;
+            FOR j := iSortPos + 1 TO GVL_WH.iGoodsCount DO
+                IF (GVL_WH.aGoods[GVL_WH.aRankIdx[j]].Freq >
+                    GVL_WH.aGoods[GVL_WH.aRankIdx[iBestJ]].Freq)
+                OR ((GVL_WH.aGoods[GVL_WH.aRankIdx[j]].Freq =
+                     GVL_WH.aGoods[GVL_WH.aRankIdx[iBestJ]].Freq)
+                    AND (GVL_WH.aGoods[GVL_WH.aRankIdx[j]].Id <
+                         GVL_WH.aGoods[GVL_WH.aRankIdx[iBestJ]].Id)) THEN
+                    iBestJ := j;
+                END_IF
+            END_FOR
+            iTmp := GVL_WH.aRankIdx[iSortPos];
+            GVL_WH.aRankIdx[iSortPos] := GVL_WH.aRankIdx[iBestJ];
+            GVL_WH.aRankIdx[iBestJ]   := iTmp;
+            iSortPos := iSortPos + 1;
+            k := k + 1;
+        END_WHILE
+        IF iSortPos >= GVL_WH.iGoodsCount THEN
+            IF iModeRun = 4 THEN iPhase := 3; ELSE iPhase := 6; END_IF   // TOB 无需序表/分类(R7:读锁存)
+        END_IF
+
+    3:  // ---- CB:travel 缓存(单周期 O(400);匀速公式+快照速度,不调函数防实时参数) ----
+        FOR i := 1 TO GVL_Param.COLS * GVL_Param.TIERS DO
+            iXj := (i - 1) / GVL_Param.TIERS;
+            iYj := (i - 1) MOD GVL_Param.TIERS;
+            GVL_WH.aSlotOrder[i] := iXj * 100 + iYj;   // 初始=行主序,phase4 排它
+            IF xSimXYSnap THEN
+                aSlotTravel[i] := MAX(INT_TO_REAL(iXj) * GVL_Param.CELL_W / rVxSnap,
+                                      INT_TO_REAL(iYj) * GVL_Param.CELL_H / rVySnap);
+            ELSE
+                aSlotTravel[i] := INT_TO_REAL(iXj) * GVL_Param.CELL_W / rVxSnap
+                                + INT_TO_REAL(iYj) * GVL_Param.CELL_H / rVySnap;
+            END_IF
+        END_FOR
+        iSlotSorted := 1;                               // 首元素天然有序
+        iPhase := 4;
+
+    4:  // ---- CB:仓位插入排序(分片 nSortSlots/周期;键=(travel,tier,col),tier=v MOD 100,col=v/100) ----
+        k := 0;
+        WHILE (k < nSortSlots) AND (iSlotSorted < GVL_Param.COLS * GVL_Param.TIERS) DO
+            j := iSlotSorted + 1;
+            rT_j := aSlotTravel[j];
+            iCj  := GVL_WH.aSlotOrder[j];
+            i := j - 1;
+            WHILE i >= 1 DO                             // AND 不短路:判断与访问分离防越界
+                IF (aSlotTravel[i] > rT_j)
+                OR ((aSlotTravel[i] = rT_j) AND ((GVL_WH.aSlotOrder[i] MOD 100) > (iCj MOD 100)))
+                OR ((aSlotTravel[i] = rT_j) AND ((GVL_WH.aSlotOrder[i] MOD 100) = (iCj MOD 100))
+                    AND ((GVL_WH.aSlotOrder[i] / 100) > (iCj / 100))) THEN
+                    aSlotTravel[i + 1]      := aSlotTravel[i];
+                    GVL_WH.aSlotOrder[i + 1] := GVL_WH.aSlotOrder[i];
+                    i := i - 1;
+                ELSE
+                    EXIT;
+                END_IF
+            END_WHILE
+            aSlotTravel[i + 1]      := rT_j;
+            GVL_WH.aSlotOrder[i + 1] := iCj;
+            iSlotSorted := iSlotSorted + 1;
+            k := k + 1;
+        END_WHILE
+        IF iSlotSorted >= GVL_Param.COLS * GVL_Param.TIERS THEN iPhase := 5; END_IF
+
+    5:  // ---- CB:分类(单周期;沿已排货物序累计频次,<=0.70/0.90 分界=Python 同式) ----
+        rF_tot := 0.0;
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            rF_tot := rF_tot + GVL_WH.aGoods[i].Freq;
+        END_FOR
+        IF rF_tot <= 0.0 THEN rF_tot := 1.0; END_IF     // Python: or 1.0
+        rAcc := 0.0;
+        GVL_WH.aCbStarts[0] := 0;  GVL_WH.aCbStarts[1] := 0;  GVL_WH.aCbStarts[2] := 0;
+        FOR i := 1 TO GVL_WH.iGoodsCount DO             // 按 aRankIdx 序(=ranked)
+            iG := GVL_WH.aRankIdx[i];
+            rAcc := rAcc + GVL_WH.aGoods[iG].Freq;
+            IF rAcc <= 0.70 * rF_tot THEN
+                GVL_WH.iCbClass[iG] := 0;
+                GVL_WH.aCbStarts[1] := GVL_WH.aCbStarts[1] + 1;      // 暂存 nA
+            ELSIF rAcc <= 0.90 * rF_tot THEN
+                GVL_WH.iCbClass[iG] := 1;
+                GVL_WH.aCbStarts[2] := GVL_WH.aCbStarts[2] + 1;      // 暂存 nB
+            ELSE
+                GVL_WH.iCbClass[iG] := 2;
+            END_IF
+        END_FOR
+        // starts = [0, nA, nA+nB]
+        GVL_WH.aCbStarts[2] := GVL_WH.aCbStarts[1] + GVL_WH.aCbStarts[2];
+        iPhase := 6;
+
+    6:  // ---- 分配(分片 nBatchPerCycle 件/周期;副作用与 FB_AssignAllGoods 逐项同款) ----
+        k := 0;
+        WHILE (k < MAX(1, GVL_Param.nBatchPerCycle)) AND (iCur <= GVL_WH.iGoodsCount) DO
+            iG := GVL_WH.aRankIdx[iCur];
+            xPlaced := FALSE;
+            IF iModeRun = 5 THEN
+                // TOB:当前最近可行位 = near 原语((时间,层,列) 平局已统一)
+                fbSel(iStrategy := 1,
+                      rGoodW := GVL_WH.aGoods[iG].Weight,
+                      rGoodF := GVL_WH.aGoods[iG].Freq,
+                      rGoodV := GVL_WH.aGoods[iG].Volume,
+                      rWMax := rWMax, rFMax := rFMax);
+                IF fbSel.xFound THEN
+                    xPlaced := TRUE;
+                    iXj := fbSel.iBestX;  iYj := fbSel.iBestY;
+                    rScoreP := fbSel.rBestScore;  rTimeP := fbSel.rBestTime;
+                END_IF
+            ELSE
+                // CB:pass1=类起点偏移(空闲格计数),pass1 无果含钳位分支,pass2=从头回退
+                iPass := 1;
+                WHILE (iPass <= 2) AND NOT xPlaced DO
+                    IF iPass = 1 THEN
+                        iSkip := GVL_WH.aCbStarts[GVL_WH.iCbClass[iG]];
+                    ELSE
+                        iSkip := 0;
+                    END_IF
+                    iFree := 0;  iLastX := -1;  iLastY := -1;
+                    FOR iIdx := 1 TO GVL_Param.COLS * GVL_Param.TIERS DO
+                        iXj := GVL_WH.aSlotOrder[iIdx] / 100;
+                        iYj := GVL_WH.aSlotOrder[iIdx] MOD 100;
+                        IF NOT GVL_WH.aSlots[iXj, iYj].Occupied THEN
+                            IF iFree >= iSkip THEN
+                                IF FC_CheckFeasible(x := iXj, y := iYj,
+                                        rGoodW := GVL_WH.aGoods[iG].Weight,
+                                        rGoodV := GVL_WH.aGoods[iG].Volume) THEN
+                                    xPlaced := TRUE;
+                                    EXIT;
+                                END_IF
+                            END_IF
+                            iLastX := iXj;  iLastY := iYj;
+                            iFree := iFree + 1;
+                        END_IF
+                    END_FOR
+                    // Python min(start,len-1) 钳位:空闲格数≤类起点→先试最后一个空闲格
+                    IF (NOT xPlaced) AND (iPass = 1) AND (iFree > 0)
+                       AND (iFree <= iSkip) AND (iLastX >= 0) THEN
+                        IF FC_CheckFeasible(x := iLastX, y := iLastY,
+                                rGoodW := GVL_WH.aGoods[iG].Weight,
+                                rGoodV := GVL_WH.aGoods[iG].Volume) THEN
+                            iXj := iLastX;  iYj := iLastY;
+                            xPlaced := TRUE;
+                        END_IF
+                    END_IF
+                    iPass := iPass + 1;
+                END_WHILE
+                IF xPlaced THEN
+                    rScoreP := FC_CalcScore(rGoodW := GVL_WH.aGoods[iG].Weight,
+                                            rGoodF := GVL_WH.aGoods[iG].Freq,
+                                            x := iXj, y := iYj,
+                                            rWMax := rWMax, rFMax := rFMax);
+                    rTimeP := FC_CalcTravelTime(x0 := 0, y0 := 0, x1 := iXj, y1 := iYj,
+                                                xSimXY := GVL_Param.xSimultaneousXY);
+                END_IF
+            END_IF
+            IF xPlaced THEN
+                GVL_WH.aSlots[iXj, iYj].Occupied := TRUE;
+                GVL_WH.aSlots[iXj, iYj].GoodsId  := GVL_WH.aGoods[iG].Id;
+                GVL_WH.aSlotFreq[iXj, iYj] := GVL_WH.aGoods[iG].Freq;                 // C2
+                IF GVL_WH.aSlotOps[iXj, iYj] < UDINT#4294967295 THEN
+                    GVL_WH.aSlotOps[iXj, iYj] := GVL_WH.aSlotOps[iXj, iYj] + 1;       // C6 履历(R5 饱和)
+                END_IF
+                GVL_WH.aGoods[iG].Assigned   := TRUE;
+                GVL_WH.aGoods[iG].X          := iXj;
+                GVL_WH.aGoods[iG].Y          := iYj;
+                GVL_WH.aGoods[iG].Score      := rScoreP;
+                GVL_WH.aGoods[iG].ExecTime   := rTimeP;
+                GVL_WH.aGoods[iG].PathLength := FC_CalcPathLen(x0 := 0, y0 := 0,
+                                                x1 := iXj, y1 := iYj);
+                GVL_Visu.VisuSlotState[iXj, iYj] := 2;                                // 绿:已占
+                iAssigned := iAssigned + 1;
+            ELSE
+                GVL_WH.aGoods[iG].Assigned := FALSE;
+                GVL_WH.aGoods[iG].X := -1;  GVL_WH.aGoods[iG].Y := -1;
+                iFailed := iFailed + 1;
+                GVL_Visu.VisuStatusText := CONCAT('NO_SLOT_GOODS_ID=',
+                                                  INT_TO_STRING(GVL_WH.aGoods[iG].Id));
+            END_IF
+            iCur := iCur + 1;
+            k := k + 1;
+        END_WHILE
+        IF iCur > GVL_WH.iGoodsCount THEN iPhase := 7; END_IF
+
+    7:  // ---- 完成 ----
+        xBusy := FALSE;  xDone := TRUE;  iPhase := 0;
+END_CASE
+END_FUNCTION_BLOCK
+
+
 (* ---------- FB_LocalSwapImprove:局部搜索(AWRA-LS 第三段,分片状态机) ----------
    每轮 = 重定位阶段(逐货找更优空位)+ 成对交换阶段(互换后总分下降则换);
    有改进继续下一轮(≤nMaxLsRounds),无改进提前收敛。
@@ -248,8 +521,8 @@ END_VAR
 VAR_OUTPUT
     xBusy   : BOOL;
     xDone   : BOOL;
-    iSwaps  : INT;
-    iRelocs : INT;
+    iSwaps  : DINT;     // 0712 轨B N5-10:接受数上界虽远小于评估数(O(n²)),仍加宽杜绝溢出
+    iRelocs : DINT;     // 0712 轨B N5-06/10:与 iSwaps 分列并同宽
     iRounds : INT;
 END_VAR
 VAR
@@ -285,9 +558,13 @@ xOld := xStart;
 CASE iPhase OF
     1:  // ---- 重定位:每周期 nBatchPerCycle 件,每件全库扫描更优空位 ----
         k := 0;
-        WHILE (k < GVL_Param.nBatchPerCycle) AND (iCurR <= GVL_WH.iGoodsCount) DO
+        WHILE (k < MAX(1, GVL_Param.nBatchPerCycle)) AND (iCurR <= GVL_WH.iGoodsCount) DO
             iGi := GVL_WH.aRankIdx[iCurR];
+            // 0712 轨B N4-23/A3(D4 拍板"真冻结"):检修位存量原地冻结,重定位跳过其源位
+            // (成对交换阶段已由 FC_FitsPhysical 目的地检查间接挡住,唯此 phase1 缺源位检查;
+            //  嵌套 IF 而非 AND——IEC AND 不短路,failed 货 X=-1 时并列条件会越界读 aMaintBlock)
             IF GVL_WH.aGoods[iGi].Assigned THEN
+            IF NOT GVL_WH.aMaintBlock[GVL_WH.aGoods[iGi].X, GVL_WH.aGoods[iGi].Y] THEN
                 rCur := FC_CalcScore(rGoodW := GVL_WH.aGoods[iGi].Weight,
                                      rGoodF := GVL_WH.aGoods[iGi].Freq,
                                      x := GVL_WH.aGoods[iGi].X, y := GVL_WH.aGoods[iGi].Y,
@@ -316,7 +593,9 @@ CASE iPhase OF
                     GVL_WH.aSlots[iBx, iBy].Occupied := TRUE;
                     GVL_WH.aSlots[iBx, iBy].GoodsId  := GVL_WH.aGoods[iGi].Id;
                     GVL_WH.aSlotFreq[iBx, iBy] := GVL_WH.aGoods[iGi].Freq;                 // C2
-                    GVL_WH.aSlotOps[iBx, iBy] := GVL_WH.aSlotOps[iBx, iBy] + 1;            // C6 搬移=一次存取
+                    IF GVL_WH.aSlotOps[iBx, iBy] < UDINT#4294967295 THEN
+                        GVL_WH.aSlotOps[iBx, iBy] := GVL_WH.aSlotOps[iBx, iBy] + 1;        // C6 搬移=一次存取(R5 饱和)
+                    END_IF
                     GVL_Visu.VisuSlotState[iBx, iBy] := 2;
                     GVL_WH.aGoods[iGi].X := iBx;  GVL_WH.aGoods[iGi].Y := iBy;
                     GVL_WH.aGoods[iGi].Score := rBest;
@@ -326,6 +605,7 @@ CASE iPhase OF
                     iRelocs := iRelocs + 1;  xImproved := TRUE;
                 END_IF
             END_IF
+            END_IF                                      // 配对 N4-23 嵌套的 Assigned 外层 IF
             iCurR := iCurR + 1;  k := k + 1;
         END_WHILE
         IF iCurR > GVL_WH.iGoodsCount THEN
@@ -334,7 +614,7 @@ CASE iPhase OF
 
     2:  // ---- 成对交换:每周期 nPairsPerCycle 对 ----
         k := 0;
-        WHILE (k < GVL_Param.nPairsPerCycle) AND (iI < GVL_WH.iGoodsCount) DO
+        WHILE (k < MAX(1, GVL_Param.nPairsPerCycle)) AND (iI < GVL_WH.iGoodsCount) DO
             iGi := GVL_WH.aRankIdx[iI];  iGj := GVL_WH.aRankIdx[iJ];
             IF GVL_WH.aGoods[iGi].Assigned AND GVL_WH.aGoods[iGj].Assigned THEN
                 xiA := GVL_WH.aGoods[iGi].X;  yiA := GVL_WH.aGoods[iGi].Y;
@@ -357,8 +637,12 @@ CASE iPhase OF
                         GVL_WH.aSlots[xjA, yjA].GoodsId := GVL_WH.aGoods[iGi].Id;
                         GVL_WH.aSlotFreq[xiA, yiA] := GVL_WH.aGoods[iGj].Freq;   // C2 互换
                         GVL_WH.aSlotFreq[xjA, yjA] := GVL_WH.aGoods[iGi].Freq;
-                        GVL_WH.aSlotOps[xiA, yiA] := GVL_WH.aSlotOps[xiA, yiA] + 1;  // C6 交换=两格各一次存取
-                        GVL_WH.aSlotOps[xjA, yjA] := GVL_WH.aSlotOps[xjA, yjA] + 1;
+                        IF GVL_WH.aSlotOps[xiA, yiA] < UDINT#4294967295 THEN
+                            GVL_WH.aSlotOps[xiA, yiA] := GVL_WH.aSlotOps[xiA, yiA] + 1;  // C6 交换=两格各一次存取(R5 饱和)
+                        END_IF
+                        IF GVL_WH.aSlotOps[xjA, yjA] < UDINT#4294967295 THEN
+                            GVL_WH.aSlotOps[xjA, yjA] := GVL_WH.aSlotOps[xjA, yjA] + 1;
+                        END_IF
                         GVL_WH.aGoods[iGi].X := xjA;  GVL_WH.aGoods[iGi].Y := yjA;
                         GVL_WH.aGoods[iGj].X := xiA;  GVL_WH.aGoods[iGj].Y := yiA;
                         GVL_WH.aGoods[iGi].ExecTime := FC_CalcTravelTime(x0 := 0, y0 := 0,
@@ -381,7 +665,8 @@ CASE iPhase OF
         IF iI >= GVL_WH.iGoodsCount THEN iPhase := 3; END_IF
 
     3:  // ---- 轮末判定 ----
-        IF xImproved AND (iRounds < GVL_Param.nMaxLsRounds) THEN
+        // 0712 轨B N4-18:MAX(1,·) 钳位——HMI 可调分片参数被置 0/负时防游标停摆静默挂起
+        IF xImproved AND (iRounds < MAX(1, GVL_Param.nMaxLsRounds)) THEN
             iRounds := iRounds + 1;  xImproved := FALSE;
             iCurR := 1;  iPhase := 1;               // 下一轮从重定位开始
         ELSE
@@ -405,6 +690,7 @@ END_VAR
 VAR
     xOld : BOOL;
     i, x, y, nUsed : INT;
+    nOccGoods : INT;            // R2:非预占占用格计数(与 PlacedCnt 平衡校验)
     rT, rFSum, rWSum, rFT, rWH : REAL;
 END_VAR
 
@@ -424,10 +710,18 @@ IF xExecute AND NOT xOld THEN
             rFT   := rFT   + GVL_WH.aGoods[i].Freq * rT;
             rWSum := rWSum + GVL_WH.aGoods[i].Weight;
             rWH   := rWH   + GVL_WH.aGoods[i].Weight * INT_TO_REAL(GVL_WH.aGoods[i].Y) * GVL_Param.CELL_H;
-            // C8 违规复查:分配结果必须仍满足约束(恒0,非0=程序缺陷立即可见)
-            IF (GVL_WH.aGoods[i].Weight > GVL_WH.aSlots[GVL_WH.aGoods[i].X, GVL_WH.aGoods[i].Y].MaxWeight)
+            // C8 违规复查(0712 轨B N4-20 扩为一致性扫描;覆盖=坐标界+记录↔格一致+承重/容积,
+            // 报告措辞对应收窄,勿称"全部约束"。坐标界前置=顺带修 X=-1 时的越界读)
+            IF (GVL_WH.aGoods[i].X < 0) OR (GVL_WH.aGoods[i].X > GVL_Param.COLS - 1)
+            OR (GVL_WH.aGoods[i].Y < 0) OR (GVL_WH.aGoods[i].Y > GVL_Param.TIERS - 1) THEN
+                GVL_WH.stStats.ViolCnt := GVL_WH.stStats.ViolCnt + 1;      // 坐标越界
+            ELSIF NOT GVL_WH.aSlots[GVL_WH.aGoods[i].X, GVL_WH.aGoods[i].Y].Occupied
+               OR (GVL_WH.aSlots[GVL_WH.aGoods[i].X, GVL_WH.aGoods[i].Y].GoodsId
+                   <> GVL_WH.aGoods[i].Id) THEN
+                GVL_WH.stStats.ViolCnt := GVL_WH.stStats.ViolCnt + 1;      // 记录与格不一致
+            ELSIF (GVL_WH.aGoods[i].Weight > GVL_WH.aSlots[GVL_WH.aGoods[i].X, GVL_WH.aGoods[i].Y].MaxWeight)
             OR (GVL_WH.aGoods[i].Volume > GVL_WH.aSlots[GVL_WH.aGoods[i].X, GVL_WH.aGoods[i].Y].MaxVolume) THEN
-                GVL_WH.stStats.ViolCnt := GVL_WH.stStats.ViolCnt + 1;
+                GVL_WH.stStats.ViolCnt := GVL_WH.stStats.ViolCnt + 1;      // 承重/容积
             END_IF
         ELSE
             GVL_WH.stStats.FailedCnt := GVL_WH.stStats.FailedCnt + 1;
@@ -443,12 +737,24 @@ IF xExecute AND NOT xOld THEN
     IF rWSum > 0.0 THEN GVL_WH.stStats.CogHeight := rWH / rWSum;    ELSE GVL_WH.stStats.CogHeight := 0.0;    END_IF
     GVL_WH.stStats.Energy := rWH;                       // Σ 重量*高度 kg·m(C4)
 
-    nUsed := 0;
+    nUsed := 0;  nOccGoods := 0;
     FOR x := 0 TO GVL_Param.COLS - 1 DO
         FOR y := 0 TO GVL_Param.TIERS - 1 DO
-            IF GVL_WH.aSlots[x, y].Occupied THEN nUsed := nUsed + 1; END_IF
+            IF GVL_WH.aSlots[x, y].Occupied THEN
+                nUsed := nUsed + 1;
+                // 0712 轨B R2:非预占占用格计数(格侧;合法预占=PresetOcc 且 GoodsId=0)
+                IF NOT (GVL_WH.aSlots[x, y].PresetOcc AND (GVL_WH.aSlots[x, y].GoodsId = 0)) THEN
+                    nOccGoods := nOccGoods + 1;
+                END_IF
+            END_IF
         END_FOR
     END_FOR
+    // 0712 轨B R2:计数平衡=一货一位的全局必要条件(幽灵格/孤儿占用在此现形;
+    // 配合 R1+N4-16 的 ID 唯一入口契约覆盖对抗审查反例1/3/4;反例2(空格残留
+    // GoodsId 而 Occupied=FALSE)无活性消费者,由 fbInit/Reset 重建清理,不计违规)
+    IF nOccGoods <> GVL_WH.stStats.PlacedCnt THEN
+        GVL_WH.stStats.ViolCnt := GVL_WH.stStats.ViolCnt + 1;
+    END_IF
     GVL_WH.stStats.UtilPct := INT_TO_REAL(nUsed) / INT_TO_REAL(GVL_Param.COLS * GVL_Param.TIERS);
 
     // 同步可视化统计区
@@ -518,7 +824,7 @@ END_IF
 END_FUNCTION_BLOCK
 
 
-(* ---------- FB_ScanLoadProbe:L4 扫描周期负载实测(AC500 实现章的实测数据源) ----------
+(* ---------- FB_ScanLoadProbe:L4 扫描周期负载探针(AB PC 仿真证据；非实体 AC500 实测) ----------
    用法:在要测量的代码段前后各调一次:
      fbProbe(xStart := TRUE);   (* 段前 *)
      ... 被测代码(如 fbAssign 一个分片周期)...
@@ -609,7 +915,7 @@ VAR
     c, rw, k, iSt : INT;   // rw=显示行(r/s 是 IEC 置复位保留字,不可作变量名——0706 无头编译揪出的潜伏 bug)
     iT       : INT;        // 设计坐标层(=TIERS-1-rw)
     rHeatMax : REAL;       // C2 频次热力归一分母
-    nOpsMax  : INT;        // C6 履历热力归一分母
+    nOpsMax  : UDINT;      // C6 计数热力归一分母(0712 轨B N5-09:随 aSlotOps 加宽)
 END_VAR
 
 // 0) C2/C6 热力归一分母(每周期 400 扫;量级远低于既有双重渲染循环)
@@ -651,8 +957,8 @@ FOR c := 0 TO GVL_Param.COLS - 1 DO
         ELSIF GVL_Visu.iViewMode = 2 THEN            // C6 损耗履历热力
             IF GVL_WH.aSlotOps[c, iT] > 0 THEN
                 GVL_Visu.VisuSlotColor[c, rw] :=
-                    FC_HeatColor(rVal := INT_TO_REAL(GVL_WH.aSlotOps[c, iT]),
-                                 rMax := INT_TO_REAL(nOpsMax));
+                    FC_HeatColor(rVal := UDINT_TO_REAL(GVL_WH.aSlotOps[c, iT]),
+                                 rMax := UDINT_TO_REAL(nOpsMax));
             ELSIF GVL_WH.aSlots[c, iT].PresetOcc THEN
                 GVL_Visu.VisuSlotColor[c, rw] := FC_StateToColor(iState := 1);
             ELSE
@@ -746,7 +1052,18 @@ IF xAdd AND NOT xOld THEN
         iErrId := 1;                                    // 边界:满仓拒收
     ELSIF rWeight < 0.0 OR rFreq < 0.0 OR rVolume < 0.0 THEN
         iErrId := 2;                                    // 边界:负属性拒收
+    ELSIF iId <= 0 THEN
+        iErrId := 4;                                    // 0712 轨B N4-16:非正 ID 拒收(0=空位哨兵)
     ELSE
+        // 0712 轨B N4-16:重复 ID 拒收(查询命中即止/哨兵语义要求业务 ID 唯一)
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            IF GVL_WH.aGoods[i].Id = iId THEN
+                iErrId := 4;
+                EXIT;
+            END_IF
+        END_FOR
+    END_IF
+    IF iErrId = 0 THEN
         GVL_WH.iGoodsCount := GVL_WH.iGoodsCount + 1;
         GVL_WH.aGoods[GVL_WH.iGoodsCount].Id       := iId;
         GVL_WH.aGoods[GVL_WH.iGoodsCount].Name     := sName;
@@ -911,17 +1228,20 @@ END_FUNCTION_BLOCK
    sim/strategy_lib.py 的 batch_profile + select_strategy(holistic 档)忠实 ST 化:
    批次画像(n/density/skew/w_mean/w_heavy)一次遍历+分片排序算出,阈值级联推荐策略。
    档位说明:holistic=题面全要素默认档(重货低层 C6/能耗 C4 权重高,AWRA 主推,
-   极小批+无画像信息降级简单规则=F18-2);lex/speed 档推荐 TOB/CB,PLC 策略库未含
-   (sim 层 A1 实验已证 lex 档达 oracle 98.5%),ST 版按主打叙事实现 holistic 档。
+   极小批+无画像信息降级简单规则=F18-2);lexicographic 档(0712 轨B D-1 已实现,
+   iObjective=1 切换):与 sim select_strategy 权威版一字对齐(density≥0.70→CB,
+   density≤0.25 且 n>20→AWRA,否则 TOB;含 n>20 条件——st_ifelse 旧生成文本漏此条,勿以彼为准),
+   CB/TOB 已由 FB_AssignClassTurnover 实现(sim 层 lex 档在 excess_fail=0 可比域达 oracle 98.5%)。
    skew=top20% 件频次占比:需频次降序排序——插入排序按件分片(每周期 nPerCycle 件,
    单件插入最坏 O(n) 步,n=400 时单周期约 2 万步 REAL 比较,远低于分片先例
    nPairsPerCycle=200 对评分的量级,不触发看门狗)。
    触发:iGoodsCount 变化自动重算(演示:载批/加件即刷新);xForce 强制重算
    (货物属性原地变更时用,如测试)。运行中数据再变=丢弃重来(以终值为准)。
-   输出推荐档位用 SelStrategy 语义:1=near(COL) 2=score 3=AWRA-LS。 *)
+   输出推荐档位用 SelStrategy 语义:1=near(COL) 2=score 3=AWRA-LS 4=CB 5=TOB。 *)
 FUNCTION_BLOCK FB_SceneDetect
 VAR_INPUT
     xForce      : BOOL;             // 上升沿:强制重算(iGoodsCount 未变但属性变了)
+    iObjective  : INT;              // 目标档 0=holistic(默认) 1=lexicographic(0712 轨B D-1)
 END_VAR
 VAR_OUTPUT
     xValid      : BOOL;             // 画像+推荐已就绪(n=0 时 FALSE)
@@ -931,6 +1251,7 @@ END_VAR
 VAR
     iStep       : INT := 0;         // 0=空闲 1=排序分片中 2=完成
     iCntLast    : INT := -1;        // 上次看到的货物数(变化检测)
+    iObjLast    : INT := -1;        // 上次目标档(切档自动重算=演示"现场切词典序档"入口)
     xForceOld   : BOOL;
     aF          : ARRAY[1..400] OF REAL;    // 频次工作数组(降序)
     iSorted     : INT;              // 已插入排序的件数
@@ -941,9 +1262,11 @@ VAR
     rSkew       : REAL;
 END_VAR
 
-// 触发检测:货物数变化 或 强制重算 → 从头开始
-IF (GVL_WH.iGoodsCount <> iCntLast) OR (xForce AND NOT xForceOld) THEN
+// 触发检测:货物数变化 或 强制重算 或 切换目标档 → 从头开始
+IF (GVL_WH.iGoodsCount <> iCntLast) OR (xForce AND NOT xForceOld)
+   OR (iObjective <> iObjLast) THEN
     iCntLast := GVL_WH.iGoodsCount;
+    iObjLast := iObjective;
     IF GVL_WH.iGoodsCount = 0 THEN
         xValid := FALSE;  iStep := 0;
         iRecBatch := -1;  iRecOnline := -1;
@@ -995,13 +1318,27 @@ IF iStep = 1 THEN
         GVL_Visu.VisuProfSkew    := rSkew;
         GVL_Visu.VisuProfWMean   := rWSum / INT_TO_REAL(nLoc);
         GVL_Visu.VisuProfWHeavy  := INT_TO_REAL(iHeavy) / INT_TO_REAL(nLoc);
-        // holistic 批量档:极小批+无画像→near,否则 AWRA(全要素安全档)
-        IF rSkew < 0.35 AND nLoc <= 20 THEN
-            iRecBatch := 1;
-            GVL_Visu.VisuRecText := 'REC=NEAR_TINY_FLAT';
+        IF iObjective = 1 THEN
+            // lexicographic 档(0712 轨B D-1):与 sim select_strategy 权威版一字对齐
+            IF GVL_Visu.VisuProfDensity >= 0.70 THEN
+                iRecBatch := 4;                       // CB:高密度(fail=0 且快)
+                GVL_Visu.VisuRecText := 'REC=CB_LEX_DENSE';
+            ELSIF (GVL_Visu.VisuProfDensity <= 0.25) AND (nLoc > 20) THEN
+                iRecBatch := 3;                       // AWRA:低密度(与 TOB 并列,安全键胜出)
+                GVL_Visu.VisuRecText := 'REC=AWRA_LEX_SPARSE';
+            ELSE
+                iRecBatch := 5;                       // TOB:主导档(含极小批 n≤20)
+                GVL_Visu.VisuRecText := 'REC=TOB_LEX';
+            END_IF
         ELSE
-            iRecBatch := 3;
-            GVL_Visu.VisuRecText := 'REC=AWRA_HOLISTIC';
+            // holistic 批量档(默认):极小批+无画像→near,否则 AWRA(全要素安全档)
+            IF rSkew < 0.35 AND nLoc <= 20 THEN
+                iRecBatch := 1;
+                GVL_Visu.VisuRecText := 'REC=NEAR_TINY_FLAT';
+            ELSE
+                iRecBatch := 3;
+                GVL_Visu.VisuRecText := 'REC=AWRA_HOLISTIC';
+            END_IF
         END_IF
         // 在线档(F18-2):画像无信息量 或 极小批→near,否则 score
         IF rSkew < 0.35 OR nLoc <= 20 THEN
@@ -1033,7 +1370,8 @@ END_VAR
 VAR_OUTPUT
     iLevel    : INT := 0;           // 0=操作员 1=管理员
     sUserText : STRING[32] := 'USER=OPERATOR';
-    iFailCnt  : INT := 0;           // 失败计数(演示可见,防猜码叙事)
+    iFailCnt  : INT := 0;           // 失败计数(演示可见;0712 轨B N5-11:加饱和防溢出——
+                                    //   仅计数不锁定,勿对外称"防暴力破解";唯一复位=断电)
 END_VAR
 VAR
     xLoginOld, xLogoutOld : BOOL;
@@ -1044,7 +1382,7 @@ IF xLogin AND NOT xLoginOld THEN
         iLevel := 1;
         sUserText := 'USER=ADMIN';
     ELSE
-        iFailCnt := iFailCnt + 1;
+        IF iFailCnt < 32767 THEN iFailCnt := iFailCnt + 1; END_IF   // N5-11 饱和
         sUserText := 'LOGIN_FAIL';
     END_IF
 END_IF
@@ -1064,7 +1402,10 @@ END_FUNCTION_BLOCK
    SelStrategy/xAutoStrategy/检修命令不在守卫集(操作员演示职能,检修另有权限门)。 *)
 FUNCTION_BLOCK FB_ParamGuard
 VAR_INPUT
-    iLevel : INT;                   // 当前用户级(FB_UserAuth.iLevel)
+    iLevel  : INT;                  // 当前用户级(FB_UserAuth.iLevel)
+    xFreeze : BOOL;                 // 0712 轨B R3:运行期参数冻结(批 ASSIGN/IMPROVE/STATS 中=TRUE,
+                                    //   连管理员的改动也回滚到批开工快照——保证单批口径不混参;
+                                    //   批结束 FALSE 放行。开工拍(冻结前一拍)的竞态窗=1 个扫描周期,人手不可达)
 END_VAR
 VAR
     xInit : BOOL := TRUE;           // 首周期:快照=现值(防 FB 初值 0 反灌参数)
@@ -1075,7 +1416,8 @@ VAR
     sPreRule, sBatchPC, sPairsPC, sMaxLsR         : INT;
 END_VAR
 
-IF xInit OR iLevel >= 1 THEN
+// R3:xFreeze 期间走 ELSE 回滚分支——批内参数=开工快照,任何人(含管理员)改动均滚回
+IF xInit OR ((iLevel >= 1) AND NOT xFreeze) THEN
     // 管理员在位(或首周期):放行并持续刷新快照——管理员改的值即新基准
     sVx := GVL_Param.rVx;                  sVy := GVL_Param.rVy;
     sTLoad := GVL_Param.rTLoad;            sTUnload := GVL_Param.rTUnload;

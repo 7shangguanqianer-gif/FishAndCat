@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-headline.py — 报告主口径(H 口径)头条数字生成器:数字的唯一可再生来源
+headline.py — 报告主口径(H 口径)5-seed 回归锚生成器
 H 口径 = 梯形加减速(A4b,拍板②)+ 场景自适应权重(A1/T11,拍板①),
 对照口径 = 匀速+固定默认(历史/文献可比口径)。两套并列,报告正文用 H,对照入附表。
-场景:120件/skew/and,5 seeds(与 F4/experiments 同基)。
+场景:120件/skew/sum,5 seeds。五个 seed 是标定集与历史 holdout 的并集，
+因此这里只能称回归锚，不能称 untouched final test，也不是 U3 的 30-seed 泛化证据。
 运行:python headline.py(~1 分钟)→ out/headline_numbers.csv + 控制台报告句
 """
 import csv
@@ -49,7 +50,8 @@ def run_five(goods, seed, adaptive):
 
 def caliber(accel, adaptive):
     ws.ACCEL = accel
-    agg = {s: {"exp": [], "hot": [], "ene": [], "ht": [], "viol": 0} for s in STRATS}
+    agg = {s: {"exp": [], "hot": [], "ene": [], "ht": [], "viol": 0,
+               "fail": 0} for s in STRATS}
     for sd in SEEDS:
         goods = ws.gen_goods(120, sd)
         res = run_five(goods, sd, adaptive)
@@ -59,17 +61,19 @@ def caliber(accel, adaptive):
             agg[s]["ene"].append(res[s]["energy"])
             agg[s]["ht"].append(res[s]["heavy_tier"])
             agg[s]["viol"] += res[s]["viol"]
+            agg[s]["fail"] += res[s]["fail"]
     ws.ACCEL = False
     return agg
 
 
 def main():
-    print("H 口径(加减速+自适应)与对照口径(匀速+固定默认),120件/skew/and,5 seeds\n")
+    print("H 口径(加减速+自适应)与对照口径(匀速+固定默认),120件/skew/sum")
+    print("证据级别:5-seed 回归锚；± 为 sample SD；非 U3 30-seed 泛化证据/非独立 final test\n")
     H = caliber(accel=True, adaptive=True)
     L = caliber(accel=False, adaptive=False)
 
     rows = []
-    print(f"{'策略':<8}{'H:exp_t均±σ':>16}{'H:能耗':>9}{'H:重货层':>8}"
+    print(f"{'策略':<8}{'H:exp_t均±sample SD':>22}{'H:能耗':>9}{'H:重货层':>8}"
           f"{'对照:exp_t':>11}{'违规Σ':>6}")
     for s in STRATS:
         he = st.mean(H[s]["exp"])
@@ -78,19 +82,24 @@ def main():
         print(f"{s:<8}{he:>11.2f}±{hs:<4.2f}{st.mean(H[s]['ene']):>9.0f}"
               f"{st.mean(H[s]['ht']):>8.2f}{le:>11.2f}"
               f"{H[s]['viol'] + L[s]['viol']:>6}")
+        ci95_half = 2.776 * hs / (len(SEEDS) ** 0.5)  # t(0.975,df=4)
         rows.append(dict(strategy=s,
                          H_exp_mean=round(he, 3), H_exp_std=round(hs, 3),
+                         H_exp_ci95_half=round(ci95_half, 3),
                          H_hot_mean=round(st.mean(H[s]["hot"]), 3),
                          H_energy_mean=round(st.mean(H[s]["ene"]), 1),
                          H_heavy_tier=round(st.mean(H[s]["ht"]), 3),
-                         legacy_exp_mean=round(le, 3),
+                         legacy_exp_mean=round(le, 3), H_seed_count=len(SEEDS),
+                         H_dispersion="sample_sd",
+                         evidence_scope="5seed_regression_anchor_not_U3_30seed_or_final",
+                         fail_sum=H[s]["fail"] + L[s]["fail"],
                          viol_sum=H[s]["viol"] + L[s]["viol"]))
 
     e = lambda s, k="exp": st.mean(H[s][k])
     drop = (1 - e("awra") / e("seq")) * 100
     ene_drop = (1 - e("awra", "ene") / e("seq", "ene")) * 100
     gap_sc = (1 - e("awra") / e("score")) * 100
-    print(f"\n★H 口径报告句(数字来源=本脚本,勿手抄旧值):")
+    print(f"\n★H 口径报告句(5-seed回归锚；sample SD；数字来源=本脚本):")
     print(f"  AWRA-LS 期望取货 {e('awra'):.2f}s,较题面顺序基线({e('seq'):.2f}s)"
           f"降 {drop:.1f}%;能耗降 {ene_drop:.1f}%;重货平均层高 {st.mean(H['awra']['ht']):.2f}")
     print(f"  批量 vs 在线 gap:{gap_sc:.1f}%;违规全口径合计 "

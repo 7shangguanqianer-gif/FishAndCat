@@ -210,7 +210,7 @@ F:\abb_wh_spike\visu_native_20260710_1225\VisualizationManager_formal.xml
 
 ```text
  M plc/AB_Project/ABB_WH.project
- M tools/ab_scripting/check_result.txt
+ M tools/ab_scripting/check_result.txt  # 历史路径，现存于 tools/ab_scripting/archive/check_result.txt
  M tools/ab_scripting/visu_main_native.xml
 ?? docs/evidence_0710/
 ```

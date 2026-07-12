@@ -79,8 +79,13 @@ VAR_GLOBAL
     aMaintBlock : ARRAY[0..19, 0..19] OF BOOL;       // TRUE=该格检修挂起
     // ---- C2/C6 热力图数据层(0711 批次前置令) ----
     aSlotFreq   : ARRAY[0..19, 0..19] OF REAL;       // C2:格上货物频次(布局态,fbInit 清)
-    aSlotOps    : ARRAY[0..19, 0..19] OF INT;        // C6:存取履历计数(放置/搬移/交换各+1;
-                                                     //     物理履历,Reset 不清,同 aMaintBlock 语义)
+    aSlotOps    : ARRAY[0..19, 0..19] OF UDINT;      // C6:布局操作/写入热图计数(放置/搬移/交换各+1;
+                                                     //     Reset 不清;0712 轨B N5-09:INT→UDINT 防长跑溢出,
+                                                     //     非 RETAIN=断电清零,故称"计数热图"勿称长期履历)
+    // ---- 0712 轨B D-1:CB 分级存储辅助(FB_AssignClassTurnover 批开工构建,批内只读) ----
+    aSlotOrder  : ARRAY[1..400] OF INT;              // 全库时间序表(编码 x*100+y;(travel,tier,col)升序)
+    iCbClass    : ARRAY[1..400] OF INT;              // 货物类别 0/1/2=A/B/C(按货物下标索引)
+    aCbStarts   : ARRAY[0..2] OF INT;                // 各类在"空闲格序"上的起点偏移(静态件数累计)
 END_VAR
 
 (* ---------- GVL_Visu:可视化接口(决赛 CODESYS Visualization 绑定这里) ----------
@@ -115,6 +120,9 @@ VAR_GLOBAL
     CmdRunAssign    : BOOL;                 // 按钮:运行批量分配(AWRA-LS)
     CmdReset        : BOOL;                 // 按钮:复位重来
     SelStrategy     : INT := 2;             // 策略选择 0=seq 1=near 2=score(在线) 3=AWRA-LS(批量)
+                                            //          4=CB 分级存储 5=TOB 全周转(0712 轨B D-1)
+    SelObjective    : INT := 0;             // 检测器目标档 0=holistic(默认) 1=lexicographic(0712 轨B;
+                                            //   演示"现场切词典序档"入口,P3 管理页开关绑定)
     // ---- L6 决赛画面增补(元件绑定方法见 2_你要操作/AB可视化搭建操作卡.md) ----
     VisuSlotColor   : ARRAY[0..19, 0..19] OF DWORD;
         // [列,显示行] 单元格填充色(16#00RRGGBB);显示行0=画面顶(=层19),

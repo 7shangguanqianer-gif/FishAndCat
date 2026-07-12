@@ -2,7 +2,7 @@
 
 > 承接第一层（`docs\sim_plc一致性_0711pm.md` 挖出策略/检测器/权重三处 = D-1/D-2/D-3）。
 > 本层查【报告头条数字】的 sim/PLC 来源一致性 + 演示【全量镜头】画面台词错配。方法：2 sonnet/medium critic（指标溯源 + 镜头对照）+ Claude 主循环独立亲验 `headline.py` 与报告草稿交叉裁决。
-> 一句话结论：**头条 6 数字中 5 个是"自适应权重"算的、PLC 静态权重复现不出**（D-2 在指标层的落点）；新挖 **D-4（叙事层错配·高危）**——报告草稿建议写"仿真结论已在目标控制器上闭环验证"，会让自适应 sim 头条数被误读为 AC500 已验证成果。演示 16 镜头仅 v4-1（=D-1）一处错配，其余 15 干净。
+> 0712校准结论：头条数字是sim H设计口径，PLC没有H KPI闭环。8.757是Python加减速+静态sim结果，不是PLC代理；PLC默认`xUseAccel=FALSE`的开关代理为6.443（仍是sim）。演示v4-1与权限/检修话术也已按N5边界收窄。
 
 ---
 
@@ -20,18 +20,18 @@
 
 ## 1. 头条 5/6 数字 = 自适应权重算出（D-2 在指标层的直接落点）
 
-Claude 亲验 `sim\headline.py`：报告句（`:93-99`）全部取自 `H = caliber(accel=True, adaptive=True)`（`:68`），`adaptive=True` 走 `ws.lookup_weights(...)` 查表构造自适应权重评分函数（`:31-35`）。而 **PLC 真实配置 = 加减速 A4b(已实现) + 静态权重(D-2, α1.0/β0.6/γ0.4/δ0.15)**，即 `accel=True + adaptive=False`——该组合 headline.py 未计算（只算了 H=True+True 与 对照 L=False+False）。
+`headline.py`的H取自`accel=True,adaptive=True`。PLC虽有加减速逻辑，但默认`xUseAccel=FALSE`，权重在线查表也未接入；因此不能把`accel=True,adaptive=False`称PLC真实配置，它只是一组Python消融。
 
 | 头条数字 | 值 | 权重基础 | PLC 可复现 | 风险 | sim 来源（file:line + CSV） |
 |---|---|---|---|---|---|
 | awra 期望取货 | 8.40±0.48s | 自适应 | ❌ no | 高 | `headline.py:31-35/45-46/75` → `out/headline_numbers.csv` awra.H_exp_mean=8.402 |
 | 较 seq 降幅 | 62.0% | 自适应 | ❌ no | 高 | `headline.py:89-90` drop（读 H 聚合） |
 | 能耗代理降幅 | 67.3% | 自适应 | ❌ no | 高 | `headline.py:91` ene_drop（同 H） |
-| 吞吐 | 230 次/h | 自适应 | ❌ no | 高 | `mixed_ops.py:114-130`(--adaptive) → `out/mixed_ops.csv` (awra,trapezoid)=230.4 |
+| 吞吐 | 230单操作/h（约115双周期/h） | 自适应 | ❌ no | 高 | `mixed_ops.py`(--adaptive) → `out/mixed_ops.csv` (awra,trapezoid)=230.4；行程-only连续满载sim |
 | 重货平均层高 | 0.57 | 自适应 | ❌ no | 高 | `headline.py:44/85` → headline_numbers.csv awra.H_heavy_tier=0.567 |
 | 理论夹逼 gap | 9.9% | **静态** | ⚠ partial | **低** | `analytic_bounds.py:84`（硬编码静态权重，未调 lookup_weights；匀速口径） |
 
-**结论**：报告主口径的头条性能数字建立在 PLC 未实现的自适应权重机制上。若把算法烧进 AC500 静态权重重放，这些数字会**实质改变**（非小数点级）。**这不改变"降级方向"（方案甲仍首选），但强化 D-2 的报告影响面：不止一句机制描述，而是头条 KPI 本身的口径。**
+**结论**：报告头条是sim设计KPI。当前既不能用8.40宣称PLC复现，也不能用8.757替代后称“PLC实现值”；PLC证据只到59/0静态匀速黄金向量。
 
 ### ⚠ 子代理量化误差已纠（交由 R3 干净重算）
 指标溯源子代理给出"对照口径 awra=6.443s / 降幅 68.2%"作为 PLC 复现值——**错误隔离**：6.443s 来自 `L = caliber(accel=False, adaptive=False)`（匀速+静态），同时改了**加减速和权重两个变量**，不是 PLC 的 `accel=True+adaptive=False`。故 68.2% 不能代表 D-2 单独影响。**R3 将只切权重变量**（`caliber(accel=True, adaptive=False)`）干净量化 D-2 对 8.40s/62% 的真实影响，见 `docs\D2量化_0712.md`（待产出）。
@@ -62,7 +62,7 @@ Claude 亲验 `sim\headline.py`：报告句（`:93-99`）全部取自 `H = calib
 ## 4. 次要发现（记录，非阻塞）
 
 - **gap 9.9% 双 awra 口径**：`analytic_bounds.py` 的 6.53s "awra" 是**匀速理论解析**口径，与同表 8.40s "awra"（加减速+自适应）**物理模型不同**，两处都叫 awra。报告草稿已标"理论夹逼(内部证据,非行业对标)"降级，框架安全；精修时防答辩追问"哪个是真 awra"。
-- **mixed_ops.csv provenance 缺口**：`mixed_ops.py:164` 写 CSV 时 motion 列只记 trapezoid/uniform，不记 `--adaptive`。230 次/h 的"确系 adaptive 口径"靠交叉核对 `实验发现.md:121` 文字而非 CSV 自证——若他人不带 `--adaptive` 重跑覆盖 CSV，头条数字会静默漂移。建议 CSV 增 adaptive 列或表头注明口径。
+- **0712已修复provenance缺口**：`mixed_ops.csv`现写`weights=adaptive/fixed`，吞吐字段也改为`throughput_dual_command_ops_h`，明确是双命令模式下的单操作数/h；230.4约等于115.2双周期/h。
 - **heavy_tier 0.57 撞脸**：与 `stress_matrix.csv` S2 均层 0.57 纯两位小数巧合，不同指标；报告草稿当前未混用，精修警惕。
 
 ---
@@ -70,7 +70,7 @@ Claude 亲验 `sim\headline.py`：报告句（`:93-99`）全部取自 `H = calib
 ## 5. 对决策的影响
 
 1. **新增 D-4 进方案甲清单**：§2.1 "闭环验证"叙事句必须精确限定（见 §2）。连同 R1 新雷（草稿:349-350），方案甲的文本改动点从 8 处扩到需复核的更大集合——**建议报告周执行方案甲前，先对报告草稿/演示脚本做一次"sim 数字 vs AC500 成果"叙事句全扫**（D-1/D-2/D-4 都是这一类）。
-2. **R3 必要性确认且路径清晰**：头条 8.40s/62% 是自适应数，R3 用 `caliber(accel=True, adaptive=False)` 隔离量化 D-2 对头条的真实影响。
+2. R3只是一项Python权重消融：8.40s/62%与8.757s/60.4%的差异不能转译成AC500实测差异。
 3. **正向确认**：§1.1 头条数字表**标注干净**、演示脚本除 D-1 外**无隐藏错配**——错配集中在少数叙事句与 v4-1 台词，可控，方案甲（诚实降级/限定语）足以覆盖，方案乙必要性未上升。
 
 ---

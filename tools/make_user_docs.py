@@ -12,10 +12,12 @@ make_user_docs.py — 用户层文档 md→docx 一键再生(用户偏好:md 难
 import os
 import re
 import sys
+import hashlib
 
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
@@ -59,10 +61,30 @@ def style_doc(doc):
     st.font.size = Pt(10.5)
 
 
+def set_view_zoom(doc):
+    """Emit a schema-complete Word zoom setting for downstream OOXML validation."""
+    settings = doc.settings.element
+    zoom = settings.find(qn("w:zoom"))
+    if zoom is None:
+        zoom = OxmlElement("w:zoom")
+        settings.insert(0, zoom)
+    zoom.set(qn("w:val"), "bestFit")
+    zoom.set(qn("w:percent"), "100")
+
+
 def convert(md_path, docx_path):
-    lines = open(md_path, encoding="utf-8").read().splitlines()
+    raw = open(md_path, "rb").read()
+    source_sha256 = hashlib.sha256(raw).hexdigest()
+    lines = raw.decode("utf-8").splitlines()
     doc = Document()
     style_doc(doc)
+    rel_source = os.path.relpath(md_path, ROOT).replace(os.sep, "/")
+    doc.core_properties.subject = f"Generated from {rel_source}"
+    doc.core_properties.keywords = f"source_sha256:{source_sha256}"
+    doc.core_properties.comments = (
+        f"source={rel_source}; source_sha256={source_sha256}; "
+        "generated artifact; edit the Markdown source instead"
+    )
     i = 0
     while i < len(lines):
         ln = lines[i]
@@ -101,9 +123,19 @@ def convert(md_path, docx_path):
                 p.paragraph_format.left_indent = Pt(12)
                 set_font(p.add_run(code_ln if code_ln else " "), 9, mono=True,
                          color=(0x33, 0x33, 0x33))
-                shd = p._p.get_or_add_pPr().makeelement(qn("w:shd"), {
+                ppr = p._p.get_or_add_pPr()
+                shd = ppr.makeelement(qn("w:shd"), {
                     qn("w:val"): "clear", qn("w:fill"): "F2F2F2"})
-                p._p.get_or_add_pPr().append(shd)
+                # CT_PPr requires w:shd before w:spacing and w:ind; appending
+                # it after either element produces a document Word can open
+                # but strict OOXML validators correctly reject.
+                anchor = ppr.find(qn("w:spacing"))
+                if anchor is None:
+                    anchor = ppr.find(qn("w:ind"))
+                if anchor is None:
+                    ppr.append(shd)
+                else:
+                    ppr.insert(ppr.index(anchor), shd)
             doc.add_paragraph()
             continue
         if s.startswith("|") and i + 1 < len(lines) and \
@@ -166,6 +198,7 @@ def convert(md_path, docx_path):
         p = doc.add_paragraph()                       # 普通段落
         add_rich(p, s)
         i += 1
+    set_view_zoom(doc)
     doc.save(docx_path)
 
 

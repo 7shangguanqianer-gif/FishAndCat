@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>P1 画面排版三方案(0710)——选一版,我照施工</title>
+<style>
+  body{font-family:"Microsoft YaHei",sans-serif;background:#f5f6f8;margin:0;padding:24px;color:#222}
+  h1{font-size:22px;margin:0 0 6px}
+  .sub{color:#666;margin-bottom:20px;font-size:14px}
+  .plan{background:#fff;border:1px solid #ddd;border-radius:10px;padding:18px 20px;margin-bottom:26px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .plan h2{margin:0 0 4px;font-size:18px}
+  .tag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}
+  .rec{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+  .meta{font-size:13px;color:#555;margin:6px 0 12px}
+  /* ---- 画面 mock 通用(1280×720 → 0.55 缩放) ---- */
+  .mock{position:relative;width:704px;height:396px;border:1px solid #bbb;background:#fff;transform-origin:0 0;font-size:7px;overflow:hidden;margin-bottom:10px}
+  .mock *{position:absolute;box-sizing:border-box}
+  .grid{left:22px;top:22px;width:308px;height:220px;
+    background:
+      repeating-linear-gradient(45deg, transparent 0 14px, rgba(112,112,112,.55) 14px 20px),
+      repeating-linear-gradient(0deg,#e8e8e8 0 10px,#fff 10px 11px),
+      repeating-linear-gradient(90deg,#e8e8e8 0 15px,#fff 15px 16px);
+    border:1px solid #999}
+  .crane{left:24px;top:228px;width:15px;height:11px;border-radius:50%;border:1px solid #a04000}
+  .box{border:1px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}
+  .btn{border:1px solid #777;background:linear-gradient(#fdfdfd,#d8d8d8);border-radius:2px;display:flex;align-items:center;justify-content:center}
+  .legendrow{display:flex;align-items:center;gap:3px}
+  .sw{width:9px;height:9px;border:1px solid #666;display:inline-block;flex:none}
+  .note{font-size:13px;line-height:1.7;margin:8px 0}
+  .note b{color:#1565c0}
+  table{border-collapse:collapse;font-size:13px;margin-top:8px}
+  td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}
+  th{background:#f0f2f5}
+  .opt{background:#fffde7;border:1px dashed #c0a000;padding:8px 12px;border-radius:6px;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>P1 画面排版:三方案对比</h1>
+<div class="sub">修理范围=你拍板的 #1 截断 / #2 堆垛机上色 / #3 图例色样 / #4 右缘呼吸边 / #5 徽章活文案。
+三版是<b>递进关系</b>(B 含 A,C 含 B)。网格区三版相同(133 深灰条纹示意),差异全在右侧面板与标题区。</div>
+
+<!-- ================= 方案 A ================= -->
+<div class="plan">
+  <h2>方案 A · 最小整容 <span class="tag rec">改动最少</span></h2>
+  <div class="meta">只治病不整容:修截断、上色、色样、右缘收进 1240、徽章去死数字。布局骨架一根不动。<b>脚本工时≈25 分钟(含 ab_sync)。</b></div>
+  <div class="mock">
+    <div style="left:22px;top:4px;width:308px;height:14px" class="box"><b>Smart Storage Control - Warehouse Slot Optimization</b></div>
+    <div class="grid"></div>
+    <div class="crane" style="background:#ff6d00"></div>
+    <div style="left:346px;top:22px;width:300px;height:14px" class="box">Status: READY_PRECOUNT=133</div>
+    <div style="left:652px;top:21px;width:16px;height:16px;border-radius:50%;background:#333" ></div>
+    <div style="left:346px;top:46px;width:36px;height:12px" class="box">ID</div><div style="left:386px;top:46px;width:104px;height:12px" class="box">901</div>
+    <div style="left:346px;top:62px;width:36px;height:12px" class="box">Name</div><div style="left:386px;top:62px;width:104px;height:12px" class="box">A</div>
+    <div style="left:346px;top:78px;width:36px;height:12px" class="box">Weight</div><div style="left:386px;top:78px;width:104px;height:12px" class="box">5.0</div>
+    <div style="left:346px;top:94px;width:36px;height:12px" class="box">Freq</div><div style="left:386px;top:94px;width:104px;height:12px" class="box">95.0</div>
+    <div style="left:346px;top:110px;width:36px;height:12px" class="box">Volume</div><div style="left:386px;top:110px;width:104px;height:12px" class="box">0.30</div>
+    <div style="left:346px;top:146px;width:54px;height:17px" class="btn">Add goods</div>
+    <div style="left:406px;top:146px;width:54px;height:17px" class="btn">Load demo</div>
+    <div style="left:466px;top:146px;width:44px;height:17px" class="btn">Reset</div>
+    <div style="left:616px;top:146px;width:60px;height:17px" class="btn">P2 Records</div>
+    <div style="left:346px;top:174px;width:28px;height:17px" class="box">Mode</div>
+    <div style="left:378px;top:174px;width:38px;height:17px" class="btn">FIFO</div>
+    <div style="left:420px;top:174px;width:38px;height:17px" class="btn">Nearest</div>
+    <div style="left:462px;top:174px;width:38px;height:17px" class="btn">Score</div>
+    <div style="left:504px;top:174px;width:54px;height:17px" class="btn">AWRA-LS</div>
+    <div style="left:566px;top:174px;width:110px;height:17px" class="box">Current strategy: 2</div>
+    <div style="left:346px;top:206px;width:54px;height:17px" class="btn">Run assign</div>
+    <div style="left:406px;top:206px;width:54px;height:17px" class="btn">Animate</div>
+    <div style="left:466px;top:206px;width:60px;height:17px" class="btn">Save snapshot</div>
+    <div style="left:532px;top:206px;width:60px;height:17px" class="btn">Live/Snapshot</div>
+    <div style="left:598px;top:207px;width:14px;height:14px;border-radius:50%;background:#333"></div>
+    <div style="left:616px;top:208px;width:56px;height:13px" class="box">Snapshot valid</div>
+    <div style="left:346px;top:238px;width:326px;height:12px" class="box" style2="">Target X 1 | Target Y 0 | Path m 1.0 | Travel s 0.6</div>
+    <!-- 图例:加色样 -->
+    <div style="left:26px;top:252px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#e8e8e8"></span> 0 Empty (light gray)</div>
+    <div style="left:220px;top:252px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#707070"></span> 1 Preset (dark gray)</div>
+    <div style="left:26px;top:268px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#43a047"></span> 2 Occupied (green)</div>
+    <div style="left:220px;top:268px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#ffc107"></span> 3 Recommended (yellow)</div>
+    <div style="left:26px;top:284px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#42a5f5"></span> 4 Path (blue)</div>
+    <div style="left:220px;top:284px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#e53935"></span> 5 Alarm (red)</div>
+    <div style="left:26px;top:300px;width:150px;height:12px" class="box legendrow"><span class="sw" style="background:#26c6da"></span> 6 Query (cyan)</div>
+    <!-- 统计 -->
+    <div style="left:346px;top:262px;width:90px;height:12px" class="box">Total inbound / s</div><div style="left:440px;top:262px;width:60px;height:12px" class="box">0.0</div>
+    <div style="left:346px;top:278px;width:90px;height:12px" class="box">Average item / s</div><div style="left:440px;top:278px;width:60px;height:12px" class="box">0.0</div>
+    <div style="left:346px;top:294px;width:90px;height:12px" class="box">Space utilization/%</div><div style="left:440px;top:294px;width:60px;height:12px" class="box">0.0</div>
+    <div style="left:512px;top:262px;width:160px;height:44px" class="box">State codes: READY / SUGGEST / DONE_OK ...</div>
+    <!-- 权重区:修好的 -->
+    <div style="left:346px;top:330px;width:52px;height:13px" class="box"><b>Alpha efficiency</b></div><div style="left:401px;top:330px;width:32px;height:13px" class="box">1.00</div>
+    <div style="left:434px;top:330px;width:52px;height:13px" class="box"><b>Beta stability</b></div><div style="left:489px;top:330px;width:32px;height:13px" class="box">0.60</div>
+    <div style="left:522px;top:330px;width:52px;height:13px" class="box"><b>Gamma energy</b></div><div style="left:577px;top:330px;width:32px;height:13px" class="box">0.40</div>
+    <div style="left:610px;top:330px;width:52px;height:13px" class="box"><b>Delta reserve</b></div><div style="left:665px;top:330px;width:32px;height:13px" class="box">0.15</div>
+    <div style="left:346px;top:350px;width:150px;height:11px" class="box">Defaults: A=1.0 B=0.6 G=0.4 D=0.15</div>
+    <div style="left:502px;top:350px;width:196px;height:11px" class="box"><b>Online tests: all green · sim/ST cross-check · dwell=I/O</b></div>
+  </div>
+  <div class="note">改动:<b>①权重区标签 62→92px 重排</b>(620/780/940/1100 均布,文字完整)
+  <b>②堆垛机橙色</b>+<b>③图例 7 色样方块</b>(经 GVL 常量色绑定,绕过静态色 API 缺口;顺带补上状态 6 青色)
+  <b>④右缘元素统一收进 x≤1240</b>(留 40px 呼吸边)<b>⑤徽章改"Online tests: all green"</b>(去死数字,永不过时)。</div>
+</div>
+
+<!-- ================= 方案 B ================= -->
+<div class="plan">
+  <h2>方案 B · 分组工程面板 <span class="tag rec">推荐——录屏/评委观感明显提升</span></h2>
+  <div class="meta">A 的全部 + 右侧面板按功能分四组,各组加细线框+组标题,同组元素对齐。评委一眼看懂"输入→命令→运行→结果"的操作流。<b>脚本工时≈40 分钟。</b></div>
+  <div class="mock">
+    <div style="left:22px;top:4px;width:308px;height:14px" class="box"><b>Smart Storage Control - Warehouse Slot Optimization</b></div>
+    <div class="grid"></div>
+    <div class="crane" style="background:#ff6d00"></div>
+    <div style="left:346px;top:20px;width:330px;height:16px" class="box"><b>Status: READY_PRECOUNT=133</b></div>
+    <div style="left:646px;top:40px;width:16px;height:16px;border-radius:50%;background:#333"></div>
+    <!-- 组1 输入 -->
+    <div style="left:342px;top:42px;width:200px;height:106px;border:1px solid #9ab"></div>
+    <div style="left:350px;top:38px;width:74px;height:9px;background:#fff;color:#369;font-weight:bold">GOODS INPUT 货物输入</div>
+    <div style="left:350px;top:54px;width:34px;height:12px" class="box">ID</div><div style="left:388px;top:54px;width:144px;height:12px" class="box">901</div>
+    <div style="left:350px;top:70px;width:34px;height:12px" class="box">Name</div><div style="left:388px;top:70px;width:144px;height:12px" class="box">A</div>
+    <div style="left:350px;top:86px;width:34px;height:12px" class="box">Weight</div><div style="left:388px;top:86px;width:144px;height:12px" class="box">5.0</div>
+    <div style="left:350px;top:102px;width:34px;height:12px" class="box">Freq</div><div style="left:388px;top:102px;width:144px;height:12px" class="box">95.0</div>
+    <div style="left:350px;top:118px;width:34px;height:12px" class="box">Volume</div><div style="left:388px;top:118px;width:144px;height:12px" class="box">0.30</div>
+    <!-- 组2 命令+策略 -->
+    <div style="left:554px;top:42px;width:126px;height:106px;border:1px solid #9ab"></div>
+    <div style="left:562px;top:38px;width:60px;height:9px;background:#fff;color:#369;font-weight:bold">COMMANDS 命令</div>
+    <div style="left:562px;top:54px;width:52px;height:16px" class="btn">Add goods</div>
+    <div style="left:620px;top:54px;width:52px;height:16px" class="btn">Load demo</div>
+    <div style="left:562px;top:76px;width:52px;height:16px" class="btn">Reset</div>
+    <div style="left:620px;top:76px;width:52px;height:16px" class="btn">P2 Records</div>
+    <div style="left:562px;top:98px;width:52px;height:16px" class="btn">Run assign</div>
+    <div style="left:620px;top:98px;width:52px;height:16px" class="btn">Animate</div>
+    <div style="left:562px;top:120px;width:52px;height:16px" class="btn">Save snap</div>
+    <div style="left:620px;top:120px;width:52px;height:16px" class="btn">Live/Snap</div>
+    <!-- 组3 策略 -->
+    <div style="left:342px;top:158px;width:338px;height:34px;border:1px solid #9ab"></div>
+    <div style="left:350px;top:154px;width:56px;height:9px;background:#fff;color:#369;font-weight:bold">STRATEGY 策略</div>
+    <div style="left:352px;top:168px;width:38px;height:16px" class="btn">FIFO</div>
+    <div style="left:394px;top:168px;width:44px;height:16px" class="btn">Nearest</div>
+    <div style="left:442px;top:168px;width:40px;height:16px" class="btn">Score</div>
+    <div style="left:486px;top:168px;width:52px;height:16px" class="btn">AWRA-LS</div>
+    <div style="left:546px;top:168px;width:128px;height:16px" class="box">Current strategy: 2 · Snapshot ●</div>
+    <!-- 组4 结果 -->
+    <div style="left:342px;top:200px;width:338px;height:116px;border:1px solid #9ab"></div>
+    <div style="left:350px;top:196px;width:100px;height:9px;background:#fff;color:#369;font-weight:bold">RESULTS 路径与统计</div>
+    <div style="left:352px;top:212px;width:322px;height:12px" class="box">Target (1,0) · Path 1.0 m · Travel 0.6 s</div>
+    <div style="left:352px;top:230px;width:96px;height:12px" class="box">Total inbound / s</div><div style="left:452px;top:230px;width:56px;height:12px" class="box">0.0</div>
+    <div style="left:352px;top:246px;width:96px;height:12px" class="box">Average item / s</div><div style="left:452px;top:246px;width:56px;height:12px" class="box">0.0</div>
+    <div style="left:352px;top:262px;width:96px;height:12px" class="box">Space util / %</div><div style="left:452px;top:262px;width:56px;height:12px" class="box">0.0</div>
+    <div style="left:352px;top:278px;width:96px;height:12px" class="box">Violations</div><div style="left:452px;top:278px;width:56px;height:12px" class="box">0</div>
+    <div style="left:516px;top:230px;width:158px;height:60px" class="box">State codes<br>READY / SUGGEST / DONE_OK<br>ERR_* / ALARM_*</div>
+    <!-- 权重区(同 A 修复)+徽章 -->
+    <div style="left:342px;top:326px;width:338px;height:30px;border:1px solid #c9a"></div>
+    <div style="left:350px;top:322px;width:130px;height:9px;background:#fff;color:#a36;font-weight:bold">SCORE WEIGHTS 评分权重(评委可调)</div>
+    <div style="left:352px;top:338px;width:50px;height:13px" class="box">Alpha eff.</div><div style="left:404px;top:338px;width:28px;height:13px" class="box">1.00</div>
+    <div style="left:438px;top:338px;width:50px;height:13px" class="box">Beta stab.</div><div style="left:490px;top:338px;width:28px;height:13px" class="box">0.60</div>
+    <div style="left:524px;top:338px;width:50px;height:13px" class="box">Gamma en.</div><div style="left:576px;top:338px;width:28px;height:13px" class="box">0.40</div>
+    <div style="left:608px;top:338px;width:50px;height:13px" class="box">Delta res.</div><div style="left:660px;top:338px;width:20px;height:13px" class="box">0.15</div>
+    <!-- 图例(同 A) -->
+    <div style="left:26px;top:252px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#e8e8e8"></span> 0 Empty</div>
+    <div style="left:180px;top:252px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#707070"></span> 1 Preset</div>
+    <div style="left:26px;top:268px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#43a047"></span> 2 Occupied</div>
+    <div style="left:180px;top:268px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#ffc107"></span> 3 Recommended</div>
+    <div style="left:26px;top:284px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#42a5f5"></span> 4 Path</div>
+    <div style="left:180px;top:284px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#e53935"></span> 5 Alarm</div>
+    <div style="left:26px;top:300px;width:145px;height:12px" class="box legendrow"><span class="sw" style="background:#26c6da"></span> 6 Query</div>
+    <div style="left:26px;top:322px;width:299px;height:11px" class="box">Online tests: all green · sim/ST cross-check · dwell=I/O</div>
+  </div>
+  <div class="note">相对 A 的增量:右面板重排为 <b>输入 / 命令 / 策略 / 结果 / 权重</b> 五个细线分组框(带中英组标题),
+  按钮 2×4 栅格化对齐,统计与状态码合入"结果"组。<b>元素位置几乎全部重排</b>(绑定不变,纯移动+加约 10 个装饰框)。</div>
+</div>
+
+<!-- ================= 方案 C ================= -->
+<div class="plan">
+  <h2>方案 C · 红黑品牌版(呼应你 0706 拍板的红黑方向)</h2>
+  <div class="meta">B 的全部 + 深色标题横幅、红色 accent 分隔条、组标题红黑配色——向 v3b 暗夜红黑动画风格看齐。<b>脚本工时≈60 分钟,且有一个已知折衷(见下)。</b></div>
+  <div class="mock">
+    <div style="left:0;top:0;width:704px;height:22px;background:#1a1a1a"></div>
+    <div style="left:22px;top:4px;width:340px;height:14px;color:#fff;font-weight:bold;background:#1a1a1a">■ Smart Storage Control - Warehouse Slot Optimization</div>
+    <div style="left:0;top:22px;width:704px;height:2px;background:#c62828"></div>
+    <div class="grid" style="top:34px"></div>
+    <div class="crane" style="background:#ff6d00;top:240px"></div>
+    <div style="left:346px;top:34px;width:330px;height:16px" class="box" ><b>Status: READY_PRECOUNT=133</b></div>
+    <div style="left:342px;top:58px;width:200px;height:100px;border:1px solid #333"></div>
+    <div style="left:350px;top:54px;width:80px;height:9px;background:#c62828;color:#fff;font-weight:bold;padding:0 3px">GOODS INPUT</div>
+    <div style="left:350px;top:70px;width:180px;height:80px;color:#888">(输入五框,布局同 B)</div>
+    <div style="left:554px;top:58px;width:126px;height:100px;border:1px solid #333"></div>
+    <div style="left:562px;top:54px;width:64px;height:9px;background:#c62828;color:#fff;font-weight:bold;padding:0 3px">COMMANDS</div>
+    <div style="left:562px;top:70px;width:110px;height:80px;color:#888">(命令八钮,同 B)</div>
+    <div style="left:342px;top:170px;width:338px;height:146px;border:1px solid #333"></div>
+    <div style="left:350px;top:166px;width:110px;height:9px;background:#c62828;color:#fff;font-weight:bold;padding:0 3px">STRATEGY / RESULTS</div>
+    <div style="left:352px;top:186px;width:320px;height:120px;color:#888">(策略行+结果统计+状态码,同 B)</div>
+    <div style="left:26px;top:262px;width:300px;height:56px;color:#888">(图例 7 色样,同 A/B)</div>
+    <div style="left:342px;top:326px;width:338px;height:30px;border:1px solid #333"></div>
+    <div style="left:350px;top:322px;width:96px;height:9px;background:#c62828;color:#fff;font-weight:bold;padding:0 3px">SCORE WEIGHTS</div>
+  </div>
+  <div class="note"><b>已知折衷</b>:脚本无法设置静态填色(0710 实证),深色横幅/红条要靠"矩形绑常量色变量"实现——
+  可行但这些装饰块会多占 GVL 常量与元素数;且元素本体(按钮/输入框)的底色改不了(始终浅灰系),
+  <b>红黑只能作用于横幅/分隔/组标题,做不到 v3b 那种整面深色</b>。想要整面红黑,正路是决赛阶段做 WebVisu 深色样式或走 3D 动画载体。</div>
+</div>
+
+<table>
+  <tr><th></th><th>A 最小整容</th><th>B 分组面板(推荐)</th><th>C 红黑品牌</th></tr>
+  <tr><td>治 #1-#5</td><td>✓</td><td>✓</td><td>✓</td></tr>
+  <tr><td>面板分组/对齐</td><td>—</td><td>✓ 五组细线框</td><td>✓ 同 B</td></tr>
+  <tr><td>品牌观感</td><td>—</td><td>—</td><td>横幅+红条(有折衷)</td></tr>
+  <tr><td>脚本工时</td><td>~25 分钟</td><td>~40 分钟</td><td>~60 分钟</td></tr>
+  <tr><td>风险</td><td>极低(动 30 元素)</td><td>低(移动多、绑定不动)</td><td>中(装饰元素+常量最多)</td></tr>
+</table>
+
+<div class="opt"><b>附带两个小拍板</b>(回复时一起说):<br>
+①徽章文案:<b>a.</b> "Online tests: all green · sim/ST cross-check · dwell point=I/O"(去数字,推荐)
+<b>b.</b> 保留 "45/45" 数字(以后用例涨了要记得手改)<br>
+②方案 B/C 的组标题语言:<b>a.</b> 纯英文(与画面一致,推荐) <b>b.</b> 中英双语(如 mock 所示,但正式画面中文有 C0555 乱码风险,需实测)</div>
+</body>
+</html>

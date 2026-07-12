@@ -10,7 +10,8 @@ rl_probe.py — T13 实跑版:轻量强化学习对照(线性策略梯度 REINFO
 特征(每个 货物×仓位 对,5 维;前三维=评分函数的三个独立项,后两维给 RL 额外自由度):
   x1 效率项 f_norm·t_norm | x2 稳定/能耗项 w_norm·tier_norm(本几何下 β、γ 特征相同,F5)
   x3 预留项 (1-f_norm)(1-t_norm) | x4 纯距离 t_norm | x5 纯层高 tier_norm
-运行:python rl_probe.py(~2-4 分钟)→ out/rl_probe.csv + figs/fig15_RL对照.png
+运行:python rl_probe.py(~2-4 分钟)→ out/rl_probe_data.csv
+    + out/rl_probe_summary.csv + figs/fig15_RL对照.png
 """
 import csv
 import os
@@ -170,13 +171,15 @@ def main():
 
     # ---- CSV ----
     os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
-    path = os.path.join(HERE, "out", "rl_probe.csv")
+    path = os.path.join(HERE, "out", "rl_probe_data.csv")
     with open(path, "w", newline="", encoding="utf-8-sig") as fp:
         w = csv.writer(fp)
         w.writerow(["episode", "eval_exp_t"])
         for ep, ev in curve:
             w.writerow([ep, round(ev, 4)])
-        w.writerow([])
+    summary_path = os.path.join(HERE, "out", "rl_probe_summary.csv")
+    with open(summary_path, "w", newline="", encoding="utf-8-sig") as fp:
+        w = csv.writer(fp)
         w.writerow(["quantity", "value"])
         for k, v in [("rl_final_exp_t", round(ev_final, 4)),
                      ("score_ref_exp_t", round(refs["score"], 4)),
@@ -224,7 +227,7 @@ def main():
     fig.tight_layout()
     os.makedirs(os.path.join(HERE, "figs"), exist_ok=True)
     fig.savefig(os.path.join(HERE, "figs", "fig15_RL对照.png"), dpi=300)
-    print(f"输出:{path} + figs/fig15_RL对照.png")
+    print(f"输出:{path} + {summary_path} + figs/fig15_RL对照.png")
 
 
 if __name__ == "__main__":

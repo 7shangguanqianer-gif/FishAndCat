@@ -171,10 +171,18 @@ FC_CalcPathLen := ABS(INT_TO_REAL(x1 - x0)) * GVL_Param.CELL_W
 END_FUNCTION
 
 
-(* ---------- FC_TMax:全库最远仓位单程时间(评分归一分母) ---------- *)
+(* ---------- FC_TMax:全库最远仓位单程时间(评分归一分母) ----------
+   0712 轨B N4-24+R4:速度<=0 回落 1.0——与 FC_CalcTravelTime(:129-130) **同一安全值**,
+   保证非法速度下分子/分母同源、tNorm 不失真(旧 0.001 版会把分母吹到 19000,评分坍缩)。
+   公式恒匀速=已知口径(N4-01,不随 xUseAccel 变)。 *)
 FUNCTION FC_TMax : REAL
-FC_TMax := MAX(INT_TO_REAL(GVL_Param.COLS - 1) * GVL_Param.CELL_W / GVL_Param.rVx,
-               INT_TO_REAL(GVL_Param.TIERS - 1) * GVL_Param.CELL_H / GVL_Param.rVy);
+VAR
+    rVxSafe, rVySafe : REAL;
+END_VAR
+rVxSafe := GVL_Param.rVx;  IF rVxSafe <= 0.0 THEN rVxSafe := 1.0; END_IF
+rVySafe := GVL_Param.rVy;  IF rVySafe <= 0.0 THEN rVySafe := 1.0; END_IF
+FC_TMax := MAX(INT_TO_REAL(GVL_Param.COLS - 1) * GVL_Param.CELL_W / rVxSafe,
+               INT_TO_REAL(GVL_Param.TIERS - 1) * GVL_Param.CELL_H / rVySafe);
 END_FUNCTION
 
 

@@ -1,0 +1,151 @@
+test_case_default_backcompat (__main__.TestDeterminism) ... ok
+test_same_seed_same_result (__main__.TestDeterminism) ... ok
+test_occupied_blocked (__main__.TestFeasibility) ... ok
+test_oversize_volume (__main__.TestFeasibility) ... ok
+test_overweight_high_tier (__main__.TestFeasibility) ... ok
+test_preset_blocked (__main__.TestFeasibility) ... ok
+test_all_cases_zero_violation (__main__.TestFindings) ... ok
+test_f2_delta_default_differs_and_wins_hot (__main__.TestFindings) ... ok
+test_f2_delta_zero_degenerates_to_near (__main__.TestFindings) ... ok
+test_f3_tight_capacity_greedy_fails_awra_survives (__main__.TestFindings) ... ok
+test_f4_legacy_and_headline_numbers (__main__.TestFindings) ... ok
+test_h_caliber_headline_lock (__main__.TestFindings) ... ok
+test_legacy_and_h_lock (__main__.TestFindings) ... ok
+test_chebyshev_time (__main__.TestGeometry) ... ok
+test_l1_accel_switch (__main__.TestGeometry) ... ok
+test_l1_axis_time_known_values (__main__.TestGeometry) ... ok
+test_l2_travel_between (__main__.TestGeometry) ... ok
+test_manhattan_path (__main__.TestGeometry) ... ok
+test_preoccupied_counts (__main__.TestGeometry) ... ok
+test_tier_cap (__main__.TestGeometry) ... ok
+test_u2_laden_kinematics (__main__.TestGeometry) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 3.084s
+
+OK
+场景:20列x20层=400仓位 | 预占用[sum]=133格 | 货物120件 seed=2026 | vx=2.0 vy=0.5 底层限重100.0kg
+口径:时间=匀速·切比雪夫双程,路径=曼哈顿双程,能耗=Σ重量x高度(kg·m);权重 α=1.0 β=0.6 γ=0.4 δ=0.15
+
+策略              组     入库  失败    总时(s)     期望取货(s)     热货均时(s)     重货均层   能耗(kg·m)   重心(m)   违规
+----------------------------------------------------------------------------------------------
+random 随机基线     在线   120   0     4606       21.07       21.94     7.17      48077    8.85    0
+seq    顺序基线     在线   120   0     4529       18.73       18.71     4.33      44967    8.28    0
+near   就近贪心     在线   120   0     2196        9.82        9.42     4.04      21365    3.93    0
+score  多目标评分    在线   120   0     2240        9.40        8.27     4.08      21520    3.96    0
+awra   AWRA-LS  批量   120   0     2284        6.53        4.60     0.58      16149    2.97    0
+
+score vs near(在线内):期望取货 9.82→9.40s(降 4.3%),热货均时 9.42→8.27s(降 12.2%)
+awra vs score(批量上界):期望取货 9.40→6.53s(降 30.5%),能耗 21520→16149 kg·m(降 25.0%)
+awra vs seq(对题面基线):期望取货 18.73→6.53s(降 65.1%),能耗降 64.1%
+
+CSV 已导出:F:\abb_wh_work\sim\out\summary_metrics.csv + 各策略 assignment_*.csv
+
+TODO(W2):δ多seed精标、NSGA-II Pareto前沿对照、matplotlib图表、装卸时间/加减速模型
+已生成 F:\abb_wh_work\plc\07_GVL_Data_generated.st
+演示批次 20 件(seed=2026),测试向量 10 条(含加减速期望值)
+AWRA 终局向量 20 件(sum 口径,placed=20 failed=0 exp_t=2.811 energy=210.4)
+  vec1: W=13.9 F=1.83 slot=(1,0) -> score=0.122893 t_uni=0.500 t_acc=2.828
+  vec2: W=69.5 F=1.1 slot=(5,2) -> score=0.222415 t_uni=4.000 t_acc=6.325
+  vec3: W=50.1 F=2.02 slot=(10,5) -> score=0.306726 t_uni=10.000 t_acc=11.667
+场景    分布       策略      期望取货s(均±σ)          能耗kg·m(均)     失败(均)    违规Σ   
+------------------------------------------------------------------
+main  uniform  random     19.33 ± 0.53          44690    0.00     0
+main  uniform  seq        19.22 ± 0.27          43875    0.00     0
+main  uniform  near        9.45 ± 0.25          20217    0.00     0
+main  uniform  score       9.07 ± 0.22          20127    0.00     0
+main  uniform  awra        7.22 ± 0.13          15291    0.00     0
+main  skew     random     20.53 ± 1.19          44690    0.00     0
+main  skew     seq        20.25 ± 1.25          43875    0.00     0
+main  skew     near        9.47 ± 0.71          20217    0.00     0
+main  skew     score       8.85 ± 0.89          19997    0.00     0
+main  skew     awra        6.44 ± 0.36          14492    0.00     0
+main  heavy    random     18.37 ± 1.99          54219    0.00     0
+main  heavy    seq        20.79 ± 1.42          55464    0.00     0
+main  heavy    near        9.47 ± 0.71          24953    0.00     0
+main  heavy    score       8.77 ± 0.99          24933    0.00     0
+main  heavy    awra        6.06 ± 0.39          20540    0.00     0
+tight skew     random     18.70 ± 1.46          59849    0.00     0
+tight skew     seq        21.16 ± 1.78          57291    0.00     0
+tight skew     near       18.72 ± 1.47          49923    5.33     0
+tight skew     score      18.46 ± 1.65          49385    5.00     0
+tight skew     awra       12.44 ± 0.96          42131    0.00     0
+
+[主场景/偏态分布,5 seeds] AWRA-LS vs 题面顺序基线:期望取货降 68.2%,能耗降 67.0%
+[紧库存,3 seeds] near 平均失败 5.3 件,awra 平均失败 0.0 件
+全矩阵违规总数 = 0(必须为 0)
+
+CSV:F:\abb_wh_work\sim\out\experiments_detail.csv / experiments_agg.csv
+图已输出:F:\abb_wh_work\sim\figs
+   anim3d_formal_60s.mp4
+   anim3d_sample_10s.mp4
+   cabinet_a.png
+   cabinet_b.png
+   cabinet_c.png
+   cabinet_d.png
+   cabinet_final_closeup.png
+   cabinet_final_full.png
+   cabinet_variants_overview.png
+   design_3d_dashboard_tier2.png
+   design_3d_dashboard_tier3.png
+   fig10_绿色换算.png
+   fig11_重排闭环.png
+   fig12_自适应权重.png
+   fig13_鲁棒压力.png
+   fig14_参数敏感性.png
+   fig15_RL对照.png
+   fig16_拟真度阶梯.png
+   fig1_策略对比.png
+   fig2_占用热力图.png
+   fig3_delta标定.png
+   fig4_时间能耗定位.png
+   fig5_分布鲁棒性.png
+   fig6_pareto前沿.png
+   fig7_运动模型对比.png
+   fig8_混合作业.png
+   fig9_理论对比.png
+   figE1_仓库示意.png
+   figE2_双层算法.png
+   figE3_两把尺子.png
+   figE4_扫描周期分片.png
+   preview_3d_anim_sample.mp4
+   preview_3d_awra.png
+   rack_style_1_steel.png
+   rack_style_2_cabinet.png
+   rack_style_3_neon.png
+   rack_style_4_relief.png
+   rack_styles_overview.png
+H 口径(加减速+自适应)与对照口径(匀速+固定默认),120件/skew/and,5 seeds
+
+策略            H:exp_t均±σ     H:能耗   H:重货层   对照:exp_t   违规Σ
+random        22.53±1.18    44690    6.44      20.53     0
+seq           22.12±1.25    43875    5.41      20.25     0
+near          11.92±0.64    20462    4.16       9.47     0
+score         10.87±1.04    20151    4.09       8.85     0
+awra           8.40±0.48    14345    0.57       6.44     0
+
+★H 口径报告句(数字来源=本脚本,勿手抄旧值):
+  AWRA-LS 期望取货 8.40s,较题面顺序基线(22.12s)降 62.0%;能耗降 67.3%;重货平均层高 0.57
+  批量 vs 在线 gap:22.7%;违规全口径合计 0(必须0)
+  对照口径(匀速+固定,文献可比):awra 6.44s,降 68.2%
+
+CSV:F:\abb_wh_work\sim\out\headline_numbers.csv
+❌ 用户层 Word 版缺失/过时 2 处(跑 python tools/make_user_docs.py):
+   1_给你看\实验发现.md 的 Word 版旧于 md
+   2_你要操作\官方群提问清单.md 的 Word 版旧于 md
+
+==================== 回归测试(数量以输出为准) ====================
+
+==================== 主对比+CSV导出 ====================
+
+==================== ST一致性数据生成 ====================
+
+==================== 多seed实验矩阵 ====================
+
+==================== 基础图表 fig1-5 ====================
+
+==================== H口径头条数字 ====================
+
+==================== 文档联动自检 ====================
+
+!! 步骤失败:文档联动自检(exit=1),后续已停止

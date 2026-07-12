@@ -98,7 +98,7 @@
   Claude 看用户清晰截图(无遮罩)精确指令每一步。用户额度换稳定。
 - **备选 B:export_native 导出裸元素 XML → Claude 在 XML 层生成 400 格+绑变量 → import_native**
   ——完全绕开 GUI,但要**先关 AB**(ScriptEngine 独占工程);裸元素结构可导出参考
-  (tools/ab_scripting/dump_visu.py 已能导出,visu_main_native.xml 有空画面容器结构)。
+  (tools/ab_scripting/archive/dump_visu.py 已能导出,visu_main_native.xml 有空画面容器结构)。
 - **备选 C:computer use 只放裸元素(它可靠),变量绑定+400格复制走 XML/Multiply**。
 - **前置永远先做**:请用户彻底关掉那个置顶浮窗;保持 AB 窗口化不最大化。
 
@@ -115,7 +115,7 @@
   `'Goods ID'` ②input_type 要全限定 `VisuDialogs.Numpad`(短名生成 Numpad_VISU_STRUCT 未知
   类型)+工程需有 VisuDialogs 库(脚本可 `libman.add_library("VisuDialogs, * (System)")` 注入)。
 - **ScriptVisualization 改不了已有输入动作**(无 remove_input_action/无枚举)→ 修法=
-  `vel.remove_id` 删元素+原参数重建(tools/ab_scripting/fix_input_titles.py,坐标匹配防错删)。
+  `vel.remove_id` 删元素+原参数重建(tools/ab_scripting/archive/fix_input_titles.py,坐标匹配防错删)。
 - **GUI 小坑三连**(批次 D 人工实配):①编辑器标签开满会报 "maximum allowed number of opened
   editors" → Window→Close All Editors;②Alarm Class 确认方式无 "REQ",选 **REP_ACK**;
   ③Banner 属性无 "Filter=Newest" 项,Alarm groups 勾 AG_WH 即可。元素定位手法=随手放+

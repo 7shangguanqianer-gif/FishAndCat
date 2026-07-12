@@ -1,0 +1,12 @@
+﻿group,n_batch_per_cycle,n_pairs_per_cycle,cycles_to_done,wall_s_sim,per_cycle_ms_sim,done_ok
+A,1,200,314,0.80,2.56,1
+B,5,200,126,0.21,1.66,1
+C,20,200,126,0.21,1.63,1
+D,20,2000,130,0.21,1.61,1
+
+param,value,note
+demo_goods,20,演示批件数(与仿真同seed同源)
+ls_pairs_total,190,20件两两交换对数 C(20;2)=190——nPairs=200 一周期吃完(nPairs 不敏感的原因)
+task_cycle_ms_nominal,10,真机任务周期标称值(真机预估=cycles×10ms;假设显式)
+source,AB2.9 仿真在线实测,tools/ab_scripting/measure_l4b.py;探针 nSamples=周期计数器
+clock_note,三时钟源周期内耗时均恒0(LTIME/Monitor/SysTimeGetNs)——周期数为确定性硬指标;仿真挂钟仅参考(自由轮转非10ms实时节拍)

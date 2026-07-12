@@ -9,6 +9,7 @@ VAR
     eState      : E_MainState := E_MainState.STATE_IDLE;
     fbInit      : FB_InitWarehouse;
     fbAssign    : FB_AssignAllGoods;
+    fbAssignCT  : FB_AssignClassTurnover;   // 0712 轨B D-1:CB/TOB 批量分配
     fbImprove   : FB_LocalSwapImprove;
     fbStats     : FB_Stats;
     fbPath      : FB_BuildVisuPath;
@@ -40,6 +41,10 @@ IF GVL_Visu.CmdReset AND NOT xResetOld THEN
     GVL_Visu.VisuPathCount := 0;                    // 复位清路径叠加
     GVL_Visu.VisuCurrentX := 0;                     // 堆垛机归位 I/O 口(左下角)
     GVL_Visu.VisuCurrentY := 0;
+    // 0712 轨B N5-05:批次局搜统计跨批清零(AWRA→Reset→非AWRA 曾残留旧 SwapCnt/LsRounds)
+    GVL_WH.stStats.SwapCnt := 0;
+    GVL_WH.stStats.LsRounds := 0;
+    GVL_WH.stStats.RelocCnt := 0;
     // 0711 修:复位同时清统计/路径显示残留(旧版遗留 186.0/370 等旧批数字误导评委)
     GVL_Visu.VisuTotalTime := 0.0;
     GVL_Visu.VisuAvgTime := 0.0;
@@ -53,6 +58,22 @@ IF GVL_Visu.CmdReset AND NOT xResetOld THEN
     eState := E_MainState.STATE_INIT;
 END_IF
 xResetOld := GVL_Visu.CmdReset;
+
+// ---------- A4 登录/登出+调参守卫(0712 轨B N4-14:前置到状态机之前) ----------
+// 原在段尾常驻区=守卫晚于消费者:越权改参可在同一扫描周期内先被 fbAssign 等用于选位、
+// 落位副作用不可回滚。前置后:守卫先回滚,消费者永远读干净值。PIN 消费即清。
+fbAuth(xLogin := GVL_Visu.CmdLogin, iPin := GVL_Visu.InPinCode,
+       xLogout := GVL_Visu.CmdLogout);
+GVL_Visu.iUserLevel := fbAuth.iLevel;
+GVL_Visu.VisuUserText := fbAuth.sUserText;
+IF GVL_Visu.CmdLogin OR GVL_Visu.CmdLogout THEN
+    GVL_Visu.InPinCode := 0;
+END_IF
+// 0712 轨B R3:批运行中冻结参数编辑(fbGuard 对一切写回滚)——单批口径不混参数版本
+fbGuard(iLevel := fbAuth.iLevel,
+        xFreeze := (eState = E_MainState.STATE_ASSIGN)
+                OR (eState = E_MainState.STATE_IMPROVE)
+                OR (eState = E_MainState.STATE_STATS));
 
 CASE eState OF
     // ---------- 待机:上电自动进入初始化 ----------
@@ -95,15 +116,24 @@ CASE eState OF
         ELSIF fbGoodsInput.iErrId = 2 THEN
             GVL_Visu.VisuStatusText := 'ERR_NEG_INPUT';        // 边界:负输入
             GVL_Visu.VisuAlarm := TRUE;
+        ELSIF fbGoodsInput.iErrId = 4 THEN
+            GVL_Visu.VisuStatusText := 'ERR_BAD_ID';           // 0712 轨B N4-16:非正/重复 ID
+            GVL_Visu.VisuAlarm := TRUE;
         END_IF
 
         // 按钮2:载入演示批次(GVL_Data,由 Python seed=2026 导出,保证与仿真同源)
+        // 0712 轨B N4-15:满仓护栏(第21次连点曾可写 aGoods[401] 越界;拒载不部分写入,T61 锁)
         IF GVL_Visu.CmdLoadDemo AND NOT xDemoOld THEN
-            FC_LoadDemoGoods();
-            GVL_Visu.VisuStatusText := CONCAT('DEMO_LOADED_N=',
-                                              INT_TO_STRING(GVL_WH.iGoodsCount));
-            GVL_Visu.VisuAlarm := FALSE;                // 新批次开始,清报警灯与旧路径
-            GVL_Visu.VisuPathCount := 0;
+            IF GVL_WH.iGoodsCount + GVL_Data.N_DEMO <= GVL_Param.MAX_GOODS THEN
+                FC_LoadDemoGoods();
+                GVL_Visu.VisuStatusText := CONCAT('DEMO_LOADED_N=',
+                                                  INT_TO_STRING(GVL_WH.iGoodsCount));
+                GVL_Visu.VisuAlarm := FALSE;            // 新批次开始,清报警灯与旧路径
+                GVL_Visu.VisuPathCount := 0;
+            ELSE
+                GVL_Visu.VisuStatusText := 'ERR_DEMO_FULL_400';
+                GVL_Visu.VisuAlarm := TRUE;
+            END_IF
         END_IF
         xDemoOld := GVL_Visu.CmdLoadDemo;
 
@@ -124,9 +154,14 @@ CASE eState OF
                 END_FOR
                 GVL_Visu.VisuPathCount := 0;
                 GVL_Visu.VisuAlarm := FALSE;
-                // 策略选择:0=seq 1=near 2=score(在线) 3=AWRA-LS(批量=Rank+score+LS)
+                // 策略选择:0=seq 1=near 2=score 3=AWRA-LS 4=CB 5=TOB(0712 轨B D-1)
                 xUseRank := (GVL_Visu.SelStrategy = 3);
                 IF GVL_Visu.SelStrategy = 3 THEN iStrat := 2; ELSE iStrat := GVL_Visu.SelStrategy; END_IF
+                // iStrat=4/5 由 STATE_ASSIGN 转发给 FB_AssignClassTurnover(启动即锁存)
+                // 0712 轨B N5-05:批开工双保险清零(与 Reset 清零并存,防跨批残留)
+                GVL_WH.stStats.SwapCnt := 0;
+                GVL_WH.stStats.LsRounds := 0;
+                GVL_WH.stStats.RelocCnt := 0;
                 xKickAssign := TRUE;
                 eState := E_MainState.STATE_ASSIGN;
             END_IF
@@ -135,16 +170,30 @@ CASE eState OF
 
     // ---------- 批量分配(分片运行中) ----------
     E_MainState.STATE_ASSIGN:
-        fbAssign(xStart := xKickAssign, xUseRank := xUseRank, iStrategy := iStrat);
-        xKickAssign := FALSE;
-        GVL_Visu.VisuStatusText := CONCAT('ASSIGN_RUN_PLACED=', INT_TO_STRING(fbAssign.iAssigned));
-        IF fbAssign.xDone THEN
-            IF GVL_Visu.SelStrategy = 3 THEN
-                xKickImprove := TRUE;
-                eState := E_MainState.STATE_IMPROVE;
-            ELSE
+        IF (iStrat = 4) OR (iStrat = 5) THEN
+            // 0712 轨B D-1:CB/TOB 专用批量 FB(无 LS 阶段,完成直入统计;iStrat 启动已锁存)
+            fbAssignCT(xStart := xKickAssign, iMode := iStrat);
+            xKickAssign := FALSE;
+            GVL_Visu.VisuStatusText := CONCAT('ASSIGN_RUN_PLACED=',
+                                              INT_TO_STRING(fbAssignCT.iAssigned));
+            IF fbAssignCT.xDone THEN
                 xKickStats := TRUE;
                 eState := E_MainState.STATE_STATS;
+            END_IF
+        ELSE
+            fbAssign(xStart := xKickAssign, xUseRank := xUseRank, iStrategy := iStrat);
+            xKickAssign := FALSE;
+            GVL_Visu.VisuStatusText := CONCAT('ASSIGN_RUN_PLACED=', INT_TO_STRING(fbAssign.iAssigned));
+            IF fbAssign.xDone THEN
+                // 0712 轨B N4-17:用启动时锁存的 xUseRank 判断,不重读实时 SelStrategy
+                // (旧写法=运行中切换策略档会错进/错过 LS 阶段的竞态)
+                IF xUseRank THEN
+                    xKickImprove := TRUE;
+                    eState := E_MainState.STATE_IMPROVE;
+                ELSE
+                    xKickStats := TRUE;
+                    eState := E_MainState.STATE_STATS;
+                END_IF
             END_IF
         END_IF
 
@@ -154,9 +203,11 @@ CASE eState OF
         xKickImprove := FALSE;
         GVL_Visu.VisuStatusText := CONCAT('IMPROVE_R=',
             CONCAT(INT_TO_STRING(fbImprove.iRounds),
-            CONCAT('_SWAPS=', INT_TO_STRING(fbImprove.iSwaps))));
+            CONCAT('_SWAPS=', CONCAT(DINT_TO_STRING(fbImprove.iSwaps),
+            CONCAT('_RELOC=', DINT_TO_STRING(fbImprove.iRelocs))))));   // R6:两类邻域分列显示
         IF fbImprove.xDone THEN
             GVL_WH.stStats.SwapCnt  := fbImprove.iSwaps;
+            GVL_WH.stStats.RelocCnt := fbImprove.iRelocs;   // 0712 轨B N5-06:重定位分列,不再漏计
             GVL_WH.stStats.LsRounds := fbImprove.iRounds;
             xKickStats := TRUE;
             eState := E_MainState.STATE_STATS;
@@ -190,20 +241,12 @@ END_CASE
 // 块3 P2/P3:记录页窗口+单件查询(常驻:DONE 后评委翻表/查询仍可用)
 fbRecPage(xPageUp := GVL_Visu.CmdPageUp, xPageDown := GVL_Visu.CmdPageDown);
 fbQuery(xQuery := GVL_Visu.CmdQuery, iId := GVL_Visu.InQueryId);
-// A2 场景检测器:货物表变化自动重算画像+推荐;Auto 开=推荐直写策略档(人工覆盖=关 Auto)
-fbSceneDet();
+// A2 场景检测器:货物表变化/切目标档 自动重算画像+推荐;Auto 开=推荐直写策略档(人工覆盖=关 Auto)
+fbSceneDet(iObjective := GVL_Visu.SelObjective);
 IF fbSceneDet.xValid AND GVL_Visu.xAutoStrategy THEN
     GVL_Visu.SelStrategy := fbSceneDet.iRecBatch;
 END_IF
-// A4 登录/登出+调参守卫;PIN 消费即清(登录动作当周期已用,不留回显/重放)
-fbAuth(xLogin := GVL_Visu.CmdLogin, iPin := GVL_Visu.InPinCode,
-       xLogout := GVL_Visu.CmdLogout);
-GVL_Visu.iUserLevel := fbAuth.iLevel;
-GVL_Visu.VisuUserText := fbAuth.sUserText;
-IF GVL_Visu.CmdLogin OR GVL_Visu.CmdLogout THEN
-    GVL_Visu.InPinCode := 0;
-END_IF
-fbGuard(iLevel := fbAuth.iLevel);
+// A4 登录/守卫已前置到状态机之前(0712 轨B N4-14,见文件顶部)——此处不再重复调用
 // A3 检修挂起/恢复(需管理员;putaway block 语义:禁新入库,存量冻结可查询)
 IF GVL_Visu.CmdMaintToggle AND NOT xMaintOld THEN
     iMaintRet := FC_MaintToggle(x := GVL_Visu.InMaintX, y := GVL_Visu.InMaintY,
@@ -231,8 +274,22 @@ IF GVL_Visu.CmdViewCycle AND NOT xViewOld THEN
 END_IF
 xViewOld := GVL_Visu.CmdViewCycle;
 // 块3 方向9:快照保存(上升沿把当前布局冻结为对比基准,CmdCompareMode 切换显示)
+// 0712 轨B N4-22:从 aSlots 重建纯占用态(0空闲/1预占/2占用),不再整体抄 VisuSlotState
+// (后者混有推荐3/路径4/查询高亮6 等瞬态色,中途保存会污染"优化前后"对比基线)
 IF GVL_Visu.CmdSaveSnap AND NOT xSnapOld THEN
-    GVL_Visu.aSnapState := GVL_Visu.VisuSlotState;      // 同型数组整体赋值
+    FOR c2 := 0 TO GVL_Param.COLS - 1 DO
+        FOR t2 := 0 TO GVL_Param.TIERS - 1 DO
+            IF GVL_WH.aSlots[c2, t2].Occupied THEN
+                IF GVL_WH.aSlots[c2, t2].PresetOcc AND (GVL_WH.aSlots[c2, t2].GoodsId = 0) THEN
+                    GVL_Visu.aSnapState[c2, t2] := 1;   // 预占(无货)
+                ELSE
+                    GVL_Visu.aSnapState[c2, t2] := 2;   // 已占
+                END_IF
+            ELSE
+                GVL_Visu.aSnapState[c2, t2] := 0;       // 空闲
+            END_IF
+        END_FOR
+    END_FOR
     GVL_Visu.xSnapValid := TRUE;
     GVL_Visu.VisuStatusText := 'SNAP_SAVED';
 END_IF

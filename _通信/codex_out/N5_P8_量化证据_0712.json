@@ -1,0 +1,84 @@
+{
+  "scope": "read-only scan of sim/out; no Automation Builder",
+  "inventory_summary": {
+    "csv_files": 37,
+    "rectangular_single_table_files": 31,
+    "intentional_multisection_files": [
+      "energy_report.csv",
+      "realism_matrix.csv",
+      "l4_task_cycles.csv",
+      "reslot_cycle.csv",
+      "scan_g2g4_agg.csv",
+      "rl_probe.csv"
+    ],
+    "zero_byte_files": [],
+    "nonfinite_files": [],
+    "duplicate_full_row_files": {},
+    "duplicate_known_key_files": {}
+  },
+  "cross_checks": {
+    "instgen": {
+      "detail_rows": 2730,
+      "scenarios": 13,
+      "seeds": 30,
+      "strategies": 7,
+      "agg_rows": 91,
+      "detail_group_count_matches_agg_n_runs": true,
+      "max_abs_mean_rounding_delta": 0.0033333333333338544,
+      "viol_sum_delta": 0.0
+    },
+    "experiments": {
+      "detail_rows": 90,
+      "agg_rows": 20,
+      "detail_group_count_matches_agg_n_runs": true,
+      "max_abs_mean_rounding_delta": 0.04000000000814907,
+      "energy_is_rounded_to_0_1": true,
+      "viol_sum_delta": 0.0
+    },
+    "oracle": {
+      "detail_rows": 3900,
+      "scenario_rows": 13,
+      "seeds": 30,
+      "selectors": 10,
+      "summary_rows": 140,
+      "summary_ALL_rows": 10,
+      "profile_rows": 390,
+      "aggregate_arithmetic_matches_within_output_rounding": true,
+      "negative_gap_detail_rows": 58,
+      "attain_over_100_detail_rows": 58,
+      "negative_gap_with_excess_fail_rows": 58,
+      "negative_gap_without_excess_fail_rows": 0,
+      "negative_gap_summary_rows": [
+        ["dense_200", "tob", -21.515, 128.04, 3.53],
+        ["dense_240", "tob", -18.681, 123.0, 9.7],
+        ["ALL", "tob", -3.092, 103.93, 1.02]
+      ]
+    },
+    "adaptive": {
+      "candidate_rows": 270,
+      "policy_rows": 18
+    },
+    "assignments": {
+      "files": 5,
+      "rows_each": 120,
+      "duplicate_good_ids": 0,
+      "duplicate_positions": 0
+    }
+  },
+  "stale_log": {
+    "file": "sim/out/consistency_probe.log",
+    "persisted_label": "390 runs = 12 scenarios x 30 seeds",
+    "arithmetic_correct_label": "390 runs = 13 scenarios x 30 seeds",
+    "current_source_uses_len_SCENARIOS": true,
+    "current_scenario_registry_count": 13,
+    "log_is_older_than_fixed_source": true
+  },
+  "generic_dictreader_multisection_behavior": {
+    "energy_report.csv": "3 rows acquire extra columns under key None",
+    "realism_matrix.csv": "9 parameter rows acquire missing values",
+    "l4_task_cycles.csv": "6 metadata rows acquire missing values",
+    "reslot_cycle.csv": "7 summary rows acquire extra columns under key None",
+    "scan_g2g4_agg.csv": "9 parameter rows acquire missing values",
+    "rl_probe.csv": "same-width second header silently changes column meaning"
+  }
+}

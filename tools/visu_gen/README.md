@@ -1,8 +1,8 @@
 # tools/visu_gen — 画面程序化生成器与探针档案(0710,Codex 实战产出收编)
 
 > 来源:`F:\abb_wh_spike\visu_native_20260710_1225\`(Codex 独立实验目录,一次性,故收编存档)。
-> 战果:**批次 B/C 全部画面元素(VisuMain 477 + VisuStats 113)由脚本生成**,编译 0 错,
-> PRG_Test 45/0,ST 文本对象零改动审计通过。交接报告=`docs/evidence_0710/`。
+> 当前三页画面元素：**VisuMain 505 + VisuStats 134 + VisuAdmin 67**；历史批次 B/C 的两页计数
+> 477+113 与 PRG_Test 45/0 仅作阶段证据。现行核心 ST 门为 59/0；输入动作仍须 GUI 洗+在线长跑。
 
 ## 核心能力发现(改写项目自动化能力边界)
 
@@ -10,8 +10,8 @@
 Visualization、添加元素、设置属性与输入动作。三方证据链:
 1. 网络考古(0710 枪1):2014-2024 官方零支持,唯一变数=CODESYS V3.5 SP21(2025-03)
    发布说明 "Scripting: Automated creation and design of visualizations using Python scripts";
-2. **Codex 实战(0710)**:用该 API 在正式工程生成 590 个元素并通过全部验收——SP21 能力
-   在 AB 2.9 存在的一手证明;
+2. **Codex 实战(0710-0711)**:用该 API 在正式工程生成三页 706 个元素并通过结构审计；
+   带输入动作元素仍需 GUI 洗与在线长跑，不能把“生成+编译”写成全部验收；
 3. 0708 探针 `create_visualization=False` 不矛盾:当时探的是旧猜想名,真实入口是 SP21 新命名空间。
 
 ## 文件清单(按用途)

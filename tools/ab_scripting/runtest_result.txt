@@ -5,7 +5,7 @@ LOGIN_OK; state=stop
 STATE after start: run
 write xRunTests via: set_prepared_value('PRG_Test.xRunTests', 'TRUE')
 write_prepared_values ok
-PRG_Test.iPassed = INT#59
+PRG_Test.iPassed = INT#75
 PRG_Test.iFailed = INT#0
 PRG_Test.sLastFail = ''
 PRG_Test.xAllPass = TRUE

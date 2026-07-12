@@ -10,11 +10,9 @@ test_oracle_gap.py — oracle_gap.py 回归测试(零依赖 unittest,风格同 t
 instance_gen.py / strategy_lib.py / warehouse_sim.py 一个字。
 
 锁定两件事:
-  1. golden number 锁 —— 当前 13 场景×30 seed(out/instgen_detail.csv 冻结数据)
-     下,det_lexicographic 相对 oracle 的 attain_mean 与 closed gap。真值来自
-     实跑 oracle_gap.main()(每次调用真实重跑全流程,~3s,非读取旧 CSV 快照),
-     故 select_strategy 阈值 / FIXED 策略表 / warehouse_sim 评分或可行性逻辑
-     任何一处漂移,这里都会变红。
+  1. golden number 锁 —— 基于当前冻结的 13 场景×30 seed
+     out/instgen_detail.csv，真实重跑 oracle_gap 的后处理/选择器流程；它会锁
+     select_strategy 与 gap 聚合，但不会重新运行 warehouse_sim 或证明策略性能。
   2. 一票否决锁 —— SBS(词典序最优固定策略)选择必须先看 excess_fail 再看 gap
      均值:构造一个"exp_t 全场最低但 fail>0"的诱饵策略,断言它不会被选中。
      `sbs = min(FIXED, key=lambda s: (fixed_exf[s], fixed_glob[s]))` 这行是
@@ -53,8 +51,10 @@ def _sbs_of(all_rows, fixed):
     """复刻 oracle_gap.py 主流程里 SBS 的选择式:excess_fail 总数(此处用 exf_mean
     等价代入,同一 selector 组内实例数恒定,排序与用 sum 完全一致)→ gap 均值,
     词典序取最小。"""
+    def gap_or_inf(row):
+        return float(row["gap_mean"]) if row.get("gap_mean") not in ("", None) else float("inf")
     return min(fixed, key=lambda s: (float(all_rows[s]["exf_mean"]),
-                                     float(all_rows[s]["gap_mean"])))
+                                     gap_or_inf(all_rows[s])))
 
 
 class TestOracleGapGoldenNumbers(unittest.TestCase):
@@ -68,9 +68,18 @@ class TestOracleGapGoldenNumbers(unittest.TestCase):
         self.assertEqual(len({k[0] for k in inst}), 13)
         self.assertEqual(len({k[1] for k in inst}), 30)
 
-        og.main()   # 真实重跑全流程(非读取旧快照),重写 out/oracle_gap*.csv;
-                    # 纯后处理+确定性(docs/sim审查_0711pm.md 已核验 SHA256 幂等)
-        all_rows = _read_all_rows(og.OUT)
+        # 真实重跑后处理，但所有生成物写入临时目录，正式 out/ 与 fig 不受测试污染。
+        tmp = tempfile.mkdtemp(prefix="oracle_gap_golden_")
+        orig_here, orig_out = og.HERE, og.OUT
+        try:
+            tmp_out = os.path.join(tmp, "out")
+            os.makedirs(tmp_out, exist_ok=True)
+            og.HERE, og.OUT = tmp, tmp_out
+            og.main()
+            all_rows = _read_all_rows(tmp_out)
+        finally:
+            og.HERE, og.OUT = orig_here, orig_out
+            shutil.rmtree(tmp, ignore_errors=True)
 
         lex = all_rows["det_lexicographic"]
         attain = float(lex["attain_mean"])
@@ -127,12 +136,11 @@ class TestOracleGapSBSVeto(unittest.TestCase):
             og.main()
 
             all_rows = _read_all_rows(tmp_out)
-            # 诱饵确实构造成立:tob 的 excess_fail>0,且 gap 是全场最低(最有诱惑力)
+            # 诱饵确实构造成立:tob 的 excess_fail>0；修复后它不再拥有可比 gap。
             self.assertGreater(float(all_rows["tob"]["exf_mean"]), 0.0)
             self.assertEqual(float(all_rows["awra"]["exf_mean"]), 0.0)
-            gaps = {s: float(all_rows[s]["gap_mean"]) for s in og.FIXED}
-            self.assertEqual(min(gaps, key=gaps.get), "tob",
-                             "诱饵设计失败:tob 应是全场 gap 最低者,测试前提不成立")
+            self.assertEqual(all_rows["tob"]["gap_mean"], "")
+            self.assertEqual(all_rows["tob"]["attain_mean"], "")
 
             # 核心断言①:按 CSV 数字复刻词典序选择式,tob 不得当选
             sbs = _sbs_of(all_rows, og.FIXED)

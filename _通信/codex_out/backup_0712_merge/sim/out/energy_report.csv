@@ -1,0 +1,13 @@
+﻿assumption,value
+eta,0.85
+mu,0.05
+carrier_kg,150.0
+daily_ops,500
+work_days,300
+elec_price_yuan_kwh,0.8
+co2_kg_per_kwh,0.581
+eta_regen_outlook,0.4
+
+layout,kwh_per_cycle,kwh_per_year,cost_yuan_year,co2_kg_year,recovered_kwh_year,kwh_year_net_regen
+seq,0.00727,545.4,436.3,316.9,175.5,369.9
+awra,0.00372,278.9,223.2,162.1,76.7,202.2

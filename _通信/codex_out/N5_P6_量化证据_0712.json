@@ -1,0 +1,42 @@
+{
+  "scope": "read-only Python rerun; no Automation Builder",
+  "energy_h_rerun": {
+    "seq": {
+      "kwh_per_dual_cycle": 0.007272209744117647,
+      "kwh_year_if_500_individual_ops_day": 545.4157308088235,
+      "kwh_year_if_500_dual_cycles_day": 1090.831461617647
+    },
+    "awra": {
+      "kwh_per_dual_cycle": 0.0037192486294117632,
+      "kwh_year_if_500_individual_ops_day": 278.94364720588226,
+      "kwh_year_if_500_dual_cycles_day": 557.8872944117645
+    }
+  },
+  "annualization": {
+    "daily_ops_source_value": 500,
+    "work_days": 300,
+    "code_interpretation": "500 individual operations/day = 250 dual cycles/day",
+    "dual_cycles_per_year_used_by_code": 75000.0,
+    "dual_cycles_per_year_if_500_means_cycles": 150000,
+    "saving_kwh_current_interpretation": 266.4720836029412,
+    "saving_kwh_if_500_dual_cycles_day": 532.9441672058824,
+    "relative_saving_pct": 48.85669197838809,
+    "cost_saving_yuan_at_0_8": 213.17766688235298
+  },
+  "co2_factor_sensitivity": {
+    "project_factor_0_581_saving_kg": 154.82028057330882,
+    "mee_2023_national_average_0_5306_saving_kg": 141.3900875597206,
+    "mee_2023_excluding_market_nonfossil_0_6096_saving_kg": 162.44138216435297,
+    "relative_saving_pct_unchanged": true
+  },
+  "throughput_awra_h": {
+    "operations": 200,
+    "travel_only_s": 3124.5,
+    "travel_only_ops_h": 230.43686989918388,
+    "plus_15s_each_store_and_retrieve_s": 6124.5,
+    "plus_handling_ops_h": 117.56061719324026,
+    "plus_one_600s_failure_s": 6724.5,
+    "plus_handling_and_failure_ops_h": 107.0711577068927,
+    "realism_common_arrival_observed_ops_h_from_p4": 41.79
+  }
+}

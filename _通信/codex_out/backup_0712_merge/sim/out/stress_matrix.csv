@@ -1,0 +1,5 @@
+﻿strategy,base_exp,drift_exp,drift_pct,drift_recovered,heavy_fail,heavy_tier,degrade_viol,degrade_cost
+seq,19.75,20.313,2.9,14.322,0,4.39,3,66.7
+near,9.887,10.36,4.8,7.542,0,4.49,5,193.2
+score,9.36,10.358,10.7,7.729,0,4.49,3.67,139.2
+awra,6.366,9.483,49.0,7.537,0,0.65,0,0.0

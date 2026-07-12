@@ -1,0 +1,11 @@
+﻿strategy,motion,exp_t,hot_t,tot_time2,energy,viol
+random,uniform,21.07,21.938,4606.0,48077.0,0
+seq,uniform,18.729,18.708,4529.0,44967.0,0
+near,uniform,9.819,9.417,2196.0,21365.0,0
+score,uniform,9.399,8.271,2240.0,21520.0,0
+awra,uniform,6.531,4.604,2284.0,16149.0,0
+random,trapezoid,23.171,24.028,5102.3,48077.0,0
+seq,trapezoid,20.568,20.551,4980.0,44967.0,0
+near,trapezoid,12.224,11.916,2799.0,22143.0,0
+score,trapezoid,11.595,10.249,2843.0,21466.0,0
+awra,trapezoid,8.786,7.091,2843.0,16089.0,0

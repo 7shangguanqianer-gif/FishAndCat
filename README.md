@@ -12,7 +12,7 @@
 | 文件 | 干什么用 |
 |---|---|
 | `项目通俗导览.md` | ★零基础从这读起(课0):算法是什么/比过谁/工业界用什么/努力清单/FAQ/词汇表 |
-| `项目全景说明书.docx` | 全局导览快照(封面标注生成日期;日常进度以 现状与任务.md 为准) |
+| `项目全景说明书.docx` | **历史快照，已过时，不作当前数字依据**；当前口径查 canonical 与三份导览 |
 | `实验发现.md` | F 系列全部实验结论(报告与答辩的弹药库,每条带复现命令) |
 | `差异化战略_如何超过别人.md` | 竞争画像、六杠杆、算法天花板路线图、§8 冲刺计划 |
 | `情报_往届与同类比赛.md` | 获奖率/评委评语六要素/对手画像/2026 届增量情报 |
@@ -23,7 +23,7 @@
 
 | 文件 | 动作 | 验收 |
 |---|---|---|
-| `AB建工程操作卡.md` | 照卡把 ST 导入 Automation Builder(60-90分钟) | PRG_Test 显示 iPassed=23 |
+| `AB建工程操作卡.md` | 照卡把 ST 导入 Automation Builder(60-90分钟) | 最后一次有证据的冻结基线为iPassed=59、iFailed=0；新计数须真实复测 |
 | `官方群提问清单.md` | 把两问粘贴进官方群,答案回传 | B1/B2 落定 |
 | `固定接管提示词.md` | 三套固定话术:换账号用套A;给Codex派活用套C一句话(信箱机制) | 复制即用 |
 | `_通信\`(根目录) | Claude↔Codex 异步信箱:致Codex.md=任务单,致Claude.md=汇报 | 你只当传令兵 |
@@ -33,8 +33,8 @@
 
 | 目录/文件 | 是什么 |
 |---|---|
-| `sim\*.py` | 仿真/实验/图表源码;底盘一键复现 `python sim\run_all.py`;各专项实验独立脚本(清单见 sim 目录) |
-| `sim\out\ sim\figs\` | 产物(可删,全部可再生) |
+| `sim\*.py` | 仿真/实验/图表源码；分阶段入口：`python sim\core_smoke.py` / `report_rebuild.py` / `artifact_verify.py`；长耗时专项独立运行 |
+| `sim\out\ sim\figs\` | Python 产物；多数可再生，但历史 AB 实测/人工证据不可由 sim 单独重建，勿整目录盲删 |
 | `plc\*.st` | AC500 ST 源码(07/08 是生成文件,禁手改) |
 | `docs\canonical_assumptions.md` | ★口径唯一真相源(引用数字前查它) |
 | `docs\ClaudeCode接管提示词.md` `docs\Codex总对接提示词.md` | AI 接管入口(抗单点) |
@@ -44,6 +44,6 @@
 
 ## 数字口径速记
 
-报告主口径 **H = 梯形加减速 + 场景自适应权重**;头条唯一来源 `python sim\headline.py`:
-**AWRA-LS 期望取货 7.42±0.42s(较基线降 66.2%),能耗降 74.3%,重货均层 0.50,违规 0**。
-口径查 `docs\canonical_assumptions.md`;回归护栏 `python sim\tests\test_sim.py`(数量以输出为准,全绿即健康)。
+报告 H 是 **sim 设计口径=梯形加减速+场景自适应权重**，不是 PLC H 闭环。头条唯一来源 `python sim\headline.py`：
+**AWRA-LS 8.40±0.48s（5-seed sample SD；回归锚，非U3 30-seed泛化证据），较顺序基线降62.0%，能耗代理降67.3%，重货均层0.57；承重/容积复查0、失败0。**
+PLC当前可引用证据边界=**75/0**（0712 轨B 三轮 AB PC 仿真在线读回：编译 0 errors+xAllPass=TRUE），范围=核心ST+AWRA/CB/TOB 三套黄金向量逐位锁+T60-T74 真实断言（仅 T75 预留）。CB/TOB 分配、lex 检测路由、near 平局统一均已实现并经 AB 实测。**仍无证据、不得外推**：400件压测/watchdog/三页在线长跑/实体AC500/多客户端隔离。口径查`docs\canonical_assumptions.md`(C11)。运行`python sim\core_smoke.py`只证明其列出的Python门通过，不代表AB、报告渲染或全部专项均已验证。

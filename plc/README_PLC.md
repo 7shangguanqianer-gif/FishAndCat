@@ -1,8 +1,9 @@
 # PLC 侧使用说明(Automation Builder / AC500 V3)
 
 > 本目录是 ST 源码骨架(文本形式)。Automation Builder(下称 AB)装好后按下述步骤导入,
-> 无实体 PLC 也能在仿真模式下完整运行(初赛口径足够)。
+> 无实体PLC时可在AB PC仿真模式检查有限逻辑；这不等于实体AC500完整运行或性能验证。
 > 交付形式官方要求待确认(canonical D 清单),先按「AB 工程 + ST 源码」双备份准备。
+> **0712并发状态**：59/0是最后一次有AB读回依据的基线。当前`06_PRG_Test.st`声明75项，其中T60-T69为真实断言、T70-T75为恒TRUE预留；CB/TOB分配和lex检测路由已写入源码。本轮未AB复测，因此源码实现、新增断言和75/0显示值都不得当作已验证证据。
 
 ## 1. 文件清单与导入对象对应
 
@@ -10,10 +11,10 @@
 |---|---|---|
 | 01_DUTs.st | 4 个 DUT(每个 TYPE 一个) | ST_Good / ST_Slot / ST_Stats / E_MainState |
 | 02_GVL.st | 3 个 GVL | GVL_Param(常量段+变量段合一个,含 L1 加减速参数)/ GVL_WH / GVL_Visu |
-| 03_Functions.st | 15 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表)+ **FC_MaintToggle**(A3 检修翻转)+ **FC_HeatColor / FC_BlendLight**(C2/C6 热力色阶、C1 层高亮混色,0711) |
-| 04_FB_Warehouse.st | 12 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 负载实测)+ **FB_VisuRefresh**(L6 颜色镜像)+ **FB_SceneDetect / FB_UserAuth / FB_ParamGuard**(A2 检测器/A4 两级权限,0711) |
+| 03_Functions.st | 17 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表)+ **FC_MaintToggle**(A3 检修翻转)+ **FC_HeatColor / FC_BlendLight**(C2/C6 热力色阶、C1 层高亮混色,0711) |
+| 04_FB_Warehouse.st | 16 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / **AssignClassTurnover(CB/TOB，源码待AB复测)** / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 AB PC仿真负载探针)+ **FB_VisuRefresh**(L6 颜色镜像)+ **FB_SceneDetect / FB_UserAuth / FB_ParamGuard** |
 | 05_PRG_Main.st | 1 个 POU-程序 | 主状态机,挂循环任务 |
-| 06_PRG_Test.st | 1 个 POU-程序 | 23 个边界+一致性用例(T22 加减速向量/T23 双命令) |
+| 06_PRG_Test.st | 1 个 POU-程序 | 源码声明75项：T01-T59为既有AB证据范围，T60-T69为新增真实断言，T70-T75为预留；59/0仍只指最后一次有读回依据的核心ST/静态匀速黄金向量 |
 | 07_GVL_Data_generated.st | 2 DUT + 1 GVL + 1 函数 | **生成文件勿手改**,由 sim/export_st_vectors.py 重生(含 ExpTimeAccel + **T25 的 ST_AwraCell/aAwraExpect 终局向量 + LAM/MAX_LS 单源常量**,0707) |
 
 ## 2. 建工程步骤(AB 2.8+/AC500 V3)
@@ -24,7 +25,7 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. PRG_Test.xRunTests := TRUE → 期望 **iPassed=59**, iFailed=0(T19/T20/T22 一致性向量,T23 双命令,T24 预占格数 133,T25 AWRA 端到端,T26-T40 边界扩充,T41 FB_GoodsInput 封装,T42-T45 块3 查询/翻页/装卸/载货,T46-T56 检修挂起/场景检测器/两级权限,**T57-T59 热力色阶/仓位履历/层高亮——0711 A2-A4+C1/C2/C6**;iAwraPosDiff 逐位分歧预期 0);由 ScriptEngine 管线 `ab_sync.ps1` 实跑验证(判定串同步 59/0);
+   a. 冻结的已验收基线：PRG_Test.xRunTests:=TRUE → **iPassed=59、iFailed=0**（T01-T59，含静态匀速一致性向量）。当前源码的T60-T69虽为真实断言，T70-T75仍是预留；必须重新跑AB并保存读回依据后，才可升级证据。源码计数本身不升级证据；
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。
@@ -33,15 +34,10 @@
 
 - **扫描周期感知分片**:批量分配每周期只处理 nBatchPerCycle 件、局部搜索每周期 nPairsPerCycle 对,
   优化算法以非阻塞状态机跑在实时控制器上,不触发看门狗——这是"AI 算法落地 PLC"的关键工程手段。
-- **与 Python 仿真同源**:评分函数逐项对齐 + 测试向量自动生成比对(T19/T20)+ 演示批次同 seed,
-  验证报告里的数字与 PLC 演示互相背书。
+- **有限一致性边界**:T19/T20 与 20件 T25 锁静态匀速黄金向量；near平局顺序已在当前源码按Python统一并增加T60，但T60尚未AB复测。REAL精度和加减速评分分母仍有已知差异，不能据此称报告H数字已由PLC复现。
 - **边界判断成体系**:越界/负输入/超重/超容/预占/满仓/无可行位报警,全部有用例(T01-T18)。
 - **口径开关**:xSimultaneousXY 切换切比雪夫(主口径)/顺序模型(对照),现场可演示两者差异。
-- **操作侧完备性(0711 A2-A4,对标同类赛项原文要求项)**:场景检测器(FB_SceneDetect,
-  批次画像→推荐策略,sim 侧 A1 实验证 lex 档达 oracle 98.5%,ST 版=holistic 全要素档)+
-  人工覆盖开关(xAutoStrategy)/ 检修挂起(FC_MaintToggle,SAP EWM putaway block 语义:
-  禁新入库、存量冻结可查询,Reset 不清)/ 两级权限(FB_UserAuth+FB_ParamGuard 变量层双闸:
-  画面元素锁定+越权改动一周期内回滚;内置 visu Access Rights 无脚本接口故不采用)。
+- **操作侧当前边界(0712并发源码)**:FB_SceneDetect 已有holistic/lexicographic切档，CB/TOB由`FB_AssignClassTurnover`路由；这些新增源码尚未AB复测。lexicographic 98.5%仍只是sim在`excess_fail=0`可比域的评估，不是控制器读回。场景权重表仍未接入运行时闭环。检修只保证**禁新入库、存量可查询**，不保证存量原地冻结。权限是单客户端演示码+ST回滚守卫；尚无多客户端隔离证据。
 
 ## 4. 已知注意项
 
@@ -81,8 +77,8 @@ fbProbe(xStop := TRUE);
 恒 0(0706 自动化管线实测;SysTime 3.5.17 placeholder 引用+位置传参适配已入 09 文件)——
 根因:PC 仿真时间服务按周期缓存/粒度粗于周期,**周期内 µs 在仿真环境不可测(如实记录)**。
 **现行 L4 口径=任务级完成周期数**(探针 nSamples=周期计数器;确定性指标,真机同值;
-真机预估=周期数×10ms 标称):四组实测数据 `sim/out/l4_task_cycles.csv`,报告 §5 已注入;
-测量脚本 `tools/ab_scripting/measure_l4b.py`(全自动:包夹→四组→恢复)。
+  真机预估=周期数×10ms 标称):四组历史 AB 仿真数据 `sim/out/l4_task_cycles_data.csv`，参数说明见 `_params.csv`；
+  源测量脚本已归档为 `tools/ab_scripting/archive/measure_l4b.py`（本轮未运行 AB）。
 
 ## 5. 决赛可视化(T17,ST 侧已就绪)
 

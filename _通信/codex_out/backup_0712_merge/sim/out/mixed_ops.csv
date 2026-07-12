@@ -1,0 +1,5 @@
+﻿strategy,motion,cycles,tot_single_s,tot_dual_s,saving_pct,thr_single_ops_h,thr_dual_ops_h,avg_retrieve_s,fails,viol
+seq,trapezoid,100,7655.7,5473.9,28.5,94.0,131.5,19.423,0,0
+near,trapezoid,100,4723.2,3294.2,30.25,152.4,218.6,11.758,0,0
+score,trapezoid,100,4483.8,3177.5,29.13,160.6,226.6,11.15,0,0
+awra,trapezoid,100,4405.7,3124.5,29.08,163.4,230.4,10.936,0,0

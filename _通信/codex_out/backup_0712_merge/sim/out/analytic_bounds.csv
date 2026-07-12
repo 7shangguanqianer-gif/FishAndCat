@@ -1,0 +1,12 @@
+﻿quantity,value_s,kind
+random_exact_discrete,19.5431,theory
+random_sim_5seeds_mean,20.5263,simulation
+bozer_white_sc_oneway,19.3958,theory_continuous
+travel_between_exact,13.7784,theory
+bozer_white_tb,13.0427,theory_continuous
+freq_aware_lower_bound,5.5431,theory_bound
+strategy_random,21.0704,simulation_seed2026
+strategy_seq,18.7291,simulation_seed2026
+strategy_near,9.8193,simulation_seed2026
+strategy_score,9.3991,simulation_seed2026
+strategy_awra,6.5307,simulation_seed2026

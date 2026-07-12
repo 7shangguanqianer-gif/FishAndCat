@@ -1,0 +1,18 @@
+场景             最优策略    exp_t 均值±CI95          awra-near 差%   显著  near 反超?
+------------------------------------------------------------------------------
+L120_uniform   tob         6.84 ± 0.04            -19.71%  ***  
+L120_skew      tob         4.56 ± 0.23            -27.85%  ***  
+L120_heavy     tob         4.56 ± 0.23            -33.93%  ***  
+tiny_light     tob         1.72 ± 0.18            -17.77%  ***  
+light_sparse   tob         2.98 ± 0.22            -40.53%  ***  
+light_full     tob         4.56 ± 0.23            -33.61%  ***  
+flat_info      tob         8.68 ± 0.01             -2.35%  ***  
+dense_200      tob         6.74 ± 0.31            -27.15%  ***  
+dense_240      tob         7.70 ± 0.32            -26.39%  ***  
+heavy_sparse   tob         2.98 ± 0.22            -42.54%  ***  
+drift_skewless tob         5.53 ± 0.28            -20.13%  ***  
+drift_heavier  tob         4.56 ± 0.23            -34.20%  ***  
+illegal_mix    tob         4.43 ± 0.22            -24.44%  ***  
+
+全矩阵违规总数 = 0(必须为 0);13 场景 × 30 seeds × 7 策略 = 2730 runs
+CSV:F:\abb_wh_work\sim\out\instgen_detail.csv / instgen_agg.csv / instgen_pairs.csv

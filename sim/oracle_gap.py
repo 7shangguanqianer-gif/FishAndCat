@@ -11,8 +11,9 @@ oracle_gap.py — A1 oracle gap 量化实验(0711 总库 A1;9 天技术窗第一
                 (v1 教训:纯 gap 均值会把 tob 选成 SBS——它在 dense fail 9.7 件/实例,
                  exp_t 只含已放件,产生 −3% 的"漏件假优势";fail 是题面一票否决项。)
   选择器        检测器三档(holistic/lexicographic/speed,batch_known=True)+ 7 固定策略。
-  gap%          (exp_t_sel − exp_t_VBS) / exp_t_VBS × 100(逐实例,再按场景聚合 mean±CI95)。
-  attainment%   exp_t_VBS / exp_t_sel × 100("达 oracle 的百分之几",报告主口径)。
+  gap%          仅在 excess_fail=0 的可比域计算
+                (exp_t_sel − exp_t_VBS) / exp_t_VBS × 100；失败更多时写 N/A。
+  attainment%   仅在 excess_fail=0 的可比域计算 exp_t_VBS / exp_t_sel × 100。
   closed gap%   (gap_SBS − gap_sel) / gap_SBS × 100(选择器吃掉了 VBS-SBS 差距的多少)。
   excess_fail   fail − fail_VBS(超出 oracle 的失败件;illegal_mix 全策略同 6 件→excess 0)。
 多目标护栏:oracle gap 只量 exp_t 单目标;holistic 档的 gap 是**有意支付的安全溢价**
@@ -64,6 +65,33 @@ def load_detail():
     return inst
 
 
+def comparable_gap(exp_t, oracle_exp, excess_fail):
+    """只在失败数不劣于词典序 oracle 时比较时间。
+
+    excess_fail>0 的候选虽然可能更快，但漏件使 exp_t 分母失真；此时返回 N/A，
+    防止产生 >100% attainment 的伪超越。
+    """
+    if excess_fail > 0:
+        return None, None
+    gap = (exp_t - oracle_exp) / oracle_exp * 100.0
+    attain = oracle_exp / exp_t * 100.0 if exp_t > 0 else None
+    return gap, attain
+
+
+def _ci_or_none(values):
+    if not values:
+        return None, None
+    return ig.ci95(values)
+
+
+def _mean_or_none(values):
+    return st.mean(values) if values else None
+
+
+def _fmt(value, spec):
+    return "N/A" if value is None else format(value, spec)
+
+
 def main():
     inst = load_detail()
     scenarios = sorted({k[0] for k in inst}, key=lambda s: list(ig.SCENARIOS).index(s))
@@ -97,54 +125,67 @@ def main():
         for sel in selectors:
             strat = det_pick[(scn, sd, sel[4:])] if sel.startswith("det_") else sel
             r = by_strat[strat]
-            gap = (r["exp_t"] - vbs) / vbs * 100.0
-            attain = vbs / r["exp_t"] * 100.0 if r["exp_t"] > 0 else 0.0
             exf = r["fail"] - vbs_fail                 # 超出 oracle 的失败件(一票否决项)
+            gap, attain = comparable_gap(r["exp_t"], vbs, exf)
             rows_detail.append(dict(scenario=scn, seed=sd, selector=sel, strat=strat,
                                     exp_t=round(r["exp_t"], 4), fail=r["fail"],
                                     excess_fail=exf,
                                     oracle_strat=vbs_strat, oracle_exp=round(vbs, 4),
-                                    gap_pct=round(gap, 3), attain_pct=round(attain, 2)))
+                                    gap_pct="" if gap is None else round(gap, 3),
+                                    attain_pct="" if attain is None else round(attain, 2)))
             a = agg_acc[(scn, sel)]
-            a["gap"].append(gap); a["attain"].append(attain)
+            if gap is not None:
+                a["gap"].append(gap)
+            if attain is not None:
+                a["attain"].append(attain)
             a["exf"].append(exf); a["strat"].append(strat)
             a["heavy"].append(r["heavy"]); a["ene"].append(r["ene"])
+            a["total"].append(1)
 
     # ---- 场景聚合 + 全局行 ----
     rows_agg = []
     glob = defaultdict(lambda: defaultdict(list))
     for (scn, sel), a in agg_acc.items():
-        gm, gh = ig.ci95(a["gap"])
-        am, _ = ig.ci95(a["attain"])
+        gm, gh = _ci_or_none(a["gap"])
+        am, _ = _ci_or_none(a["attain"])
         picks = sorted(set(a["strat"]))
         rows_agg.append(dict(scenario=scn, selector=sel,
-                             gap_mean=round(gm, 3), gap_ci95=round(gh, 3),
-                             attain_mean=round(am, 2),
+                             gap_mean="" if gm is None else round(gm, 3),
+                             gap_ci95="" if gh is None else round(gh, 3),
+                             attain_mean="" if am is None else round(am, 2),
                              exf_mean=round(st.mean(a["exf"]), 2),
                              heavy_mean=round(st.mean(a["heavy"]), 3),
                              ene_mean=round(st.mean(a["ene"]), 1),
+                             comparable_n=len(a["gap"]), total_n=len(a["total"]),
                              picked=" ".join(picks)))
         g = glob[sel]
-        for k in ("gap", "attain", "exf", "heavy", "ene"):
+        for k in ("gap", "attain", "exf", "heavy", "ene", "total"):
             g[k] += a[k]
     for sel in selectors:
         g = glob[sel]
-        gm, gh = ig.ci95(g["gap"])
-        am, _ = ig.ci95(g["attain"])
+        gm, gh = _ci_or_none(g["gap"])
+        am, _ = _ci_or_none(g["attain"])
         rows_agg.append(dict(scenario="ALL", selector=sel,
-                             gap_mean=round(gm, 3), gap_ci95=round(gh, 3),
-                             attain_mean=round(am, 2),
+                             gap_mean="" if gm is None else round(gm, 3),
+                             gap_ci95="" if gh is None else round(gh, 3),
+                             attain_mean="" if am is None else round(am, 2),
                              exf_mean=round(st.mean(g["exf"]), 2),
                              heavy_mean=round(st.mean(g["heavy"]), 3),
-                             ene_mean=round(st.mean(g["ene"]), 1), picked=""))
+                             ene_mean=round(st.mean(g["ene"]), 1),
+                             comparable_n=len(g["gap"]), total_n=len(g["total"]),
+                             picked=""))
 
     # ---- SBS(词典序:excess_fail 总数最小 → gap 均值最小)与 closed gap ----
-    fixed_glob = {s: st.mean(glob[s]["gap"]) for s in FIXED}
+    fixed_glob = {s: _mean_or_none(glob[s]["gap"]) for s in FIXED}
     fixed_exf = {s: sum(glob[s]["exf"]) for s in FIXED}
-    sbs = min(FIXED, key=lambda s: (fixed_exf[s], fixed_glob[s]))
+    sbs = min(FIXED, key=lambda s: (fixed_exf[s],
+                                    float("inf") if fixed_glob[s] is None else fixed_glob[s]))
     gap_sbs = fixed_glob[sbs]
-    closed = {o: (gap_sbs - st.mean(glob[f"det_{o}"]["gap"])) / gap_sbs * 100.0
-              for o in OBJECTIVES} if gap_sbs > 0 else {o: 0.0 for o in OBJECTIVES}
+    closed = {}
+    for o in OBJECTIVES:
+        det_gap = _mean_or_none(glob[f"det_{o}"]["gap"])
+        closed[o] = ((gap_sbs - det_gap) / gap_sbs * 100.0
+                     if gap_sbs and det_gap is not None else None)
 
     os.makedirs(OUT, exist_ok=True)
     prof_rows = [dict(scenario=s, seed=sd, **profiles[(s, sd)]) for s in scenarios
@@ -157,33 +198,39 @@ def main():
 
     # ---- 双预案判读(总库 A1 授权口径,按数据自动落笔) ----
     sbs_worst = sorted([r for r in rows_agg if r["selector"] == sbs
-                        and r["scenario"] != "ALL"], key=lambda r: -r["gap_mean"])[:3]
+                        and r["scenario"] != "ALL" and r["gap_mean"] != ""],
+                       key=lambda r: -r["gap_mean"])[:3]
     L = ["# A1 oracle gap 实验判读(oracle_gap.py 自动生成;数据=instgen_detail 13场景×30seed)",
          "",
          f"- VBS(词典序 oracle:fail 最小→exp_t 最小);unrestricted oracle 更低的实例 "
          f"{raw_lt_lex}/{n_inst}(纯速度下界,含 fail>0 漏件失真,只做参考不进叙事)。",
          f"- SBS(词典序最优固定策略:excess_fail 总数→gap 均值)= **{sbs}**,"
-         f"全局平均 gap {gap_sbs:.2f}%;其最差三场景:"
+         f"全局平均 gap {_fmt(gap_sbs, '.2f')}%;其最差三场景:"
          + "、".join(f"{r['scenario']} {r['gap_mean']:.1f}%" for r in sbs_worst) + "。",
          f"- 固定策略 excess_fail 总账(30 实例累计,>0=有漏件假优势不可作 SBS):"
          + " ".join(f"{s}={fixed_exf[s]}" for s in FIXED) + "。", ""]
     for o in OBJECTIVES:
         g = glob[f"det_{o}"]
-        L.append(f"- 检测器[{o}]:全局 gap {st.mean(g['gap']):.2f}%,"
-                 f"达 oracle {st.mean(g['attain']):.1f}%,closed gap {closed[o]:.1f}%,"
+        g_gap = _mean_or_none(g["gap"])
+        g_attain = _mean_or_none(g["attain"])
+        L.append(f"- 检测器[{o}]:全局 gap {_fmt(g_gap, '.2f')}%,"
+                 f"达 oracle {_fmt(g_attain, '.1f')}%,closed gap {_fmt(closed[o], '.1f')}%,"
                  f"excess_fail 均值 {st.mean(g['exf']):.2f}"
-                 f",heavy_tier {st.mean(g['heavy']):.2f},energy {st.mean(g['ene']):.0f}")
-    hol_attain = st.mean(glob["det_holistic"]["attain"])
-    lex_attain = st.mean(glob["det_lexicographic"]["attain"])
-    best_o = max(OBJECTIVES, key=lambda o: st.mean(glob[f"det_{o}"]["attain"]))
-    worst_fix = max(fixed_glob, key=fixed_glob.get)
+                 f",可比 {len(g['gap'])}/{len(g['total'])}(excess_fail=0),"
+                 f"heavy_tier {st.mean(g['heavy']):.2f},energy {st.mean(g['ene']):.0f}")
+    hol_attain = _mean_or_none(glob["det_holistic"]["attain"])
+    lex_attain = _mean_or_none(glob["det_lexicographic"]["attain"])
+    valid_attains = [v for v in (hol_attain, lex_attain) if v is not None]
+    best_attain = max(valid_attains) if valid_attains else None
+    best_o = max(OBJECTIVES, key=lambda o: _mean_or_none(glob[f"det_{o}"]["attain"])
+                 if glob[f"det_{o}"]["attain"] else float("-inf"))
+    worst_fix = max((s for s in FIXED if fixed_glob[s] is not None), key=lambda s: fixed_glob[s])
     L += ["", "## 双预案落笔(0711 授权)", ""]
-    if max(hol_attain, lex_attain) >= 95.0:
-        L.append(f"**预案①成立**:检测器(词典序档)以零在线学习、单次查表的近零延迟达 "
-                 f"oracle {lex_attain:.1f}%——在 PLC 10ms 扫描周期的硬实时约束下,并行试跑"
-                 f"多策略再择优不可行(L4 实测:单件推荐含 400 格全扫在 1 个任务周期内完成,"
-                 f"多策略并行意味着 N 倍计算×统计窗口,违反入库节拍),查表式检测器是该约束下"
-                 f"的工程最优形态。")
+    if lex_attain is not None and lex_attain >= 95.0:
+        L.append(f"**预案①得到sim证据**:词典序检测器通过一次画像/查表，在excess_fail=0可比域"
+                 f"达到oracle {lex_attain:.1f}%。它是不在线试跑多策略的低负载候选形态；历史AB PC仿真"
+                 f"只观察到单件推荐含400格全扫在1个任务周期内完成，实体AC500最坏时延与watchdog未测。"
+                 f"因此不得把该结果称为PLC实测、理论上限或已证明的工程最优形态。")
     if gap_sbs >= 5.0 or (sbs_worst and sbs_worst[0]["gap_mean"] >= 10.0):
         L.append(f"**预案②成立**:场景间最优策略差异显著——词典序可用的最优固定策略 {sbs} "
                  f"在最差场景落后 oracle {sbs_worst[0]['gap_mean']:.1f}%"
@@ -191,8 +238,8 @@ def main():
                  f"{fixed_glob[worst_fix]:.1f}%;纯速度候选 tob 虽 gap 低但在 dense 场景"
                  f"漏件 {fixed_exf['tob']} 件(题面'存放准确性'一票否决)——单一策略存在"
                  f"结构性风险,场景检测是硬需而非锦上添花。")
-    if max(hol_attain, lex_attain) < 95.0 and gap_sbs < 5.0:
-        L.append(f"两预案均未达阈值(检测器最高 attain {max(hol_attain, lex_attain):.1f}%、"
+    if best_attain is not None and best_attain < 95.0 and gap_sbs < 5.0:
+        L.append(f"两预案均未达阈值(检测器最高 attain {best_attain:.1f}%、"
                  f"SBS gap {gap_sbs:.2f}%):按'检测器与最优固定策略同水平,价值在可解释切换"
                  f"与安全档位'的保守口径写,不夸大。")
     hh, sh = st.mean(glob["det_holistic"]["heavy"]), st.mean(glob["det_speed"]["heavy"])
@@ -202,9 +249,9 @@ def main():
           f"{st.mean(glob['det_holistic']['gap']):.1f}% 的对价:重货平均层高 {hh:.2f} vs "
           f"speed 档 {sh:.2f}(低 {sh / hh:.1f} 倍),能耗代理 {he:.0f} vs {se:.0f}"
           f"(低 {(1 - he / se) * 100:.0f}%)。",
-          "- 报告口径:速度敏感客户用词典序/speed 档(达 oracle 98%+),安全合规口径用 "
-          "holistic 档(题面 C6 重货低层/C4 能耗权重高)——检测器三档并存,目标口径是输入"
-          "(F18-3),不是单点押注。"]
+          "- 报告口径:sim可比较holistic/lexicographic/speed三档；当前ST源码已有holistic/lexicographic"
+          "切换、CB/TOB分配与对应新增断言，但尚未完成新一轮AB复测。故98.5%/99.9%仍只属于"
+          "excess_fail=0可比域的sim结果，不得写成已验证的客户档或控制器效果。"]
     L += ["", "## 检测器逐场景推荐核查(lexicographic 档 vs 0706 标定表 detector_rules.md)", ""]
     for scn in scenarios:
         picks = sorted(set(agg_acc[(scn, "det_lexicographic")]["strat"]))
@@ -229,7 +276,8 @@ def main():
         vals, errs = [], []
         for scn in scenarios:
             r = next(r for r in rows_agg if r["scenario"] == scn and r["selector"] == sel)
-            vals.append(r["gap_mean"]); errs.append(r["gap_ci95"])
+            vals.append(0.0 if r["gap_mean"] == "" else r["gap_mean"])
+            errs.append(0.0 if r["gap_ci95"] == "" else r["gap_ci95"])
         xs = [x + (i - 1.5) * W for x in range(len(scenarios))]
         ax1.bar(xs, vals, W, yerr=errs, capsize=2, label=label, color=color,
                 error_kw=dict(lw=0.7))
@@ -240,14 +288,18 @@ def main():
     ax1.legend(fontsize=8)
     ax1.axhline(0, color="#444", lw=0.8)
     ax1.spines[["top", "right"]].set_visible(False)
-    order = sorted(FIXED, key=lambda s: (fixed_exf[s] > 0, fixed_glob[s]))
-    ax2.barh(range(len(order)), [fixed_glob[s] for s in order],
+    order = sorted(FIXED, key=lambda s: (fixed_exf[s] > 0,
+                                         float("inf") if fixed_glob[s] is None else fixed_glob[s]))
+    bar_vals = [0.0 if fixed_glob[s] is None else fixed_glob[s] for s in order]
+    ax2.barh(range(len(order)), bar_vals,
              color=["#2e7d32" if s == sbs else
                     "#c62828" if fixed_exf[s] > 0 else "#90a4ae" for s in order])
     for i, s in enumerate(order):
-        note = f" {fixed_glob[s]:.1f}%" + (f"(漏件{fixed_exf[s]}件,不可比)"
-                                            if fixed_exf[s] > 0 else "")
-        ax2.text(max(fixed_glob[s], 0), i, note, va="center", fontsize=7.5)
+        note = (" N/A" if fixed_glob[s] is None else f" {fixed_glob[s]:.1f}%")
+        if fixed_exf[s] > 0:
+            note += f"(漏件{fixed_exf[s]}件;百分比仅含可比实例)"
+        ax2.text(max(0.0 if fixed_glob[s] is None else fixed_glob[s], 0),
+                 i, note, va="center", fontsize=7.5)
     ax2.set_yticks(range(len(order)))
     ax2.set_yticklabels(order, fontsize=9)
     ax2.set_xlabel("全局平均 gap(%;红=有失败漏件,exp_t 失真)")

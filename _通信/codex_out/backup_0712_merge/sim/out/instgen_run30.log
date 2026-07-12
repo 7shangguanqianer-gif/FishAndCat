@@ -1,0 +1,17 @@
+场景             最优策略    exp_t 均值±CI95          awra-near 差%   显著  near 反超?
+------------------------------------------------------------------------------
+L120_uniform   awra        7.30 ± 0.04            -19.71%  ***  
+L120_skew      awra        6.33 ± 0.28            -27.85%  ***  
+L120_heavy     awra        5.80 ± 0.27            -33.93%  ***  
+tiny_light     awra        2.48 ± 0.21            -17.77%  ***  
+light_sparse   awra        3.31 ± 0.20            -40.53%  ***  
+light_full     awra        5.83 ± 0.27            -33.61%  ***  
+flat_info      awra        8.92 ± 0.01             -2.35%  ***  
+dense_200      awra       10.18 ± 0.42            -27.15%  ***  
+dense_240      awra       12.19 ± 0.47            -26.39%  ***  
+heavy_sparse   awra        3.20 ± 0.21            -42.54%  ***  
+drift_skewless awra        7.06 ± 0.23            -20.13%  ***  
+drift_heavier  awra        5.77 ± 0.26            -34.20%  ***  
+
+全矩阵违规总数 = 0(必须为 0);12 场景 × 30 seeds × 5 策略 = 1800 runs
+CSV:F:\abb_wh_work\sim\out\instgen_detail.csv / instgen_agg.csv / instgen_pairs.csv

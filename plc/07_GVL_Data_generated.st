@@ -79,6 +79,60 @@ VAR_GLOBAL
     AWRA_EXPT   : REAL := 2.810626;   // 期望取货时间(ExpRetrieval 比对,容差1e-3)
     AWRA_ENERGY : REAL := 210.400000;  // 能耗 kg·m(Energy 比对)
     AWRA_COG    : REAL := 0.227632;     // 重心高(CogHeight 比对)
+    N_CB      : INT := 20;   // T68 CB 终局向量件数
+    aCbExpect : ARRAY[1..20] OF ST_AwraCell := [
+        (Id := 1, X := 9, Y := 1),
+        (Id := 2, X := 7, Y := 3),
+        (Id := 3, X := 5, Y := 2),
+        (Id := 4, X := 4, Y := 1),
+        (Id := 5, X := 3, Y := 2),
+        (Id := 6, X := 5, Y := 3),
+        (Id := 7, X := 1, Y := 1),
+        (Id := 8, X := 4, Y := 3),
+        (Id := 9, X := 1, Y := 0),
+        (Id := 10, X := 8, Y := 2),
+        (Id := 11, X := 6, Y := 2),
+        (Id := 12, X := 0, Y := 1),
+        (Id := 13, X := 10, Y := 3),
+        (Id := 14, X := 10, Y := 0),
+        (Id := 15, X := 9, Y := 2),
+        (Id := 16, X := 3, Y := 1),
+        (Id := 17, X := 4, Y := 0),
+        (Id := 18, X := 2, Y := 0),
+        (Id := 19, X := 11, Y := 3),
+        (Id := 20, X := 8, Y := 3)
+    ];
+    CB_EXPT   : REAL := 2.495106;
+    CB_ENERGY : REAL := 1572.800000;
+    CB_PLACED : INT := 20;
+    CB_FAILED : INT := 0;
+    N_TOB      : INT := 20;   // T69 TOB 终局向量件数
+    aTobExpect : ARRAY[1..20] OF ST_AwraCell := [
+        (Id := 1, X := 8, Y := 0),
+        (Id := 2, X := 6, Y := 2),
+        (Id := 3, X := 6, Y := 1),
+        (Id := 4, X := 4, Y := 1),
+        (Id := 5, X := 5, Y := 0),
+        (Id := 6, X := 5, Y := 2),
+        (Id := 7, X := 1, Y := 1),
+        (Id := 8, X := 3, Y := 2),
+        (Id := 9, X := 1, Y := 0),
+        (Id := 10, X := 7, Y := 1),
+        (Id := 11, X := 7, Y := 0),
+        (Id := 12, X := 0, Y := 1),
+        (Id := 13, X := 9, Y := 1),
+        (Id := 14, X := 2, Y := 2),
+        (Id := 15, X := 0, Y := 2),
+        (Id := 16, X := 3, Y := 1),
+        (Id := 17, X := 4, Y := 0),
+        (Id := 18, X := 2, Y := 0),
+        (Id := 19, X := 9, Y := 2),
+        (Id := 20, X := 8, Y := 2)
+    ];
+    TOB_EXPT   : REAL := 2.143856;
+    TOB_ENERGY : REAL := 978.100000;
+    TOB_PLACED : INT := 20;
+    TOB_FAILED : INT := 0;
 END_VAR
 
 (* ---------- FC_LoadDemoGoods:载入演示批次(与 Python 仿真同源同 seed) ---------- *)
@@ -86,6 +140,19 @@ FUNCTION FC_LoadDemoGoods : BOOL
 VAR
     n : INT;
 END_VAR
+// 0712 轨B N4-15:满仓护栏(拒载不部分写入;调用点另有同判断=双保险,T61 锁)
+IF GVL_WH.iGoodsCount + GVL_Data.N_DEMO > GVL_Param.MAX_GOODS THEN
+    FC_LoadDemoGoods := FALSE;
+    RETURN;
+END_IF
+// 0712 轨B R1:ID 冲突拒载(演示批固定 Id 1..N_DEMO;表内已有任一同域 Id 即整批拒绝,
+//   防重复身份破坏查询/统计唯一性契约=N4-16 的演示批入口闭环;二次载入自然被拒,T61 锁)
+FOR n := 1 TO GVL_WH.iGoodsCount DO
+    IF (GVL_WH.aGoods[n].Id >= 1) AND (GVL_WH.aGoods[n].Id <= GVL_Data.N_DEMO) THEN
+        FC_LoadDemoGoods := FALSE;
+        RETURN;
+    END_IF
+END_FOR
 n := GVL_WH.iGoodsCount;
 n := n + 1;  GVL_WH.aGoods[n].Id := 1;  GVL_WH.aGoods[n].Name := 'G001';
 GVL_WH.aGoods[n].Weight := 13.9;  GVL_WH.aGoods[n].Freq := 1.83;  GVL_WH.aGoods[n].Volume := 0.51;  GVL_WH.aGoods[n].Assigned := FALSE;

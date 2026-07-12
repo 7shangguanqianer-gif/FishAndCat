@@ -51,9 +51,11 @@ STRUCT
     CogHeight      : REAL;      // 载荷重心高度 m(C6)
     PathTotal2Way  : REAL;      // 路径总长 m,双程曼哈顿(C5 损耗代理)
     UtilPct        : REAL;      // 空间利用率 =已占/400(C7,含预占)
-    ViolCnt        : INT;       // 约束违规数,必须恒为0(C8)
-    SwapCnt        : INT;       // 局部搜索接受的改进次数
-    LsRounds       : INT;       // 局部搜索实际轮数
+    ViolCnt        : INT;       // 约束违规数,必须恒为0(C8;0712 轨B N4-20 扩为一致性扫描)
+    SwapCnt        : DINT;      // 局部搜索接受的成对交换次数(0712 轨B N5-06 正名/N5-10 加宽;
+                                //   批统计,批开工与 Reset 双清零=N5-05)
+    RelocCnt       : DINT;      // 局部搜索接受的重定位次数(0712 轨B N5-06 新增,与 SwapCnt 分列)
+    LsRounds       : INT;       // 局部搜索实际轮数(≤nMaxLsRounds,INT 足)
 END_STRUCT
 END_TYPE
 

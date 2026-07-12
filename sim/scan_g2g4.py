@@ -14,7 +14,9 @@ scan_g2g4.py — G2/G3/G4 情景参数敏感性扫描(0710 夜;深思清单第 1
 统计纪律:30 seed(2026..2055),CRN——同 seed 下各参数点共享同一负载(货物/请求由
 seed 决定,参数只改拟真层);排序保持率按 seed 逐一判定后聚合。
 口径:档3 专属(泊松+装卸+噪声+故障);不动主口径 H,不进回归门(与 realism.py 同例)。
-运行:python scan_g2g4.py            → out/scan_g2g4.csv + out/scan_g2g4_agg.csv
+运行:python scan_g2g4.py            → out/scan_g2g4.csv
+                                      + out/scan_g2g4_agg_data.csv
+                                      + out/scan_g2g4_agg_params.csv
      python scan_g2g4.py --smoke    → 单 seed 七点冒烟(约 1 分钟)
      python scan_g2g4.py --seeds N  → 自定 seed 数
 """
@@ -75,10 +77,12 @@ def run_point(args):
     fn = ws.make_score_fn(1.0, bg_on / 2, bg_on / 2, d_on, w_max, f_max)
     fnb = ws.make_score_fn(1.0, bg_ba / 2, bg_ba / 2, d_ba, w_max, f_max)
 
+    arrivals, _ = rl.common_arrivals(goods, new_goods, requests, fn, w_max,
+                                     f_max, fnb, cycles=CYCLES, seed=seed)
     rows = []
     for s in STRATS:
         m = rl.run_tier3(s, goods, new_goods, requests, fn, w_max, f_max, fnb,
-                         cycles=CYCLES, seed=seed)
+                         arrivals=arrivals, cycles=CYCLES, seed=seed)
         rows.append(dict(label=label, seed=seed, strategy=s,
                          avg_retr=m["avg_retr"], resp_p50=m["resp_p50"],
                          resp_p95=m["resp_p95"], util=m["util"],
@@ -176,21 +180,22 @@ def main():
                               pair_rate_p95_pct=round(pw_95, 1), viol_sum=viol,
                               seeds=len(seeds)))
 
-    agg_path = os.path.join(HERE, "out", "scan_g2g4_agg.csv")
+    agg_path = os.path.join(HERE, "out", "scan_g2g4_agg_data.csv")
     with open(agg_path, "w", newline="", encoding="utf-8-sig") as fp:
         w = csv.DictWriter(fp, fieldnames=list(keep_rows[0].keys()))
         w.writeheader()
         w.writerows(keep_rows)
-        w.writerow({})
-    with open(agg_path, "a", newline="", encoding="utf-8-sig") as fp:
+    param_path = os.path.join(HERE, "out", "scan_g2g4_agg_params.csv")
+    with open(param_path, "w", newline="", encoding="utf-8-sig") as fp:
         w = csv.writer(fp)
-        w.writerow(["param", "value"])
+        w.writerow(["param", "value", "note"])
         for k, v in BASE.items():
-            w.writerow([k, v])
-        w.writerow(["cycles", CYCLES])
-        w.writerow(["seeds", f"{seeds[0]}..{seeds[-1]}"])
+            w.writerow([k, v, "canonical G 参数"])
+        w.writerow(["cycles", CYCLES, "每个 seed 的混合流周期数"])
+        w.writerow(["seeds", f"{seeds[0]}..{seeds[-1]}", "CRN seed 区间"])
+        w.writerow(["arrival_reference_strategy", "seq", "每个配置点/seed四策略共享到达流"])
 
-    print(f"\n输出:{raw_path} + {agg_path}")
+    print(f"\n输出:{raw_path} + {agg_path} + {param_path}")
 
 
 if __name__ == "__main__":

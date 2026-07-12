@@ -136,12 +136,13 @@ class TestFeasibility(unittest.TestCase):
 class TestFindings(unittest.TestCase):
     """实验发现回归(docs/实验发现.md)"""
 
-    def test_f2_delta_zero_degenerates_to_near(self):
+    def test_f2_delta_zero_matches_near_occupied_set_only(self):
         goods = ws.gen_goods(120, 2026)
         out = _run_all(goods, delta=0.0)
         near_set = {pos for _, pos in out["near"][1]}
         score_set = {pos for _, pos in out["score"][1]}
-        self.assertEqual(near_set, score_set)          # δ=0 → 占位集合完全相同
+        # 仅锁“占用仓位集合”一致；不证明 gid→仓位映射、平局路径或算法严格等价。
+        self.assertEqual(near_set, score_set)
 
     def test_f2_delta_default_differs_and_wins_hot(self):
         goods = ws.gen_goods(120, 2026)
@@ -170,6 +171,7 @@ class TestFindings(unittest.TestCase):
         self.assertAlmostEqual(m["awra"]["heavy_tier"], 0.50, delta=0.01)
         for k in m:
             self.assertEqual(m[k]["viol"], 0, k)       # C8:违规恒0
+            self.assertEqual(m[k]["fail"], 0, k)       # 成功域内比较，禁止漏件降时
 
     def test_h_caliber_headline_lock(self):
         # H 口径新锁(官方 sum 底图+0706 重标策略表,seed=2026 锁定值;经用户+官方批准的
@@ -188,6 +190,7 @@ class TestFindings(unittest.TestCase):
             m = ws.metrics(wh, placed, failed)
             self.assertAlmostEqual(m["exp_t"], 8.6232, delta=0.01)
             self.assertEqual(m["viol"], 0)
+            self.assertEqual(m["fail"], 0)
         finally:
             ws.ACCEL = False
 
@@ -203,6 +206,7 @@ class TestFindings(unittest.TestCase):
             m = ws.metrics(wh, placed, failed)
             self.assertAlmostEqual(m["exp_t"], 7.6202, delta=0.01)
             self.assertEqual(m["viol"], 0)
+            self.assertEqual(m["fail"], 0)
         finally:
             ws.ACCEL = False
 
@@ -211,7 +215,9 @@ class TestFindings(unittest.TestCase):
             goods = ws.gen_goods(100, 7, case)
             out = _run_all(goods)
             for k, v in out.items():
-                self.assertEqual(ws.metrics(*v)["viol"], 0, f"{case}/{k}")
+                m = ws.metrics(*v)
+                self.assertEqual(m["viol"], 0, f"{case}/{k}")
+                self.assertEqual(m["fail"], 0, f"{case}/{k}")
 
 
 class TestDeterminism(unittest.TestCase):

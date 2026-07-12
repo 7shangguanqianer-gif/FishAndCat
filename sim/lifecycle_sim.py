@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-lifecycle_sim.py — T1.4 U5 全生命周期仿真:δ 位置价值预留项的闭环验证
+lifecycle_sim.py — T1.4 U5 生命周期仿真:检验（可证伪）δ位置价值预留主张
 
 问题:δ 项(罚"冷货占近位")的收益主张是"给未来热货留近位"——静态单批布局
 看不到"未来",只有全生命周期(入库→按频次出库→回库→汰换→夜间重排的持续循环)
@@ -131,10 +131,31 @@ def run_lifecycle(seed, delta, cycles=200, day_len=40, turnover=TURNOVER,
             for mgid, old, new in moves:
                 reslot_t += _t_move(old, new, by_gid[mgid])
             n_moves += len(moves)
+    # ---- 观察窗结束后的 drain phase ----
+    # pending 中仍是已取出但尚未回库的在途货；若直接 return，会把终局库存、
+    # 总作业时间和 final_q 全部截尾。按到期顺序冲洗，不再触发新取货或夜间重排。
+    flush_time = 0.0
+    flush_count = 0
+    for _, g in sorted(pending, key=lambda item: item[0]):
+        pos = ws.strat_score(wh, g, fn)
+        if pos is None:
+            fails += 1
+            continue
+        wh.put(pos[0], pos[1], g)
+        pos_of[g.gid] = pos
+        by_gid[g.gid] = g
+        t_s = _t_store(pos, g)
+        tot += t_s
+        flush_time += t_s
+        flush_count += 1
+    pending.clear()
+
     return dict(
         retr_mean=st.mean(retr) if retr else 0.0,
         retr_late=st.mean(retr_late) if retr_late else 0.0,
         tot_time=tot, reslot_t=reslot_t, moves=n_moves, fails=fails,
+        pending_end=len(pending), inventory_end=len(pos_of),
+        flush_time=flush_time, flush_count=flush_count,
         final_q=layout_quality(wh, pos_of, by_gid),
     )
 

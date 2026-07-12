@@ -2,7 +2,7 @@
 """
 D-2 量化(overnight R3, 0712): 只切"权重"一个变量, 隔离 D-2 对头条数字的真实影响.
 - H = caliber(accel=True,  adaptive=True )  报告头条口径(加减速+自适应权重)  应复现 headline.py 的 8.40s
-- P = caliber(accel=True,  adaptive=False)  PLC 实际口径(加减速+静态默认权重 α1.0/β0.6/γ0.4/δ0.15)  <== D-2 后 AC500 真跑
+- P = caliber(accel=True,  adaptive=False)  Python 加减速+静态默认权重 sim 消融（非 PLC 代理/真跑）
 - L = caliber(accel=False, adaptive=False)  对照口径(匀速+静态)  仅作参考(headline.py 的对照列)
 纯 python, 不碰 AB. seed 固定(headline.SEEDS), 可复现.
 """

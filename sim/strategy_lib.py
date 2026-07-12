@@ -199,7 +199,7 @@ def st_ifelse(objective="holistic"):
     """输出检测器的 ST if-else 蒸馏文本(块2 移植用;与 select_strategy v1 同逻辑)。"""
     if objective == "lexicographic":
         body = ("ELSIF rDensity >= 0.70 THEN sStrategy := 'CB';\n"
-                "ELSIF rDensity <= 0.25 THEN sStrategy := 'AWRA';\n"
+                "ELSIF rDensity <= 0.25 AND nBatch > 20 THEN sStrategy := 'AWRA';\n"  # 0712 修:补 n>20,与 select_strategy 对齐(曾漏致 tiny_light 误路由)
                 "ELSE sStrategy := 'TOB'; END_IF;\n")
     else:                                     # holistic 默认档
         body = ("ELSIF rSkew < 0.35 AND nBatch <= 20 THEN sStrategy := 'COL';\n"
