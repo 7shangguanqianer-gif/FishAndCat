@@ -134,6 +134,14 @@
 
 - **13:40-14:00 compact 接力+8h 授权+Codex 并发发现（角色对调）**：接力恢复后用户四项授权全签（`b526499`，A1-A4+保活 PID 39684）。审致Claude.md 发现 **13:24 新回执：Codex H1 对抗审查完成**——裁决「方向接受，当前实现不签绿」，五项阻断（B1 删文件解锁/B2 锁只盖一个 CLI/B3 preflight 可被非空场骗过/B4 safe_stop 读回失败不先停 Target/B5 无互斥 TOCTOU）+四高严+M1 恢复策略冲突，全文 `_通信/codex_out/0713_H1对抗审查.md`，我逐项独立核对**全部接受**（B4 是我写的真 bug）。按拍板「先修锁再进现场」准备动手 H1.1 时，Write 撞车发现 **Codex 正在并发实施 H1.1**（用户以「继续」指令授权它接管；范围=l2_factoryio/+纯离线测试，不碰 Factory I/O/AB、不执行 git；四层设计：缺失/旧 schema 锁定+进程互斥+transition_pending+coil/target 命令租约；恢复命令从 CLI 关闭保留底层；进度 1/5 步、7 文件 +1161/-333）→ **我即刻冻结 l2_factoryio/ 写入，角色切换「它修我审」**，等收工回执后做独立复核+commit（git 归我）。fault_state.json 已被它迁移 schema 2（RECOVERY_UNSAFE 保留归档 ✓ 不是清锁）。等待期完成 **H3 硬前置·录屏管线验证**：ffmpeg（kedou）gdigrab `title='Factory IO'` 10fps 录制+1fps 抽帧+帧内容可判读全链路 PASS；**陷阱入账：gdigrab 抓的是窗口所在屏幕区域，被遮挡时抓到遮挡物**——H3 录视觉门前必须把 Factory I/O 置前（open_application）且录制期间不动其他窗口。
 
+- **14:00-14:05 H2 GUI+治理段完成（除 preflight 全清，等 H1.1 代码）**：
+  - GUI 载入 debug 场景（My Scenes 两个畸形名场景：`AA…official_baseline_0713e`=官方基线副本、`A…debug_prebaseline_0713se`=debug，选后者）；console `app.web_server = True` 开 Web API（**console 粘贴陷阱**：type 走剪贴板快路径曾把剪贴板旧文本粘进 console 报 SyntaxError 无害，正确做法=先 write_clipboard 再 ctrl+v）。
+  - **H1.5 tag 全量枚举裁决**：36 tags 落盘 `logs/webapi_tags_20260713_135357.json`。**无任何 X/Z/Lift 实体坐标反馈 tag**（数值型仅 Time Scale/Camera Position/Target Position）→「状态失配」假设无法用 tag 实测，`LIFT_POSITION_UNKNOWN` 维持视觉门路径，**H3 录屏逐帧=唯一裁决手段，H4 不可跳过**。另实锤 Web API 与 Modbus 是两套编址（Lift API addr 17 vs Modbus coil 4），io_map.md 的 Modbus 映射仍是权威。
+  - **新发现+治理：Remover 也被持久 force=True**（出库端吞货部件，货物消失候选因素之一）。根源实锤：**force 持久化在场景 XML 里**（`UseForcedValue="True" ForcedValue="True"`），每次重载场景 force 复活——这解释了 Emitter force 反复出现。治理=双层：运行时 values-force 置 False + **直接改场景 XML**（.factoryio 是 UTF-8 BOM 明文 XML！）两部件均改为 `ForcedValue="False"`（保持 UseForcedValue=True=载入即强制关，出箱只能显式 pulse）。
+  - **箱型调试固定（拍板#5）落地**：场景 XML `<Parts BoxS/BoxM/BoxL/StackableBox>` 四箱型全 True=混出根源；改为**仅 BoxM=True**。备份：`…debug_prebaseline_0713se.factoryio.bak_0713_1402`（9/9 验收时还原此备份即恢复混出）。GUI 重载场景生效（**陷阱：重载弹 Unsaved Changes 必须点 DISCARD**，SAVE 会用内存旧配置覆盖磁盘修改）。
+  - **RUN 态空场基线全绿**：Running=True、At Entry/Load/Unload/Exit 全 True（无货）、叉 one-hot Middle、Moving X/Z=False、Emitter/Remover=False、Target=0、Stop/E-stop 常闭健康。Web API 在场景重载后存活（app 级不随场景重置）。reset-epoch 的空场证据链就绪。
+  - webapi_probe 小 bug 待修：emitter-off 读回校验用 `/api/tag/values` 端点，该端点不返回 isForced 字段→误报 mismatch；正确端点=`/api/tags`。（l2_factoryio 冻结中，待 Codex 收工后并入复核意见。）
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
