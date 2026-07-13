@@ -119,6 +119,8 @@
 
 - **0713 夜 H0-H1 完成（Claude 接管后首段）**：H0 离线基线复现 64/64；对 Codex 根因假设提出独立质疑（"载荷偏姿卡梁"解释不了 postF6-G2 取箱升程无 Z——统一线索=**Lift 实体状态与命令失配**，若成立 H4 几何 A/B 可整段跳过，钥匙=Web API 实体位置反馈）。H1 五门全落地：①G4 拆 place-extend（只伸叉禁写 Lift）/place-lower（--confirm-clearance 视觉门+真实 Z）/retract，融合版 place 禁用指引；②`fault_lock.py` 持久故障锁（LOWER_NO_START/LIFT_POSITION_UNKNOWN/CARGO_LOST/RECOVERY_UNSAFE 原子写 fault_state.json，锁下只许 snapshot/stop/mark-fault，解锁唯一路径=reset-epoch 双条件：确认完整重启+在线空场 preflight 实过）；③负载感知 stop 跨进程重建叉保持（线圈读回 True 即拒撤叉，读回失败拒盲收）；④pick/relift/place-lower 三处 NO START→落锁；⑤防绕过测试 21 项新增，**85/85 PASS**。H1.5 `webapi_probe.py`（tag 枚举/find 位置反馈/emitter-off/emitter-pulse，纯标准库）。commit=2c5508c(交接归档)+adf9eae(H1)。发现并修一处命名遮蔽 bug（record_phase_state 参数 load_state 盖模块函数）。
 
+- **0713 夜 H2 起点状态（compact 前指针）**：Factory I/O 已全新启动（无残留进程后 Start-Process，**未载场景、未开 Web API、未 preflight**）——H2 从"截图确认→GUI Open 载 debug 场景"继续。⚠ debug 场景文件名是畸形拼接串 `Automated WarehouAutomated Warehouse_debug_prebaseline_0713se.factoryio`（My Scenes 目录），必须 GUI 对话框选择勿拼路径。**Codex 已被用户启动**（轨A批次+H1对抗审查，按 0713 夜信箱节执行中）——回执到达时审+签+双留痕。**H3 前置待办：搭录屏**（视觉门要录 10-20s 逐帧判读；方案候选 ffmpeg gdigrab（kedou 目录有 ffmpeg）或 PowerShell CopyFromScreen 连拍序列，H3 开工时先落地并试录）。桌面面板本轮不动（Codex 正在优化，避免写冲突）。wakeup 兜底已挂（1800s 循环）。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
