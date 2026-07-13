@@ -60,6 +60,8 @@
 3. 如需人工视觉确认，继续保持叉臂输出，不得因已到 `At Left` / `At Right` 而释放。
 4. 完成确认后，将 `Forks Left=False` **且** `Forks Right=False`；叉臂才释放并自动回 `Middle`。应确认 `At Middle=True` 后再进入下一相位。
 
+`Lift` 每次 True/False 状态转换都必须看到真实 `Moving Z` 启动沿和稳定结束；`NO START` 表示物理状态与线圈读回失配，必须停在当前人工门处理。不得再以“零行程”或固定 dwell 代替 Z 运动证据。0713 空载 A 探针已确认：`Forks Right=True` 保持期间写 `Lift=False`，`Moving Z` 可在约 0.094 s 启动并约 1.98 s 落稳，因此 Right 保持本身不是本轮掉箱根因。
+
 ### 恢复相位：`relift`
 
 若固定机位画面已由操作员确认货物仍在承载台，同时叉臂在 `Middle`、当前 cell 位置已确认且 `Lift=False`，则先写 `Lift=True` 进入 `relift` 恢复。Factory I/O 没有承载台 cargo-present 反馈，`At Load` 只能证明载入位未被遮挡，不能代替上述人工画面门。该恢复步骤**不得移动 X，也不得动作任一叉臂**；仅在升举状态恢复并重新确认现场条件后，才可继续后续流程。

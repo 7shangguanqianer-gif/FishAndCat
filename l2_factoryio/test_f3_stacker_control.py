@@ -106,7 +106,6 @@ class SequenceContractTests(unittest.TestCase):
         stacker.release_forks_to_middle = Mock()
         stacker.coil = Mock()
         stacker.wait_motion_cycle = Mock()
-        stacker.wait_optional_motion_cycle = Mock()
         stacker.wait_stable = Mock()
         stacker.wait_for_box_edge = Mock()
         stacker.box_at_load = Mock(return_value=False)
@@ -204,6 +203,7 @@ class SequenceContractTests(unittest.TestCase):
 
         stacker.forks_right_hold.assert_called_once_with()
         stacker.coil.assert_called_once_with(f3.C_LIFT, False)
+        self.assertEqual(stacker.wait_motion_cycle.call_args.args[0], "lower load")
         stacker.release_forks_to_middle.assert_not_called()
         stacker.assert_placement_hold_ready.assert_called_once_with()
         self.assertEqual(stacker.load_state, f3.LoadState.PLACED_PENDING)
@@ -234,7 +234,10 @@ class SequenceContractTests(unittest.TestCase):
 
         stacker.assert_fork_position.assert_called_once_with(f3.IN_AT_MIDDLE, "Middle")
         stacker.coil.assert_called_once_with(f3.C_LIFT, True)
-        stacker.wait_optional_motion_cycle.assert_called_once()
+        stacker.wait_motion_cycle.assert_called_once()
+        self.assertEqual(
+            stacker.wait_motion_cycle.call_args.args[0], "relift carried load"
+        )
         stacker.goto.assert_not_called()
         stacker.forks_left_hold.assert_not_called()
         stacker.forks_right_hold.assert_not_called()

@@ -71,7 +71,6 @@ POLL = 0.05
 SETTLE = 0.40
 LOAD_SETTLE_DWELL = 2.0
 PLACEMENT_SETTLE_DWELL = 1.5
-OPTIONAL_MOTION_START_TIMEOUT = 1.0
 DIAGNOSTIC_PHASES = ("feed", "pick", "travel", "relift", "place", "retract")
 ACCEPTANCE_CELLS = (1, 30, 54)
 
@@ -379,39 +378,6 @@ class Stacker:
             timeout=finish_timeout,
         )
 
-    def wait_optional_motion_cycle(
-        self,
-        description: str,
-        moving: Callable[[], bool],
-        *,
-        start_timeout: float = OPTIONAL_MOTION_START_TIMEOUT,
-        finish_timeout: float = STEP_TIMEOUT,
-    ) -> bool:
-        """允许 Lift 在机械端点出现零行程，但仍验证最终静止。"""
-        t0 = time.monotonic()
-        started = False
-        while time.monotonic() - t0 < start_timeout:
-            self.check_safety_inputs(require_running=True)
-            if moving():
-                started = True
-                print(f"  [start {time.monotonic() - t0:4.2f}s] {description}")
-                break
-            time.sleep(POLL)
-        if started:
-            self.wait_stable(
-                f"{description} settled",
-                lambda: not moving(),
-                timeout=finish_timeout,
-            )
-        else:
-            self.wait_stable(
-                f"{description} remains settled (zero-stroke accepted)",
-                lambda: not moving(),
-                timeout=1.0,
-                stable_for=0.30,
-            )
-        return started
-
     def safe_stop(self, *, preserve_lift: bool | None = None) -> None:
         """停止行走/输送；已确认伸出的保持型叉臂不得因清零而自动回中。"""
         if preserve_lift is None:
@@ -671,7 +637,7 @@ class Stacker:
         print(f"* 恢复微抬：仅 Lift=True，不移动 X/叉臂（货位 {cell}）")
         # load_state 已在人工门处先标为 CARRYING；写入失败也不会主动降载。
         self.coil(C_LIFT, True)
-        self.wait_optional_motion_cycle("relift carried load", lambda: self.din(IN_MOVING_Z))
+        self.wait_motion_cycle("relift carried load", lambda: self.din(IN_MOVING_Z))
         self.assert_loaded_transport_ready()
 
     def assert_placement_hold_ready(self) -> None:
@@ -708,7 +674,9 @@ class Stacker:
         )
         self.forks_right_hold()
         self.coil(C_LIFT, False)
-        self.wait_optional_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
+        # 空载 A 探针已实测 Right=True 时下降会出现真实 Z 边沿；因此任何
+        # NO START 都是物理状态失配，绝不能再以 zero-stroke 伪通过。
+        self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
         print(f"* placement settle dwell: {PLACEMENT_SETTLE_DWELL:.1f}s")
         time.sleep(PLACEMENT_SETTLE_DWELL)
         self.assert_placement_hold_ready()
