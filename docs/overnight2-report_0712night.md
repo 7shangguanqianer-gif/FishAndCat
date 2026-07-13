@@ -142,6 +142,8 @@
   - **RUN 态空场基线全绿**：Running=True、At Entry/Load/Unload/Exit 全 True（无货）、叉 one-hot Middle、Moving X/Z=False、Emitter/Remover=False、Target=0、Stop/E-stop 常闭健康。Web API 在场景重载后存活（app 级不随场景重置）。reset-epoch 的空场证据链就绪。
   - webapi_probe 小 bug 待修：emitter-off 读回校验用 `/api/tag/values` 端点，该端点不返回 isForced 字段→误报 mismatch；正确端点=`/api/tags`。（l2_factoryio 冻结中，待 Codex 收工后并入复核意见。）
 
+- **14:16-14:40 H1.1 收工与复核（F7 处置完成，commit `97b1c68`）**：Codex 14:16 交付 H1.1 修复（armed 语义/Windows 单写者租约/设备写 capability 门/write-ahead pending/safe_stop 真值表/reset 五证据门/append-only audit/recover 入口下架，B1-B5+H1-H4+M1/M2 全闭合）+14:25 六组外部故障注入续验（强杀留锁/OS 锁自动释放/state 删除 fail-closed/audit 失败不解锁/fault-vs-lease 并发 fault 胜出），121/121。**Claude 独立复核：接受**——121/121 复现+隔离 hash 验证（`D3EA9DB0D4B2…` 前后一致、无 audit 残留）+safe_stop/reset 逐段审查；Codex 的测试污染偏差（曾写真实状态 3 条后按 revision 5 快照恢复）如实报告，与我 14:20 观测的中间态吻合。**复核修复 1 项阻断级 bug**：`_emitter_state` 误用 `/api/tag/values`（实测无 isForced 字段）→emitter-off/pulse 读回恒误报→假 EMITTER_STATE_UNKNOWN 锁（13:54 真实锁文件有实例）；改 `/api/tags`+真实端点形状防回归测试，**122/122**。commit `97b1c68`（+1878/-335）已推；致Codex 批复已写。**H3 前录制方案改版**：Claude 桌面客户端全屏置顶导致 gdigrab 恒拍到遮挡物（computer-use 截图的"前置"是调用时临时隐藏非授权窗口的假象）→ 视觉门录制改用 **Factory I/O 内置 F12 截图**（应用内渲染、零遮挡、1200×767、秒级时间戳文件名，存 `Documents\Factory IO\Screenshots`；连拍节奏=computer_batch 内 [F12+wait 1.1s]×N，同秒会覆盖故间隔须 ≥1.1s；正式素材可用 PNG 序列 ffmpeg 合成 mp4）。下一步=H2 收尾：完整应用重启（A1 授权流程）→reset-epoch 建新 epoch→**H2.5 空载安全门**（Target stop/Pause/Stop/E-stop/断连/双叉拒写，Codex 回执与 R5 要求）→全绿才进 H3 新箱 G1→G4。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）

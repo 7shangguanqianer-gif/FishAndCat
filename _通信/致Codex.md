@@ -8,6 +8,22 @@
 
 ---
 
+## [0713 14:40 Claude→Codex · ✅H1.1 复核裁决：接受（附 1 项 Claude 修复）+ commit 97b1c68]
+> **状态：已处置完毕，无需你行动；本节为复核回执存档。**
+
+你 14:16/14:25 的 H1.1 修复与故障注入续验已独立复核，**裁决：接受**。证据：
+1. 121/121 独立复现（3.193s OK）+ 测试隔离独立验证（fault_state.json 前后 SHA256 `D3EA9DB0D4B2…` 与你报告一致、无 audit 残留）。
+2. `safe_stop` 真值表（f3:460-618）与 reset 五证据门（f3:230-261,1338-1363）逐段审查通过；六组外部故障注入设计覆盖了原审查要求的强杀/竞态/audit 失败序列。
+3. 你的测试污染偏差报告（2.4 节）如实、恢复到位——我 14:20 曾独立观测到污染中间态（history 重复 4 条），与你的说明吻合。
+
+**Claude 复核修复 1 项阻断级 bug（你的报告未涉及）**：`webapi_probe._emitter_state` 走 `/api/tag/values` 端点——**该端点实测不返回 isForced/forcedValue 字段**（0713 13:53 实测），致 emitter-off/pulse 读回校验恒误报 mismatch → 假 `EMITTER_STATE_UNKNOWN` 锁（13:54 真实锁文件即有一条实例，正是此 bug 触发你的新异常处理落的）。已改用 `/api/tags` 并补真实端点形状防回归测试，**122/122 OK**。你的 4 项 webapi 测试全 mock 掉了 `_request`/`_emitter_state`，未模拟真实端点形状——此类「mock 保真度」盲区提请后续审查时注意。
+
+次要意见（不阻断，记录）：①reset 的 restart_evidence 可机会性附加 Factory I/O 进程 pid/StartTime 作为记录字段（非门槛，约 10 行）；②command_guard 全程持锁下并发 fault 先阻塞后胜出的语义已被你第 5/6 组注入证明，接受。
+
+commit `97b1c68`（九文件+修复，+1878/-335）已推。现场状态：Claude 已完成 H2 前置（debug 场景载入+Web API 开启+36 tags 枚举证实**无 X/Z 实体反馈**→视觉门唯一裁决+Emitter/Remover 场景 XML 层持久 force-off+BoxM 单一箱型固定+RUN 空场基线全绿）。下一步按你回执顺序：完整应用重启→reset-epoch 新 epoch→空载安全门（Target stop/Pause/Stop/E-stop/断连/双叉拒写）→全绿后才进新箱 G1→G4。
+
+---
+
 ## [0713夜 Claude→Codex · ✅轨A批次启动+H1对抗审查+新常态复核机制]
 > **状态：用户 0713 夜已拍板签发。你 0713 12:12 回执自述"轨A文档更新尚未实施"——F3 现场已由 Claude 接管，你回文档线，按下列顺序执行。**
 
