@@ -30,9 +30,9 @@ class SequenceContractTests(unittest.TestCase):
         stacker.forks_right.assert_not_called()
         self.assertEqual(
             stacker.coil.call_args_list,
-            [call(f3.C_LIFT, True), call(f3.C_LIFT, False)],
+            [call(f3.C_LIFT, True)],
         )
-        self.assertEqual(stacker.wait_motion_cycle.call_count, 2)
+        self.assertEqual(stacker.wait_motion_cycle.call_count, 1)
         stacker.forks_center.assert_called_once_with()
 
     def test_store_uses_right_forks_then_lowers_and_centers(self):
@@ -45,9 +45,9 @@ class SequenceContractTests(unittest.TestCase):
         stacker.forks_left.assert_not_called()
         self.assertEqual(
             stacker.coil.call_args_list,
-            [call(f3.C_LIFT, True), call(f3.C_LIFT, False)],
+            [call(f3.C_LIFT, False)],
         )
-        self.assertEqual(stacker.wait_motion_cycle.call_count, 2)
+        self.assertEqual(stacker.wait_motion_cycle.call_count, 1)
         stacker.forks_center.assert_called_once_with()
 
     def test_feed_does_not_run_conveyors_when_load_is_occupied(self):
@@ -57,6 +57,54 @@ class SequenceContractTests(unittest.TestCase):
         stacker.feed_one_box()
 
         stacker.coil.assert_not_called()
+
+    def test_feed_moves_to_rest_before_starting_conveyors(self):
+        stacker = self.make_stacker()
+        stacker.box_at_load.return_value = False
+        actions = Mock()
+        actions.attach_mock(stacker.goto, "goto")
+        actions.attach_mock(stacker.coil, "coil")
+
+        with patch("f3_stacker_control.time.sleep"):
+            stacker.feed_one_box()
+
+        rest_call = call.goto(f3.POS_REST, "(prepare load station)")
+        belt_call = call.coil(f3.C_ENTRY_CONV, True)
+        self.assertIn(rest_call, actions.mock_calls)
+        self.assertLess(
+            actions.mock_calls.index(rest_call),
+            actions.mock_calls.index(belt_call),
+        )
+
+    def test_feed_stops_belts_before_settle_dwell(self):
+        stacker = self.make_stacker()
+        stacker.box_at_load.return_value = False
+
+        with patch("f3_stacker_control.time.sleep") as sleep:
+            stacker.feed_one_box()
+
+        self.assertEqual(
+            stacker.coil.call_args_list[-2:],
+            [
+                call(f3.C_ENTRY_CONV, False),
+                call(f3.C_LOAD_CONV, False),
+            ],
+        )
+        sleep.assert_called_once_with(f3.LOAD_SETTLE_DWELL)
+        self.assertEqual(f3.LOAD_SETTLE_DWELL, 2.0)
+
+    def test_feed_rechecks_load_after_settle(self):
+        stacker = self.make_stacker()
+        stacker.box_at_load.return_value = False
+
+        with patch("f3_stacker_control.time.sleep"):
+            stacker.feed_one_box()
+
+        self.assertEqual(stacker.wait_stable.call_count, 2)
+        self.assertEqual(
+            stacker.wait_stable.call_args_list[-1].args[0],
+            "box remains at load after settle",
+        )
 
     def test_store_rejects_non_cell_positions(self):
         stacker = self.make_stacker()
@@ -94,14 +142,23 @@ class SequenceContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Moving X/Z"):
             stacker.assert_action_ready()
 
-    def test_pick_adds_explicit_cargo_settle_dwell(self):
+    def test_pick_does_not_lower_or_sleep_before_loaded_travel(self):
         stacker = self.make_stacker()
 
         with patch("f3_stacker_control.time.sleep") as sleep:
             stacker.pick_from_load()
 
-        sleep.assert_called_once_with(f3.CARGO_SETTLE_DWELL)
-        self.assertEqual(f3.CARGO_SETTLE_DWELL, 1.5)
+        sleep.assert_not_called()
+        stacker.coil.assert_called_once_with(f3.C_LIFT, True)
+
+    def test_store_waits_for_load_to_settle_before_forks_center(self):
+        stacker = self.make_stacker()
+
+        with patch("f3_stacker_control.time.sleep") as sleep:
+            stacker.store_to(1)
+
+        sleep.assert_called_once_with(f3.PLACEMENT_SETTLE_DWELL)
+        self.assertEqual(f3.PLACEMENT_SETTLE_DWELL, 1.5)
 
     def test_diagnostic_feed_stops_after_feed(self):
         stacker = self.make_stacker()

@@ -9,8 +9,8 @@
 - 本场景载入输送带位于 Stacker Crane 的 Left 侧；货架位于 Right 侧。
 - At Entry/Load/Unload/Exit 是对射传感器：False=被箱遮挡，True=空。
 - Lift=True 微抬取箱，Lift=False 放下；Lift 行程会反映在 Moving Z。
-- 运输前必须在叉臂回中后 Lift=False，让货物落稳在承载台；到货位后
-  再 Lift=True 抬起、伸叉、Lift=False 放入货架。禁止悬叉运输。
+- 运输前必须在 Lift=True 取货高度让叉臂回中，并保持 Lift=True 带载移动；
+  到货位后伸叉、Lift=False 放入货架。禁止在移动前把货物放成自由载荷。
 - 两个叉向输出同时为 True 时回中位；到位后两个输出都置 False。
 
 安全原则：
@@ -58,7 +58,8 @@ STEP_TIMEOUT = 30.0
 START_TIMEOUT = 3.0
 POLL = 0.05
 SETTLE = 0.40
-CARGO_SETTLE_DWELL = 1.5
+LOAD_SETTLE_DWELL = 2.0
+PLACEMENT_SETTLE_DWELL = 1.5
 DIAGNOSTIC_PHASES = ("feed", "pick", "travel", "store")
 ACCEPTANCE_CELLS = (1, 30, 54)
 
@@ -299,6 +300,8 @@ class Stacker:
         self.coil(C_FORKS_R, False)
 
     def feed_one_box(self) -> None:
+        self.goto(POS_REST, "(prepare load station)")
+        self.forks_center()
         if self.box_at_load():
             print("* 载入位已有箱，跳过输送")
             return
@@ -315,22 +318,25 @@ class Stacker:
         finally:
             self.coil(C_ENTRY_CONV, False)
             self.coil(C_LOAD_CONV, False)
+        print(f"* load settle dwell: {LOAD_SETTLE_DWELL:.1f}s")
+        time.sleep(LOAD_SETTLE_DWELL)
+        self.wait_stable(
+            "box remains at load after settle",
+            self.box_at_load,
+            timeout=1.5,
+            stable_for=0.40,
+        )
 
     def pick_from_load(self) -> None:
         if not self.box_at_load():
             raise RuntimeError("pick precondition failed: At Load is empty")
         self.goto(POS_REST, "(rest=载入台)")
-        print("* 取箱：Left 侧伸叉 -> 抬起 -> 回中 -> 降到承载台")
+        print("* 取箱：Left 侧伸叉 -> 抬起 -> 回中（保持 Lift=True 带载）")
         self.forks_left()
         self.coil(C_LIFT, True)
         self.wait_motion_cycle("lift load", lambda: self.din(IN_MOVING_Z))
         self.wait_stable("At Load cleared", lambda: not self.box_at_load())
         self.forks_center()
-        self.coil(C_LIFT, False)
-        self.wait_motion_cycle("settle cargo on carriage", lambda: self.din(IN_MOVING_Z))
-        self.wait_stable("cargo clear of At Load", lambda: not self.box_at_load())
-        print(f"* cargo settle dwell: {CARGO_SETTLE_DWELL:.1f}s")
-        time.sleep(CARGO_SETTLE_DWELL)
 
     def travel_loaded_to(self, cell: int) -> None:
         if not 1 <= cell <= 54:
@@ -341,12 +347,12 @@ class Stacker:
         if not 1 <= cell <= 54:
             raise ValueError(f"cell must be 1..54, got {cell}")
         self.travel_loaded_to(cell)
-        print(f"* 放箱：先抬起 -> Right 侧伸叉 -> 降下 -> 回中（货位 {cell}）")
-        self.coil(C_LIFT, True)
-        self.wait_motion_cycle("raise cargo for rack", lambda: self.din(IN_MOVING_Z))
+        print(f"* 放箱：Right 侧伸叉 -> Lift=False 下放 -> 回中（货位 {cell}）")
         self.forks_right()
         self.coil(C_LIFT, False)
         self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
+        print(f"* placement settle dwell: {PLACEMENT_SETTLE_DWELL:.1f}s")
+        time.sleep(PLACEMENT_SETTLE_DWELL)
         self.forks_center()
 
     def store_one(self, cell: int) -> None:
