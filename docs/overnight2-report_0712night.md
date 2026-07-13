@@ -59,6 +59,15 @@
 | F7 | Codex 产出到达→审+回执+签后续 | ⬜ | 全自动+双留痕 |
 | F8 | 任务池尽→"完美标准清单"扩展（全作品找优化点，非文档线） | ⬜ | 持续 |
 
+### 0713 用户改拍：Factory I/O 路径 C + 保留自研 3D
+
+- 原 F3“三箱快线→F4 OPC→F5 联调”改为 C0 安全门→C1 契约门→C2 离线编排门→C3 AB 握手门→C4 单任务在线门→C5 三任务在线门→C6 同源 3D 门。
+- AB 保持 20×20 业务真相源；Python 仅做 400→54 显式代表映射、设备适配和 safe-stop；Factory I/O 不称 400 格物理孪生。
+- 总体设计=`5a5c18c`，C0–C2 实施计划=`c9e9318`；F3 安全动作基线=`3abec42`，任务契约/映射=`dd57e0d`，JSONL 事件=`c5246a2`，三任务离线编排=`40bc068`。
+- C0–C2 离线结果：`test_f3_stacker_control.py + test_task_contract.py + test_event_log.py + test_task_orchestrator.py` 共 **23/23 PASS**。覆盖 INBOUND/OUTBOUND/DUAL、safe-stop、safe-stop 二次失败、`request_seq` 冲突、进程重启幂等和中断任务 `RECOVERY_REQUIRED`。
+- **未签绿项**：F3 现场碰撞/散落近景验收尚未关闭，AB OPC UA/任务队列尚未施工，自研 3D 尚未改读统一事件；禁止越门录正式素材或宣称完整控制闭环。
+- 下一步先完成 F3 现场碰撞门，再进入 AB OPC UA，禁止越门录正式素材。
+
 ## 四、时间线与反思
 - **21:55 F2 开工（文件层侦察先行）**：`F:\Factory IO.exe`=Unity 2023.1.5f1 主程序（VersionInfo 是 Unity 版本，软件版本待 GUI）；注册表 HKCU/HKLM 均无 Real Games 键=**本机从未运行过，首启大概率进激活/试用流程**。`Factory IO_Data\Managed` 关键 DLL 清单：**Engine IO.dll（SDK 宿主端在场）**、Opc.UaFx.Client.dll（OPC UA client 驱动=F5 直连 AB 的宿主件）、ComDrvS7V6/S7PROSIM/Mhj.PLCSIMPlusConnector（西门子系）、**EmbedIO.dll（内嵌 HTTP server→疑似 v2023 Tags REST API，若实锤=快线第四路线：Python requests 即可读写 tag，比 Modbus 还简单）**、IronPython.dll（内置脚本引擎）、CLIC.Client.dll（Real Games 云许可客户端→⚠首启可能要账号，撞到=红线换线记录）。Modbus 无独立 DLL（应内嵌于 Control IO Engine.dll）。
 - **22:07 F2 完成（用时 12min，GUI 零障碍）**：无激活墙直进 WELCOME→场景库双击载入 Automated Warehouse→状态栏实证 **v2.5.10 Ultimate Edition**→驱动面板全清单+Modbus Server 默认映射截图→pymodbus 冒烟 PASS。**快线路线就地修正**：v2.5.10 有 `Modbus TCP/IP Server` 驱动（compact 前查证的"Factory I/O 只能当 client"是旧版信息）→ F3 改为 **Factory I/O 当 server + Python pymodbus client 直连**，比预案（pymodbus 起 server 等它反连）少一层依赖；SDK 路线降为备选。**踩坑一枚**：驱动 CONFIGURATION 的 Network adapter 默认吸附 Clash 虚拟网卡 Meta Tunnel（Host=198.18.0.1），已改 Software Loopback Interface 1（Host 自动跟随 127.0.0.1）——不修这个 Python 连 127.0.0.1 必扑空，此坑值得进 memory（凡本机有代理虚拟网卡，工业软件的网卡绑定下拉都可能默认选错）。
