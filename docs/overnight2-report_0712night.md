@@ -144,6 +144,14 @@
 
 - **14:16-14:40 H1.1 收工与复核（F7 处置完成，commit `97b1c68`）**：Codex 14:16 交付 H1.1 修复（armed 语义/Windows 单写者租约/设备写 capability 门/write-ahead pending/safe_stop 真值表/reset 五证据门/append-only audit/recover 入口下架，B1-B5+H1-H4+M1/M2 全闭合）+14:25 六组外部故障注入续验（强杀留锁/OS 锁自动释放/state 删除 fail-closed/audit 失败不解锁/fault-vs-lease 并发 fault 胜出），121/121。**Claude 独立复核：接受**——121/121 复现+隔离 hash 验证（`D3EA9DB0D4B2…` 前后一致、无 audit 残留）+safe_stop/reset 逐段审查；Codex 的测试污染偏差（曾写真实状态 3 条后按 revision 5 快照恢复）如实报告，与我 14:20 观测的中间态吻合。**复核修复 1 项阻断级 bug**：`_emitter_state` 误用 `/api/tag/values`（实测无 isForced 字段）→emitter-off/pulse 读回恒误报→假 EMITTER_STATE_UNKNOWN 锁（13:54 真实锁文件有实例）；改 `/api/tags`+真实端点形状防回归测试，**122/122**。commit `97b1c68`（+1878/-335）已推；致Codex 批复已写。**H3 前录制方案改版**：Claude 桌面客户端全屏置顶导致 gdigrab 恒拍到遮挡物（computer-use 截图的"前置"是调用时临时隐藏非授权窗口的假象）→ 视觉门录制改用 **Factory I/O 内置 F12 截图**（应用内渲染、零遮挡、1200×767、秒级时间戳文件名，存 `Documents\Factory IO\Screenshots`；连拍节奏=computer_batch 内 [F12+wait 1.1s]×N，同秒会覆盖故间隔须 ≥1.1s；正式素材可用 PNG 序列 ffmpeg 合成 mp4）。下一步=H2 收尾：完整应用重启（A1 授权流程）→reset-epoch 建新 epoch→**H2.5 空载安全门**（Target stop/Pause/Stop/E-stop/断连/双叉拒写，Codex 回执与 R5 要求）→全绿才进 H3 新箱 G1→G4。
 
+- **14:36-14:55 解锁+H2.5 空载安全门收官（F3 转入 H3 就绪态）**：
+  - **解锁流程 ×2 实测**：完整重启（PID 43236→34944→42396）+GUI 载场景+console Web API+RUN+`reset-epoch` 五证据门（operator 声明/在线空场 preflight 含四货物传感器/visual-empty/emitter-off/note 可追溯）全过，两个新 epoch（14:43:03 清 RECOVERY_UNSAFE、14:52:36 清 COMMAND_ABORTED）；**`fault_events.jsonl` audit 链诞生**（首条 epoch-reset-request 完整记录）。场景 XML 持久 force-off 跨进程生效验证 ✓。
+  - **mechanics-probe A（解锁后首次真实运动）**：新框架全链路 PASS（租约→write-ahead→capability→动作→completion→真值表版 safe_stop 收尾）。两个物理结论：①**新 epoch 下 Lift 命令有真实 Z 边沿（0.08s）**——状态失配最坏假设被削弱；②复现凌晨结论 Right 伸出不互锁下放（interlock refuted）→**G4 无 Z 是带载特有问题**，H3 单箱见分晓。
+  - **H2.5 三现场门 PASS**：①**GUI Pause 中断链**——probe B 运动中注入 Pause→NO START fail-closed→cleanup safe_stop 成功→COMMAND_ABORTED 落锁+**pending 留存**（write-ahead 现场实证）+锁下 diagnose 被拒；②**双叉歧义拒写**——Modbus 注入 C2/C3 双 True→白名单 stop 报 `fork state ambiguous` 拒绝完成、**C2/C3 分毫未动**（读回仍双 True）+SAFE_STOP_UNCONFIRMED 落锁（stop 失败升级现场实证）；③reset 五证据门（见上）。**Stop/E-stop/断连未单独现场测**：与 Pause 同构（同走 check_safety_inputs raise→BaseException→落锁通路）+离线故障注入组 1/2 已覆盖强杀/断连，如实声明不算独立现场证据，H3 期间机会性补验。
+  - **系统级发现：Web API force 不回写 Modbus coil 表**——第一次用 Web API force 双叉时 stop 读 Modbus 全 False 报 VERIFIED（代码基于可见证据行为正确，但证据通道被旁路）：**GUI/Web API 层 force 可让物理驱动与 Modbus 读回脱节**，是 Codex B2 边界声明的具体实例。改进建议（给下一批次）：reset-epoch preflight 机会性断言**全部输出 tag isForced=False**（Web API 可查）。
+  - **绿箱破案**：出口带上的"绿色遗留箱"实为 **Remover 部件的可视化图标**（虚线框+示例箱体）——场景文件无货物对象+删除"绿箱"时虚线框同消失（当时删的是 Remover 本体，**万幸未 Save**）+重载随部件重现。教训：**EDIT 模式删除任何对象前必须核对部件名**；「视觉空场确认」要认识部件可视化。
+  - H3 就绪证据：堆垛机重载后复位 rest/载入位（F12 `14_53_17.png`）→ --confirm-rest 视觉证据成立。出箱路径=emitter-pulse（BoxM 单一箱型）→diagnose feed。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
