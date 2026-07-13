@@ -28,6 +28,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from datetime import datetime
@@ -57,6 +58,9 @@ STEP_TIMEOUT = 30.0
 START_TIMEOUT = 3.0
 POLL = 0.05
 SETTLE = 0.40
+CARGO_SETTLE_DWELL = 1.5
+DIAGNOSTIC_PHASES = ("feed", "pick", "travel", "store")
+ACCEPTANCE_CELLS = (1, 30, 54)
 
 INPUT_NAMES = (
     "At Entry", "At Load", "At Left", "At Middle", "At Right",
@@ -325,11 +329,18 @@ class Stacker:
         self.coil(C_LIFT, False)
         self.wait_motion_cycle("settle cargo on carriage", lambda: self.din(IN_MOVING_Z))
         self.wait_stable("cargo clear of At Load", lambda: not self.box_at_load())
+        print(f"* cargo settle dwell: {CARGO_SETTLE_DWELL:.1f}s")
+        time.sleep(CARGO_SETTLE_DWELL)
+
+    def travel_loaded_to(self, cell: int) -> None:
+        if not 1 <= cell <= 54:
+            raise ValueError(f"cell must be 1..54, got {cell}")
+        self.goto(cell, f"(loaded travel to cell {cell})")
 
     def store_to(self, cell: int) -> None:
         if not 1 <= cell <= 54:
             raise ValueError(f"cell must be 1..54, got {cell}")
-        self.goto(cell, f"(货位 {cell})")
+        self.travel_loaded_to(cell)
         print(f"* 放箱：先抬起 -> Right 侧伸叉 -> 降下 -> 回中（货位 {cell}）")
         self.coil(C_LIFT, True)
         self.wait_motion_cycle("raise cargo for rack", lambda: self.din(IN_MOVING_Z))
@@ -345,10 +356,45 @@ class Stacker:
         self.goto(POS_REST, "(cycle complete)")
         print(f"=== 货位 {cell} 单箱流程完成 ===\n")
 
+    def run_diagnostic(self, phase: str, cell: int) -> None:
+        if phase not in DIAGNOSTIC_PHASES:
+            raise ValueError(f"invalid diagnostic phase: {phase}")
+        if phase == "store":
+            self.store_one(cell)
+            return
+        self.feed_one_box()
+        if phase == "feed":
+            return
+        self.pick_from_load()
+        if phase == "pick":
+            return
+        self.travel_loaded_to(cell)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="mode", required=True)
+    sub.add_parser("snapshot")
+    sub.add_parser("stop")
+
+    probe = sub.add_parser("probe")
+    probe.add_argument("cell", type=int, nargs="?", default=1)
+
+    demo = sub.add_parser("demo")
+    demo.add_argument("count", type=int, nargs="?", default=3)
+
+    diagnose = sub.add_parser("diagnose")
+    diagnose.add_argument("phase", choices=DIAGNOSTIC_PHASES)
+    diagnose.add_argument("cell", type=int, nargs="?", default=1)
+
+    sub.add_parser("accept")
+    return parser
+
 
 def main() -> None:
-    mode = sys.argv[1] if len(sys.argv) > 1 else "snapshot"
-    action_mode = mode in {"probe", "demo"}
+    args = build_parser().parse_args()
+    mode = args.mode
+    action_mode = mode in {"probe", "demo", "diagnose", "accept"}
     original_stdout = sys.stdout
     log_file = None
     if action_mode:
@@ -368,14 +414,19 @@ def main() -> None:
             stacker.all_stop()
         elif mode == "probe":
             stacker.assert_action_ready()
-            cell = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-            stacker.store_one(cell)
+            stacker.store_one(args.cell)
         elif mode == "demo":
             stacker.assert_action_ready()
-            count = int(sys.argv[2]) if len(sys.argv) > 2 else 3
-            if not 1 <= count <= 3:
-                raise ValueError(f"demo count must be 1..3, got {count}")
-            for cell in [11, 24, 37][:count]:
+            if not 1 <= args.count <= 3:
+                raise ValueError(f"demo count must be 1..3, got {args.count}")
+            for cell in [11, 24, 37][: args.count]:
+                stacker.store_one(cell)
+        elif mode == "diagnose":
+            stacker.assert_action_ready()
+            stacker.run_diagnostic(args.phase, args.cell)
+        elif mode == "accept":
+            stacker.assert_action_ready()
+            for cell in ACCEPTANCE_CELLS:
                 stacker.store_one(cell)
         else:
             raise ValueError(f"unknown mode: {mode}")

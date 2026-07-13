@@ -40,7 +40,7 @@ class SequenceContractTests(unittest.TestCase):
 
         stacker.store_to(1)
 
-        stacker.goto.assert_called_once_with(1, "(货位 1)")
+        stacker.goto.assert_called_once_with(1, "(loaded travel to cell 1)")
         stacker.forks_right.assert_called_once_with()
         stacker.forks_left.assert_not_called()
         self.assertEqual(
@@ -93,6 +93,72 @@ class SequenceContractTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "Moving X/Z"):
             stacker.assert_action_ready()
+
+    def test_pick_adds_explicit_cargo_settle_dwell(self):
+        stacker = self.make_stacker()
+
+        with patch("f3_stacker_control.time.sleep") as sleep:
+            stacker.pick_from_load()
+
+        sleep.assert_called_once_with(f3.CARGO_SETTLE_DWELL)
+        self.assertEqual(f3.CARGO_SETTLE_DWELL, 1.5)
+
+    def test_diagnostic_feed_stops_after_feed(self):
+        stacker = self.make_stacker()
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+        stacker.travel_loaded_to = Mock()
+        stacker.store_one = Mock()
+
+        stacker.run_diagnostic("feed", 1)
+
+        stacker.feed_one_box.assert_called_once_with()
+        stacker.pick_from_load.assert_not_called()
+        stacker.travel_loaded_to.assert_not_called()
+        stacker.store_one.assert_not_called()
+
+    def test_diagnostic_pick_runs_prerequisites_only(self):
+        stacker = self.make_stacker()
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+        stacker.travel_loaded_to = Mock()
+        stacker.store_one = Mock()
+
+        stacker.run_diagnostic("pick", 1)
+
+        stacker.feed_one_box.assert_called_once_with()
+        stacker.pick_from_load.assert_called_once_with()
+        stacker.travel_loaded_to.assert_not_called()
+        stacker.store_one.assert_not_called()
+
+    def test_diagnostic_travel_runs_pick_then_loaded_travel(self):
+        stacker = self.make_stacker()
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+        stacker.travel_loaded_to = Mock()
+        stacker.store_one = Mock()
+
+        stacker.run_diagnostic("travel", 30)
+
+        stacker.feed_one_box.assert_called_once_with()
+        stacker.pick_from_load.assert_called_once_with()
+        stacker.travel_loaded_to.assert_called_once_with(30)
+        stacker.store_one.assert_not_called()
+
+    def test_diagnostic_store_reuses_full_cycle(self):
+        stacker = self.make_stacker()
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+        stacker.travel_loaded_to = Mock()
+        stacker.store_one = Mock()
+
+        stacker.run_diagnostic("store", 54)
+
+        stacker.store_one.assert_called_once_with(54)
+        stacker.feed_one_box.assert_not_called()
+
+    def test_acceptance_cells_cover_near_middle_far_extremes(self):
+        self.assertEqual(f3.ACCEPTANCE_CELLS, (1, 30, 54))
 
 
 if __name__ == "__main__":
