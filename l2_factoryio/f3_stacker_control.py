@@ -377,8 +377,9 @@ class Stacker:
         return self.din(IN_MOVING_X) or self.din(IN_MOVING_Z)
 
     def box_at_load(self) -> bool:
-        # 0713 近景 + F6 空载亲验：At Load=False 时载入输送带为空。
-        return self.din(IN_AT_LOAD)
+        # 0713 实物 A/B：入口有托盘+箱体时 At Entry=False，而空载的
+        # At Load/Unload/Exit=True；四个货物检测传感器均为低有效。
+        return not self.din(IN_AT_LOAD)
 
     def goto(self, position: int, description: str = "") -> None:
         if position != POS_REST and not 1 <= position <= 54:

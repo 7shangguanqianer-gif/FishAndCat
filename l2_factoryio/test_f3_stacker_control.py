@@ -258,11 +258,11 @@ class ForkAndGateTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "one-hot"):
             stacker.assert_fork_position(f3.IN_AT_MIDDLE, "Middle")
 
-    def test_box_at_load_uses_positive_sensor_polarity(self):
+    def test_box_at_load_uses_active_low_sensor_polarity(self):
         stacker = self.make_stacker()
-        stacker.din.return_value = True
-        self.assertTrue(stacker.box_at_load())
         stacker.din.return_value = False
+        self.assertTrue(stacker.box_at_load())
+        stacker.din.return_value = True
         self.assertFalse(stacker.box_at_load())
 
     def test_extend_clears_drive_outputs_after_limit_is_reached(self):
