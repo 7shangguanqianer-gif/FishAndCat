@@ -1,176 +1,403 @@
 # -*- coding: utf-8 -*-
-"""F3 快线：Python 直控 Factory I/O Automated Warehouse 堆垛机（Modbus TCP client）。
+"""F3 快线：Python 直控 Factory I/O Automated Warehouse（Modbus TCP）。
 
-角色：Python 扮演"伪 PLC"，经 Modbus TCP 读传感器/写执行器，驱动堆垛机完成入库。
-口径：本产物为"Python 直控技术预演"素材（非 AC500 控制回路）。
+角色：Python 是“伪 PLC”，经 Modbus TCP 读取传感器、写执行器。
+口径：本产物只称“Python 直控技术预演”，不称 AC500/PLC 闭环。
 
-已核实事实（io_map.md + 官方文档 docs.factoryio.com/manual/parts/stations/）：
-- Target Position(HReg0)：1-54=货位格，0=原地停，>54=rest 位(55)。
-- Lift(Coil4)：True=平台微抬（取/放箱行程）。
-- Forks Left(C2)/Right(C3)：双 ON=回中位；At Left/Middle/Right(I2/3/4)=叉臂位置到达(True=在位)。
-- 箱检测传感器(At Entry/Load/Unload/Exit)=对射型：True=空，False=被物遮挡（有箱）。
+0712 现场校准：
+- Target Position 1..54=货位，0=原地停止，55=rest/载入位。
+- 本场景载入输送带位于 Stacker Crane 的 Left 侧；货架位于 Right 侧。
+- At Entry/Load/Unload/Exit 是对射传感器：False=被箱遮挡，True=空。
+- Lift=True 微抬取箱，Lift=False 放下；Lift 行程会反映在 Moving Z。
+- 运输前必须在叉臂回中后 Lift=False，让货物落稳在承载台；到货位后
+  再 Lift=True 抬起、伸叉、Lift=False 放入货架。禁止悬叉运输。
+- 两个叉向输出同时为 True 时回中位；到位后两个输出都置 False。
 
-安全护栏：任何等待超时 → 全输出清零 + Target=0，抛异常退出（挂机自愈由外层记录）。
+安全原则：
+- 所有运动都采用“先见起动/离位，再等停稳/到位”的两阶段判据。
+- 任一步超时或异常都会清零输出并写 Target=0。
+- probe/demo 正常结束时回到 rest，再清零输出。
+
 用法：
-  python f3_stacker_control.py probe    # 阶段实验：入料→取箱→存 1 号位（单箱全流程，详细日志）
-  python f3_stacker_control.py demo 3   # 连续入库 3 箱到货位 [11, 24, 37]（演示动线）
+  # probe/demo 前先在 Factory I/O 按 F6，确认场景是无散落物的新状态
+  python f3_stacker_control.py snapshot  # 只读 I/O 快照
+  python f3_stacker_control.py stop      # 输出安全清零
+  python f3_stacker_control.py probe 1   # 单箱入库到货位 1
+  python f3_stacker_control.py demo 3    # 连续入库到 [11, 24, 37]
 """
+
+from __future__ import annotations
+
 import sys
 import time
+from datetime import datetime
+from pathlib import Path
+from typing import Callable
 
 from pymodbus.client import ModbusTcpClient
 
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 HOST, PORT, SLAVE = "127.0.0.1", 502, 1
 
-# 点表（io_map.md）
+# Discrete inputs
 IN_AT_ENTRY, IN_AT_LOAD, IN_AT_LEFT, IN_AT_MIDDLE, IN_AT_RIGHT = 0, 1, 2, 3, 4
 IN_AT_UNLOAD, IN_AT_EXIT, IN_MOVING_X, IN_MOVING_Z = 5, 6, 7, 8
-IN_RUNNING = 14
+IN_START, IN_RESET, IN_STOP, IN_ESTOP, IN_AUTO, IN_RUNNING = 9, 10, 11, 12, 13, 14
+
+# Coils / holding register
 C_ENTRY_CONV, C_LOAD_CONV, C_FORKS_L, C_FORKS_R, C_LIFT = 0, 1, 2, 3, 4
 C_UNLOAD_CONV, C_EXIT_CONV = 5, 6
 HR_TARGET = 0
-POS_REST = 55  # >54 = rest 位（正对载入台）
+POS_REST = 55
 
-STEP_TIMEOUT = 30.0   # 单步等待上限（堆垛机全程移动可能十几秒）
-POLL = 0.1
+STEP_TIMEOUT = 30.0
+START_TIMEOUT = 3.0
+POLL = 0.05
+SETTLE = 0.40
+
+INPUT_NAMES = (
+    "At Entry", "At Load", "At Left", "At Middle", "At Right",
+    "At Unload", "At Exit", "Moving X", "Moving Z", "Start", "Reset",
+    "Stop", "Emergency stop", "Auto", "FACTORY I/O (Running)",
+)
+COIL_NAMES = (
+    "Entry Conveyor", "Load Conveyor", "Forks Left", "Forks Right", "Lift",
+    "Unload Conveyor", "Exit Conveyor", "Start light", "Reset light", "Stop light",
+)
+
+
+class TeeStream:
+    """把现场动作日志同时写到控制台和证据文件。"""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, text):
+        for stream in self.streams:
+            stream.write(text)
+            stream.flush()
+        return len(text)
+
+    def flush(self):
+        for stream in self.streams:
+            stream.flush()
 
 
 class Stacker:
-    def __init__(self):
-        self.c = ModbusTcpClient(HOST, port=PORT)
+    def __init__(self, client=None):
+        self.c = client or ModbusTcpClient(HOST, port=PORT)
         if not self.c.connect():
             raise SystemExit("connect failed")
-        r = self.c.read_discrete_inputs(IN_RUNNING, count=1, slave=SLAVE)
-        if r.isError() or not r.bits[0]:
-            raise SystemExit("Factory I/O 未在 RUN 状态（Input14=False）——先在 GUI 按播放")
+        self.position_hint: int | None = None
+        self.check_interlocks()
 
-    # --- 基础 IO ---
-    def din(self, addr):
+    # ---- 基础 I/O ----
+    def din(self, addr: int) -> bool:
         r = self.c.read_discrete_inputs(addr, count=1, slave=SLAVE)
         if r.isError():
             raise RuntimeError(f"read input {addr}: {r}")
-        return r.bits[0]
+        return bool(r.bits[0])
 
-    def coil(self, addr, val):
-        r = self.c.write_coil(addr, val, slave=SLAVE)
+    def coil(self, addr: int, value: bool) -> None:
+        r = self.c.write_coil(addr, value, slave=SLAVE)
         if r.isError():
             raise RuntimeError(f"write coil {addr}: {r}")
 
-    def target(self, pos):
-        r = self.c.write_register(HR_TARGET, pos, slave=SLAVE)
+    def target(self, position: int) -> None:
+        r = self.c.write_register(HR_TARGET, position, slave=SLAVE)
         if r.isError():
-            raise RuntimeError(f"write target {pos}: {r}")
+            raise RuntimeError(f"write target {position}: {r}")
 
-    def wait(self, desc, pred, timeout=STEP_TIMEOUT):
-        t0 = time.time()
-        while time.time() - t0 < timeout:
-            if pred():
-                print(f"  [ok {time.time()-t0:5.1f}s] {desc}")
-                return
+    def check_interlocks(self) -> None:
+        if not self.din(IN_RUNNING):
+            raise RuntimeError("Factory I/O 未在 RUN 状态（Input14=False）")
+        if not self.din(IN_STOP):
+            raise RuntimeError("Stop 常闭输入断开（Input11=False）")
+        if not self.din(IN_ESTOP):
+            raise RuntimeError("Emergency stop 常闭输入断开（Input12=False）")
+
+    def snapshot(self) -> dict:
+        di = self.c.read_discrete_inputs(0, count=len(INPUT_NAMES), slave=SLAVE)
+        co = self.c.read_coils(0, count=len(COIL_NAMES), slave=SLAVE)
+        hr = self.c.read_holding_registers(HR_TARGET, count=1, slave=SLAVE)
+        if di.isError() or co.isError() or hr.isError():
+            raise RuntimeError(f"snapshot failed: di={di}, co={co}, hr={hr}")
+        return {
+            "inputs": [bool(x) for x in di.bits[: len(INPUT_NAMES)]],
+            "coils": [bool(x) for x in co.bits[: len(COIL_NAMES)]],
+            "target": int(hr.registers[0]),
+        }
+
+    def print_snapshot(self, label: str) -> None:
+        snap = self.snapshot()
+        print(f"--- {label} ---")
+        print("inputs: " + ", ".join(
+            f"{i}:{name}={snap['inputs'][i]}" for i, name in enumerate(INPUT_NAMES)
+        ))
+        print("coils: " + ", ".join(
+            f"{i}:{name}={snap['coils'][i]}" for i, name in enumerate(COIL_NAMES)
+        ))
+        print(f"target: {snap['target']}")
+
+    def assert_action_ready(self) -> None:
+        """拒绝在上轮碰撞/中断残留状态上继续自动动作。"""
+        snap = self.snapshot()
+        problems = []
+        if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
+            problems.append("Moving X/Z still active")
+        if not snap["inputs"][IN_AT_MIDDLE]:
+            problems.append("forks are not at Middle")
+        active = [i for i, value in enumerate(snap["coils"][:7]) if value]
+        if active:
+            problems.append(f"active coils={active}")
+        if problems:
+            raise RuntimeError(
+                "action preflight failed (press Factory I/O F6 and recheck): "
+                + "; ".join(problems)
+            )
+        print("PREFLIGHT OK: settled, forks Middle, C0..C6=False")
+
+    # ---- 等待与安全 ----
+    def wait_stable(
+        self,
+        description: str,
+        predicate: Callable[[], bool],
+        *,
+        timeout: float = STEP_TIMEOUT,
+        stable_for: float = SETTLE,
+    ) -> None:
+        started = time.monotonic()
+        stable_since = None
+        while time.monotonic() - started < timeout:
+            self.check_interlocks()
+            if predicate():
+                stable_since = stable_since or time.monotonic()
+                if time.monotonic() - stable_since >= stable_for:
+                    print(f"  [ok {time.monotonic() - started:5.2f}s] {description}")
+                    return
+            else:
+                stable_since = None
             time.sleep(POLL)
-        self.all_stop()
-        raise RuntimeError(f"TIMEOUT({timeout}s) waiting: {desc}")
+        raise RuntimeError(f"TIMEOUT({timeout}s): {description}")
 
-    def all_stop(self):
-        """安全清零：所有输出 False + Target=0（原地停）。"""
-        for a in (C_ENTRY_CONV, C_LOAD_CONV, C_FORKS_L, C_FORKS_R, C_LIFT,
-                  C_UNLOAD_CONV, C_EXIT_CONV):
+    def wait_motion_cycle(
+        self,
+        description: str,
+        moving: Callable[[], bool],
+        *,
+        start_timeout: float = START_TIMEOUT,
+        finish_timeout: float = STEP_TIMEOUT,
+        allow_no_start: bool = False,
+    ) -> bool:
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < start_timeout:
+            self.check_interlocks()
+            if moving():
+                print(f"  [start {time.monotonic() - t0:4.2f}s] {description}")
+                break
+            time.sleep(POLL)
+        else:
+            if allow_no_start:
+                self.wait_stable(
+                    f"{description} already settled (no motion)",
+                    lambda: not moving(),
+                    timeout=1.0,
+                )
+                return False
+            raise RuntimeError(f"NO START({start_timeout}s): {description}")
+
+        self.wait_stable(
+            f"{description} settled",
+            lambda: not moving(),
+            timeout=finish_timeout,
+        )
+        return True
+
+    def all_stop(self) -> None:
+        errors = []
+        for address in (
+            C_ENTRY_CONV, C_LOAD_CONV, C_FORKS_L, C_FORKS_R, C_LIFT,
+            C_UNLOAD_CONV, C_EXIT_CONV,
+        ):
             try:
-                self.coil(a, False)
-            except Exception:
-                pass
+                self.coil(address, False)
+            except Exception as exc:  # 尽力停机后汇总，不吞掉事实
+                errors.append(f"C{address}: {exc}")
         try:
             self.target(0)
-        except Exception:
-            pass
+        except Exception as exc:
+            errors.append(f"HR0: {exc}")
+        if errors:
+            raise RuntimeError("safe stop incomplete: " + "; ".join(errors))
+        print("SAFE STOP: C0..C6=False, Target=0")
 
-    # --- 组合动作 ---
-    def crane_settled(self):
-        return (not self.din(IN_MOVING_X)) and (not self.din(IN_MOVING_Z))
+    # ---- 组合动作 ----
+    def crane_moving(self) -> bool:
+        return self.din(IN_MOVING_X) or self.din(IN_MOVING_Z)
 
-    def goto(self, pos, desc=""):
-        print(f"* Target Position = {pos} {desc}")
-        self.target(pos)
-        time.sleep(0.5)  # 给 Moving 信号起来的时间
-        self.wait(f"crane settled @ {pos}", self.crane_settled)
+    def box_at_load(self) -> bool:
+        return not self.din(IN_AT_LOAD)
 
-    def forks_center(self):
-        # 官方文档：双 ON = 回中
+    def goto(self, position: int, description: str = "") -> None:
+        if position != POS_REST and not 1 <= position <= 54:
+            raise ValueError(f"invalid target position: {position}")
+        if self.position_hint == position:
+            print(f"* Target Position = {position} {description} [already confirmed]")
+            return
+        print(f"* Target Position = {position} {description}")
+        self.target(position)
+        # 场景复位后堆垛机可能已物理位于 rest；Numerical 配置没有当前
+        # Position 输入，因此首个幂等 rest 命令只可能以“持续停稳”确认。
+        self.wait_motion_cycle(
+            f"crane -> {position}",
+            self.crane_moving,
+            allow_no_start=(position == POS_REST and self.position_hint is None),
+        )
+        self.position_hint = position
+
+    def _fork_to(self, name: str, coil_address: int, limit_input: int) -> None:
+        if self.din(limit_input):
+            print(f"* forks already at {name}")
+            return
+        self.coil(C_FORKS_L, coil_address == C_FORKS_L)
+        self.coil(C_FORKS_R, coil_address == C_FORKS_R)
+        self.wait_stable(
+            f"forks At {name}",
+            lambda: self.din(limit_input),
+            timeout=8.0,
+            stable_for=0.15,
+        )
+
+    def forks_left(self) -> None:
+        self._fork_to("Left", C_FORKS_L, IN_AT_LEFT)
+
+    def forks_right(self) -> None:
+        self._fork_to("Right", C_FORKS_R, IN_AT_RIGHT)
+
+    def forks_center(self) -> None:
+        if self.din(IN_AT_MIDDLE):
+            self.coil(C_FORKS_L, False)
+            self.coil(C_FORKS_R, False)
+            print("* forks already at Middle")
+            return
         self.coil(C_FORKS_L, True)
         self.coil(C_FORKS_R, True)
-        self.wait("forks At Middle", lambda: self.din(IN_AT_MIDDLE))
+        self.wait_stable(
+            "forks At Middle",
+            lambda: self.din(IN_AT_MIDDLE),
+            timeout=8.0,
+            stable_for=0.15,
+        )
         self.coil(C_FORKS_L, False)
         self.coil(C_FORKS_R, False)
 
-    def forks_right(self):
-        self.coil(C_FORKS_L, False)
-        self.coil(C_FORKS_R, True)
-        self.wait("forks At Right", lambda: self.din(IN_AT_RIGHT))
-
-    def forks_left(self):
-        self.coil(C_FORKS_R, False)
-        self.coil(C_FORKS_L, True)
-        self.wait("forks At Left", lambda: self.din(IN_AT_LEFT))
-
-    def feed_one_box(self):
-        """入料：入口两条带走箱到载入台（At Load 遮挡=False=有箱）。"""
-        print("* 入料：Entry+Load Conveyor 走")
+    def feed_one_box(self) -> None:
+        if self.box_at_load():
+            print("* 载入位已有箱，跳过输送")
+            return
+        print("* 入料：Entry + Load Conveyor")
         self.coil(C_ENTRY_CONV, True)
         self.coil(C_LOAD_CONV, True)
-        self.wait("box At Load (blocked)", lambda: not self.din(IN_AT_LOAD),
-                  timeout=60)
-        self.coil(C_ENTRY_CONV, False)
-        self.coil(C_LOAD_CONV, False)
+        try:
+            self.wait_stable(
+                "box At Load",
+                self.box_at_load,
+                timeout=60.0,
+                stable_for=0.30,
+            )
+        finally:
+            self.coil(C_ENTRY_CONV, False)
+            self.coil(C_LOAD_CONV, False)
 
-    def pick_from_load(self):
-        """载入台取箱：rest 位 → 伸右叉 → 微抬 → 回中。"""
+    def pick_from_load(self) -> None:
+        if not self.box_at_load():
+            raise RuntimeError("pick precondition failed: At Load is empty")
         self.goto(POS_REST, "(rest=载入台)")
-        print("* 取箱")
-        self.forks_right()
-        self.coil(C_LIFT, True)
-        time.sleep(1.2)  # Lift 无独立到位传感，给行程时间
-        self.forks_center()
-
-    def store_to(self, cell):
-        """存入货位：移动(带箱,Lift 保持 True) → 伸左叉 → 放下 → 回中。"""
-        self.goto(cell, f"(货位 {cell})")
-        print(f"* 放箱 → 货位 {cell}")
+        print("* 取箱：Left 侧伸叉 -> 抬起 -> 回中 -> 降到承载台")
         self.forks_left()
+        self.coil(C_LIFT, True)
+        self.wait_motion_cycle("lift load", lambda: self.din(IN_MOVING_Z))
+        self.wait_stable("At Load cleared", lambda: not self.box_at_load())
+        self.forks_center()
         self.coil(C_LIFT, False)
-        time.sleep(1.2)
+        self.wait_motion_cycle("settle cargo on carriage", lambda: self.din(IN_MOVING_Z))
+        self.wait_stable("cargo clear of At Load", lambda: not self.box_at_load())
+
+    def store_to(self, cell: int) -> None:
+        if not 1 <= cell <= 54:
+            raise ValueError(f"cell must be 1..54, got {cell}")
+        self.goto(cell, f"(货位 {cell})")
+        print(f"* 放箱：先抬起 -> Right 侧伸叉 -> 降下 -> 回中（货位 {cell}）")
+        self.coil(C_LIFT, True)
+        self.wait_motion_cycle("raise cargo for rack", lambda: self.din(IN_MOVING_Z))
+        self.forks_right()
+        self.coil(C_LIFT, False)
+        self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
         self.forks_center()
 
-    def store_one(self, cell):
+    def store_one(self, cell: int) -> None:
         self.feed_one_box()
         self.pick_from_load()
         self.store_to(cell)
-        print(f"=== 货位 {cell} 入库完成 ===\n")
+        self.goto(POS_REST, "(cycle complete)")
+        print(f"=== 货位 {cell} 单箱流程完成 ===\n")
 
 
-def main():
-    mode = sys.argv[1] if len(sys.argv) > 1 else "probe"
-    s = Stacker()
-    t0 = time.time()
+def main() -> None:
+    mode = sys.argv[1] if len(sys.argv) > 1 else "snapshot"
+    action_mode = mode in {"probe", "demo"}
+    original_stdout = sys.stdout
+    log_file = None
+    if action_mode:
+        log_dir = Path(__file__).resolve().parent / "logs"
+        log_dir.mkdir(exist_ok=True)
+        log_path = log_dir / f"F3_{mode}_{datetime.now():%Y%m%d_%H%M%S}.log"
+        log_file = log_path.open("w", encoding="utf-8", newline="\n")
+        sys.stdout = TeeStream(original_stdout, log_file)
+        print(f"LOG FILE: {log_path}")
+
+    stacker = Stacker()
+    started = time.monotonic()
     try:
-        if mode == "probe":
-            s.store_one(1)
+        if mode == "snapshot":
+            stacker.print_snapshot("F3 SNAPSHOT")
+        elif mode == "stop":
+            stacker.all_stop()
+        elif mode == "probe":
+            stacker.assert_action_ready()
+            cell = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+            stacker.store_one(cell)
         elif mode == "demo":
-            n = int(sys.argv[2]) if len(sys.argv) > 2 else 3
-            cells = [11, 24, 37][:n]
-            for c in cells:
-                s.store_one(c)
+            stacker.assert_action_ready()
+            count = int(sys.argv[2]) if len(sys.argv) > 2 else 3
+            if not 1 <= count <= 3:
+                raise ValueError(f"demo count must be 1..3, got {count}")
+            for cell in [11, 24, 37][:count]:
+                stacker.store_one(cell)
         else:
-            raise SystemExit(f"unknown mode {mode}")
-        print(f"ALL DONE in {time.time()-t0:.1f}s")
+            raise ValueError(f"unknown mode: {mode}")
+        if action_mode:
+            stacker.all_stop()
+        print(f"ALL DONE in {time.monotonic() - started:.1f}s")
     except KeyboardInterrupt:
-        print("interrupted -> all_stop")
-        s.all_stop()
-    except Exception as e:
-        print(f"FAILED: {e}")
-        s.all_stop()
+        print("interrupted -> safe stop")
+        stacker.all_stop()
+        raise
+    except Exception as exc:
+        print(f"FAILED: {exc}")
+        try:
+            stacker.all_stop()
+        except Exception as stop_exc:
+            print(f"SAFE STOP FAILED: {stop_exc}")
         raise
     finally:
-        s.c.close()
+        stacker.c.close()
+        if log_file is not None:
+            sys.stdout = original_stdout
+            log_file.close()
 
 
 if __name__ == "__main__":
