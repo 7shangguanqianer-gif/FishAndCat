@@ -50,8 +50,8 @@
 | # | 任务 | 状态 | 备注 |
 |---|---|---|---|
 | F0 | 修 plc_evidence.csv+core_smoke 复跑+通知 Codex | ✅ | PASS，阻塞解除 |
-| F1 | 流程改进搜索（overnight/computer-use agent 经验），落 memory+账本 | ⬜ | 用户点名 |
-| F2 | Factory I/O 首启侦察：打开→内置 Automated Warehouse 场景→I/O 点清单→驱动面板截图 | ⬜ | computer-use；kedou 无关已澄清 |
+| F1 | 流程改进搜索（overnight/computer-use agent 经验），落 memory+账本 | ✅ | 业界实践与既有机制高度吻合(原子任务/每步commit/测试门禁/账本)；**增量采纳**：①实验前先 commit 代码(crash 不丢活,F3/F4 执行铁律)②相位粒度 30-60min(1h 反思对齐)③禁触部署/凭据类(本就红线)。来源见账本尾注 |
+| F2 | Factory I/O 首启侦察：打开→内置 Automated Warehouse 场景→I/O 点清单→驱动面板截图 | ⬜ | computer-use；kedou 无关已澄清。**SDK 侦察新发现（F3 硬前提）**：Engine I/O SDK 仅 .NET Standard 2.0（Python 需 pythonnet 桥）、要求 **Ultimate Edition**、驱动须设 "None"、Factory I/O 必须运行中——F2 首启时先核实本机版本是否 Ultimate；若非 Ultimate 则快线改走 Modbus TCP（pymodbus server+Factory I/O Modbus client 驱动，不吃版本限制） |
 | F3 | 快线：SDK/Modbus 选型试验→Python"伪 PLC"驱动堆垛机入库 3 箱→录屏+点表 | ⬜ | l2_factoryio/ |
 | F4 | 正线 3b：AB 仿真 PLC 开 OPC UA server 实验（Symbol Configuration 侦察→外部 client 连接读写）→结论落档 | ⬜ | 成败均是决赛材料 |
 | F5 | 3b 通→Factory I/O OPC client 直连 AB 仿真联调；不通→CODESYS Control Win 兜底 | ⬜ | |
