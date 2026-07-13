@@ -7,15 +7,17 @@
 0713 分层校准结论：
 - Target Position 1..54=货位，0=原地停止，55=rest/载入位。
 - 当前工作假设：载入台在 Left 侧、货架在 Right 侧；必须由 G2/G4 画面亲验。
-- At Entry/Load/Unload/Exit 为正逻辑到位传感器：True=有箱，False=空。
+- At Entry/Load/Unload/Exit 为低有效货物传感器：False=有箱，True=空。
 - Lift=True 微抬取箱；带载移动必须保持 Lift=True，禁止把货物降成自由载荷。
 - Factory I/O 没有 cargo-present 和当前位置反馈，因此信号门不能代替人工画面门。
 
 安全协议：
-- 诊断拆成 feed -> pick -> travel -> place -> retract 五个物理门。
+- 主流程拆成 feed -> pick -> travel -> place -> retract 五个物理门；
+  relift 只用于已确认货物仍在承载台的异常恢复。
 - pick/travel 收尾只停止运动，保留 Lift=True；不得用通用清零主动掉箱。
 - place 在下放后保持货叉伸出，人工确认货架承载后才单独执行 retract。
-- 叉限位必须 one-hot；到位后立即撤销叉驱动输出。
+- Forks Left/Right 是保持型命令：伸出期间必须保持；Lift 切换并落稳后，
+  才能双输出 False 释放并自动回 Middle。
 - stop/snapshot 在 Pause、Stop 或 E-stop 状态下仍必须可用。
 
 推荐校准命令（每轮先 F6、再 F5 RUN）：
@@ -23,6 +25,8 @@
   python f3_stacker_control.py diagnose pick 1 --confirm-rest --observe-seconds 30
   # 画面确认货物水平且在承载台后，不复位：
   python f3_stacker_control.py diagnose travel 1 --confirm-cargo --confirm-position --observe-seconds 30
+  # 仅用于“货物仍在承载台但 Lift=False”的现场恢复：
+  python f3_stacker_control.py diagnose relift 1 --confirm-cargo --confirm-position --observe-seconds 20
   python f3_stacker_control.py diagnose place 1 --confirm-cargo --confirm-position --observe-seconds 30
   # 画面确认货架梁已承载后：
   python f3_stacker_control.py diagnose retract 1 --confirm-placement --confirm-position --observe-seconds 10
@@ -67,7 +71,8 @@ POLL = 0.05
 SETTLE = 0.40
 LOAD_SETTLE_DWELL = 2.0
 PLACEMENT_SETTLE_DWELL = 1.5
-DIAGNOSTIC_PHASES = ("feed", "pick", "travel", "place", "retract")
+OPTIONAL_MOTION_START_TIMEOUT = 1.0
+DIAGNOSTIC_PHASES = ("feed", "pick", "travel", "relift", "place", "retract")
 ACCEPTANCE_CELLS = (1, 30, 54)
 
 INPUT_NAMES = (
@@ -115,6 +120,8 @@ class Stacker:
         # 构造只负责连接。stop/snapshot 不能被 RUN/Stop/E-stop 互锁挡住。
         self.position_hint: int | None = None
         self.load_state = LoadState.UNKNOWN
+        # Left/Right 是保持型输出；记录已确认到限位且必须继续保持的方向。
+        self.fork_hold: int | None = None
 
     # ---- 基础 I/O ----
     def din(self, addr: int) -> bool:
@@ -260,6 +267,42 @@ class Stacker:
         self.position_hint = position
         print(f"OPERATOR GATE: cargo horizontal/present; current position={position}")
 
+    def resume_lowered_carrying(
+        self, *, operator_confirmed: bool, position: int
+    ) -> None:
+        """恢复 G4 失败后仍在承载台、但 Lift=False 的已知现场状态。"""
+        if not operator_confirmed:
+            raise RuntimeError(
+                "cargo visual confirmation required before relift recovery"
+            )
+        if not 1 <= position <= 54:
+            raise ValueError(f"invalid recovery cell: {position}")
+        snap = self.snapshot()
+        problems = []
+        fork_bits = self._fork_bits_from_snapshot(snap)
+        if fork_bits != (False, True, False):
+            problems.append(f"fork limits not one-hot Middle: {fork_bits}")
+        if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
+            problems.append("crane still moving")
+        if not snap["inputs"][IN_AT_LOAD]:
+            problems.append("At Load still blocked")
+        if snap["coils"][C_LIFT]:
+            problems.append("Lift must be False before relift recovery")
+        if snap["coils"][C_FORKS_L] or snap["coils"][C_FORKS_R]:
+            problems.append("fork outputs must be False at Middle")
+        if snap["target"] != 0:
+            problems.append(f"Target={snap['target']} (expected 0)")
+        if problems:
+            raise RuntimeError("relift recovery gate failed: " + "; ".join(problems))
+        # 从这里起按“货物仍在承载台”保守处理；异常清理不得主动降 Lift。
+        self.load_state = LoadState.CARRYING
+        self.position_hint = position
+        self.fork_hold = None
+        print(
+            f"OPERATOR GATE: cargo visually confirmed on lowered carriage; "
+            f"current position={position}"
+        )
+
     def resume_placement_pending(
         self, *, operator_confirmed: bool, position: int
     ) -> None:
@@ -278,10 +321,15 @@ class Stacker:
             problems.append("crane still moving")
         if snap["coils"][C_LIFT]:
             problems.append("Lift must be False after placement")
+        if snap["coils"][C_FORKS_L] or not snap["coils"][C_FORKS_R]:
+            problems.append("Forks Right hold output must remain True")
+        if snap["target"] != 0:
+            problems.append(f"Target={snap['target']} (expected 0)")
         if problems:
             raise RuntimeError("placement hold gate failed: " + "; ".join(problems))
         self.load_state = LoadState.PLACED_PENDING
         self.position_hint = position
+        self.fork_hold = C_FORKS_R
         print(f"OPERATOR GATE: rack support confirmed at cell {position}")
 
     # ---- 等待与安全 ----
@@ -331,10 +379,46 @@ class Stacker:
             timeout=finish_timeout,
         )
 
+    def wait_optional_motion_cycle(
+        self,
+        description: str,
+        moving: Callable[[], bool],
+        *,
+        start_timeout: float = OPTIONAL_MOTION_START_TIMEOUT,
+        finish_timeout: float = STEP_TIMEOUT,
+    ) -> bool:
+        """允许 Lift 在机械端点出现零行程，但仍验证最终静止。"""
+        t0 = time.monotonic()
+        started = False
+        while time.monotonic() - t0 < start_timeout:
+            self.check_safety_inputs(require_running=True)
+            if moving():
+                started = True
+                print(f"  [start {time.monotonic() - t0:4.2f}s] {description}")
+                break
+            time.sleep(POLL)
+        if started:
+            self.wait_stable(
+                f"{description} settled",
+                lambda: not moving(),
+                timeout=finish_timeout,
+            )
+        else:
+            self.wait_stable(
+                f"{description} remains settled (zero-stroke accepted)",
+                lambda: not moving(),
+                timeout=1.0,
+                stable_for=0.30,
+            )
+        return started
+
     def safe_stop(self, *, preserve_lift: bool | None = None) -> None:
-        """停止所有运动并读回；载荷不明或在途时绝不主动撤 Lift。"""
+        """停止行走/输送；已确认伸出的保持型叉臂不得因清零而自动回中。"""
         if preserve_lift is None:
             preserve_lift = self.load_state in (LoadState.UNKNOWN, LoadState.CARRYING)
+        held_fork = getattr(self, "fork_hold", None)
+        if held_fork not in (C_FORKS_L, C_FORKS_R):
+            held_fork = None
         errors = []
         try:
             # 先停 X/Z 目标，避免清执行器过程中继续行走。
@@ -342,6 +426,9 @@ class Stacker:
         except Exception as exc:
             errors.append(f"HR0: {exc}")
         for address in MOTION_COILS:
+            if address == held_fork:
+                # 对该部件，False 不是“停止”而是主动自动回中。
+                continue
             try:
                 self.coil(address, False)
             except Exception as exc:
@@ -354,7 +441,12 @@ class Stacker:
 
         try:
             snap = self.snapshot()
-            bad = [address for address in MOTION_COILS if snap["coils"][address]]
+            bad = [
+                address for address in MOTION_COILS
+                if address != held_fork and snap["coils"][address]
+            ]
+            if held_fork is not None and not snap["coils"][held_fork]:
+                errors.append(f"held fork output C{held_fork} unexpectedly False")
             if not preserve_lift and snap["coils"][C_LIFT]:
                 bad.append(C_LIFT)
             if snap["target"] != 0 or bad:
@@ -366,7 +458,11 @@ class Stacker:
         if errors:
             raise RuntimeError("safe stop incomplete: " + "; ".join(errors))
         lift_text = "preserved" if preserve_lift else "False"
-        print(f"SAFE STOP VERIFIED: motion coils=False, Target=0, Lift={lift_text}")
+        fork_text = f"C{held_fork}=True held" if held_fork is not None else "False"
+        print(
+            f"SAFE STOP VERIFIED: other motion coils=False, Target=0, "
+            f"Lift={lift_text}, ForkHold={fork_text}"
+        )
 
     # 旧入口保留为兼容别名，但语义已是载荷感知停机。
     def all_stop(self) -> None:
@@ -405,12 +501,14 @@ class Stacker:
         if errors:
             raise RuntimeError("fork output clear failed: " + "; ".join(errors))
 
-    def _fork_to(self, name: str, coil_address: int, limit_input: int) -> None:
+    def _fork_to_hold(self, name: str, coil_address: int, limit_input: int) -> None:
+        """伸到指定侧并保持命令；调用方完成 Lift 动作后才允许释放。"""
         self.assert_fork_position(IN_AT_MIDDLE, "Middle")
         primary_error = None
         try:
-            self.coil(C_FORKS_L, coil_address == C_FORKS_L)
-            self.coil(C_FORKS_R, coil_address == C_FORKS_R)
+            opposite = C_FORKS_R if coil_address == C_FORKS_L else C_FORKS_L
+            self.coil(opposite, False)
+            self.coil(coil_address, True)
             self.wait_stable(
                 "forks departed Middle",
                 lambda: not self.din(IN_AT_MIDDLE),
@@ -427,61 +525,50 @@ class Stacker:
                 timeout=8.0,
                 stable_for=0.15,
             )
+            self.fork_hold = coil_address
+            print(f"* forks one-hot {name}; C{coil_address}=True hold preserved")
         except Exception as exc:
             primary_error = exc
-        try:
-            # 到限位后撤销驱动，避免持续顶推货物/货架。
-            self._clear_fork_outputs()
-        except Exception as clear_exc:
-            if primary_error is None:
-                primary_error = clear_exc
-            else:
+            try:
+                # 尚未确认到限位时回到默认 Middle，避免半伸状态悬停。
+                self._clear_fork_outputs()
+                self.fork_hold = None
+            except Exception as clear_exc:
                 primary_error = RuntimeError(f"{primary_error}; {clear_exc}")
         if primary_error is not None:
             raise primary_error
 
-    def forks_left(self) -> None:
-        self._fork_to("Left", C_FORKS_L, IN_AT_LEFT)
+    def forks_left_hold(self) -> None:
+        self._fork_to_hold("Left", C_FORKS_L, IN_AT_LEFT)
 
-    def forks_right(self) -> None:
-        self._fork_to("Right", C_FORKS_R, IN_AT_RIGHT)
+    def forks_right_hold(self) -> None:
+        self._fork_to_hold("Right", C_FORKS_R, IN_AT_RIGHT)
 
-    def forks_center(self) -> None:
+    def release_forks_to_middle(self) -> None:
+        """双输出 False 释放保持，机构自动回 Middle；绝不同时写 True。"""
         bits = self._read_fork_bits()
         if bits == (False, True, False):
             self._clear_fork_outputs()
+            self.fork_hold = None
             print("* forks already one-hot Middle")
             return
         if sum(bits) != 1 or bits[1]:
             raise RuntimeError(f"cannot center from invalid fork limits: {bits}")
         departed_input = IN_AT_LEFT if bits[0] else IN_AT_RIGHT
-        primary_error = None
-        try:
-            self.coil(C_FORKS_L, True)
-            self.coil(C_FORKS_R, True)
-            self.wait_stable(
-                "forks departed extended limit",
-                lambda: not self.din(departed_input),
-                timeout=3.0,
-                stable_for=POLL,
-            )
-            self.wait_stable(
-                "forks one-hot At Middle",
-                lambda: self._read_fork_bits() == (False, True, False),
-                timeout=8.0,
-                stable_for=0.15,
-            )
-        except Exception as exc:
-            primary_error = exc
-        try:
-            self._clear_fork_outputs()
-        except Exception as clear_exc:
-            if primary_error is None:
-                primary_error = clear_exc
-            else:
-                primary_error = RuntimeError(f"{primary_error}; {clear_exc}")
-        if primary_error is not None:
-            raise primary_error
+        self._clear_fork_outputs()
+        self.fork_hold = None
+        self.wait_stable(
+            "forks departed extended limit after hold release",
+            lambda: not self.din(departed_input),
+            timeout=3.0,
+            stable_for=POLL,
+        )
+        self.wait_stable(
+            "forks one-hot At Middle",
+            lambda: self._read_fork_bits() == (False, True, False),
+            timeout=8.0,
+            stable_for=0.15,
+        )
 
     def wait_for_box_edge(self) -> None:
         """第一次检测到 At Load 遮挡立即返回；防抖在停带后执行。"""
@@ -513,7 +600,7 @@ class Stacker:
 
     def feed_one_box(self) -> None:
         self.goto(POS_REST, "(prepare load station)")
-        self.forks_center()
+        self.release_forks_to_middle()
         if self.box_at_load():
             raise RuntimeError(
                 "load station already occupied; G1 cannot be bypassed "
@@ -550,14 +637,14 @@ class Stacker:
             raise RuntimeError("pick precondition failed: At Load is empty")
         self.goto(POS_REST, "(rest=载入台)")
         print("* 取箱：Left 侧伸叉 -> 抬起 -> 回中（保持 Lift=True 带载）")
-        self.forks_left()
+        self.forks_left_hold()
         # 从此刻起叉已在货物下方；即使 Lift 写入/反馈随后失败，清理路径也
         # 必须按“可能带载”保守处理，不能主动写 Lift=False。
         self.load_state = LoadState.CARRYING
         self.coil(C_LIFT, True)
         self.wait_motion_cycle("lift load", lambda: self.din(IN_MOVING_Z))
         self.wait_stable("At Load cleared", lambda: not self.box_at_load())
-        self.forks_center()
+        self.release_forks_to_middle()
         self.assert_loaded_transport_ready()
 
     def travel_loaded_to(self, cell: int) -> None:
@@ -567,6 +654,44 @@ class Stacker:
             raise RuntimeError(f"travel requires CARRYING state, got {self.load_state.value}")
         self.assert_loaded_transport_ready()
         self.goto(cell, f"(loaded travel to cell {cell})")
+
+    def relift_carried_load(self, cell: int) -> None:
+        """只恢复承载台微抬状态；禁止 X 行走和叉臂动作。"""
+        if self.load_state != LoadState.CARRYING:
+            raise RuntimeError(
+                f"relift requires operator-confirmed CARRYING state, "
+                f"got {self.load_state.value}"
+            )
+        if self.position_hint != cell:
+            raise RuntimeError(
+                f"relift position evidence mismatch: confirmed={self.position_hint}, "
+                f"cell={cell}"
+            )
+        self.assert_fork_position(IN_AT_MIDDLE, "Middle")
+        print(f"* 恢复微抬：仅 Lift=True，不移动 X/叉臂（货位 {cell}）")
+        # load_state 已在人工门处先标为 CARRYING；写入失败也不会主动降载。
+        self.coil(C_LIFT, True)
+        self.wait_optional_motion_cycle("relift carried load", lambda: self.din(IN_MOVING_Z))
+        self.assert_loaded_transport_ready()
+
+    def assert_placement_hold_ready(self) -> None:
+        """验证放箱观察门：Right 到位且保持，Lift 已下放，系统静止。"""
+        snap = self.snapshot()
+        problems = []
+        fork_bits = self._fork_bits_from_snapshot(snap)
+        if fork_bits != (False, False, True):
+            problems.append(f"fork limits not one-hot Right: {fork_bits}")
+        if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
+            problems.append("crane still moving")
+        if snap["coils"][C_LIFT]:
+            problems.append("Lift must be False after placement")
+        if snap["coils"][C_FORKS_L] or not snap["coils"][C_FORKS_R]:
+            problems.append("Forks Right hold output must remain True")
+        if snap["target"] != 0:
+            problems.append(f"Target={snap['target']} (expected 0)")
+        if problems:
+            raise RuntimeError("placement hold actuator gate failed: " + "; ".join(problems))
+        print("PLACEMENT ACTUATOR GATE OK: Right held, Lift=False, motion settled")
 
     def place_hold(self, cell: int) -> None:
         if not 1 <= cell <= 54:
@@ -581,12 +706,12 @@ class Stacker:
         print(
             f"* 放箱保持：Right 侧伸叉 -> Lift=False 下放 -> 保持伸叉（货位 {cell}）"
         )
-        self.forks_right()
+        self.forks_right_hold()
         self.coil(C_LIFT, False)
-        self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
+        self.wait_optional_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
         print(f"* placement settle dwell: {PLACEMENT_SETTLE_DWELL:.1f}s")
         time.sleep(PLACEMENT_SETTLE_DWELL)
-        self.assert_fork_position(IN_AT_RIGHT, "Right")
+        self.assert_placement_hold_ready()
         self.load_state = LoadState.PLACED_PENDING
         print("PLACEMENT HOLD: inspect rack support before running retract")
 
@@ -598,7 +723,7 @@ class Stacker:
                 f"retract requires PLACED_PENDING state, got {self.load_state.value}"
             )
         self.assert_fork_position(IN_AT_RIGHT, "Right")
-        self.forks_center()
+        self.release_forks_to_middle()
         self.load_state = LoadState.PLACED
         print("PLACEMENT VERIFIED: forks retracted after operator confirmation")
 
@@ -644,6 +769,9 @@ class Stacker:
         elif phase == "travel":
             self.travel_loaded_to(cell)
             self.observe_phase("G3_TRAVEL", observe_seconds)
+        elif phase == "relift":
+            self.relift_carried_load(cell)
+            self.observe_phase("RECOVERY_RELIFT", observe_seconds)
         elif phase == "place":
             self.place_hold(cell)
             self.observe_phase("G4_PLACE_HOLD", observe_seconds)
@@ -689,6 +817,15 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
             operator_confirmed=args.confirm_cargo,
             position=POS_REST,
         )
+    elif phase == "relift":
+        if not args.confirm_position:
+            raise RuntimeError(
+                f"--confirm-position required: visually confirm crane at cell {args.cell}"
+            )
+        stacker.resume_lowered_carrying(
+            operator_confirmed=args.confirm_cargo,
+            position=args.cell,
+        )
     elif phase == "place":
         if not args.confirm_position:
             raise RuntimeError(
@@ -707,6 +844,23 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
             operator_confirmed=args.confirm_placement,
             position=args.cell,
         )
+
+
+def _finish_diagnostic(stacker: Stacker, phase: str) -> None:
+    """保留需要跨进程维持的物理状态；其余相位执行载荷感知停机。"""
+    if phase == "place":
+        print(
+            "PLACEMENT HOLD PRESERVED: Forks Right remains True; "
+            "run retract only after visual rack-support confirmation"
+        )
+        return
+    if phase == "relift":
+        print(
+            "RELIFT STATE PRESERVED: successful recovery wrote Lift=True only; "
+            "no X/fork cleanup writes required"
+        )
+        return
+    stacker.safe_stop()
 
 
 def main() -> None:
@@ -741,7 +895,7 @@ def main() -> None:
                 cargo_confirmed=args.confirm_cargo,
                 placement_confirmed=args.confirm_placement,
             )
-            stacker.safe_stop()
+            _finish_diagnostic(stacker, args.phase)
         elif mode in {"probe", "demo", "accept"}:
             raise RuntimeError(
                 f"{mode} disabled until G1-G4 layered calibration is signed; "

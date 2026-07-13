@@ -7,7 +7,7 @@
 >
 > **0713 现场纠错（G2/G4 待画面终签）：** 当前固定机位与有效取箱边沿支持“Left=载入输送带侧、Right=货架侧”；0712 初稿把两侧写反。以下点表已按当前工作假设修正，最终只以 G2 真实承载与 G4 真实入架画面为准，不能只凭限位信号宣告成立。
 >
-> **0713 实物极性复核（进程重启后，入口托盘+箱体画面与 Modbus 同步取证）：** Automated Warehouse 的 At Entry/Load/Unload/Exit 在当前 Modbus 映射中为低有效：`False=有货遮挡`、`True=空`。现场快照为入口有货 `At Entry=False`，其余空位 `At Load/Unload/Exit=True`。此前仅凭 F6 后远景把 `At Load=False` 判为空载的结论已作废。
+> **0713 实物极性复核（进程重启后，入口托盘+箱体画面与 Modbus 同步取证）：** Automated Warehouse 的货物传感器 At Entry/Load/Unload/Exit 在当前 Modbus 映射中为 **active-low**：`False=有货遮挡`、`True=空`。现场快照为入口有货 `At Entry=False`，其余空位 `At Load/Unload/Exit=True`。此前仅凭 F6 后远景把 `At Load=False` 判为空载的结论已作废。
 
 ## 默认映射（驱动面板自动生成，截图 `img/F2_modbus_server_default_mapping_0712.png`）
 
@@ -48,6 +48,21 @@
 | 地址 | 点名 | 含义 |
 |---|---|---|
 | Holding Reg 0 | Target Position | 堆垛机目标货位号（int；具体编号规则见 F3 实验记录） |
+
+## 叉臂取放动作契约（0713 现场实锤）
+
+`Forks Left` / `Forks Right` 是**保持型命令**，不是到限位即撤销的脉冲命令：命令撤销后，机构会自动回 `Middle`。此前在 `At Left` / `At Right` 到位后立即撤销，导致取放过程中的货物被叉臂拉回；该逻辑不得再使用。
+
+正确序列如下（向左或向右只选择对应的一路叉臂输出）：
+
+1. 令目标方向叉臂输出 `True`，并持续保持；另一方向输出保持 `False`。
+2. 在叉臂保持伸出期间切换 `Lift` 完成取货或放货，并等待升降行程结束、货物落稳。
+3. 如需人工视觉确认，继续保持叉臂输出，不得因已到 `At Left` / `At Right` 而释放。
+4. 完成确认后，将 `Forks Left=False` **且** `Forks Right=False`；叉臂才释放并自动回 `Middle`。应确认 `At Middle=True` 后再进入下一相位。
+
+### 恢复相位：`relift`
+
+若固定机位画面已由操作员确认货物仍在承载台，同时叉臂在 `Middle`、当前 cell 位置已确认且 `Lift=False`，则先写 `Lift=True` 进入 `relift` 恢复。Factory I/O 没有承载台 cargo-present 反馈，`At Load` 只能证明载入位未被遮挡，不能代替上述人工画面门。该恢复步骤**不得移动 X，也不得动作任一叉臂**；仅在升举状态恢复并重新确认现场条件后，才可继续后续流程。
 
 ## 冒烟验证（`f2_smoke_read.py`，0712 实测 PASS）
 - `connect: True`；15 inputs / 10 coils / HReg0 / IReg0 全部读通零报错。
