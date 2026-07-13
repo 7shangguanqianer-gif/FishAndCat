@@ -4,6 +4,10 @@
 > 驱动：**Modbus TCP/IP Server**（Factory I/O 当 server，Python 用 pymodbus **client** 直连——比预案"pymodbus 起 server 等它连"依赖更少）。
 > 绑定：`127.0.0.1:502`，Slave ID `1`，Auto start ✓。
 > ⚠ 网卡坑（已修）：CONFIGURATION 里 Network adapter 默认落在 **Meta Tunnel**（Clash 虚拟网卡 198.18.0.1），Python 连 127.0.0.1 会扑空；已改 **Software Loopback Interface 1**，Host 自动变 127.0.0.1。Clash 开关不再影响链路。
+>
+> **0713 现场纠错（G2/G4 待画面终签）：** 当前固定机位与有效取箱边沿支持“Left=载入输送带侧、Right=货架侧”；0712 初稿把两侧写反。以下点表已按当前工作假设修正，最终只以 G2 真实承载与 G4 真实入架画面为准，不能只凭限位信号宣告成立。
+>
+> **传感器极性：** Automated Warehouse 的 At Entry/Load/Unload/Exit 在当前 Modbus 映射中为 `False=被箱遮挡`、`True=光路空`；名称中的 `At` 不代表 Python 读到 `True` 就有箱。
 
 ## 默认映射（驱动面板自动生成，截图 `img/F2_modbus_server_default_mapping_0712.png`）
 
@@ -12,9 +16,9 @@
 |---|---|---|---|
 | Input 0 | At Entry | Bool | 入口输送带箱到位 |
 | Input 1 | At Load | Bool | 载入位（堆垛机取箱口）箱到位 |
-| Input 2 | At Left | Bool | 叉臂在左（伸向货架侧） |
+| Input 2 | At Left | Bool | 叉臂在左（当前工作假设：伸向载入输送带侧） |
 | Input 3 | At Middle | Bool | 叉臂居中（收回） |
-| Input 4 | At Right | Bool | 叉臂在右（伸向输送带侧） |
+| Input 4 | At Right | Bool | 叉臂在右（当前工作假设：伸向货架侧） |
 | Input 5 | At Unload | Bool | 卸载位箱到位 |
 | Input 6 | At Exit | Bool | 出口输送带箱到位 |
 | Input 7 | Moving X | Bool | 堆垛机水平移动中 |
@@ -31,8 +35,8 @@
 |---|---|---|
 | Coil 0 | Entry Conveyor | 入口输送带走 |
 | Coil 1 | Load Conveyor | 载入输送带走 |
-| Coil 2 | Forks Left | 叉臂伸左（货架侧） |
-| Coil 3 | Forks Right | 叉臂伸右（输送带侧） |
+| Coil 2 | Forks Left | 叉臂伸左（当前工作假设：载入输送带侧；G2 画面终签） |
+| Coil 3 | Forks Right | 叉臂伸右（当前工作假设：货架侧；G4 画面终签） |
 | Coil 4 | Lift | 叉臂升（取/放箱行程） |
 | Coil 5 | Unload Conveyor | 卸载输送带走 |
 | Coil 6 | Exit Conveyor | 出口输送带走 |
