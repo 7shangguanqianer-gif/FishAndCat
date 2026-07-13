@@ -173,6 +173,12 @@
   - **P3 终极对照实验（下一循环）**：重启（顺带清 Lift 的 force 残留）→载入**官方库原版** Automated Warehouse（非 My Scenes 副本——凌晨几何复核只证明了两个副本互相一致，不代表与官方模板一致）→原版预置托盘上用 Web API force 驱动完整取/放序列→原版有 Z=我们场景坏（修场景/换基线）；原版同样无 Z=引擎行为（重设计时序）。
   - Deviation 补记：P1 使用 Web API force 作为研究测量通道（受控+记录+重启清除），非绕锁作业。
 
+- **15:54-16:00 P3 终极对照实验：F3 谜题全面闭环（官方原版完整放箱成功）**：
+  - 重启后载入**官方库原版** Automated Warehouse（driver=None，纯 Web API force 驱动；原版 Emitter 无治理已自动出件——先 force 止血）。用与 debug 场景**完全相同的命令序列**重放全链：feed（4.83s 边沿）→pick（Left 2.15s→Lift True **Z① ACTIVE 0.07s/27 采样**）→travel 30（3.21s）→place（Right 2.13s→Lift False **Z② ACTIVE 0.06s/25 采样=决胜观测**）→retract（回中 2.08s）→park。
+  - **终验帧（15:58:15）：托盘+箱稳稳留在货架格内、堆垛机已回走——F3 首次完整成功放箱达成。**
+  - **终极裁决**：控制序列/时序/代码全程正确（官方语义吻合）；**debug 场景本身是坏的**（同序列在 debug 场景 G4 无 Z）。凌晨全部事故（cell 1 无 Z、postF6 G2 无 Z、恢复后掉箱）根源=坏场景+把场景故障误判为控制问题后的恢复操作。具体坏点（rack 对齐/stacker 校准/场景内部状态）不再深挖——**处置=抛弃 debug 场景，基于官方原版重建工作场景**（配 Modbus driver 映射+Emitter BoxM/force-off 治理→另存新副本），在新场景上跑 f3_stacker_control 全链+9/9 验收（H5）。
+  - P3 全日志与帧：`scratchpad/p3_official_replay.py` 输出（本节）+`Screenshots/15_58_15.png`（放箱成功帧，将归档 media）。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
