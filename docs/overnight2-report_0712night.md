@@ -51,7 +51,7 @@
 |---|---|---|---|
 | F0 | 修 plc_evidence.csv+core_smoke 复跑+通知 Codex | ✅ | PASS，阻塞解除 |
 | F1 | 流程改进搜索（overnight/computer-use agent 经验），落 memory+账本 | ✅ | 业界实践与既有机制高度吻合(原子任务/每步commit/测试门禁/账本)；**增量采纳**：①实验前先 commit 代码(crash 不丢活,F3/F4 执行铁律)②相位粒度 30-60min(1h 反思对齐)③禁触部署/凭据类(本就红线)。来源见账本尾注 |
-| F2 | Factory I/O 首启侦察：打开→内置 Automated Warehouse 场景→I/O 点清单→驱动面板截图 | ⬜ | computer-use；kedou 无关已澄清。**SDK 侦察新发现（F3 硬前提）**：Engine I/O SDK 仅 .NET Standard 2.0（Python 需 pythonnet 桥）、要求 **Ultimate Edition**、驱动须设 "None"、Factory I/O 必须运行中——F2 首启时先核实本机版本是否 Ultimate；若非 Ultimate 则快线改走 Modbus TCP（pymodbus server+Factory I/O Modbus client 驱动，不吃版本限制） |
+| F2 | Factory I/O 首启侦察：打开→内置 Automated Warehouse 场景→I/O 点清单→驱动面板截图 | ✅ | **v2.5.10 Ultimate Edition**（状态栏实证）；无激活墙直进；Automated Warehouse 已载入；驱动全清单解锁（含 Modbus TCP/IP **Server**+OPC Client DA/UA）；默认映射拿全（15 In/10 Coil/HReg0=Target Position）；**网卡坑已修**（Meta Tunnel→Loopback）；pymodbus 3.8.6 只读冒烟 **PASS**。产物=`l2_factoryio/{io_map.md, f2_smoke_read.py, img/F2_*.png×3}` |
 | F3 | 快线：SDK/Modbus 选型试验→Python"伪 PLC"驱动堆垛机入库 3 箱→录屏+点表 | ⬜ | l2_factoryio/ |
 | F4 | 正线 3b：AB 仿真 PLC 开 OPC UA server 实验（Symbol Configuration 侦察→外部 client 连接读写）→结论落档 | ⬜ | 成败均是决赛材料 |
 | F5 | 3b 通→Factory I/O OPC client 直连 AB 仿真联调；不通→CODESYS Control Win 兜底 | ⬜ | |
@@ -60,7 +60,8 @@
 | F8 | 任务池尽→"完美标准清单"扩展（全作品找优化点，非文档线） | ⬜ | 持续 |
 
 ## 四、时间线与反思
-- （本轮开工时间待首条记录）
+- **21:55 F2 开工（文件层侦察先行）**：`F:\Factory IO.exe`=Unity 2023.1.5f1 主程序（VersionInfo 是 Unity 版本，软件版本待 GUI）；注册表 HKCU/HKLM 均无 Real Games 键=**本机从未运行过，首启大概率进激活/试用流程**。`Factory IO_Data\Managed` 关键 DLL 清单：**Engine IO.dll（SDK 宿主端在场）**、Opc.UaFx.Client.dll（OPC UA client 驱动=F5 直连 AB 的宿主件）、ComDrvS7V6/S7PROSIM/Mhj.PLCSIMPlusConnector（西门子系）、**EmbedIO.dll（内嵌 HTTP server→疑似 v2023 Tags REST API，若实锤=快线第四路线：Python requests 即可读写 tag，比 Modbus 还简单）**、IronPython.dll（内置脚本引擎）、CLIC.Client.dll（Real Games 云许可客户端→⚠首启可能要账号，撞到=红线换线记录）。Modbus 无独立 DLL（应内嵌于 Control IO Engine.dll）。
+- **22:07 F2 完成（用时 12min，GUI 零障碍）**：无激活墙直进 WELCOME→场景库双击载入 Automated Warehouse→状态栏实证 **v2.5.10 Ultimate Edition**→驱动面板全清单+Modbus Server 默认映射截图→pymodbus 冒烟 PASS。**快线路线就地修正**：v2.5.10 有 `Modbus TCP/IP Server` 驱动（compact 前查证的"Factory I/O 只能当 client"是旧版信息）→ F3 改为 **Factory I/O 当 server + Python pymodbus client 直连**，比预案（pymodbus 起 server 等它反连）少一层依赖；SDK 路线降为备选。**踩坑一枚**：驱动 CONFIGURATION 的 Network adapter 默认吸附 Clash 虚拟网卡 Meta Tunnel（Host=198.18.0.1），已改 Software Loopback Interface 1（Host 自动跟随 127.0.0.1）——不修这个 Python 连 127.0.0.1 必扑空，此坑值得进 memory（凡本机有代理虚拟网卡，工业软件的网卡绑定下拉都可能默认选错）。
 
 ## 五、待拍板清单
 - （随夜间积累）
