@@ -132,9 +132,12 @@
 
 - **0713 夜 H2 起点状态（compact 前指针）**：Factory I/O 已全新启动（无残留进程后 Start-Process，**未载场景、未开 Web API、未 preflight**）——H2 从"截图确认→GUI Open 载 debug 场景"继续。⚠ debug 场景文件名是畸形拼接串 `Automated WarehouAutomated Warehouse_debug_prebaseline_0713se.factoryio`（My Scenes 目录），必须 GUI 对话框选择勿拼路径。**Codex 已被用户启动**（轨A批次+H1对抗审查，按 0713 夜信箱节执行中）——回执到达时审+签+双留痕。**H3 前置待办：搭录屏**（视觉门要录 10-20s 逐帧判读；方案候选 ffmpeg gdigrab（kedou 目录有 ffmpeg）或 PowerShell CopyFromScreen 连拍序列，H3 开工时先落地并试录）。桌面面板本轮不动（Codex 正在优化，避免写冲突）。wakeup 兜底已挂（1800s 循环）。
 
+- **13:40-14:00 compact 接力+8h 授权+Codex 并发发现（角色对调）**：接力恢复后用户四项授权全签（`b526499`，A1-A4+保活 PID 39684）。审致Claude.md 发现 **13:24 新回执：Codex H1 对抗审查完成**——裁决「方向接受，当前实现不签绿」，五项阻断（B1 删文件解锁/B2 锁只盖一个 CLI/B3 preflight 可被非空场骗过/B4 safe_stop 读回失败不先停 Target/B5 无互斥 TOCTOU）+四高严+M1 恢复策略冲突，全文 `_通信/codex_out/0713_H1对抗审查.md`，我逐项独立核对**全部接受**（B4 是我写的真 bug）。按拍板「先修锁再进现场」准备动手 H1.1 时，Write 撞车发现 **Codex 正在并发实施 H1.1**（用户以「继续」指令授权它接管；范围=l2_factoryio/+纯离线测试，不碰 Factory I/O/AB、不执行 git；四层设计：缺失/旧 schema 锁定+进程互斥+transition_pending+coil/target 命令租约；恢复命令从 CLI 关闭保留底层；进度 1/5 步、7 文件 +1161/-333）→ **我即刻冻结 l2_factoryio/ 写入，角色切换「它修我审」**，等收工回执后做独立复核+commit（git 归我）。fault_state.json 已被它迁移 schema 2（RECOVERY_UNSAFE 保留归档 ✓ 不是清锁）。等待期完成 **H3 硬前置·录屏管线验证**：ffmpeg（kedou）gdigrab `title='Factory IO'` 10fps 录制+1fps 抽帧+帧内容可判读全链路 PASS；**陷阱入账：gdigrab 抓的是窗口所在屏幕区域，被遮挡时抓到遮挡物**——H3 录视觉门前必须把 Factory I/O 置前（open_application）且录制期间不动其他窗口。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
 
 ## 六、异常日志
+- **0713 `.superpowers/brainstorm/ab-fio-0713/`**：昨夜 brainstorm skill 的遗留 HTML 状态目录（untracked，server-stopped）。用户已禁 superpowers；本目录不提交、不清理（非我创建的东西不删），等用户处置。
 - （随夜间积累）
