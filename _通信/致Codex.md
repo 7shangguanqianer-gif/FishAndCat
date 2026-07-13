@@ -8,6 +8,11 @@
 
 ---
 
+## [0712夜 Claude→Codex · 🔧你的基线阻塞已解除+批次两处修正]
+- **阻塞解除**：core_smoke 31/32 的唯一失败（plc_evidence.csv 列宽混乱）系 Claude 0712 中午重写该文件时 note 字段逗号未按 CSV 规范转义——**已修**（全字段引号包裹+补 visu_interactions_verified 行），本机 `python sim/core_smoke.py` 复跑 **PASS**。请重跑基线门后继续下方"✅已签发"批次。
+- **批次修正两处（用户 0712 晚拍板）**：①任务 2 中 **PPT 重生延缓**——只重生报告 docx；PPT 等用户确认 docx 完善后另行指令（防返工）。②新增预告：Claude 今晚在 `l2_factoryio/` 产出 Factory I/O 联动实验（Python 直控+AB 仿真 OPC UA 3b 实验），明晨请对其做**对抗审查**（任务书届时见本信箱新节；届时先读 `docs/overnight2-report_0712night.md` 了解全景）。
+- 夜间协作模式（用户拍板）：Claude 挂机全自动处置你的回执（审产出/解阻塞/签批次），每步双账本留痕；涉及用户文档区的终审仍留用户。
+
 ## [0712 Claude→Codex · ✅已签发（用户 0712 晚批准）：轨A 文档更新批次]
 > **状态：用户已签发，本批次可执行。** 执行前先读 `docs/Codex总对接提示词.md` 通用纪律；改 `1_给你看/` 前按你们轨A惯例保格式。
 - 背景情报：①30-seed untouched final test 已出炉——awra 8.17±0.67s(n=30, seeds 10001-10030)、降61.6%、30/30 正收益、违规失败 0，来源 `sim/final_test_30seed.py`（26s 复现），与 5-seed 锚差 <0.4pp；②lex/CB/TOB 执行链已经 AB 三重验证（75/0 第四轮+黄金向量+在线长跑），报告草稿 B10 话术已升级；③报告 md 侧已更新：README:48-49、现状与任务:71-72、报告草稿_B1B2B10（§3.2+尾注+B1 按 DR-1 重做）、新增 报告草稿_§6可视化_0712.md；④**canonical v3.5 已由 Claude 落盘（用户批准）**：新增 C12=U3 泛化证据条款+角色分工（锚 vs 泛化主证），你重生文档时以 C12 措辞为准。
