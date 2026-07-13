@@ -56,6 +56,13 @@ class ConstructorAndStopTests(unittest.TestCase):
         for address in f3.MOTION_COILS:
             self.assertIn(call.coil(address, False), timeline.mock_calls)
 
+    def test_safe_stop_preserves_lift_for_recovery_unsafe_load(self):
+        stacker = self.make_stop_stacker(f3.LoadState.RECOVERY_UNSAFE)
+
+        stacker.safe_stop()
+
+        self.assertNotIn(call(f3.C_LIFT, False), stacker.coil.call_args_list)
+
     def test_safe_stop_clears_lift_when_load_is_known_empty(self):
         stacker = self.make_stop_stacker(f3.LoadState.EMPTY)
         stacker.snapshot.return_value["coils"][f3.C_LIFT] = False
@@ -112,6 +119,7 @@ class SequenceContractTests(unittest.TestCase):
         stacker.assert_loaded_transport_ready = Mock()
         stacker.assert_fork_position = Mock()
         stacker.assert_placement_hold_ready = Mock()
+        stacker.resume_extended_recovery = Mock()
         stacker.check_safety_inputs = Mock()
         return stacker
 
@@ -194,19 +202,71 @@ class SequenceContractTests(unittest.TestCase):
 
         self.assertEqual(stacker.load_state, f3.LoadState.CARRYING)
 
-    def test_place_hold_does_not_retract_before_manual_confirmation(self):
+    def test_fused_place_hold_is_disabled_with_split_gate_guidance(self):
         stacker = self.make_stacker()
         stacker.load_state = f3.LoadState.CARRYING
         stacker.position_hint = 30
-        with patch("f3_stacker_control.time.sleep"):
+
+        with self.assertRaisesRegex(RuntimeError, "place-extend"):
             stacker.place_hold(30)
 
+        stacker.forks_right_hold.assert_not_called()
+        stacker.coil.assert_not_called()
+
+    def test_place_extend_holds_right_and_never_writes_lift(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.CARRYING
+        stacker.position_hint = 30
+
+        stacker.place_extend(30)
+
         stacker.forks_right_hold.assert_called_once_with()
+        stacker.coil.assert_not_called()
+        stacker.wait_motion_cycle.assert_not_called()
+        stacker.release_forks_to_middle.assert_not_called()
+        self.assertEqual(stacker.load_state, f3.LoadState.EXTENDED_HOLD)
+
+    def test_place_lower_requires_extended_hold_state(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.CARRYING
+        stacker.position_hint = 30
+
+        with self.assertRaisesRegex(RuntimeError, "EXTENDED_HOLD"):
+            stacker.place_lower(30)
+
+        stacker.coil.assert_not_called()
+
+    def test_place_lower_lowers_with_real_z_and_keeps_right_hold(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.EXTENDED_HOLD
+        stacker.position_hint = 30
+        with patch("f3_stacker_control.time.sleep"):
+            stacker.place_lower(30)
+
+        stacker.assert_fork_position.assert_called_once_with(f3.IN_AT_RIGHT, "Right")
         stacker.coil.assert_called_once_with(f3.C_LIFT, False)
         self.assertEqual(stacker.wait_motion_cycle.call_args.args[0], "lower load")
         stacker.release_forks_to_middle.assert_not_called()
         stacker.assert_placement_hold_ready.assert_called_once_with()
         self.assertEqual(stacker.load_state, f3.LoadState.PLACED_PENDING)
+
+    def test_place_lower_no_z_records_persistent_fault(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.EXTENDED_HOLD
+        stacker.position_hint = 30
+        stacker.wait_motion_cycle.side_effect = RuntimeError(
+            "NO START(3.0s): lower load"
+        )
+
+        with patch("f3_stacker_control.fault_lock.record_fault") as record:
+            with self.assertRaisesRegex(RuntimeError, "NO START"):
+                stacker.place_lower(30)
+
+        record.assert_called_once()
+        self.assertEqual(
+            record.call_args.args[0], f3.fault_lock.FAULT_LIFT_POSITION_UNKNOWN
+        )
+        self.assertEqual(record.call_args.kwargs["cell"], 30)
 
     def test_retract_requires_explicit_operator_confirmation(self):
         stacker = self.make_stacker()
@@ -224,6 +284,44 @@ class SequenceContractTests(unittest.TestCase):
         stacker.assert_fork_position.assert_called_once_with(f3.IN_AT_RIGHT, "Right")
         stacker.release_forks_to_middle.assert_called_once_with()
         self.assertEqual(stacker.load_state, f3.LoadState.PLACED)
+
+    def test_recover_place_lift_preserves_right_hold_and_never_retracts(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.CARRYING
+        stacker.position_hint = 1
+        stacker.din = Mock(return_value=False)
+
+        with patch.object(f3, "START_TIMEOUT", 0.0):
+            stacker.recover_place_hold_lift(1)
+
+        stacker.coil.assert_called_once_with(f3.C_LIFT, True)
+        stacker.release_forks_to_middle.assert_not_called()
+        stacker.resume_extended_recovery.assert_called_once_with(
+            operator_confirmed=True,
+            position=1,
+            expected_lift=True,
+        )
+
+    def test_recover_place_retract_requires_raised_gate_before_centering(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.CARRYING
+        stacker.position_hint = 30
+        timeline = Mock()
+        timeline.attach_mock(stacker.resume_extended_recovery, "gate")
+        timeline.attach_mock(stacker.release_forks_to_middle, "center")
+
+        stacker.recover_place_hold_retract(30)
+
+        self.assertLess(
+            timeline.mock_calls.index(call.gate(
+                operator_confirmed=True,
+                position=30,
+                expected_lift=True,
+            )),
+            timeline.mock_calls.index(call.center()),
+        )
+        stacker.assert_loaded_transport_ready.assert_called_once_with()
+        self.assertEqual(stacker.load_state, f3.LoadState.RECOVERY_UNSAFE)
 
     def test_relift_only_raises_lift_and_keeps_position(self):
         stacker = self.make_stacker()
@@ -293,18 +391,36 @@ class SequenceContractTests(unittest.TestCase):
         stacker.travel_loaded_to.assert_called_once_with(30)
         stacker.observe_phase.assert_called_once_with("G3_TRAVEL", 2.0)
 
-    def test_place_and_retract_are_distinct_diagnostic_gates(self):
+    def test_fused_place_diagnostic_raises_split_guidance(self):
         stacker = self.make_stacker()
         stacker.load_state = f3.LoadState.CARRYING
-        stacker.place_hold = Mock()
         stacker.retract_after_placement = Mock()
         stacker.observe_phase = Mock()
 
-        stacker.run_diagnostic("place", 54, observe_seconds=2.0)
+        with self.assertRaisesRegex(RuntimeError, "place-extend"):
+            stacker.run_diagnostic("place", 54, observe_seconds=2.0)
 
-        stacker.place_hold.assert_called_once_with(54)
         stacker.retract_after_placement.assert_not_called()
-        stacker.observe_phase.assert_called_once_with("G4_PLACE_HOLD", 2.0)
+        stacker.observe_phase.assert_not_called()
+
+    def test_place_extend_and_lower_are_distinct_diagnostic_gates(self):
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.CARRYING
+        stacker.place_extend = Mock()
+        stacker.place_lower = Mock()
+        stacker.retract_after_placement = Mock()
+        stacker.observe_phase = Mock()
+
+        stacker.run_diagnostic("place-extend", 54, observe_seconds=2.0)
+        stacker.place_extend.assert_called_once_with(54)
+        stacker.place_lower.assert_not_called()
+        stacker.observe_phase.assert_called_once_with("G4_PLACE_EXTEND_HOLD", 2.0)
+
+        stacker.observe_phase.reset_mock()
+        stacker.run_diagnostic("place-lower", 54, observe_seconds=1.0)
+        stacker.place_lower.assert_called_once_with(54)
+        stacker.retract_after_placement.assert_not_called()
+        stacker.observe_phase.assert_called_once_with("G4_PLACE_LOWER_HOLD", 1.0)
 
 
 class ForkAndGateTests(unittest.TestCase):
@@ -329,6 +445,48 @@ class ForkAndGateTests(unittest.TestCase):
         stacker = self.make_stacker()
         stacker.din.return_value = False
         self.assertTrue(stacker.box_at_load())
+
+    def test_extended_recovery_gate_records_right_hold_and_carrying(self):
+        stacker = self.make_stacker()
+        inputs = [False] * len(f3.INPUT_NAMES)
+        inputs[f3.IN_AT_RIGHT] = True
+        coils = [False] * len(f3.COIL_NAMES)
+        coils[f3.C_FORKS_R] = True
+        coils[f3.C_LIFT] = True
+        stacker.snapshot = Mock(return_value={
+            "inputs": inputs,
+            "coils": coils,
+            "target": 0,
+        })
+
+        stacker.resume_extended_recovery(
+            operator_confirmed=True,
+            position=30,
+            expected_lift=True,
+        )
+
+        self.assertEqual(stacker.load_state, f3.LoadState.CARRYING)
+        self.assertEqual(stacker.position_hint, 30)
+        self.assertEqual(stacker.fork_hold, f3.C_FORKS_R)
+
+    def test_extended_recovery_gate_rejects_wrong_lift_state(self):
+        stacker = self.make_stacker()
+        inputs = [False] * len(f3.INPUT_NAMES)
+        inputs[f3.IN_AT_RIGHT] = True
+        coils = [False] * len(f3.COIL_NAMES)
+        coils[f3.C_FORKS_R] = True
+        stacker.snapshot = Mock(return_value={
+            "inputs": inputs,
+            "coils": coils,
+            "target": 0,
+        })
+
+        with self.assertRaisesRegex(RuntimeError, "Lift=False"):
+            stacker.resume_extended_recovery(
+                operator_confirmed=True,
+                position=1,
+                expected_lift=True,
+            )
         stacker.din.return_value = True
         self.assertFalse(stacker.box_at_load())
 
@@ -439,10 +597,17 @@ class ForkAndGateTests(unittest.TestCase):
 
 
 class MainCleanupTests(unittest.TestCase):
-    def test_successful_place_preserves_right_hold(self):
+    def test_successful_place_extend_preserves_right_hold(self):
         stacker = Mock()
 
-        f3._finish_diagnostic(stacker, "place")
+        f3._finish_diagnostic(stacker, "place-extend")
+
+        stacker.safe_stop.assert_not_called()
+
+    def test_successful_place_lower_preserves_right_hold(self):
+        stacker = Mock()
+
+        f3._finish_diagnostic(stacker, "place-lower")
 
         stacker.safe_stop.assert_not_called()
 
@@ -450,6 +615,13 @@ class MainCleanupTests(unittest.TestCase):
         stacker = Mock()
 
         f3._finish_diagnostic(stacker, "relift")
+
+        stacker.safe_stop.assert_not_called()
+
+    def test_successful_recover_lift_preserves_right_hold(self):
+        stacker = Mock()
+
+        f3._finish_diagnostic(stacker, "recover-lift")
 
         stacker.safe_stop.assert_not_called()
 
@@ -465,11 +637,31 @@ class ParserTests(unittest.TestCase):
     def test_diagnostic_phases_are_split_at_manual_gates(self):
         self.assertEqual(
             f3.DIAGNOSTIC_PHASES,
-            ("feed", "pick", "travel", "relift", "place", "retract"),
+            (
+                "feed", "pick", "travel", "relift", "place",
+                "place-extend", "place-lower",
+                "recover-lift", "recover-retract", "retract",
+            ),
         )
 
     def test_acceptance_cells_cover_near_middle_far_extremes(self):
         self.assertEqual(f3.ACCEPTANCE_CELLS, (1, 30, 54))
+
+    def test_travel_current_position_is_recorded_for_fresh_known_origin(self):
+        args = f3.build_parser().parse_args([
+            "diagnose", "travel", "30",
+            "--current-position", "1",
+            "--confirm-cargo",
+            "--confirm-position",
+        ])
+        stacker = Mock()
+
+        f3._prepare_diagnostic(stacker, args)
+
+        stacker.resume_carrying.assert_called_once_with(
+            operator_confirmed=True,
+            position=1,
+        )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,4 @@
+fault_state.json
+media/*.mp4
+media/*.mkv
+__pycache__/

@@ -16,6 +16,9 @@
   relift 只用于已确认货物仍在承载台的异常恢复。
 - pick/travel 收尾只停止运动，保留 Lift=True；不得用通用清零主动掉箱。
 - place 在下放后保持货叉伸出，人工确认货架承载后才单独执行 retract。
+- place 若下放无 Z 边沿，禁止直接 retract；必须先 recover-lift 恢复微抬，
+  画面确认货物仍由托盘承载后再 recover-retract 回中。恢复回中后的货物
+  视为姿态未知，禁止继续带载行走；保存证据后必须 F6 清场重来。
 - Forks Left/Right 是保持型命令：伸出期间必须保持；Lift 切换并落稳后，
   才能双输出 False 释放并自动回 Middle。
 - stop/snapshot 在 Pause、Stop 或 E-stop 状态下仍必须可用。
@@ -25,9 +28,15 @@
   python f3_stacker_control.py diagnose pick 1 --confirm-rest --observe-seconds 30
   # 画面确认货物水平且在承载台后，不复位：
   python f3_stacker_control.py diagnose travel 1 --confirm-cargo --confirm-position --observe-seconds 30
+  # 仅对“完整应用重启后、从未进入 recovery 的可信新载荷”记录起点；
+  # recovery 后 cargo pose 不可信，严禁用此命令继续运输：
+  python f3_stacker_control.py diagnose travel 30 --current-position 1 --confirm-cargo --confirm-position --observe-seconds 30
   # 仅用于“货物仍在承载台但 Lift=False”的现场恢复：
   python f3_stacker_control.py diagnose relift 1 --confirm-cargo --confirm-position --observe-seconds 20
   python f3_stacker_control.py diagnose place 1 --confirm-cargo --confirm-position --observe-seconds 30
+  # place 报 NO START 且货物仍在伸出托盘上时，分两门恢复：
+  python f3_stacker_control.py diagnose recover-lift 1 --confirm-cargo --confirm-position --observe-seconds 20
+  python f3_stacker_control.py diagnose recover-retract 1 --confirm-cargo --confirm-position --observe-seconds 10
   # 画面确认货架梁已承载后：
   python f3_stacker_control.py diagnose retract 1 --confirm-placement --confirm-position --observe-seconds 10
 """
@@ -43,6 +52,8 @@ from pathlib import Path
 from typing import Callable
 
 from pymodbus.client import ModbusTcpClient
+
+import fault_lock
 
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -71,7 +82,11 @@ POLL = 0.05
 SETTLE = 0.40
 LOAD_SETTLE_DWELL = 2.0
 PLACEMENT_SETTLE_DWELL = 1.5
-DIAGNOSTIC_PHASES = ("feed", "pick", "travel", "relift", "place", "retract")
+DIAGNOSTIC_PHASES = (
+    "feed", "pick", "travel", "relift", "place",
+    "place-extend", "place-lower",
+    "recover-lift", "recover-retract", "retract",
+)
 ACCEPTANCE_CELLS = (1, 30, 54)
 
 INPUT_NAMES = (
@@ -90,6 +105,8 @@ class LoadState(Enum):
     EMPTY = "empty"
     STAGED = "staged"
     CARRYING = "carrying"
+    EXTENDED_HOLD = "extended_hold"      # place-extend 完成：Right 保持、Lift 仍 True、待视觉门
+    RECOVERY_UNSAFE = "recovery_unsafe"
     PLACED_PENDING = "placed_pending"
     PLACED = "placed"
 
@@ -331,6 +348,48 @@ class Stacker:
         self.fork_hold = C_FORKS_R
         print(f"OPERATOR GATE: rack support confirmed at cell {position}")
 
+    def resume_extended_recovery(
+        self,
+        *,
+        operator_confirmed: bool,
+        position: int,
+        expected_lift: bool,
+    ) -> None:
+        """恢复 place 失败后 Right 保持伸出的已知现场状态。"""
+        if not operator_confirmed:
+            raise RuntimeError(
+                "cargo visual confirmation required for extended-fork recovery"
+            )
+        if not 1 <= position <= 54:
+            raise ValueError(f"invalid extended recovery cell: {position}")
+        snap = self.snapshot()
+        problems = []
+        fork_bits = self._fork_bits_from_snapshot(snap)
+        if fork_bits != (False, False, True):
+            problems.append(f"fork limits not one-hot Right: {fork_bits}")
+        if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
+            problems.append("crane still moving")
+        if bool(snap["coils"][C_LIFT]) != expected_lift:
+            problems.append(
+                f"Lift={snap['coils'][C_LIFT]} (expected {expected_lift})"
+            )
+        if snap["coils"][C_FORKS_L] or not snap["coils"][C_FORKS_R]:
+            problems.append("Forks Right hold output must remain True")
+        if snap["target"] != 0:
+            problems.append(f"Target={snap['target']} (expected 0)")
+        if problems:
+            raise RuntimeError(
+                "extended recovery gate failed: " + "; ".join(problems)
+            )
+        self.load_state = LoadState.CARRYING
+        self.position_hint = position
+        self.fork_hold = C_FORKS_R
+        state = "raised" if expected_lift else "lower-commanded/no-Z"
+        print(
+            f"OPERATOR GATE: cargo visually confirmed on extended pallet; "
+            f"state={state}; current position={position}"
+        )
+
     # ---- 等待与安全 ----
     def wait_stable(
         self,
@@ -381,10 +440,35 @@ class Stacker:
     def safe_stop(self, *, preserve_lift: bool | None = None) -> None:
         """停止行走/输送；已确认伸出的保持型叉臂不得因清零而自动回中。"""
         if preserve_lift is None:
-            preserve_lift = self.load_state in (LoadState.UNKNOWN, LoadState.CARRYING)
+            preserve_lift = self.load_state in (
+                LoadState.UNKNOWN,
+                LoadState.CARRYING,
+                LoadState.EXTENDED_HOLD,
+                LoadState.RECOVERY_UNSAFE,
+            )
         held_fork = getattr(self, "fork_hold", None)
         if held_fork not in (C_FORKS_L, C_FORKS_R):
             held_fork = None
+        if held_fork is None:
+            # H1 门3（跨进程负载感知）：新进程 fork_hold=None，但上一进程可能
+            # 留下伸叉保持——线圈读回 True 即视为保持中；此时写 False 不是
+            # “停止”而是主动回中拉货。支撑关系未知，默认不撤叉。
+            try:
+                snap = self.snapshot()
+                for address in (C_FORKS_L, C_FORKS_R):
+                    if snap["coils"][address]:
+                        held_fork = address
+                        self.fork_hold = address
+                        print(
+                            f"* stop: rebuilt fork hold from coil readback "
+                            f"C{address}=True; refusing to auto-retract"
+                        )
+                        break
+            except Exception as exc:
+                raise RuntimeError(
+                    f"safe stop aborted: cannot read back fork coils ({exc}); "
+                    "refusing blind retract of possibly extended forks"
+                )
         errors = []
         try:
             # 先停 X/Z 目标，避免清执行器过程中继续行走。
@@ -608,7 +692,22 @@ class Stacker:
         # 必须按“可能带载”保守处理，不能主动写 Lift=False。
         self.load_state = LoadState.CARRYING
         self.coil(C_LIFT, True)
-        self.wait_motion_cycle("lift load", lambda: self.din(IN_MOVING_Z))
+        try:
+            self.wait_motion_cycle("lift load", lambda: self.din(IN_MOVING_Z))
+        except RuntimeError as exc:
+            # 0713 postF6 G2 实例：Left 到位、Lift=True 却无 Z。跨进程落锁。
+            if "NO START" in str(exc):
+                fault_lock.record_fault(
+                    fault_lock.FAULT_LIFT_POSITION_UNKNOWN,
+                    cell=None,
+                    detail=f"pick wrote Lift=True but Moving Z never started: {exc}",
+                    context={"phase": "pick"},
+                )
+                print(
+                    "PERSISTENT FAULT LOCK: LIFT_POSITION_UNKNOWN recorded; "
+                    "save evidence, exit and FULLY restart Factory I/O"
+                )
+            raise
         self.wait_stable("At Load cleared", lambda: not self.box_at_load())
         self.release_forks_to_middle()
         self.assert_loaded_transport_ready()
@@ -637,7 +736,23 @@ class Stacker:
         print(f"* 恢复微抬：仅 Lift=True，不移动 X/叉臂（货位 {cell}）")
         # load_state 已在人工门处先标为 CARRYING；写入失败也不会主动降载。
         self.coil(C_LIFT, True)
-        self.wait_motion_cycle("relift carried load", lambda: self.din(IN_MOVING_Z))
+        try:
+            self.wait_motion_cycle(
+                "relift carried load", lambda: self.din(IN_MOVING_Z)
+            )
+        except RuntimeError as exc:
+            if "NO START" in str(exc):
+                fault_lock.record_fault(
+                    fault_lock.FAULT_LIFT_POSITION_UNKNOWN,
+                    cell=cell,
+                    detail=f"relift wrote Lift=True but Moving Z never started: {exc}",
+                    context={"phase": "relift"},
+                )
+                print(
+                    "PERSISTENT FAULT LOCK: LIFT_POSITION_UNKNOWN recorded; "
+                    "save evidence, exit and FULLY restart Factory I/O"
+                )
+            raise
         self.assert_loaded_transport_ready()
 
     def assert_placement_hold_ready(self) -> None:
@@ -660,28 +775,197 @@ class Stacker:
         print("PLACEMENT ACTUATOR GATE OK: Right held, Lift=False, motion settled")
 
     def place_hold(self, cell: int) -> None:
+        """0713 H1 拆门后禁用：Right 到位后立即下放正是 G4 事故形态。"""
+        raise RuntimeError(
+            "place is split into fail-closed gates: run place-extend, pass the "
+            "visual gate, then place-lower; the fused place phase is disabled"
+        )
+
+    def place_extend(self, cell: int) -> None:
+        """G4 第一段：仅伸 Right 保持，绝不写 Lift；停在下放前视觉门。"""
         if not 1 <= cell <= 54:
             raise ValueError(f"cell must be 1..54, got {cell}")
         if self.load_state != LoadState.CARRYING:
-            raise RuntimeError(f"place requires CARRYING state, got {self.load_state.value}")
+            raise RuntimeError(
+                f"place-extend requires CARRYING state, got {self.load_state.value}"
+            )
         if self.position_hint != cell:
             raise RuntimeError(
-                f"place position evidence mismatch: confirmed={self.position_hint}, cell={cell}"
+                f"place-extend position evidence mismatch: "
+                f"confirmed={self.position_hint}, cell={cell}"
             )
         self.assert_loaded_transport_ready()
         print(
-            f"* 放箱保持：Right 侧伸叉 -> Lift=False 下放 -> 保持伸叉（货位 {cell}）"
+            f"* 放箱-伸叉段：Right 侧伸叉并保持；本相位禁止任何 Lift 写入"
+            f"（货位 {cell}）"
         )
         self.forks_right_hold()
+        self.load_state = LoadState.EXTENDED_HOLD
+        print(
+            "PLACE-EXTEND HOLD: inspect clearance/tilt/hook on camera; "
+            "only a passing visual gate authorizes place-lower"
+        )
+
+    def resume_extended_hold(
+        self, *, operator_confirmed: bool, position: int
+    ) -> None:
+        """place-lower 的跨进程前置：Right 保持伸出且 Lift 命令仍为 True。"""
+        if not operator_confirmed:
+            raise RuntimeError(
+                "clearance visual confirmation required before place-lower"
+            )
+        if not 1 <= position <= 54:
+            raise ValueError(f"invalid extended-hold cell: {position}")
+        snap = self.snapshot()
+        problems = []
+        fork_bits = self._fork_bits_from_snapshot(snap)
+        if fork_bits != (False, False, True):
+            problems.append(f"fork limits not one-hot Right: {fork_bits}")
+        if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
+            problems.append("crane still moving")
+        if not snap["coils"][C_LIFT]:
+            problems.append("Lift command must still be True before lowering")
+        if snap["coils"][C_FORKS_L] or not snap["coils"][C_FORKS_R]:
+            problems.append("Forks Right hold output must remain True")
+        if snap["target"] != 0:
+            problems.append(f"Target={snap['target']} (expected 0)")
+        if problems:
+            raise RuntimeError("extended-hold gate failed: " + "; ".join(problems))
+        self.load_state = LoadState.EXTENDED_HOLD
+        self.position_hint = position
+        self.fork_hold = C_FORKS_R
+        print(
+            f"OPERATOR GATE: clearance visually confirmed at cell {position}; "
+            "lowering authorized"
+        )
+
+    def place_lower(self, cell: int) -> None:
+        """G4 第二段：视觉门通过后才下放；无 Z 即持久故障锁。"""
+        if not 1 <= cell <= 54:
+            raise ValueError(f"cell must be 1..54, got {cell}")
+        if self.load_state != LoadState.EXTENDED_HOLD:
+            raise RuntimeError(
+                f"place-lower requires EXTENDED_HOLD state, got {self.load_state.value}"
+            )
+        if self.position_hint != cell:
+            raise RuntimeError(
+                f"place-lower position evidence mismatch: "
+                f"confirmed={self.position_hint}, cell={cell}"
+            )
+        self.assert_fork_position(IN_AT_RIGHT, "Right")
+        print(f"* 放箱-下放段：Lift=False，要求真实 Z 边沿（货位 {cell}）")
         self.coil(C_LIFT, False)
-        # 空载 A 探针已实测 Right=True 时下降会出现真实 Z 边沿；因此任何
-        # NO START 都是物理状态失配，绝不能再以 zero-stroke 伪通过。
-        self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
+        # 空载 A 探针已实测 Right=True 时下降会出现真实 Z 边沿；任何 NO START
+        # 都是物理状态失配 -> 持久故障锁（fail-closed，跨进程不可绕过）。
+        try:
+            self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
+        except RuntimeError as exc:
+            if "NO START" in str(exc):
+                fault_lock.record_fault(
+                    fault_lock.FAULT_LIFT_POSITION_UNKNOWN,
+                    cell=cell,
+                    detail=(
+                        "place-lower wrote Lift=False but Moving Z never "
+                        f"started: {exc}"
+                    ),
+                    context={"phase": "place-lower"},
+                )
+                print(
+                    "PERSISTENT FAULT LOCK: LIFT_POSITION_UNKNOWN recorded; "
+                    "save evidence, exit and FULLY restart Factory I/O"
+                )
+            raise
         print(f"* placement settle dwell: {PLACEMENT_SETTLE_DWELL:.1f}s")
         time.sleep(PLACEMENT_SETTLE_DWELL)
         self.assert_placement_hold_ready()
         self.load_state = LoadState.PLACED_PENDING
         print("PLACEMENT HOLD: inspect rack support before running retract")
+
+    def recover_place_hold_lift(self, cell: int) -> None:
+        """place 无 Z 边沿后的第一道恢复门：保持伸叉，只恢复 Lift=True。"""
+        if self.load_state != LoadState.CARRYING:
+            raise RuntimeError(
+                f"recover-lift requires CARRYING state, got {self.load_state.value}"
+            )
+        if self.position_hint != cell:
+            raise RuntimeError(
+                f"recover-lift position evidence mismatch: "
+                f"confirmed={self.position_hint}, cell={cell}"
+            )
+        self.assert_fork_position(IN_AT_RIGHT, "Right")
+        print(
+            f"* 放箱失败恢复-抬起：Right 保持，先 Lift=True；"
+            f"禁止在此相位回中（货位 {cell}）"
+        )
+        self.coil(C_LIFT, True)
+
+        # 若平台确实已下放，会出现 Z 边沿；若 place 的下降从未启动，平台本就
+        # 在抬起位置，允许无边沿，但仅限本恢复相位且必须随后校验输出/静止状态。
+        t0 = time.monotonic()
+        saw_motion = False
+        while time.monotonic() - t0 < START_TIMEOUT:
+            self.check_safety_inputs(require_running=True)
+            if self.din(IN_MOVING_Z):
+                saw_motion = True
+                print(
+                    f"  [start {time.monotonic() - t0:4.2f}s] "
+                    "recover extended load lift"
+                )
+                break
+            time.sleep(POLL)
+        if saw_motion:
+            self.wait_stable(
+                "recover extended load lift settled",
+                lambda: not self.din(IN_MOVING_Z),
+                timeout=STEP_TIMEOUT,
+            )
+        else:
+            print(
+                "  [recovery-only] no Z edge: platform may already be raised; "
+                "visual gate remains mandatory before recover-retract"
+            )
+
+        self.resume_extended_recovery(
+            operator_confirmed=True,
+            position=cell,
+            expected_lift=True,
+        )
+        print("RECOVERY HOLD: inspect pallet/cargo before recover-retract")
+
+    def recover_place_hold_retract(self, cell: int) -> None:
+        """第二道恢复门：Lift=True 且画面确认后，才把伸出货物带回承载台。"""
+        if self.load_state != LoadState.CARRYING:
+            raise RuntimeError(
+                f"recover-retract requires CARRYING state, got {self.load_state.value}"
+            )
+        if self.position_hint != cell:
+            raise RuntimeError(
+                f"recover-retract position evidence mismatch: "
+                f"confirmed={self.position_hint}, cell={cell}"
+            )
+        self.resume_extended_recovery(
+            operator_confirmed=True,
+            position=cell,
+            expected_lift=True,
+        )
+        self.release_forks_to_middle()
+        self.assert_loaded_transport_ready()
+        self.load_state = LoadState.RECOVERY_UNSAFE
+        # 0713 现场教训：一次恢复后继续运输 -> cell 30 掉落。锁必须跨进程。
+        fault_lock.record_fault(
+            fault_lock.FAULT_RECOVERY_UNSAFE,
+            cell=cell,
+            detail=(
+                "recover-retract completed; cargo pose untrusted after recovery "
+                "-- transport forbidden until full application restart"
+            ),
+            context={"phase": "recover-retract"},
+        )
+        print(
+            "RECOVERY COMPLETE: pallet/cargo returned to raised carriage; "
+            "pose is untrusted -> PERSISTENT FAULT LOCK recorded; "
+            "save evidence, exit and FULLY restart Factory I/O -- DO NOT TRAVEL"
+        )
 
     def retract_after_placement(self, *, operator_confirmed: bool) -> None:
         if not operator_confirmed:
@@ -741,8 +1025,19 @@ class Stacker:
             self.relift_carried_load(cell)
             self.observe_phase("RECOVERY_RELIFT", observe_seconds)
         elif phase == "place":
-            self.place_hold(cell)
-            self.observe_phase("G4_PLACE_HOLD", observe_seconds)
+            self.place_hold(cell)  # fail-closed：指引改用 place-extend/place-lower
+        elif phase == "place-extend":
+            self.place_extend(cell)
+            self.observe_phase("G4_PLACE_EXTEND_HOLD", observe_seconds)
+        elif phase == "place-lower":
+            self.place_lower(cell)
+            self.observe_phase("G4_PLACE_LOWER_HOLD", observe_seconds)
+        elif phase == "recover-lift":
+            self.recover_place_hold_lift(cell)
+            self.observe_phase("RECOVERY_PLACE_LIFT_HOLD", observe_seconds)
+        elif phase == "recover-retract":
+            self.recover_place_hold_retract(cell)
+            self.observe_phase("RECOVERY_PLACE_RETRACT", observe_seconds)
         elif phase == "retract":
             self.retract_after_placement(operator_confirmed=placement_confirmed)
             self.observe_phase("G4_RETRACT", observe_seconds)
@@ -769,6 +1064,36 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--confirm-cargo", action="store_true")
     diagnose.add_argument("--confirm-position", action="store_true")
     diagnose.add_argument("--confirm-placement", action="store_true")
+    diagnose.add_argument(
+        "--confirm-clearance",
+        action="store_true",
+        help="visual gate passed on extended pallet (place-lower prerequisite)",
+    )
+    diagnose.add_argument(
+        "--current-position",
+        type=int,
+        default=None,
+        help="operator-confirmed current position for travel; default=55/rest",
+    )
+
+    mark_fault = sub.add_parser(
+        "mark-fault",
+        help="record an operator-observed persistent fault (e.g. camera-confirmed drop)",
+    )
+    mark_fault.add_argument("code", choices=fault_lock.KNOWN_FAULTS)
+    mark_fault.add_argument("--cell", type=int, default=None)
+    mark_fault.add_argument("--detail", required=True)
+
+    reset_epoch = sub.add_parser(
+        "reset-epoch",
+        help="clear the persistent fault lock after a FULL application restart",
+    )
+    reset_epoch.add_argument(
+        "--operator-confirmed-restart",
+        action="store_true",
+        help="assert Factory I/O was fully exited and restarted (F6 does NOT count)",
+    )
+    reset_epoch.add_argument("--note", default="")
     return parser
 
 
@@ -780,10 +1105,15 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
         stacker.confirm_rest_baseline(args.confirm_rest)
     elif phase == "travel":
         if not args.confirm_position:
-            raise RuntimeError("--confirm-position required: visually confirm crane at rest")
+            raise RuntimeError(
+                "--confirm-position required: visually confirm current crane position"
+            )
+        current_position = (
+            POS_REST if args.current_position is None else args.current_position
+        )
         stacker.resume_carrying(
             operator_confirmed=args.confirm_cargo,
-            position=POS_REST,
+            position=current_position,
         )
     elif phase == "relift":
         if not args.confirm_position:
@@ -795,6 +1125,9 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
             position=args.cell,
         )
     elif phase == "place":
+        # fail-closed：不做任何现场写入，run_diagnostic 会直接抛拆门指引。
+        pass
+    elif phase == "place-extend":
         if not args.confirm_position:
             raise RuntimeError(
                 f"--confirm-position required: visually confirm crane at cell {args.cell}"
@@ -802,6 +1135,40 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
         stacker.resume_carrying(
             operator_confirmed=args.confirm_cargo,
             position=args.cell,
+        )
+    elif phase == "place-lower":
+        if not args.confirm_position:
+            raise RuntimeError(
+                f"--confirm-position required: visually confirm crane at cell {args.cell}"
+            )
+        if not args.confirm_clearance:
+            raise RuntimeError(
+                "--confirm-clearance required: pass the visual gate (clearance/"
+                "tilt/hook) on the extended pallet before lowering"
+            )
+        stacker.resume_extended_hold(
+            operator_confirmed=args.confirm_clearance,
+            position=args.cell,
+        )
+    elif phase == "recover-lift":
+        if not args.confirm_position:
+            raise RuntimeError(
+                f"--confirm-position required: visually confirm crane at cell {args.cell}"
+            )
+        stacker.resume_extended_recovery(
+            operator_confirmed=args.confirm_cargo,
+            position=args.cell,
+            expected_lift=False,
+        )
+    elif phase == "recover-retract":
+        if not args.confirm_position:
+            raise RuntimeError(
+                f"--confirm-position required: visually confirm crane at cell {args.cell}"
+            )
+        stacker.resume_extended_recovery(
+            operator_confirmed=args.confirm_cargo,
+            position=args.cell,
+            expected_lift=True,
         )
     elif phase == "retract":
         if not args.confirm_position:
@@ -816,10 +1183,10 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
 
 def _finish_diagnostic(stacker: Stacker, phase: str) -> None:
     """保留需要跨进程维持的物理状态；其余相位执行载荷感知停机。"""
-    if phase == "place":
+    if phase in ("place-extend", "place-lower", "recover-lift"):
         print(
-            "PLACEMENT HOLD PRESERVED: Forks Right remains True; "
-            "run retract only after visual rack-support confirmation"
+            "EXTENDED HOLD PRESERVED: Forks Right remains True; "
+            "use only the next visually authorized phase"
         )
         return
     if phase == "relift":
@@ -831,10 +1198,47 @@ def _finish_diagnostic(stacker: Stacker, phase: str) -> None:
     stacker.safe_stop()
 
 
+def _assert_unlocked_for_action(mode: str) -> None:
+    """H1 门2：持久故障锁下只允许取证类命令；--confirm-* 不能绕过。"""
+    state = fault_lock.load_state()
+    if not fault_lock.is_locked(state):
+        return
+    if mode in {"snapshot", "stop", "mark-fault", "reset-epoch"}:
+        return
+    raise RuntimeError(
+        "PERSISTENT FAULT LOCK ACTIVE -> " + fault_lock.lock_reason(state)
+        + "; only snapshot/stop/mark-fault are allowed. Unlock path: save "
+        "evidence, FULLY exit and restart Factory I/O, verify an empty-scene "
+        "preflight, then run reset-epoch --operator-confirmed-restart"
+    )
+
+
+def _run_reset_epoch(stacker: Stacker, args: argparse.Namespace) -> None:
+    """清锁前强制在线空场 preflight：RUN 中、全零输出、one-hot Middle。"""
+    stacker.check_safety_inputs(require_running=True)
+    preflight_ok = False
+    try:
+        stacker.assert_action_ready()
+        preflight_ok = True
+    except RuntimeError as exc:
+        print(f"EMPTY-SCENE PREFLIGHT FAILED: {exc}")
+    state = fault_lock.clear_for_new_epoch(
+        operator_confirmed_restart=args.operator_confirmed_restart,
+        preflight_passed=preflight_ok,
+        note=args.note,
+    )
+    print(
+        "FAULT LOCK CLEARED: new epoch started at "
+        f"{state['epoch_started_at']}; cleared={state['cleared_fault']}"
+    )
+
+
 def main() -> None:
     args = build_parser().parse_args()
     mode = args.mode
-    action_mode = mode in {"probe", "demo", "diagnose", "accept"}
+    action_mode = mode in {
+        "probe", "demo", "diagnose", "accept", "reset-epoch", "mark-fault",
+    }
     original_stdout = sys.stdout
     log_file = None
     stacker = None
@@ -848,12 +1252,22 @@ def main() -> None:
         print(f"LOG FILE: {log_path}")
 
     try:
+        _assert_unlocked_for_action(mode)
+        if mode == "mark-fault":
+            state = fault_lock.record_fault(
+                args.code, cell=args.cell, detail=args.detail,
+                context={"phase": "operator-mark"},
+            )
+            print(f"PERSISTENT FAULT LOCK RECORDED: {fault_lock.lock_reason(state)}")
+            return
         stacker = Stacker()
         if mode == "snapshot":
             stacker.print_snapshot("F3 SNAPSHOT")
         elif mode == "stop":
             # 未知现场不撤 Lift，避免恢复 RUN 后主动掉箱。
             stacker.safe_stop(preserve_lift=True)
+        elif mode == "reset-epoch":
+            _run_reset_epoch(stacker, args)
         elif mode == "diagnose":
             _prepare_diagnostic(stacker, args)
             stacker.run_diagnostic(
@@ -864,6 +1278,13 @@ def main() -> None:
                 placement_confirmed=args.confirm_placement,
             )
             _finish_diagnostic(stacker, args.phase)
+            fault_lock.record_phase_state(
+                phase=args.phase,
+                cell=args.cell,
+                load_state_value=stacker.load_state.value,
+                fork_hold=stacker.fork_hold,
+                lift_command=None,
+            )
         elif mode in {"probe", "demo", "accept"}:
             raise RuntimeError(
                 f"{mode} disabled until G1-G4 layered calibration is signed; "

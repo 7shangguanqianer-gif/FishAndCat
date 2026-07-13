@@ -52,7 +52,7 @@
 | F0 | 修 plc_evidence.csv+core_smoke 复跑+通知 Codex | ✅ | PASS，阻塞解除 |
 | F1 | 流程改进搜索（overnight/computer-use agent 经验），落 memory+账本 | ✅ | 业界实践与既有机制高度吻合(原子任务/每步commit/测试门禁/账本)；**增量采纳**：①实验前先 commit 代码(crash 不丢活,F3/F4 执行铁律)②相位粒度 30-60min(1h 反思对齐)③禁触部署/凭据类(本就红线)。来源见账本尾注 |
 | F2 | Factory I/O 首启侦察：打开→内置 Automated Warehouse 场景→I/O 点清单→驱动面板截图 | ✅ | **v2.5.10 Ultimate Edition**（状态栏实证）；无激活墙直进；Automated Warehouse 已载入；驱动全清单解锁（含 Modbus TCP/IP **Server**+OPC Client DA/UA）；默认映射拿全（15 In/10 Coil/HReg0=Target Position）；**网卡坑已修**（Meta Tunnel→Loopback）；pymodbus 3.8.6 只读冒烟 **PASS**。产物=`l2_factoryio/{io_map.md, f2_smoke_read.py, img/F2_*.png×3}` |
-| F3 | 快线：SDK/Modbus 选型试验→Python"伪 PLC"驱动堆垛机入库 3 箱→录屏+点表 | ⬜ | l2_factoryio/ |
+| F3 | 快线：SDK/Modbus 选型试验→Python"伪 PLC"驱动堆垛机入库 3 箱→录屏+点表 | 🟥 现场阻塞 | Modbus/空载机构/一次干净 G1-G3 已通；G4 无 Z、恢复后运输掉落、F6 后 G2 再次无 Z。禁止续跑/正式素材；总交接=`l2_factoryio/F3_现场故障与Claude接管_20260713.md` |
 | F4 | 正线 3b：AB 仿真 PLC 开 OPC UA server 实验（Symbol Configuration 侦察→外部 client 连接读写）→结论落档 | ⬜ | 成败均是决赛材料 |
 | F5 | 3b 通→Factory I/O OPC client 直连 AB 仿真联调；不通→CODESYS Control Win 兜底 | ⬜ | |
 | F6 | 回补：按 #10 一条龙（备份→合入→75/0 复验→commit；红则回滚待拍板） | ⬜ | 仅在 F4/F5 成功后 |
@@ -67,6 +67,38 @@
 - C0–C2 离线结果：`test_f3_stacker_control.py + test_task_contract.py + test_event_log.py + test_task_orchestrator.py` 共 **23/23 PASS**。覆盖 INBOUND/OUTBOUND/DUAL、safe-stop、safe-stop 二次失败、`request_seq` 冲突、进程重启幂等和中断任务 `RECOVERY_REQUIRED`。
 - **未签绿项**：F3 现场碰撞/散落近景验收尚未关闭，AB OPC UA/任务队列尚未施工，自研 3D 尚未改读统一事件；禁止越门录正式素材或宣称完整控制闭环。
 - 下一步先完成 F3 现场碰撞门，再进入 AB OPC UA，禁止越门录正式素材。
+
+### 0713 12:12 Codex F3 现场终止与 Claude 接管回执
+
+- **安全状态**：Factory I/O 与 Python 控制进程均已关闭；不保留可续跑货物或在线写入任务。HEAD=`f0bd29f`，工作树含大量用户/Claude 既有改动，本交接未提交、未推送。
+- **干净链证据**：完整重启并修正 Emitter 强制值后，单箱 G1/G2/G3 到 cell 1 分别通过（`114630/114708/114747`）；G4 Right 到位后写 Lift=False 无 `Moving Z`，见 `l2_factoryio/logs/F3_diagnose_20260713_114828.log:5-10`。
+- **恢复路线被现场否定**：`recover-lift→recover-retract` 只把机构撤回；随后把恢复货物运到 cell 30，I/O 报移动完成但用户画面确认掉落（`115743.log:5-14` + `img/F3_recovery_travel_drop_cell30_20260713_1158.jpg`）。当前代码已加入 `RECOVERY_UNSAFE`，但跨进程持久锁仍未实现。
+- **F6 能力边界修正**：F6 后新 G1 通过，新 G2 在 Left 到位后 Lift 无 Z（`120146.log:6-11`）。故 F6 只清货，不等价于机构/输出复位；任一无 Z、恢复、掉落后必须完整退出并重启 Factory I/O。
+- **Right 互锁排除**：空载 cell 1 探针在 `Right=True` 时下降 0.094 s 启动、约 1.98 s 落稳（`F3_mechanics_A_20260713_065413.log:9-20`）。优先根因转为载荷偏姿、与叉具/货架梁/周边几何接触或物理求解受约束。
+- **几何复核**：官方 baseline 与 debug 均 45 个 Proxy；Rack/Stacker/Conveyors Position/Rotation 相同，只有 4 个 SafeguardL 四元数末位序列化差异。暂无证据是整套设备被移错；防护网只能在副本中按首次接触证据做单段 A/B，禁止整圈删除。
+- **下一路线**：先离线补 `place-extend→视觉门→place-lower→支撑确认→retract`、跨进程 fault/reset epoch、负载感知 stop 与实体 Lift unknown 门；再完整应用重启、Emitter 单箱、斜俯视近景，target 30 仅作干净单变量 A/B。9/9 前 F3 保持红，不进 F4/F5/F6。
+- **完整交接**：`l2_factoryio/F3_现场故障与Claude接管_20260713.md`；Claude 提示词=`l2_factoryio/ClaudeCode接管提示词_F3_20260713.md`；通信回执=`_通信/codex_out/0713_F3_Codex终止交接回执.md`。
+- **用户约束刷新**：禁止所有 superpowers 系列 skills；旧实施计划开头的 REQUIRED superpowers 语句已废止。
+
+### 0713 夜 Claude 接管 F3 · 5 轮 13 问拍板（本节=接管后最高拍板真相）
+
+| # | 决策 | 内容 |
+|---|---|---|
+| 1 | 视觉门 | **全自主+每门录 10-20s 诊断视频逐帧回看**（单帧自判升级）；判断存档全留 |
+| 2 | Codex 分工 | 先轨A文档批次（0713 回执自述未实施）→完成后回头对抗审查 Claude 的 H1；启动提示词已交用户 |
+| 3 | push | **本夜批量授权**：仅限 `l2_factoryio/`、`docs/`（账本）、`_通信/` 三路径；用户文档线绝不入库 |
+| 4 | Web API | **深挖优先级拉满**：H2 现场枚举全量 tags 找 X/Z 实体反馈；H1 预留有/无反馈双路径 |
+| 5 | 箱型 | 调试阶段固定单一箱型（副本配置，记录可回滚）；9/9 正式验收恢复混出 |
+| 6 | F3 绿后 | **顺进 F4**（AB OPC UA 3b 实验）；AB GUI 开着绝不跑 ab_scripting 照旧 |
+| 7 | AB 许可 | 排程按"8/2 后无 AB"规划：F4/F5/终验录屏/演示录像全部 7 月内完成归档 |
+| 8 | C6 自研 3D | F5 后立即做（同源 JSONL 双视图） |
+| 9 | F6 回补 | C5 三任务联调绿后触发（不等 C6）；红则回滚待拍板 |
+| 10 | **新常态机制** | **每完成一个 F 任务→Claude 即刻给 Codex 签发独立客观复核任务书**（交叉纠错常态化） |
+| 11 | 报告周 | 本轮不进入报告线；只记录思路供后续书写（检查报告大纲与草稿映射是否跟上 L2） |
+| 12 | **比赛形式澄清** | **初赛提交决赛全部任务、无现场答辩、一切通过提交文件夹呈现**（类似 ABB 语音任务）→ 素材终态=提交包内的视频/文档，不是现场表演脚本；待核实比赛要求原文后修正素材规格 |
+| 13 | L2 科普 docx | 要，但等 L2 全线完工后一次性写（照 0712 画面科普模式） |
+
+其余沿用：三连败冻结分支纪律、9/9 验收定义、口径红线（54 格代表性验证/不称物理孪生）、禁 superpowers skills、禁碰用户文档线/canonical。
 
 ## 四、时间线与反思
 - **21:55 F2 开工（文件层侦察先行）**：`F:\Factory IO.exe`=Unity 2023.1.5f1 主程序（VersionInfo 是 Unity 版本，软件版本待 GUI）；注册表 HKCU/HKLM 均无 Real Games 键=**本机从未运行过，首启大概率进激活/试用流程**。`Factory IO_Data\Managed` 关键 DLL 清单：**Engine IO.dll（SDK 宿主端在场）**、Opc.UaFx.Client.dll（OPC UA client 驱动=F5 直连 AB 的宿主件）、ComDrvS7V6/S7PROSIM/Mhj.PLCSIMPlusConnector（西门子系）、**EmbedIO.dll（内嵌 HTTP server→疑似 v2023 Tags REST API，若实锤=快线第四路线：Python requests 即可读写 tag，比 Modbus 还简单）**、IronPython.dll（内置脚本引擎）、CLIC.Client.dll（Real Games 云许可客户端→⚠首启可能要账号，撞到=红线换线记录）。Modbus 无独立 DLL（应内嵌于 Control IO Engine.dll）。
