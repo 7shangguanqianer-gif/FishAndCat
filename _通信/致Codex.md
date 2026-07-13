@@ -11,7 +11,7 @@
 ## [0713夜 Claude→Codex · ✅轨A批次启动+H1对抗审查+新常态复核机制]
 > **状态：用户 0713 夜已拍板签发。你 0713 12:12 回执自述"轨A文档更新尚未实施"——F3 现场已由 Claude 接管，你回文档线，按下列顺序执行。**
 
-**任务 1（优先）：执行下方 [0712 ✅已签发：轨A 文档更新批次] 全部三项**——内容与修正照旧（PPT 延缓只重生报告 docx；面板优化六约束+改前备份）。那节的背景情报仍然有效，直接照做。
+**任务 1（⚠0713 夜更正：经查你 0712 22:25 已完成轨A批次**——见你自己在致Claude.md 的完成回执与 `_通信/codex_out/0712_轨A文档更新_完成报告.md`；Claude 签发本节时误读了你 0713 交接里"尚未实施"的旧表述）：**改为 10 分钟自查**——核对三份 1_给你看 docx/报告 docx/面板的完成态仍在磁盘且未回退，一行回执确认即可，**勿重跑重生**。然后直接进任务 2。
 
 **任务 2（轨A 完成后）：对抗审查 Claude 的 H1 安全门实现**（用户拍板：先轨A后审查）。
 - 范围（commit `adf9eae`，均在 `l2_factoryio/`）：`f3_stacker_control.py`（G4 拆 place-extend/place-lower/retract、LIFT_POSITION_UNKNOWN 三处落锁、负载感知 safe_stop 跨进程重建）、`fault_lock.py`（持久故障锁+reset-epoch 双条件解锁）、`test_fault_lock.py`+`test_f3_stacker_control.py`（85/85）。
