@@ -1,4 +1,6 @@
 fault_state.json
+fault_state.lock
+fault_events.jsonl
 media/*.mp4
 media/*.mkv
 __pycache__/

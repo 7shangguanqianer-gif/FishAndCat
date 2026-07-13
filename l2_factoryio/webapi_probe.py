@@ -31,6 +31,8 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+import fault_lock
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -126,9 +128,12 @@ def cmd_find(base: str) -> None:
 
 
 def _emitter_state(base: str) -> dict:
-    for v in fetch_values(base):
-        if v.get("id") == EMITTER_TAG_ID:
-            return v
+    # 0713 实测：/api/tag/values 条目不含 isForced/forcedValue，只有 /api/tags
+    # 才携带 force 态。读回校验若走 values 端点会恒判 mismatch -> 假
+    # EMITTER_STATE_UNKNOWN 锁。
+    for t in fetch_tags(base):
+        if t.get("id") == EMITTER_TAG_ID:
+            return t
     raise SystemExit(
         f"Emitter tag {EMITTER_TAG_ID} not found; 场景不同或 id 已变化——"
         "先 dump 全量核对"
@@ -140,6 +145,7 @@ def cmd_emitter_status(base: str) -> None:
 
 
 def _force_emitter(base: str, value: bool) -> None:
+    fault_lock.assert_device_write_allowed("emitter", value=value)
     payload = [{"id": EMITTER_TAG_ID, "value": value}]
     status, body = _request(base, "/api/tag/values-force", "PUT", payload)
     if status not in (200, 204):
@@ -158,10 +164,16 @@ def cmd_emitter_pulse(base: str, timeout: float) -> None:
     """短暂 force true 出单箱；本脚本不读 Modbus，检出交给控制器/操作者。"""
     _force_emitter(base, True)
     print(f"EMITTER FORCED TRUE for up to {timeout:.1f}s (single box window)")
-    time.sleep(timeout)
-    _force_emitter(base, False)
+    try:
+        time.sleep(timeout)
+    finally:
+        # Ctrl-C/异常也必须先尝试关 Emitter；失败由外层持久锁定。
+        _force_emitter(base, False)
+    state = _emitter_state(base)
     print("EMITTER FORCED FALSE (window closed)")
-    print(json.dumps(_emitter_state(base), ensure_ascii=False, indent=2))
+    print(json.dumps(state, ensure_ascii=False, indent=2))
+    if state.get("value") or not state.get("isForced", False):
+        raise RuntimeError("emitter force-off readback mismatch after pulse")
 
 
 def main() -> None:
@@ -183,9 +195,39 @@ def main() -> None:
     elif args.cmd == "emitter-status":
         cmd_emitter_status(args.base)
     elif args.cmd == "emitter-off":
-        cmd_emitter_off(args.base)
+        with fault_lock.command_guard("emitter-off"):
+            try:
+                cmd_emitter_off(args.base)
+            except BaseException as exc:
+                fault_lock.record_fault(
+                    fault_lock.FAULT_EMITTER_STATE_UNKNOWN,
+                    cell=None,
+                    detail=f"emitter-off failed: {type(exc).__name__}: {exc}",
+                    context={"command": "emitter-off"},
+                )
+                raise
     elif args.cmd == "emitter-pulse":
-        cmd_emitter_pulse(args.base, args.seconds)
+        with fault_lock.command_guard("emitter-pulse"):
+            token = fault_lock.begin_transition(
+                "emitter-pulse",
+                cell=None,
+                context={
+                    "seconds": args.seconds,
+                    "expected_before": "Emitter forced False",
+                    "expected_after": "Emitter forced False after one-box window",
+                },
+            )
+            try:
+                cmd_emitter_pulse(args.base, args.seconds)
+            except BaseException as exc:
+                fault_lock.record_fault(
+                    fault_lock.FAULT_EMITTER_STATE_UNKNOWN,
+                    cell=None,
+                    detail=f"emitter-pulse failed: {type(exc).__name__}: {exc}",
+                    context={"transition_token": token},
+                )
+                raise
+            fault_lock.complete_transition(token)
 
 
 if __name__ == "__main__":

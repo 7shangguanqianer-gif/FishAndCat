@@ -12,13 +12,11 @@
 - Factory I/O 没有 cargo-present 和当前位置反馈，因此信号门不能代替人工画面门。
 
 安全协议：
-- 主流程拆成 feed -> pick -> travel -> place -> retract 五个物理门；
-  relift 只用于已确认货物仍在承载台的异常恢复。
+- 主流程拆成 feed -> pick -> travel -> place-extend -> place-lower -> retract；
+  旧 relift/recover 软件恢复入口在 H1.1 关闭，异常后只允许外部人工安全处置。
 - pick/travel 收尾只停止运动，保留 Lift=True；不得用通用清零主动掉箱。
 - place 在下放后保持货叉伸出，人工确认货架承载后才单独执行 retract。
-- place 若下放无 Z 边沿，禁止直接 retract；必须先 recover-lift 恢复微抬，
-  画面确认货物仍由托盘承载后再 recover-retract 回中。恢复回中后的货物
-  视为姿态未知，禁止继续带载行走；保存证据后必须 F6 清场重来。
+- place 若下放无 Z 边沿，禁止 direct retract/recover/travel；持久锁定并退出。
 - Forks Left/Right 是保持型命令：伸出期间必须保持；Lift 切换并落稳后，
   才能双输出 False 释放并自动回 Middle。
 - stop/snapshot 在 Pause、Stop 或 E-stop 状态下仍必须可用。
@@ -31,12 +29,8 @@
   # 仅对“完整应用重启后、从未进入 recovery 的可信新载荷”记录起点；
   # recovery 后 cargo pose 不可信，严禁用此命令继续运输：
   python f3_stacker_control.py diagnose travel 30 --current-position 1 --confirm-cargo --confirm-position --observe-seconds 30
-  # 仅用于“货物仍在承载台但 Lift=False”的现场恢复：
-  python f3_stacker_control.py diagnose relift 1 --confirm-cargo --confirm-position --observe-seconds 20
-  python f3_stacker_control.py diagnose place 1 --confirm-cargo --confirm-position --observe-seconds 30
-  # place 报 NO START 且货物仍在伸出托盘上时，分两门恢复：
-  python f3_stacker_control.py diagnose recover-lift 1 --confirm-cargo --confirm-position --observe-seconds 20
-  python f3_stacker_control.py diagnose recover-retract 1 --confirm-cargo --confirm-position --observe-seconds 10
+  python f3_stacker_control.py diagnose place-extend 1 --confirm-cargo --confirm-position --observe-seconds 30
+  python f3_stacker_control.py diagnose place-lower 1 --confirm-position --confirm-clearance --observe-seconds 30
   # 画面确认货架梁已承载后：
   python f3_stacker_control.py diagnose retract 1 --confirm-placement --confirm-position --observe-seconds 10
 """
@@ -73,6 +67,7 @@ MOTION_COILS = (
     C_ENTRY_CONV, C_LOAD_CONV, C_FORKS_L, C_FORKS_R,
     C_UNLOAD_CONV, C_EXIT_CONV,
 )
+CONVEYOR_COILS = (C_ENTRY_CONV, C_LOAD_CONV, C_UNLOAD_CONV, C_EXIT_CONV)
 HR_TARGET = 0
 POS_REST = 55
 
@@ -82,11 +77,19 @@ POLL = 0.05
 SETTLE = 0.40
 LOAD_SETTLE_DWELL = 2.0
 PLACEMENT_SETTLE_DWELL = 1.5
+SAFE_STOP_TIMEOUT = 5.0
 DIAGNOSTIC_PHASES = (
-    "feed", "pick", "travel", "relift", "place",
-    "place-extend", "place-lower",
-    "recover-lift", "recover-retract", "retract",
+    "feed", "pick", "travel", "place-extend", "place-lower", "retract",
 )
+
+DIAGNOSTIC_EXPECTATIONS = {
+    "feed": ("empty scene at rest", "single cargo staged at load"),
+    "pick": ("confirmed cargo staged at load", "cargo raised on carriage"),
+    "travel": ("cargo raised at confirmed origin", "cargo raised at requested cell"),
+    "place-extend": ("cargo raised at cell", "C3 held; cargo extended for visual gate"),
+    "place-lower": ("C3 held; Lift=True", "C3 held; Lift=False; placement pending"),
+    "retract": ("operator-confirmed placement; C3 held", "forks Middle; carriage empty"),
+}
 ACCEPTANCE_CELLS = (1, 30, 54)
 
 INPUT_NAMES = (
@@ -147,11 +150,17 @@ class Stacker:
         return bool(r.bits[0])
 
     def coil(self, addr: int, value: bool) -> None:
+        fault_lock.assert_device_write_allowed(
+            "modbus-coil", address=addr, value=value,
+        )
         r = self.c.write_coil(addr, value, slave=SLAVE)
         if r.isError():
             raise RuntimeError(f"write coil {addr}: {r}")
 
     def target(self, position: int) -> None:
+        fault_lock.assert_device_write_allowed(
+            "modbus-target", address=HR_TARGET, value=position,
+        )
         r = self.c.write_register(HR_TARGET, position, slave=SLAVE)
         if r.isError():
             raise RuntimeError(f"write target {position}: {r}")
@@ -218,8 +227,8 @@ class Stacker:
                 f"Left/Middle/Right={bits}"
             )
 
-    def assert_action_ready(self) -> None:
-        """拒绝在上轮碰撞/中断残留状态上开始新箱。"""
+    def assert_action_ready(self, *, require_empty_scene: bool = False) -> None:
+        """检查静态执行器基线；reset 时额外检查四个低有效货物输入。"""
         snap = self.snapshot()
         problems = []
         if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
@@ -232,13 +241,24 @@ class Stacker:
             problems.append(f"active coils={active}")
         if snap["target"] != 0:
             problems.append(f"Target={snap['target']} (expected 0)")
+        if require_empty_scene:
+            cargo_inputs = (IN_AT_ENTRY, IN_AT_LOAD, IN_AT_UNLOAD, IN_AT_EXIT)
+            occupied = [INPUT_NAMES[i] for i in cargo_inputs if not snap["inputs"][i]]
+            if occupied:
+                problems.append(
+                    "active-low cargo sensors occupied=" + ",".join(occupied)
+                )
         if problems:
             raise RuntimeError(
                 "action preflight failed (save evidence, then F6 and recheck): "
                 + "; ".join(problems)
             )
         self.load_state = LoadState.EMPTY
-        print("PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0")
+        cargo_text = ", cargo sensors empty" if require_empty_scene else ""
+        print(
+            "PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, "
+            f"Target=0{cargo_text}"
+        )
 
     def confirm_rest_baseline(self, operator_confirmed: bool) -> None:
         if not operator_confirmed:
@@ -437,8 +457,38 @@ class Stacker:
             timeout=finish_timeout,
         )
 
+    def _stable_stop_snapshot(self, timeout: float | None = None) -> dict:
+        """Target=0 且 X/Z 静止后，要求两次现场真值完全一致。"""
+        if timeout is None:
+            timeout = SAFE_STOP_TIMEOUT
+        deadline = time.monotonic() + timeout
+        previous_signature = None
+        while True:
+            snap = self.snapshot()
+            signature = (
+                snap["target"],
+                snap["inputs"][IN_MOVING_X],
+                snap["inputs"][IN_MOVING_Z],
+                self._fork_bits_from_snapshot(snap),
+                tuple(snap["coils"][i] for i in range(7)),
+            )
+            settled = (
+                snap["target"] == 0
+                and not snap["inputs"][IN_MOVING_X]
+                and not snap["inputs"][IN_MOVING_Z]
+            )
+            if settled and signature == previous_signature:
+                return snap
+            previous_signature = signature if settled else None
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    "safe-stop stabilization timeout: Target/Moving did not "
+                    "reach two identical stopped snapshots"
+                )
+            time.sleep(POLL)
+
     def safe_stop(self, *, preserve_lift: bool | None = None) -> None:
-        """停止行走/输送；已确认伸出的保持型叉臂不得因清零而自动回中。"""
+        """保守停机：先 Target=0；叉状态不明确时绝不写叉或 Lift。"""
         if preserve_lift is None:
             preserve_lift = self.load_state in (
                 LoadState.UNKNOWN,
@@ -446,71 +496,124 @@ class Stacker:
                 LoadState.EXTENDED_HOLD,
                 LoadState.RECOVERY_UNSAFE,
             )
-        held_fork = getattr(self, "fork_hold", None)
-        if held_fork not in (C_FORKS_L, C_FORKS_R):
-            held_fork = None
-        if held_fork is None:
-            # H1 门3（跨进程负载感知）：新进程 fork_hold=None，但上一进程可能
-            # 留下伸叉保持——线圈读回 True 即视为保持中；此时写 False 不是
-            # “停止”而是主动回中拉货。支撑关系未知，默认不撤叉。
-            try:
-                snap = self.snapshot()
-                for address in (C_FORKS_L, C_FORKS_R):
-                    if snap["coils"][address]:
-                        held_fork = address
-                        self.fork_hold = address
-                        print(
-                            f"* stop: rebuilt fork hold from coil readback "
-                            f"C{address}=True; refusing to auto-retract"
-                        )
-                        break
-            except Exception as exc:
-                raise RuntimeError(
-                    f"safe stop aborted: cannot read back fork coils ({exc}); "
-                    "refusing blind retract of possibly extended forks"
-                )
         errors = []
+
+        # 叉状态和读取是否正常，都不能阻止独立尝试 Target=0。
         try:
-            # 先停 X/Z 目标，避免清执行器过程中继续行走。
             self.target(0)
         except Exception as exc:
             errors.append(f"HR0: {exc}")
-        for address in MOTION_COILS:
-            if address == held_fork:
-                # 对该部件，False 不是“停止”而是主动自动回中。
-                continue
+
+        snap = None
+        held_fork = None
+        fork_ambiguous = None
+        try:
+            snap = self._stable_stop_snapshot()
+            fork_bits = self._fork_bits_from_snapshot(snap)
+            active_forks = [
+                address
+                for address in (C_FORKS_L, C_FORKS_R)
+                if snap["coils"][address]
+            ]
+            remembered = getattr(self, "fork_hold", None)
+            if remembered not in (None, C_FORKS_L, C_FORKS_R):
+                fork_ambiguous = f"invalid in-memory fork_hold={remembered}"
+            elif len(active_forks) > 1:
+                fork_ambiguous = f"both fork hold coils active={active_forks}"
+            elif len(active_forks) == 1:
+                held_fork = active_forks[0]
+                expected_bits = (
+                    (True, False, False)
+                    if held_fork == C_FORKS_L
+                    else (False, False, True)
+                )
+                if fork_bits != expected_bits:
+                    fork_ambiguous = (
+                        f"coil/limit mismatch: held=C{held_fork}, limits={fork_bits}"
+                    )
+                elif remembered is not None and remembered != held_fork:
+                    fork_ambiguous = (
+                        f"stale fork_hold=C{remembered}, actual=C{held_fork}"
+                    )
+            elif fork_bits != (False, True, False):
+                fork_ambiguous = (
+                    f"no hold coil but forks not one-hot Middle: limits={fork_bits}"
+                )
+            elif remembered is not None:
+                fork_ambiguous = (
+                    f"stale fork_hold=C{remembered}, actual coils both False"
+                )
+            if fork_ambiguous is None:
+                self.fork_hold = held_fork
+                if held_fork is not None:
+                    preserve_lift = True
+                    print(
+                        f"* stop: stable coil+limit truth confirms C{held_fork} "
+                        "hold; refusing auto-retract"
+                    )
+        except Exception as exc:
+            fork_ambiguous = f"cannot establish stopped fork truth ({exc})"
+
+        # 输送带 False 是停止语义；即使叉真值不明，也可单独尝试清除。
+        for address in CONVEYOR_COILS:
             try:
                 self.coil(address, False)
             except Exception as exc:
                 errors.append(f"C{address}: {exc}")
-        if not preserve_lift:
+
+        # Fork=False 是主动回中；歧义时不碰 C2/C3，也不碰 Lift。
+        if fork_ambiguous is not None:
+            errors.append("fork state ambiguous: " + fork_ambiguous)
+        elif not preserve_lift:
             try:
                 self.coil(C_LIFT, False)
             except Exception as exc:
                 errors.append(f"C{C_LIFT}: {exc}")
 
-        try:
-            snap = self.snapshot()
-            bad = [
-                address for address in MOTION_COILS
-                if address != held_fork and snap["coils"][address]
-            ]
-            if held_fork is not None and not snap["coils"][held_fork]:
-                errors.append(f"held fork output C{held_fork} unexpectedly False")
-            if not preserve_lift and snap["coils"][C_LIFT]:
-                bad.append(C_LIFT)
-            if snap["target"] != 0 or bad:
-                errors.append(
-                    f"readback mismatch: Target={snap['target']}, active coils={bad}"
-                )
-        except Exception as exc:
-            errors.append(f"readback: {exc}")
+        if snap is not None:
+            try:
+                verified = self._stable_stop_snapshot()
+                bad_conveyors = [
+                    address
+                    for address in CONVEYOR_COILS
+                    if verified["coils"][address]
+                ]
+                if bad_conveyors:
+                    errors.append(f"conveyor readback active={bad_conveyors}")
+                if fork_ambiguous is None:
+                    bits = self._fork_bits_from_snapshot(verified)
+                    if held_fork is None:
+                        if (
+                            verified["coils"][C_FORKS_L]
+                            or verified["coils"][C_FORKS_R]
+                            or bits != (False, True, False)
+                        ):
+                            errors.append(
+                                "fork readback mismatch: expected both coils False/Middle"
+                            )
+                    else:
+                        expected_bits = (
+                            (True, False, False)
+                            if held_fork == C_FORKS_L
+                            else (False, False, True)
+                        )
+                        if (
+                            not verified["coils"][held_fork]
+                            or bits != expected_bits
+                        ):
+                            errors.append(
+                                f"held fork output/limit C{held_fork} no longer confirmed"
+                            )
+                    if not preserve_lift and verified["coils"][C_LIFT]:
+                        errors.append("Lift readback unexpectedly True")
+            except Exception as exc:
+                errors.append(f"readback: {exc}")
         if errors:
             raise RuntimeError("safe stop incomplete: " + "; ".join(errors))
         lift_text = "preserved" if preserve_lift else "False"
         fork_text = f"C{held_fork}=True held" if held_fork is not None else "False"
         print(
-            f"SAFE STOP VERIFIED: other motion coils=False, Target=0, "
+            f"SAFE STOP VERIFIED: conveyors=False, X/Z stopped, Target=0, "
             f"Lift={lift_text}, ForkHold={fork_text}"
         )
 
@@ -1091,9 +1194,18 @@ def build_parser() -> argparse.ArgumentParser:
     reset_epoch.add_argument(
         "--operator-confirmed-restart",
         action="store_true",
-        help="assert Factory I/O was fully exited and restarted (F6 does NOT count)",
+        help=(
+            "operator attestation that Factory I/O was fully exited/restarted; "
+            "not machine-verifiable (F6 does NOT count)"
+        ),
     )
-    reset_epoch.add_argument("--note", default="")
+    reset_epoch.add_argument("--confirm-visual-empty", action="store_true")
+    reset_epoch.add_argument("--confirm-emitter-off", action="store_true")
+    reset_epoch.add_argument(
+        "--note",
+        default="",
+        help="required screenshot/video evidence path or other traceable note",
+    )
     return parser
 
 
@@ -1132,6 +1244,12 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
             raise RuntimeError(
                 f"--confirm-position required: visually confirm crane at cell {args.cell}"
             )
+        fault_lock.require_last_phase(
+            "travel",
+            cell=args.cell,
+            load_state_value=LoadState.CARRYING.value,
+            lift_command=True,
+        )
         stacker.resume_carrying(
             operator_confirmed=args.confirm_cargo,
             position=args.cell,
@@ -1146,6 +1264,13 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
                 "--confirm-clearance required: pass the visual gate (clearance/"
                 "tilt/hook) on the extended pallet before lowering"
             )
+        fault_lock.require_last_phase(
+            "place-extend",
+            cell=args.cell,
+            load_state_value=LoadState.EXTENDED_HOLD.value,
+            fork_hold=C_FORKS_R,
+            lift_command=True,
+        )
         stacker.resume_extended_hold(
             operator_confirmed=args.confirm_clearance,
             position=args.cell,
@@ -1175,6 +1300,13 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
             raise RuntimeError(
                 f"--confirm-position required: visually confirm crane at cell {args.cell}"
             )
+        fault_lock.require_last_phase(
+            "place-lower",
+            cell=args.cell,
+            load_state_value=LoadState.PLACED_PENDING.value,
+            fork_hold=C_FORKS_R,
+            lift_command=False,
+        )
         stacker.resume_placement_pending(
             operator_confirmed=args.confirm_placement,
             position=args.cell,
@@ -1199,38 +1331,80 @@ def _finish_diagnostic(stacker: Stacker, phase: str) -> None:
 
 
 def _assert_unlocked_for_action(mode: str) -> None:
-    """H1 门2：持久故障锁下只允许取证类命令；--confirm-* 不能绕过。"""
-    state = fault_lock.load_state()
-    if not fault_lock.is_locked(state):
-        return
-    if mode in {"snapshot", "stop", "mark-fault", "reset-epoch"}:
-        return
-    raise RuntimeError(
-        "PERSISTENT FAULT LOCK ACTIVE -> " + fault_lock.lock_reason(state)
-        + "; only snapshot/stop/mark-fault are allowed. Unlock path: save "
-        "evidence, FULLY exit and restart Factory I/O, verify an empty-scene "
-        "preflight, then run reset-epoch --operator-confirmed-restart"
-    )
+    """兼容测试/调用；main 使用 command_guard 原子覆盖判锁到动作完成。"""
+    fault_lock.assert_mode_allowed(mode)
 
 
 def _run_reset_epoch(stacker: Stacker, args: argparse.Namespace) -> None:
-    """清锁前强制在线空场 preflight：RUN 中、全零输出、one-hot Middle。"""
+    """人工重启声明 + 在线传感器门 + 可追溯视觉/Emitter 声明。"""
+    if not args.confirm_visual_empty:
+        raise RuntimeError("reset-epoch requires --confirm-visual-empty")
+    if not args.confirm_emitter_off:
+        raise RuntimeError("reset-epoch requires --confirm-emitter-off")
+    if not args.note.strip():
+        raise RuntimeError("reset-epoch requires --note with evidence path")
     stacker.check_safety_inputs(require_running=True)
     preflight_ok = False
     try:
-        stacker.assert_action_ready()
+        stacker.assert_action_ready(require_empty_scene=True)
         preflight_ok = True
     except RuntimeError as exc:
         print(f"EMPTY-SCENE PREFLIGHT FAILED: {exc}")
     state = fault_lock.clear_for_new_epoch(
         operator_confirmed_restart=args.operator_confirmed_restart,
         preflight_passed=preflight_ok,
+        visual_empty_confirmed=args.confirm_visual_empty,
+        emitter_off_confirmed=args.confirm_emitter_off,
         note=args.note,
     )
     print(
         "FAULT LOCK CLEARED: new epoch started at "
         f"{state['epoch_started_at']}; cleared={state['cleared_fault']}"
     )
+
+
+def _handle_command_failure(
+    *,
+    mode: str,
+    args: argparse.Namespace,
+    stacker: Stacker | None,
+    transition_token: str | None,
+    error: BaseException,
+) -> None:
+    """租约仍持有时保守停机；有设备事务就持久锁定。"""
+    if isinstance(error, KeyboardInterrupt):
+        print("interrupted")
+    else:
+        print(f"FAILED: {error}")
+    stop_error = None
+    if stacker is not None and (transition_token is not None or mode == "stop"):
+        try:
+            stacker.safe_stop(preserve_lift=True if mode == "stop" else None)
+        except BaseException as exc:
+            stop_error = exc
+            print(f"SAFE STOP FAILED: {exc}")
+    if transition_token is not None or (mode == "stop" and stop_error is not None):
+        code = (
+            fault_lock.FAULT_SAFE_STOP_UNCONFIRMED
+            if stop_error is not None
+            else fault_lock.FAULT_COMMAND_ABORTED
+        )
+        detail = f"{mode} aborted: {type(error).__name__}: {error}"
+        if stop_error is not None:
+            detail += f"; safe_stop={type(stop_error).__name__}: {stop_error}"
+        try:
+            fault_lock.record_fault(
+                code,
+                cell=getattr(args, "cell", None),
+                detail=detail,
+                context={
+                    "mode": mode,
+                    "phase": getattr(args, "phase", None),
+                    "transition_token": transition_token,
+                },
+            )
+        except Exception as lock_exc:
+            print(f"PERSISTENT LOCK WRITE FAILED: {lock_exc}")
 
 
 def main() -> None:
@@ -1252,60 +1426,89 @@ def main() -> None:
         print(f"LOG FILE: {log_path}")
 
     try:
-        _assert_unlocked_for_action(mode)
-        if mode == "mark-fault":
-            state = fault_lock.record_fault(
-                args.code, cell=args.cell, detail=args.detail,
-                context={"phase": "operator-mark"},
-            )
-            print(f"PERSISTENT FAULT LOCK RECORDED: {fault_lock.lock_reason(state)}")
-            return
-        stacker = Stacker()
-        if mode == "snapshot":
-            stacker.print_snapshot("F3 SNAPSHOT")
-        elif mode == "stop":
-            # 未知现场不撤 Lift，避免恢复 RUN 后主动掉箱。
-            stacker.safe_stop(preserve_lift=True)
-        elif mode == "reset-epoch":
-            _run_reset_epoch(stacker, args)
-        elif mode == "diagnose":
-            _prepare_diagnostic(stacker, args)
-            stacker.run_diagnostic(
-                args.phase,
-                args.cell,
-                args.observe_seconds,
-                cargo_confirmed=args.confirm_cargo,
-                placement_confirmed=args.confirm_placement,
-            )
-            _finish_diagnostic(stacker, args.phase)
-            fault_lock.record_phase_state(
-                phase=args.phase,
-                cell=args.cell,
-                load_state_value=stacker.load_state.value,
-                fork_hold=stacker.fork_hold,
-                lift_command=None,
-            )
-        elif mode in {"probe", "demo", "accept"}:
-            raise RuntimeError(
-                f"{mode} disabled until G1-G4 layered calibration is signed; "
-                "use diagnose gates instead"
-            )
-        else:
-            raise ValueError(f"unknown mode: {mode}")
-        print(f"ALL DONE in {time.monotonic() - started:.1f}s")
-    except KeyboardInterrupt:
-        print("interrupted -> load-aware safe stop")
-        if stacker is not None:
-            stacker.safe_stop()
-        raise
-    except Exception as exc:
-        print(f"FAILED: {exc}")
-        if stacker is not None:
+        with fault_lock.command_guard(mode):
+            transition_token = None
             try:
-                stacker.safe_stop()
-            except Exception as stop_exc:
-                print(f"SAFE STOP FAILED: {stop_exc}")
-        raise
+                if mode == "mark-fault":
+                    state = fault_lock.record_fault(
+                        args.code,
+                        cell=args.cell,
+                        detail=args.detail,
+                        context={"phase": "operator-mark"},
+                    )
+                    print(
+                        "PERSISTENT FAULT LOCK RECORDED: "
+                        + fault_lock.lock_reason(state)
+                    )
+                    return
+                stacker = Stacker()
+                if mode == "snapshot":
+                    stacker.print_snapshot("F3 SNAPSHOT")
+                elif mode == "stop":
+                    # 未锁场景也写 intent；强杀会使下一次 action fail-closed。
+                    if not fault_lock.is_locked(fault_lock.load_state()):
+                        transition_token = fault_lock.begin_transition(
+                            "safe-stop",
+                            cell=None,
+                            context={
+                                "mode": "stop",
+                                "expected_after": "Target=0; X/Z stopped; conveyors=False",
+                            },
+                        )
+                    stacker.safe_stop(preserve_lift=True)
+                    if transition_token is not None:
+                        fault_lock.complete_transition(transition_token)
+                        transition_token = None
+                elif mode == "reset-epoch":
+                    _run_reset_epoch(stacker, args)
+                elif mode == "diagnose":
+                    _prepare_diagnostic(stacker, args)
+                    expected_before, expected_after = DIAGNOSTIC_EXPECTATIONS[args.phase]
+                    transition_token = fault_lock.begin_transition(
+                        f"diagnose:{args.phase}",
+                        cell=args.cell,
+                        context={
+                            "observe_seconds": args.observe_seconds,
+                            "expected_before": expected_before,
+                            "expected_after": expected_after,
+                        },
+                    )
+                    stacker.run_diagnostic(
+                        args.phase,
+                        args.cell,
+                        args.observe_seconds,
+                        cargo_confirmed=args.confirm_cargo,
+                        placement_confirmed=args.confirm_placement,
+                    )
+                    _finish_diagnostic(stacker, args.phase)
+                    final_snap = stacker.snapshot()
+                    fault_lock.record_phase_state(
+                        phase=args.phase,
+                        cell=args.cell,
+                        load_state_value=stacker.load_state.value,
+                        fork_hold=stacker.fork_hold,
+                        lift_command=bool(final_snap["coils"][C_LIFT]),
+                        transition_token=transition_token,
+                    )
+                    fault_lock.complete_transition(transition_token)
+                    transition_token = None
+                elif mode in {"probe", "demo", "accept"}:
+                    raise RuntimeError(
+                        f"{mode} disabled until G1-G4 layered calibration is signed; "
+                        "use diagnose gates instead"
+                    )
+                else:
+                    raise ValueError(f"unknown mode: {mode}")
+                print(f"ALL DONE in {time.monotonic() - started:.1f}s")
+            except BaseException as exc:
+                _handle_command_failure(
+                    mode=mode,
+                    args=args,
+                    stacker=stacker,
+                    transition_token=transition_token,
+                    error=exc,
+                )
+                raise
     finally:
         if stacker is not None:
             stacker.c.close()

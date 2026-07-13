@@ -64,6 +64,7 @@ class MechanicsProbeTests(unittest.TestCase):
 
         probe.prepare_empty_probe(stacker)
 
+        stacker.assert_action_ready.assert_called_once_with(require_empty_scene=True)
         stacker.coil.assert_called_once_with(f3.C_LIFT, True)
         stacker.wait_motion_cycle.assert_called_once()
         self.assertEqual(

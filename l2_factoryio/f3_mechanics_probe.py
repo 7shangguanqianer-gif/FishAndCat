@@ -13,6 +13,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import fault_lock
+
 from f3_stacker_control import (
     C_FORKS_R,
     C_LIFT,
@@ -65,7 +67,7 @@ def monitor_z_finish_and_right(
 
 
 def prepare_empty_probe(stacker: Stacker) -> None:
-    stacker.assert_action_ready()
+    stacker.assert_action_ready(require_empty_scene=True)
     stacker.load_state = LoadState.EMPTY
     stacker.goto(1, "(empty mechanics probe)")
     stacker.assert_fork_position(IN_AT_MIDDLE, "Middle")
@@ -175,19 +177,56 @@ def main() -> None:
     log_file = log_path.open("w", encoding="utf-8", newline="\n")
     sys.stdout = TeeStream(original_stdout, log_file)
     stacker = None
+    transition_token = None
     try:
-        print(f"LOG FILE: {log_path}")
-        stacker = Stacker()
-        prepare_empty_probe(stacker)
-        passed = probe_a(stacker) if args.case == "A" else probe_b(stacker)
-        stacker.print_snapshot(f"MECHANICS {args.case} RESULT")
-        print(f"PROBE_{args.case}_PASS={passed}")
-    finally:
-        if stacker is not None:
+        with fault_lock.command_guard("mechanics-probe"):
+            print(f"LOG FILE: {log_path}")
+            stacker = Stacker()
+            transition_token = fault_lock.begin_transition(
+                f"mechanics-probe:{args.case}",
+                cell=None,
+                context={
+                    "confirm_empty": True,
+                    "expected_before": "empty scene; Middle; all outputs off",
+                    "expected_after": "empty scene; Target=0; conservative stop",
+                },
+            )
+            failure = None
+            cleanup_failure = None
+            try:
+                prepare_empty_probe(stacker)
+                passed = probe_a(stacker) if args.case == "A" else probe_b(stacker)
+                stacker.print_snapshot(f"MECHANICS {args.case} RESULT")
+                print(f"PROBE_{args.case}_PASS={passed}")
+            except BaseException as exc:
+                failure = exc
             try:
                 cleanup_empty_probe(stacker)
-            finally:
-                stacker.c.close()
+            except BaseException as exc:
+                cleanup_failure = exc
+            if failure is not None or cleanup_failure is not None:
+                detail = f"mechanics probe failed: {failure}"
+                if cleanup_failure is not None:
+                    detail += f"; cleanup/safe-stop failed: {cleanup_failure}"
+                fault_lock.record_fault(
+                    fault_lock.FAULT_SAFE_STOP_UNCONFIRMED
+                    if cleanup_failure is not None
+                    else fault_lock.FAULT_COMMAND_ABORTED,
+                    cell=None,
+                    detail=detail,
+                    context={
+                        "probe_case": args.case,
+                        "transition_token": transition_token,
+                    },
+                )
+                if failure is not None:
+                    raise failure
+                raise cleanup_failure
+            fault_lock.complete_transition(transition_token)
+            transition_token = None
+    finally:
+        if stacker is not None:
+            stacker.c.close()
         sys.stdout = original_stdout
         log_file.close()
 
