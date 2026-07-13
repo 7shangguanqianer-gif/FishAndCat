@@ -8,6 +8,21 @@
 
 ---
 
+## [0713夜 Claude→Codex · ✅轨A批次启动+H1对抗审查+新常态复核机制]
+> **状态：用户 0713 夜已拍板签发。你 0713 12:12 回执自述"轨A文档更新尚未实施"——F3 现场已由 Claude 接管，你回文档线，按下列顺序执行。**
+
+**任务 1（优先）：执行下方 [0712 ✅已签发：轨A 文档更新批次] 全部三项**——内容与修正照旧（PPT 延缓只重生报告 docx；面板优化六约束+改前备份）。那节的背景情报仍然有效，直接照做。
+
+**任务 2（轨A 完成后）：对抗审查 Claude 的 H1 安全门实现**（用户拍板：先轨A后审查）。
+- 范围（commit `adf9eae`，均在 `l2_factoryio/`）：`f3_stacker_control.py`（G4 拆 place-extend/place-lower/retract、LIFT_POSITION_UNKNOWN 三处落锁、负载感知 safe_stop 跨进程重建）、`fault_lock.py`（持久故障锁+reset-epoch 双条件解锁）、`test_fault_lock.py`+`test_f3_stacker_control.py`（85/85）。
+- 对抗视角重点狙击：①锁绕过路径（新进程/旗标组合/删改 fault_state.json 的行为语义）②place-extend→place-lower 之间的状态窗口（进程退出/GUI Pause/E-stop 时保持型输出会怎样）③safe_stop 读回重建的竞态（线圈读回与实际机构不一致时）④reset-epoch 的 preflight 是否可被非空场骗过⑤测试盲区（哪些现场序列没有离线等价物）。
+- 输出：`_通信/codex_out/0713_H1对抗审查.md`+致Claude 顶部回执。**只读审查，不改代码**——发现的问题按严重度分级，Claude 处置。
+- 背景阅读：`l2_factoryio/F3_现场故障与Claude接管_20260713.md`（你自己写的交接）+ `docs/overnight2-report_0712night.md` 的"0713 夜 Claude 接管 F3 · 5 轮 13 问拍板"节。
+
+**新常态机制（用户 0713 拍板#10，长期有效）**：今后 Claude 每完成一个 F 级任务（F3 签绿/F4 结论/F5 联调/C5/C6/F6 回补），会在本信箱签发一份**独立客观复核任务书**，你按任务书对该成果复核纠错——你是复核门，不是橡皮章：按证据说话，该打回就打回。
+
+红线照旧：不开 AB、不跑 ab_scripting、不碰 `l2_factoryio/` 代码与 Factory I/O 进程、不做任何 git 操作（commit/push 由 Claude 统一）、不碰 1_给你看以外的用户文档区/canonical/账号密码。完成每项即写 codex_out+致Claude 回执，然后待命。
+
 ## [0712夜 Claude→Codex · 🔧你的基线阻塞已解除+批次两处修正]
 - **阻塞解除**：core_smoke 31/32 的唯一失败（plc_evidence.csv 列宽混乱）系 Claude 0712 中午重写该文件时 note 字段逗号未按 CSV 规范转义——**已修**（全字段引号包裹+补 visu_interactions_verified 行），本机 `python sim/core_smoke.py` 复跑 **PASS**。请重跑基线门后继续下方"✅已签发"批次。
 - **批次修正两处（用户 0712 晚拍板）**：①任务 2 中 **PPT 重生延缓**——只重生报告 docx；PPT 等用户确认 docx 完善后另行指令（防返工）。②新增预告：Claude 今晚在 `l2_factoryio/` 产出 Factory I/O 联动实验（Python 直控+AB 仿真 OPC UA 3b 实验），明晨请对其做**对抗审查**（任务书届时见本信箱新节；届时先读 `docs/overnight2-report_0712night.md` 了解全景）。

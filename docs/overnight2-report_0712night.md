@@ -100,11 +100,27 @@
 
 其余沿用：三连败冻结分支纪律、9/9 验收定义、口径红线（54 格代表性验证/不称物理孪生）、禁 superpowers skills、禁碰用户文档线/canonical。
 
+### 0713 夜挂机相位规划（/overnight v2 正式开工单，H1 已完，从 H2 起）
+
+| 相位 | 内容 | 预计 | 前置 | 验收产出 | 失败/转移路径 |
+|---|---|---|---|---|---|
+| H2 | 完整重启基线：载 debug 场景→console 开 Web API→**tag 全量枚举(H1.5，找 X/Z 实体反馈)**→Emitter force off→箱型调试固定（Emitter 配置检查）→RUN 空场 preflight | 30-50min | Factory I/O 已全新启动 ✓ | `logs/webapi_tags_*.json`+基线截图+preflight 日志 | Web API 开不了→Modbus 路径照走，位置反馈降级人工门；场景文件找不到→用官方场景另存新 debug 副本 |
+| H3 | 单箱单变量全链：G1 feed→G2 pick（**视觉门=录屏 10-20s+抽帧逐帧判读**）→G3 travel（先 cell 30 干净 A/B）→G4 place-extend（视觉门）→place-lower（真实 Z）→retract | 60-120min | H2 绿 | 每门录屏+判读记录+诊断日志 | 任一无 Z→fault lock 自动落→保存证据→完整重启→单变量 A/B；**同一子问题三连败→冻结分支**，写 Codex 复核任务书后转 F8 |
+| H4 | 几何 A/B（复制场景仅动单段护栏） | 条件触发 | H3 拿到首次接触帧证据 | A/B 对比记录 | 我的"状态失配"假设若被 H2 位置反馈证实→整段跳过 |
+| H5 | 9/9 验收：cell 1/30/54 各 3 次，箱型恢复混出，全程录屏 | 60-90min | H3 单次全链绿 | 9 份日志+录屏+验收表（口径=54 格代表性验证） | 任何一次失败→回 H3 诊断，不凑数 |
+| F4 | AB 仿真 PLC 开 OPC UA server（3b） | 60-120min | F3 签绿 | `3b_ab_opcua_实验记录.md`（成败均档） | AB GUI 期间绝不跑 ab_scripting；撞登录墙截图即停换 CODESYS 兜底记录 |
+| F5→C5→C6→F6 | 联调→三任务→同源 3D→回补 | 按 13 问拍板 | 逐门 | 见拍板表 | 每 F 完成→给 Codex 签发复核任务书（拍板#10） |
+
+**节奏机制（本轮起严格执行）**：①连续满负荷，相位间不停车；②**每小时整点前后在本节下方时间线写一行反思**（进度/偏差/风险/下一小时计划）；③每相位收口=commit+push+账本落账+（若为 F 级）Codex 复核任务书；④轮次若中断，ScheduleWakeup 兜底自动续（提示词=读本账本从最新 ⬜ 继续）；⑤额度尽→自动醒接续。
+
 ## 四、时间线与反思
 - **21:55 F2 开工（文件层侦察先行）**：`F:\Factory IO.exe`=Unity 2023.1.5f1 主程序（VersionInfo 是 Unity 版本，软件版本待 GUI）；注册表 HKCU/HKLM 均无 Real Games 键=**本机从未运行过，首启大概率进激活/试用流程**。`Factory IO_Data\Managed` 关键 DLL 清单：**Engine IO.dll（SDK 宿主端在场）**、Opc.UaFx.Client.dll（OPC UA client 驱动=F5 直连 AB 的宿主件）、ComDrvS7V6/S7PROSIM/Mhj.PLCSIMPlusConnector（西门子系）、**EmbedIO.dll（内嵌 HTTP server→疑似 v2023 Tags REST API，若实锤=快线第四路线：Python requests 即可读写 tag，比 Modbus 还简单）**、IronPython.dll（内置脚本引擎）、CLIC.Client.dll（Real Games 云许可客户端→⚠首启可能要账号，撞到=红线换线记录）。Modbus 无独立 DLL（应内嵌于 Control IO Engine.dll）。
 - **22:07 F2 完成（用时 12min，GUI 零障碍）**：无激活墙直进 WELCOME→场景库双击载入 Automated Warehouse→状态栏实证 **v2.5.10 Ultimate Edition**→驱动面板全清单+Modbus Server 默认映射截图→pymodbus 冒烟 PASS。**快线路线就地修正**：v2.5.10 有 `Modbus TCP/IP Server` 驱动（compact 前查证的"Factory I/O 只能当 client"是旧版信息）→ F3 改为 **Factory I/O 当 server + Python pymodbus client 直连**，比预案（pymodbus 起 server 等它反连）少一层依赖；SDK 路线降为备选。**踩坑一枚**：驱动 CONFIGURATION 的 Network adapter 默认吸附 Clash 虚拟网卡 Meta Tunnel（Host=198.18.0.1），已改 Software Loopback Interface 1（Host 自动跟随 127.0.0.1）——不修这个 Python 连 127.0.0.1 必扑空，此坑值得进 memory（凡本机有代理虚拟网卡，工业软件的网卡绑定下拉都可能默认选错）。
 
+- **0713 夜 H0-H1 完成（Claude 接管后首段）**：H0 离线基线复现 64/64；对 Codex 根因假设提出独立质疑（"载荷偏姿卡梁"解释不了 postF6-G2 取箱升程无 Z——统一线索=**Lift 实体状态与命令失配**，若成立 H4 几何 A/B 可整段跳过，钥匙=Web API 实体位置反馈）。H1 五门全落地：①G4 拆 place-extend（只伸叉禁写 Lift）/place-lower（--confirm-clearance 视觉门+真实 Z）/retract，融合版 place 禁用指引；②`fault_lock.py` 持久故障锁（LOWER_NO_START/LIFT_POSITION_UNKNOWN/CARGO_LOST/RECOVERY_UNSAFE 原子写 fault_state.json，锁下只许 snapshot/stop/mark-fault，解锁唯一路径=reset-epoch 双条件：确认完整重启+在线空场 preflight 实过）；③负载感知 stop 跨进程重建叉保持（线圈读回 True 即拒撤叉，读回失败拒盲收）；④pick/relift/place-lower 三处 NO START→落锁；⑤防绕过测试 21 项新增，**85/85 PASS**。H1.5 `webapi_probe.py`（tag 枚举/find 位置反馈/emitter-off/emitter-pulse，纯标准库）。commit=2c5508c(交接归档)+adf9eae(H1)。发现并修一处命名遮蔽 bug（record_phase_state 参数 load_state 盖模块函数）。
+
 ## 五、待拍板清单
+- **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
 
 ## 六、异常日志
