@@ -7,7 +7,7 @@
 0713 分层校准结论：
 - Target Position 1..54=货位，0=原地停止，55=rest/载入位。
 - 当前工作假设：载入台在 Left 侧、货架在 Right 侧；必须由 G2/G4 画面亲验。
-- At Entry/Load/Unload/Exit 为对射传感器：False=被箱遮挡，True=空。
+- At Entry/Load/Unload/Exit 为正逻辑到位传感器：True=有箱，False=空。
 - Lift=True 微抬取箱；带载移动必须保持 Lift=True，禁止把货物降成自由载荷。
 - Factory I/O 没有 cargo-present 和当前位置反馈，因此信号门不能代替人工画面门。
 
@@ -19,8 +19,8 @@
 - stop/snapshot 在 Pause、Stop 或 E-stop 状态下仍必须可用。
 
 推荐校准命令（每轮先 F6、再 F5 RUN）：
-  python f3_stacker_control.py diagnose feed 1 --confirm-rest --confirm-baseline-load --observe-seconds 30
-  python f3_stacker_control.py diagnose pick 1 --confirm-rest --confirm-baseline-load --observe-seconds 30
+  python f3_stacker_control.py diagnose feed 1 --confirm-rest --observe-seconds 30
+  python f3_stacker_control.py diagnose pick 1 --confirm-rest --observe-seconds 30
   # 画面确认货物水平且在承载台后，不复位：
   python f3_stacker_control.py diagnose travel 1 --confirm-cargo --confirm-position --observe-seconds 30
   python f3_stacker_control.py diagnose place 1 --confirm-cargo --confirm-position --observe-seconds 30
@@ -115,7 +115,6 @@ class Stacker:
         # 构造只负责连接。stop/snapshot 不能被 RUN/Stop/E-stop 互锁挡住。
         self.position_hint: int | None = None
         self.load_state = LoadState.UNKNOWN
-        self.baseline_load_confirmed = False
 
     # ---- 基础 I/O ----
     def din(self, addr: int) -> bool:
@@ -226,19 +225,6 @@ class Stacker:
             )
         self.position_hint = POS_REST
         print("OPERATOR GATE: fixed-camera rest position confirmed after F6")
-
-    def confirm_baseline_load(self, operator_confirmed: bool) -> None:
-        if not operator_confirmed:
-            return
-        if not self.box_at_load():
-            raise RuntimeError(
-                "--confirm-baseline-load was given but At Load is empty"
-            )
-        self.baseline_load_confirmed = True
-        print(
-            "OPERATOR GATE: official F6 baseline preloaded box confirmed "
-            "flat/stationary"
-        )
 
     def assert_loaded_transport_ready(self) -> None:
         """只验证执行器/传感器一致性；不宣称货物真的仍在承载台。"""
@@ -391,7 +377,8 @@ class Stacker:
         return self.din(IN_MOVING_X) or self.din(IN_MOVING_Z)
 
     def box_at_load(self) -> bool:
-        return not self.din(IN_AT_LOAD)
+        # 0713 近景 + F6 空载亲验：At Load=False 时载入输送带为空。
+        return self.din(IN_AT_LOAD)
 
     def goto(self, position: int, description: str = "") -> None:
         if position != POS_REST and not 1 <= position <= 54:
@@ -527,15 +514,10 @@ class Stacker:
         self.goto(POS_REST, "(prepare load station)")
         self.forks_center()
         if self.box_at_load():
-            if not self.baseline_load_confirmed:
-                raise RuntimeError(
-                    "load station already occupied; G1 cannot be bypassed. "
-                    "After a fresh F6 and fixed-camera check, rerun with "
-                    "--confirm-baseline-load; otherwise save evidence and recover."
-                )
-            print("* 接受官方 F6 预置箱：输送带保持停止，执行落稳复核")
-            self._verify_load_stable()
-            return
+            raise RuntimeError(
+                "load station already occupied; G1 cannot be bypassed "
+                "(save evidence, then F6 for a clean trial)"
+            )
         print("* 入料：Entry + Load Conveyor")
         primary_error = None
         try:
@@ -677,7 +659,6 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("cell", type=int, nargs="?", default=1)
     diagnose.add_argument("--observe-seconds", type=float, default=0.0)
     diagnose.add_argument("--confirm-rest", action="store_true")
-    diagnose.add_argument("--confirm-baseline-load", action="store_true")
     diagnose.add_argument("--confirm-cargo", action="store_true")
     diagnose.add_argument("--confirm-position", action="store_true")
     diagnose.add_argument("--confirm-placement", action="store_true")
@@ -690,7 +671,6 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
     if phase in ("feed", "pick"):
         stacker.assert_action_ready()
         stacker.confirm_rest_baseline(args.confirm_rest)
-        stacker.confirm_baseline_load(args.confirm_baseline_load)
     elif phase == "travel":
         if not args.confirm_position:
             raise RuntimeError("--confirm-position required: visually confirm crane at rest")

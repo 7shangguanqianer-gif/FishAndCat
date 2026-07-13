@@ -76,7 +76,6 @@ class SequenceContractTests(unittest.TestCase):
         stacker = f3.Stacker.__new__(f3.Stacker)
         stacker.load_state = f3.LoadState.EMPTY
         stacker.position_hint = f3.POS_REST
-        stacker.baseline_load_confirmed = False
         stacker.goto = Mock()
         stacker.forks_left = Mock()
         stacker.forks_right = Mock()
@@ -98,19 +97,6 @@ class SequenceContractTests(unittest.TestCase):
             stacker.feed_one_box()
 
         stacker.coil.assert_not_called()
-
-    def test_feed_accepts_f6_baseline_load_only_after_explicit_confirmation(self):
-        stacker = self.make_stacker()
-        stacker.box_at_load.return_value = True
-        stacker.baseline_load_confirmed = True
-
-        with patch("f3_stacker_control.time.sleep") as sleep:
-            stacker.feed_one_box()
-
-        stacker.coil.assert_not_called()
-        self.assertEqual(stacker.wait_stable.call_count, 2)
-        sleep.assert_called_once_with(f3.LOAD_SETTLE_DWELL)
-        self.assertEqual(stacker.load_state, f3.LoadState.STAGED)
 
     def test_feed_stops_belts_at_first_sensor_edge_before_settle_check(self):
         stacker = self.make_stacker()
@@ -271,6 +257,13 @@ class ForkAndGateTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "one-hot"):
             stacker.assert_fork_position(f3.IN_AT_MIDDLE, "Middle")
+
+    def test_box_at_load_uses_positive_sensor_polarity(self):
+        stacker = self.make_stacker()
+        stacker.din.return_value = True
+        self.assertTrue(stacker.box_at_load())
+        stacker.din.return_value = False
+        self.assertFalse(stacker.box_at_load())
 
     def test_extend_clears_drive_outputs_after_limit_is_reached(self):
         stacker = self.make_stacker()

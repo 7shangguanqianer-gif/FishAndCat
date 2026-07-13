@@ -7,7 +7,7 @@
 >
 > **0713 现场纠错（G2/G4 待画面终签）：** 当前固定机位与有效取箱边沿支持“Left=载入输送带侧、Right=货架侧”；0712 初稿把两侧写反。以下点表已按当前工作假设修正，最终只以 G2 真实承载与 G4 真实入架画面为准，不能只凭限位信号宣告成立。
 >
-> **传感器极性：** Automated Warehouse 的 At Entry/Load/Unload/Exit 在当前 Modbus 映射中为 `False=被箱遮挡`、`True=光路空`；名称中的 `At` 不代表 Python 读到 `True` 就有箱。
+> **0713 极性纠错（近景 + F6 空载亲验）：** Automated Warehouse 的 At Entry/Load/Unload/Exit 在当前 Modbus 映射中为正逻辑：`True=有箱到位`、`False=空`。旧控制器把 `At Load=False` 解释成有箱，导致“空载取货、信号假成功”；该口径已作废。
 
 ## 默认映射（驱动面板自动生成，截图 `img/F2_modbus_server_default_mapping_0712.png`）
 
