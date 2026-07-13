@@ -1,0 +1,4 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_050050.log
+PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0
+FAILED: rest position has no sensor feedback; rerun with --confirm-rest only after fixed-camera visual confirmation following F6
+SAFE STOP VERIFIED: motion coils=False, Target=0, Lift=False

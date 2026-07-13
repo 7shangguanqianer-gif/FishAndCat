@@ -1,0 +1,19 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_061011.log
+ACTUATOR GATE OK: Middle, Lift=True, At Load clear; cargo presence still requires visual confirmation
+OPERATOR GATE: cargo horizontal/present; current position=1
+ACTUATOR GATE OK: Middle, Lift=True, At Load clear; cargo presence still requires visual confirmation
+* 放箱保持：Right 侧伸叉 -> Lift=False 下放 -> 保持伸叉（货位 1）
+  [ok  0.19s] forks departed Middle
+  [ok  2.22s] forks one-hot At Right
+* forks one-hot Right; C3=True hold preserved
+  [ok  0.33s] lower load remains settled (zero-stroke accepted)
+* placement settle dwell: 1.5s
+PLACEMENT ACTUATOR GATE OK: Right held, Lift=False, motion settled
+PLACEMENT HOLD: inspect rack support before running retract
+--- OBSERVE G4_PLACE_HOLD ---
+inputs: 0:At Entry=False, 1:At Load=True, 2:At Left=False, 3:At Middle=False, 4:At Right=True, 5:At Unload=True, 6:At Exit=True, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=True, 4:Lift=False, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 0
+OBSERVE WINDOW G4_PLACE_HOLD: 15.0s; fixed-camera evidence now
+PLACEMENT HOLD PRESERVED: Forks Right remains True; run retract only after visual rack-support confirmation
+ALL DONE in 20.4s

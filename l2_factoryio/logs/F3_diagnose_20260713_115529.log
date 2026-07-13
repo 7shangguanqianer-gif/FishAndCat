@@ -1,0 +1,13 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_115529.log
+OPERATOR GATE: cargo visually confirmed on extended pallet; state=lower-commanded/no-Z; current position=1
+* 放箱失败恢复-抬起：Right 保持，先 Lift=True；禁止在此相位回中（货位 1）
+  [recovery-only] no Z edge: platform may already be raised; visual gate remains mandatory before recover-retract
+OPERATOR GATE: cargo visually confirmed on extended pallet; state=raised; current position=1
+RECOVERY HOLD: inspect pallet/cargo before recover-retract
+--- OBSERVE RECOVERY_PLACE_LIFT_HOLD ---
+inputs: 0:At Entry=True, 1:At Load=True, 2:At Left=False, 3:At Middle=False, 4:At Right=True, 5:At Unload=True, 6:At Exit=True, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=True, 4:Lift=True, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 0
+OBSERVE WINDOW RECOVERY_PLACE_LIFT_HOLD: 6.0s; fixed-camera evidence now
+EXTENDED HOLD PRESERVED: Forks Right remains True; use only the next visually authorized phase
+ALL DONE in 9.1s

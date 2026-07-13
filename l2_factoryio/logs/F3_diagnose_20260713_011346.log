@@ -1,0 +1,6 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_011346.log
+PREFLIGHT OK: settled, forks Middle, C0..C6=False
+* 入料：Entry + Load Conveyor
+  [ok  5.20s] box At Load
+SAFE STOP: C0..C6=False, Target=0
+ALL DONE in 5.2s

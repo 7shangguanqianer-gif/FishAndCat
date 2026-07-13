@@ -1,0 +1,11 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_120146.log
+PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0
+OPERATOR GATE: fixed-camera rest position confirmed after F6
+OPERATOR GATE: reuse visually confirmed G1 staged cargo
+* Target Position = 55 (rest=载入台) [operator/in-process position evidence]
+* 取箱：Left 侧伸叉 -> 抬起 -> 回中（保持 Lift=True 带载）
+  [ok  0.19s] forks departed Middle
+  [ok  2.20s] forks one-hot At Left
+* forks one-hot Left; C2=True hold preserved
+FAILED: NO START(3.0s): lift load
+SAFE STOP VERIFIED: other motion coils=False, Target=0, Lift=preserved, ForkHold=C2=True held

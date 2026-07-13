@@ -1,0 +1,70 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_demo_20260712_232606.log
+* 入料：Entry + Load Conveyor
+  [ok  2.62s] box At Load
+* Target Position = 55 (rest=载入台)
+  [ok  0.45s] crane -> 55 already settled (no motion)
+* 取箱：Left 侧伸叉 -> Lift=True -> 回中
+  [ok  2.38s] forks At Left
+  [start 0.11s] lift load
+  [ok  2.09s] lift load settled
+  [ok  0.45s] At Load cleared
+  [ok  2.38s] forks At Middle
+  [ok  0.45s] cargo clear of At Load
+* Target Position = 11 (货位 11)
+  [start 0.14s] crane -> 11
+  [ok  3.38s] crane -> 11 settled
+* 放箱：Right 侧伸叉 -> Lift=False -> 回中（货位 11）
+  [ok  2.38s] forks At Right
+  [start 0.14s] lower load
+  [ok  1.99s] lower load settled
+  [ok  2.38s] forks At Middle
+* Target Position = 55 (cycle complete)
+  [start 0.20s] crane -> 55
+  [ok  3.39s] crane -> 55 settled
+=== 货位 11 单箱流程完成 ===
+
+* 入料：Entry + Load Conveyor
+  [ok  2.56s] box At Load
+* Target Position = 55 (rest=载入台) [already confirmed]
+* 取箱：Left 侧伸叉 -> Lift=True -> 回中
+  [ok  2.38s] forks At Left
+  [start 0.16s] lift load
+  [ok  2.12s] lift load settled
+  [ok  0.44s] At Load cleared
+  [ok  2.38s] forks At Middle
+  [ok  0.44s] cargo clear of At Load
+* Target Position = 24 (货位 24)
+  [start 0.08s] crane -> 24
+  [ok  5.75s] crane -> 24 settled
+* 放箱：Right 侧伸叉 -> Lift=False -> 回中（货位 24）
+  [ok  2.39s] forks At Right
+  [start 0.08s] lower load
+  [ok  2.05s] lower load settled
+  [ok  2.36s] forks At Middle
+* Target Position = 55 (cycle complete)
+  [start 0.14s] crane -> 55
+  [ok  5.73s] crane -> 55 settled
+=== 货位 24 单箱流程完成 ===
+
+* 入料：Entry + Load Conveyor
+  [ok  2.62s] box At Load
+* Target Position = 55 (rest=载入台) [already confirmed]
+* 取箱：Left 侧伸叉 -> Lift=True -> 回中
+  [ok  2.36s] forks At Left
+  [start 0.14s] lift load
+  [ok  2.16s] lift load settled
+  [ok  0.45s] At Load cleared
+  [ok  2.38s] forks At Middle
+  [ok  0.44s] cargo clear of At Load
+* Target Position = 37 (货位 37)
+  [start 0.08s] crane -> 37
+  [ok  4.42s] crane -> 37 settled
+* 放箱：Right 侧伸叉 -> Lift=False -> 回中（货位 37）
+  [ok  2.38s] forks At Right
+  [start 0.06s] lower load
+  [ok  2.00s] lower load settled
+  [ok  2.33s] forks At Middle
+* Target Position = 55 (cycle complete)
+  [start 0.08s] crane -> 55
+FAILED: TIMEOUT(30.0s): crane -> 55 settled
+SAFE STOP: C0..C6=False, Target=0

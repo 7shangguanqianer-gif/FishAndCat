@@ -1,0 +1,21 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_mechanics_A_20260713_065413.log
+PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0
+* Target Position = 1 (empty mechanics probe)
+  [start 0.06s] crane -> 1
+  [ok  2.92s] crane -> 1 settled
+* baseline: Lift=True at Middle; a real Moving Z edge is mandatory
+  [start 0.12s] baseline lift raise
+  [ok  1.94s] baseline lift raise settled
+* A: Right=True held -> Lift=False
+  [ok  0.20s] forks departed Middle
+  [ok  2.16s] forks one-hot At Right
+* forks one-hot Right; C3=True hold preserved
+A_RESULT=Z_STARTED at 0.094s while Right=True [interlock refuted]
+  [ok  1.98s] A lower settled
+--- MECHANICS A RESULT ---
+inputs: 0:At Entry=True, 1:At Load=True, 2:At Left=False, 3:At Middle=False, 4:At Right=True, 5:At Unload=True, 6:At Exit=True, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=True, 4:Lift=False, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 1
+PROBE_A_PASS=True
+  [ok  2.41s] empty probe cleanup one-hot Middle
+SAFE STOP VERIFIED: other motion coils=False, Target=0, Lift=False, ForkHold=False

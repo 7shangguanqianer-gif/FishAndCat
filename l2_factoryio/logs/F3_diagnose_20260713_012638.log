@@ -1,0 +1,24 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_012638.log
+PREFLIGHT OK: settled, forks Middle, C0..C6=False
+* 入料：Entry + Load Conveyor
+  [ok  5.17s] box At Load
+* Target Position = 55 (rest=载入台)
+  [ok  0.45s] crane -> 55 already settled (no motion)
+* 取箱：Left 侧伸叉 -> 抬起 -> 回中（保持 Lift=True 带载）
+  [ok  2.36s] forks At Left
+  [start 0.14s] lift load
+  [ok  2.06s] lift load settled
+  [ok  0.44s] At Load cleared
+  [ok  2.33s] forks At Middle
+* Target Position = 1 (loaded travel to cell 1)
+  [start 0.12s] crane -> 1
+  [ok  2.69s] crane -> 1 settled
+* 放箱：Right 侧伸叉 -> Lift=False 下放 -> 回中（货位 1）
+  [ok  4.36s] forks At Right
+  [start 0.00s] lower load
+  [ok  2.25s] lower load settled
+  [ok  2.38s] forks At Middle
+* Target Position = 55 (cycle complete)
+  [start 0.14s] crane -> 55
+FAILED: TIMEOUT(30.0s): crane -> 55 settled
+SAFE STOP: C0..C6=False, Target=0

@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 447, in <module>
+    main()
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 418, in main
+    stacker.run_diagnostic(args.phase, args.cell)
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 355, in run_diagnostic
+    self.store_one(cell)
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 348, in store_one
+    self.goto(POS_REST, "(cycle complete)")
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 257, in goto
+    self.wait_motion_cycle(
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 215, in wait_motion_cycle
+    self.wait_stable(
+  File "F:\abb_wh_work\l2_factoryio\f3_stacker_control.py", line 187, in wait_stable
+    raise RuntimeError(f"TIMEOUT({timeout}s): {description}")
+RuntimeError: TIMEOUT(30.0s): crane -> 55 settled

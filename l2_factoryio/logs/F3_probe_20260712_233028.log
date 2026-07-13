@@ -1,0 +1,7 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_probe_20260712_233028.log
+* 入料：Entry + Load Conveyor
+  [ok  2.61s] box At Load
+* Target Position = 55 (rest=载入台)
+  [start 0.02s] crane -> 55
+FAILED: TIMEOUT(30.0s): crane -> 55 settled
+SAFE STOP: C0..C6=False, Target=0

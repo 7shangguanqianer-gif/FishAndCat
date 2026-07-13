@@ -1,0 +1,5 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_probe_20260712_232315.log
+* 载入位已有箱，跳过输送
+* Target Position = 55 (rest=载入台)
+FAILED: NO START(3.0s): crane -> 55
+SAFE STOP: C0..C6=False, Target=0

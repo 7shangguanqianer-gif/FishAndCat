@@ -1,0 +1,12 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_060916.log
+OPERATOR GATE: cargo visually confirmed on lowered carriage; current position=1
+* 恢复微抬：仅 Lift=True，不移动 X/叉臂（货位 1）
+  [ok  0.33s] relift carried load remains settled (zero-stroke accepted)
+ACTUATOR GATE OK: Middle, Lift=True, At Load clear; cargo presence still requires visual confirmation
+--- OBSERVE RECOVERY_RELIFT ---
+inputs: 0:At Entry=False, 1:At Load=True, 2:At Left=False, 3:At Middle=True, 4:At Right=False, 5:At Unload=True, 6:At Exit=True, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=False, 4:Lift=True, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 0
+OBSERVE WINDOW RECOVERY_RELIFT: 10.0s; fixed-camera evidence now
+RELIFT STATE PRESERVED: successful recovery wrote Lift=True only; no X/fork cleanup writes required
+ALL DONE in 11.4s

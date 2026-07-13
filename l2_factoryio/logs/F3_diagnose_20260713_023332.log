@@ -1,0 +1,13 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_023332.log
+PREFLIGHT OK: settled, forks Middle, C0..C6=False
+* Target Position = 55 (prepare load station)
+  [ok  0.44s] crane -> 55 already settled (no motion)
+* forks already at Middle
+* 载入位已有箱，跳过输送
+--- OBSERVE G1_FEED ---
+inputs: 0:At Entry=False, 1:At Load=False, 2:At Left=False, 3:At Middle=True, 4:At Right=False, 5:At Unload=False, 6:At Exit=False, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=False, 4:Lift=False, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 55
+OBSERVE WINDOW G1_FEED: 30.0s; pause Factory I/O now
+SAFE STOP: C0..C6=False, Target=0
+ALL DONE in 33.5s

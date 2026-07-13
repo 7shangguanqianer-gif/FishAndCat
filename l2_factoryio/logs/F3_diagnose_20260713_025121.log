@@ -1,0 +1,7 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_025121.log
+PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0
+OPERATOR GATE: fixed-camera rest position confirmed after F6
+* Target Position = 55 (prepare load station) [operator/in-process position evidence]
+* forks already one-hot Middle
+FAILED: load station already occupied; G1 cannot be bypassed (save evidence, then F6 for a clean trial)
+SAFE STOP VERIFIED: motion coils=False, Target=0, Lift=False

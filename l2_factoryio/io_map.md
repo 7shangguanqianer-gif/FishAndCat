@@ -8,6 +8,10 @@
 > **0713 现场纠错（G2/G4 待画面终签）：** 当前固定机位与有效取箱边沿支持“Left=载入输送带侧、Right=货架侧”；0712 初稿把两侧写反。以下点表已按当前工作假设修正，最终只以 G2 真实承载与 G4 真实入架画面为准，不能只凭限位信号宣告成立。
 >
 > **0713 实物极性复核（进程重启后，入口托盘+箱体画面与 Modbus 同步取证）：** Automated Warehouse 的货物传感器 At Entry/Load/Unload/Exit 在当前 Modbus 映射中为 **active-low**：`False=有货遮挡`、`True=空`。现场快照为入口有货 `At Entry=False`，其余空位 `At Load/Unload/Exit=True`。此前仅凭 F6 后远景把 `At Load=False` 判为空载的结论已作废。
+>
+> **0713 终止交接补充：** F6 只会清理/重置场景货物，不能作为控制输出或实体微升降机构的可信复位。F6 后已实测新 G2 在 `Forks Left` 到位后 `Lift=True` 却无 `Moving Z`；任一无 Z、recovery 或掉落后必须保存证据并**完整退出、重启 Factory I/O**，不得只按 F6 继续同一验收链。
+>
+> **Emitter 强制值陷阱：** Web API 现场 tag id=`8e4549f8-74ed-4dd8-ab3d-b8ddb795e8c7`；曾处于 `isForced=true, forcedValue=true`。普通 `/api/tag/values` 写 false 不会覆盖强制值，必须用 `PUT /api/tag/values-force` 明确 force false。单箱生成只能短暂 force true，`At Entry` 检出后立即 force false；否则会连续生成多托货并污染验收。
 
 ## 默认映射（驱动面板自动生成，截图 `img/F2_modbus_server_default_mapping_0712.png`）
 
@@ -64,7 +68,9 @@
 
 ### 恢复相位：`relift`
 
-若固定机位画面已由操作员确认货物仍在承载台，同时叉臂在 `Middle`、当前 cell 位置已确认且 `Lift=False`，则先写 `Lift=True` 进入 `relift` 恢复。Factory I/O 没有承载台 cargo-present 反馈，`At Load` 只能证明载入位未被遮挡，不能代替上述人工画面门。该恢复步骤**不得移动 X，也不得动作任一叉臂**；仅在升举状态恢复并重新确认现场条件后，才可继续后续流程。
+若固定机位画面已由操作员确认货物仍在承载台，同时叉臂在 `Middle`、当前 cell 位置已确认且 `Lift=False`，则先写 `Lift=True` 进入 `relift` 恢复。Factory I/O 没有承载台 cargo-present 反馈，`At Load` 只能证明载入位未被遮挡，不能代替上述人工画面门。该恢复步骤**不得移动 X，也不得动作任一叉臂**；它只允许把机构带到便于取证/撤险的状态，不授权继续运输或放货。
+
+**0713 现场升级：所有 recovery 只用于撤险，不再允许继续任务。** 一次 `recover-lift→recover-retract` 后，画面看似回到承载台，随后从 cell 1 移至 cell 30 时货物掉落。恢复后的载荷必须标记 `RECOVERY_UNSAFE/cargo trust=false`，保存证据后完整重启应用；F6 不足以解锁。当前进程内枚举已加入，但跨 CLI 进程持久故障锁尚未实现，接管者不得用 `--confirm-*` 重新构造 `CARRYING` 绕过。
 
 ## 冒烟验证（`f2_smoke_read.py`，0712 实测 PASS）
 - `connect: True`；15 inputs / 10 coils / HReg0 / IReg0 全部读通零报错。

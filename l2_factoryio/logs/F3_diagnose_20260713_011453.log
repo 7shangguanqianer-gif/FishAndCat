@@ -1,0 +1,17 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_011453.log
+PREFLIGHT OK: settled, forks Middle, C0..C6=False
+* 载入位已有箱，跳过输送
+* Target Position = 55 (rest=载入台)
+  [ok  0.45s] crane -> 55 already settled (no motion)
+* 取箱：Left 侧伸叉 -> 抬起 -> 回中 -> 降到承载台
+  [ok  2.36s] forks At Left
+  [start 0.12s] lift load
+  [ok  1.94s] lift load settled
+  [ok  0.44s] At Load cleared
+  [ok  2.38s] forks At Middle
+  [start 0.12s] settle cargo on carriage
+  [ok  2.06s] settle cargo on carriage settled
+  [ok  0.44s] cargo clear of At Load
+* cargo settle dwell: 1.5s
+SAFE STOP: C0..C6=False, Target=0
+ALL DONE in 15.6s

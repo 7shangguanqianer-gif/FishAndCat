@@ -1,0 +1,31 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_probe_20260712_233238.log
+* 入料：Entry + Load Conveyor
+  [ok  5.17s] box At Load
+* Target Position = 55 (rest=载入台)
+  [ok  0.44s] crane -> 55 already settled (no motion)
+* 取箱：Left 侧伸叉 -> 抬起 -> 回中 -> 降到承载台
+  [ok  2.39s] forks At Left
+  [start 0.08s] lift load
+  [ok  2.12s] lift load settled
+  [ok  0.44s] At Load cleared
+  [ok  2.36s] forks At Middle
+  [start 0.14s] settle cargo on carriage
+  [ok  2.12s] settle cargo on carriage settled
+  [ok  0.44s] cargo clear of At Load
+* Target Position = 37 (货位 37)
+  [start 0.14s] crane -> 37
+  [ok  4.49s] crane -> 37 settled
+* 放箱：先抬起 -> Right 侧伸叉 -> 降下 -> 回中（货位 37）
+  [start 0.12s] raise cargo for rack
+  [ok  1.94s] raise cargo for rack settled
+  [ok  2.38s] forks At Right
+  [start 0.08s] lower load
+  [ok  2.02s] lower load settled
+  [ok  2.31s] forks At Middle
+* Target Position = 55 (cycle complete)
+  [start 0.12s] crane -> 55
+  [ok  4.48s] crane -> 55 settled
+=== 货位 37 单箱流程完成 ===
+
+SAFE STOP: C0..C6=False, Target=0
+ALL DONE in 36.9s

@@ -1,0 +1,10 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_114828.log
+ACTUATOR GATE OK: Middle, Lift=True, At Load clear; cargo presence still requires visual confirmation
+OPERATOR GATE: cargo horizontal/present; current position=1
+ACTUATOR GATE OK: Middle, Lift=True, At Load clear; cargo presence still requires visual confirmation
+* 放箱保持：Right 侧伸叉 -> Lift=False 下放 -> 保持伸叉（货位 1）
+  [ok  0.19s] forks departed Middle
+  [ok  2.19s] forks one-hot At Right
+* forks one-hot Right; C3=True hold preserved
+FAILED: NO START(3.0s): lower load
+SAFE STOP VERIFIED: other motion coils=False, Target=0, Lift=preserved, ForkHold=C3=True held

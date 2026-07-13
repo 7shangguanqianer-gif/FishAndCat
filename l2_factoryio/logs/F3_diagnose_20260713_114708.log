@@ -1,0 +1,22 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_114708.log
+PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0
+OPERATOR GATE: fixed-camera rest position confirmed after F6
+OPERATOR GATE: reuse visually confirmed G1 staged cargo
+* Target Position = 55 (rest=载入台) [operator/in-process position evidence]
+* 取箱：Left 侧伸叉 -> 抬起 -> 回中（保持 Lift=True 带载）
+  [ok  0.26s] forks departed Middle
+  [ok  2.08s] forks one-hot At Left
+* forks one-hot Left; C2=True hold preserved
+  [start 0.06s] lift load
+  [ok  2.16s] lift load settled
+  [ok  0.45s] At Load cleared
+  [ok  0.20s] forks departed extended limit after hold release
+  [ok  2.19s] forks one-hot At Middle
+ACTUATOR GATE OK: Middle, Lift=True, At Load clear; cargo presence still requires visual confirmation
+--- OBSERVE G2_PICK ---
+inputs: 0:At Entry=True, 1:At Load=True, 2:At Left=False, 3:At Middle=True, 4:At Right=False, 5:At Unload=True, 6:At Exit=True, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=False, 4:Lift=True, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 0
+OBSERVE WINDOW G2_PICK: 8.0s; fixed-camera evidence now
+SAFE STOP VERIFIED: other motion coils=False, Target=0, Lift=preserved, ForkHold=False
+ALL DONE in 15.5s

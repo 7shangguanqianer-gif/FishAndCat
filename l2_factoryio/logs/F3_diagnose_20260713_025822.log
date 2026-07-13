@@ -1,0 +1,17 @@
+LOG FILE: F:\abb_wh_work\l2_factoryio\logs\F3_diagnose_20260713_025822.log
+PREFLIGHT OK: settled, forks one-hot Middle, C0..C6=False, Target=0
+OPERATOR GATE: fixed-camera rest position confirmed after F6
+OPERATOR GATE: official F6 baseline preloaded box confirmed flat/stationary
+* Target Position = 55 (prepare load station) [operator/in-process position evidence]
+* forks already one-hot Middle
+* 接受官方 F6 预置箱：输送带保持停止，执行落稳复核
+  [ok  0.38s] box stable at load after belts stopped
+* load settle dwell: 2.0s
+  [ok  0.44s] box remains at load after settle
+--- OBSERVE G1_FEED ---
+inputs: 0:At Entry=False, 1:At Load=False, 2:At Left=False, 3:At Middle=True, 4:At Right=False, 5:At Unload=False, 6:At Exit=False, 7:Moving X=False, 8:Moving Z=False, 9:Start=False, 10:Reset=False, 11:Stop=True, 12:Emergency stop=True, 13:Auto=False, 14:FACTORY I/O (Running)=True
+coils: 0:Entry Conveyor=False, 1:Load Conveyor=False, 2:Forks Left=False, 3:Forks Right=False, 4:Lift=False, 5:Unload Conveyor=False, 6:Exit Conveyor=False, 7:Start light=False, 8:Reset light=False, 9:Stop light=False
+target: 0
+OBSERVE WINDOW G1_FEED: 30.0s; fixed-camera evidence now
+SAFE STOP VERIFIED: motion coils=False, Target=0, Lift=False
+ALL DONE in 32.9s
