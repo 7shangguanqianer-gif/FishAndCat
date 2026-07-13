@@ -111,6 +111,9 @@ class LoadState(Enum):
     EXTENDED_HOLD = "extended_hold"      # place-extend 完成：Right 保持、Lift 仍 True、待视觉门
     RECOVERY_UNSAFE = "recovery_unsafe"
     PLACED_PENDING = "placed_pending"
+    # place-lower 无 Z 且零行程自检通过：货物疑似已被货架梁支撑（0713 根因）；
+    # 只能由 retract 的人工视觉门或 mark-fault 消费。
+    LOWER_STALLED = "lower_stalled"
     PLACED = "placed"
 
 
@@ -494,6 +497,7 @@ class Stacker:
                 LoadState.UNKNOWN,
                 LoadState.CARRYING,
                 LoadState.EXTENDED_HOLD,
+                LoadState.LOWER_STALLED,
                 LoadState.RECOVERY_UNSAFE,
             )
         errors = []
@@ -943,7 +947,16 @@ class Stacker:
         )
 
     def place_lower(self, cell: int) -> None:
-        """G4 第二段：视觉门通过后才下放；无 Z 即持久故障锁。"""
+        """G4 第二段：视觉门通过后才下放。
+
+        0713 15:16 根因裁决（media/g4_evidence_0713/）：带载时托盘在
+        place-extend 后往往已接触货架梁，下放行程≈0，物理引擎不产生
+        Moving Z——「NO START」在此形态下是放置成功而非故障（凌晨事故
+        正是把它误判为故障后用 recover 把已放好的货拉回导致的）。
+        因此 NO START 且现场保守自检通过 -> LOWER_STALLED 保持现场，
+        由 retract 的 --confirm-placement 人工视觉门做最终裁决（画面
+        为准）；自检不过或其他异常仍 fail-closed 落持久锁。
+        """
         if not 1 <= cell <= 54:
             raise ValueError(f"cell must be 1..54, got {cell}")
         if self.load_state != LoadState.EXTENDED_HOLD:
@@ -956,33 +969,65 @@ class Stacker:
                 f"confirmed={self.position_hint}, cell={cell}"
             )
         self.assert_fork_position(IN_AT_RIGHT, "Right")
-        print(f"* 放箱-下放段：Lift=False，要求真实 Z 边沿（货位 {cell}）")
+        print(f"* 放箱-下放段：Lift=False，期待 Z 边沿或零行程停驻（货位 {cell}）")
         self.coil(C_LIFT, False)
-        # 空载 A 探针已实测 Right=True 时下降会出现真实 Z 边沿；任何 NO START
-        # 都是物理状态失配 -> 持久故障锁（fail-closed，跨进程不可绕过）。
         try:
             self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
         except RuntimeError as exc:
-            if "NO START" in str(exc):
-                fault_lock.record_fault(
-                    fault_lock.FAULT_LIFT_POSITION_UNKNOWN,
-                    cell=cell,
-                    detail=(
-                        "place-lower wrote Lift=False but Moving Z never "
-                        f"started: {exc}"
-                    ),
-                    context={"phase": "place-lower"},
-                )
+            if "NO START" not in str(exc):
+                raise
+            if self._zero_drop_hold_confirmed():
+                self.load_state = LoadState.LOWER_STALLED
                 print(
-                    "PERSISTENT FAULT LOCK: LIFT_POSITION_UNKNOWN recorded; "
-                    "save evidence, exit and FULLY restart Factory I/O"
+                    "ZERO-DROP CANDIDATE: no Z travel and the site is held "
+                    "stable (Right one-hot, C3 hold, still). The pallet is "
+                    "likely already resting on the rack beams. VISUALLY "
+                    "confirm rack support, then run: diagnose retract "
+                    f"{cell} --confirm-placement --confirm-position; if the "
+                    "cargo is NOT supported, run mark-fault instead."
                 )
+                return
+            fault_lock.record_fault(
+                fault_lock.FAULT_LIFT_POSITION_UNKNOWN,
+                cell=cell,
+                detail=(
+                    "place-lower wrote Lift=False, Moving Z never started "
+                    f"and the stalled-site self-check failed: {exc}"
+                ),
+                context={"phase": "place-lower"},
+            )
+            print(
+                "PERSISTENT FAULT LOCK: LIFT_POSITION_UNKNOWN recorded; "
+                "save evidence, exit and FULLY restart Factory I/O"
+            )
             raise
         print(f"* placement settle dwell: {PLACEMENT_SETTLE_DWELL:.1f}s")
         time.sleep(PLACEMENT_SETTLE_DWELL)
         self.assert_placement_hold_ready()
         self.load_state = LoadState.PLACED_PENDING
         print("PLACEMENT HOLD: inspect rack support before running retract")
+
+    def _zero_drop_hold_confirmed(self) -> bool:
+        """NO START 后的保守自检：现场必须与「零行程停驻」完全一致。
+
+        任何读取失败或状态偏离都返回 False（调用方落持久锁）。这里只证明
+        执行器/传感器一致性；货物是否真的被货架梁支撑仍必须由 retract 前
+        的人工视觉门确认。
+        """
+        try:
+            snap = self.snapshot()
+        except Exception:
+            return False
+        fork_bits = self._fork_bits_from_snapshot(snap)
+        return (
+            fork_bits == (False, False, True)
+            and not snap["inputs"][IN_MOVING_X]
+            and not snap["inputs"][IN_MOVING_Z]
+            and snap["coils"][C_FORKS_R]
+            and not snap["coils"][C_FORKS_L]
+            and not snap["coils"][C_LIFT]
+            and snap["target"] == 0
+        )
 
     def recover_place_hold_lift(self, cell: int) -> None:
         """place 无 Z 边沿后的第一道恢复门：保持伸叉，只恢复 Lift=True。"""
@@ -1300,10 +1345,23 @@ def _prepare_diagnostic(stacker: Stacker, args: argparse.Namespace) -> None:
             raise RuntimeError(
                 f"--confirm-position required: visually confirm crane at cell {args.cell}"
             )
+        # place-lower 的两种合法收尾：真实 Z 下放（placed_pending）或
+        # 0713 根因的零行程停驻（lower_stalled，货物支撑由本相位的
+        # --confirm-placement 人工视觉门最终裁决）。
+        persisted = fault_lock.load_state().get("last_phase") or {}
+        persisted_load = persisted.get("load_state")
+        if persisted_load not in (
+            LoadState.PLACED_PENDING.value,
+            LoadState.LOWER_STALLED.value,
+        ):
+            raise RuntimeError(
+                "persisted phase gate failed: load_state="
+                f"{persisted_load} expected placed_pending/lower_stalled"
+            )
         fault_lock.require_last_phase(
             "place-lower",
             cell=args.cell,
-            load_state_value=LoadState.PLACED_PENDING.value,
+            load_state_value=persisted_load,
             fork_hold=C_FORKS_R,
             lift_command=False,
         )

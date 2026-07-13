@@ -298,13 +298,14 @@ class SequenceContractTests(unittest.TestCase):
         stacker.assert_placement_hold_ready.assert_called_once_with()
         self.assertEqual(stacker.load_state, f3.LoadState.PLACED_PENDING)
 
-    def test_place_lower_no_z_records_persistent_fault(self):
+    def test_place_lower_no_z_with_failed_selfcheck_records_persistent_fault(self):
         stacker = self.make_stacker()
         stacker.load_state = f3.LoadState.EXTENDED_HOLD
         stacker.position_hint = 30
         stacker.wait_motion_cycle.side_effect = RuntimeError(
             "NO START(3.0s): lower load"
         )
+        stacker._zero_drop_hold_confirmed = Mock(return_value=False)
 
         with patch("f3_stacker_control.fault_lock.record_fault") as record:
             with self.assertRaisesRegex(RuntimeError, "NO START"):
@@ -315,6 +316,51 @@ class SequenceContractTests(unittest.TestCase):
             record.call_args.args[0], f3.fault_lock.FAULT_LIFT_POSITION_UNKNOWN
         )
         self.assertEqual(record.call_args.kwargs["cell"], 30)
+
+    def test_place_lower_no_z_with_stable_site_enters_lower_stalled(self):
+        """0713 根因语义：零行程停驻=疑似放置成功，保持现场不落锁。"""
+        stacker = self.make_stacker()
+        stacker.load_state = f3.LoadState.EXTENDED_HOLD
+        stacker.position_hint = 30
+        stacker.wait_motion_cycle.side_effect = RuntimeError(
+            "NO START(3.0s): lower load"
+        )
+        stacker._zero_drop_hold_confirmed = Mock(return_value=True)
+
+        with patch("f3_stacker_control.fault_lock.record_fault") as record:
+            stacker.place_lower(30)  # 不应 raise
+
+        record.assert_not_called()
+        self.assertEqual(stacker.load_state, f3.LoadState.LOWER_STALLED)
+        stacker.coil.assert_called_once_with(f3.C_LIFT, False)
+        stacker.release_forks_to_middle.assert_not_called()
+
+    def test_zero_drop_selfcheck_truth_table(self):
+        stacker = f3.Stacker.__new__(f3.Stacker)
+
+        def snap(fork_bits=(False, False, True), moving=(False, False),
+                 c2=False, c3=True, lift=False, target=0):
+            inputs = [False] * len(f3.INPUT_NAMES)
+            inputs[f3.IN_AT_LEFT], inputs[f3.IN_AT_MIDDLE], inputs[f3.IN_AT_RIGHT] = fork_bits
+            inputs[f3.IN_MOVING_X], inputs[f3.IN_MOVING_Z] = moving
+            coils = [False] * len(f3.COIL_NAMES)
+            coils[f3.C_FORKS_L], coils[f3.C_FORKS_R], coils[f3.C_LIFT] = c2, c3, lift
+            return {"inputs": inputs, "coils": coils, "target": target}
+
+        stacker.snapshot = Mock(return_value=snap())
+        self.assertTrue(stacker._zero_drop_hold_confirmed())
+        for bad in (
+            snap(fork_bits=(False, True, False)),      # 叉不在 Right
+            snap(moving=(False, True)),                 # 仍在动
+            snap(c3=False),                             # 保持丢失
+            snap(c2=True),                              # 双叉
+            snap(lift=True),                            # Lift 命令未落
+            snap(target=30),                            # Target 未清
+        ):
+            stacker.snapshot = Mock(return_value=bad)
+            self.assertFalse(stacker._zero_drop_hold_confirmed())
+        stacker.snapshot = Mock(side_effect=RuntimeError("link down"))
+        self.assertFalse(stacker._zero_drop_hold_confirmed())
 
     def test_retract_requires_explicit_operator_confirmation(self):
         stacker = self.make_stacker()
@@ -770,7 +816,14 @@ class ParserTests(unittest.TestCase):
         )
 
     @patch("f3_stacker_control.fault_lock.require_last_phase")
-    def test_retract_requires_persisted_lower_chain(self, require_phase):
+    @patch("f3_stacker_control.fault_lock.load_state")
+    def test_retract_requires_persisted_lower_chain(self, load_state, require_phase):
+        load_state.return_value = {
+            "last_phase": {
+                "phase": "place-lower",
+                "load_state": f3.LoadState.PLACED_PENDING.value,
+            },
+        }
         args = f3.build_parser().parse_args([
             "diagnose", "retract", "30", "--confirm-position", "--confirm-placement",
         ])
@@ -783,6 +836,45 @@ class ParserTests(unittest.TestCase):
             fork_hold=f3.C_FORKS_R,
             lift_command=False,
         )
+
+    @patch("f3_stacker_control.fault_lock.require_last_phase")
+    @patch("f3_stacker_control.fault_lock.load_state")
+    def test_retract_accepts_zero_drop_lower_stalled_chain(self, load_state, require_phase):
+        """0713 根因：place-lower 零行程停驻后 retract 必须可达（人工视觉门裁决）。"""
+        load_state.return_value = {
+            "last_phase": {
+                "phase": "place-lower",
+                "load_state": f3.LoadState.LOWER_STALLED.value,
+            },
+        }
+        args = f3.build_parser().parse_args([
+            "diagnose", "retract", "30", "--confirm-position", "--confirm-placement",
+        ])
+        stacker = Mock()
+        f3._prepare_diagnostic(stacker, args)
+        require_phase.assert_called_once_with(
+            "place-lower",
+            cell=30,
+            load_state_value=f3.LoadState.LOWER_STALLED.value,
+            fork_hold=f3.C_FORKS_R,
+            lift_command=False,
+        )
+
+    @patch("f3_stacker_control.fault_lock.require_last_phase")
+    @patch("f3_stacker_control.fault_lock.load_state")
+    def test_retract_rejects_other_persisted_load_states(self, load_state, require_phase):
+        load_state.return_value = {
+            "last_phase": {
+                "phase": "place-lower",
+                "load_state": f3.LoadState.EXTENDED_HOLD.value,
+            },
+        }
+        args = f3.build_parser().parse_args([
+            "diagnose", "retract", "30", "--confirm-position", "--confirm-placement",
+        ])
+        with self.assertRaisesRegex(RuntimeError, "placed_pending/lower_stalled"):
+            f3._prepare_diagnostic(Mock(), args)
+        require_phase.assert_not_called()
 
     def test_reset_epoch_requires_visual_emitter_and_traceable_note(self):
         stacker = Mock()
