@@ -212,6 +212,33 @@ class SequenceContractTests(unittest.TestCase):
 
         stacker.check_safety_inputs.assert_called_with(require_running=False)
 
+    def test_pick_diagnostic_reuses_only_confirmed_staged_box(self):
+        stacker = self.make_stacker()
+        stacker.box_at_load.return_value = True
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+        stacker.observe_phase = Mock()
+
+        stacker.run_diagnostic(
+            "pick", 1, observe_seconds=2.0, cargo_confirmed=True
+        )
+
+        stacker.feed_one_box.assert_not_called()
+        stacker.pick_from_load.assert_called_once_with()
+        stacker.observe_phase.assert_called_once_with("G2_PICK", 2.0)
+
+    def test_pick_diagnostic_rejects_unconfirmed_staged_box(self):
+        stacker = self.make_stacker()
+        stacker.box_at_load.return_value = True
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+
+        with self.assertRaisesRegex(RuntimeError, "--confirm-cargo required"):
+            stacker.run_diagnostic("pick", 1)
+
+        stacker.feed_one_box.assert_not_called()
+        stacker.pick_from_load.assert_not_called()
+
     def test_travel_diagnostic_does_not_repeat_feed_or_pick(self):
         stacker = self.make_stacker()
         stacker.load_state = f3.LoadState.CARRYING

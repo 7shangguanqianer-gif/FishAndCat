@@ -620,6 +620,7 @@ class Stacker:
         cell: int,
         observe_seconds: float = 0.0,
         *,
+        cargo_confirmed: bool = False,
         placement_confirmed: bool = False,
     ) -> None:
         if phase not in DIAGNOSTIC_PHASES:
@@ -628,7 +629,16 @@ class Stacker:
             self.feed_one_box()
             self.observe_phase("G1_FEED", observe_seconds)
         elif phase == "pick":
-            self.feed_one_box()
+            if self.box_at_load():
+                if not cargo_confirmed:
+                    raise RuntimeError(
+                        "--confirm-cargo required: visually confirm the staged load "
+                        "before reusing G1 evidence"
+                    )
+                self.load_state = LoadState.STAGED
+                print("OPERATOR GATE: reuse visually confirmed G1 staged cargo")
+            else:
+                self.feed_one_box()
             self.pick_from_load()
             self.observe_phase("G2_PICK", observe_seconds)
         elif phase == "travel":
@@ -728,6 +738,7 @@ def main() -> None:
                 args.phase,
                 args.cell,
                 args.observe_seconds,
+                cargo_confirmed=args.confirm_cargo,
                 placement_confirmed=args.confirm_placement,
             )
             stacker.safe_stop()
