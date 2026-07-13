@@ -255,6 +255,28 @@ class SequenceContractTests(unittest.TestCase):
         stacker.store_one.assert_called_once_with(54)
         stacker.feed_one_box.assert_not_called()
 
+    def test_observation_hold_emits_snapshot_and_waits(self):
+        stacker = self.make_stacker()
+        stacker.print_snapshot = Mock()
+        stacker.check_interlocks = Mock()
+
+        with patch("f3_stacker_control.time.sleep") as sleep:
+            stacker.observe_phase("G2_PICK", 0.2)
+
+        stacker.print_snapshot.assert_called_once_with("OBSERVE G2_PICK")
+        self.assertGreaterEqual(sleep.call_count, 1)
+
+    def test_diagnostic_pick_observes_before_return(self):
+        stacker = self.make_stacker()
+        stacker.feed_one_box = Mock()
+        stacker.pick_from_load = Mock()
+        stacker.observe_phase = Mock()
+
+        stacker.run_diagnostic("pick", 1, observe_seconds=20.0)
+
+        stacker.pick_from_load.assert_called_once_with()
+        stacker.observe_phase.assert_called_once_with("G2_PICK", 20.0)
+
     def test_acceptance_cells_cover_near_middle_far_extremes(self):
         self.assertEqual(f3.ACCEPTANCE_CELLS, (1, 30, 54))
 

@@ -383,19 +383,39 @@ class Stacker:
         self.goto(POS_REST, "(cycle complete)")
         print(f"=== 货位 {cell} 单箱流程完成 ===\n")
 
-    def run_diagnostic(self, phase: str, cell: int) -> None:
+    def observe_phase(self, label: str, seconds: float) -> None:
+        """在主流程清理输出前保留现场，供 GUI Pause 和固定机位取证。"""
+        if seconds <= 0:
+            return
+        self.print_snapshot(f"OBSERVE {label}")
+        print(f"OBSERVE WINDOW {label}: {seconds:.1f}s; pause Factory I/O now")
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            self.check_interlocks()
+            time.sleep(min(0.10, max(0.0, deadline - time.monotonic())))
+
+    def run_diagnostic(
+        self,
+        phase: str,
+        cell: int,
+        observe_seconds: float = 0.0,
+    ) -> None:
         if phase not in DIAGNOSTIC_PHASES:
             raise ValueError(f"invalid diagnostic phase: {phase}")
         if phase == "store":
             self.store_one(cell)
+            self.observe_phase("G4_STORE", observe_seconds)
             return
         self.feed_one_box()
         if phase == "feed":
+            self.observe_phase("G1_FEED", observe_seconds)
             return
         self.pick_from_load()
         if phase == "pick":
+            self.observe_phase("G2_PICK", observe_seconds)
             return
         self.travel_loaded_to(cell)
+        self.observe_phase("G3_TRAVEL", observe_seconds)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -413,6 +433,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose = sub.add_parser("diagnose")
     diagnose.add_argument("phase", choices=DIAGNOSTIC_PHASES)
     diagnose.add_argument("cell", type=int, nargs="?", default=1)
+    diagnose.add_argument("--observe-seconds", type=float, default=0.0)
 
     sub.add_parser("accept")
     return parser
@@ -450,7 +471,7 @@ def main() -> None:
                 stacker.store_one(cell)
         elif mode == "diagnose":
             stacker.assert_action_ready()
-            stacker.run_diagnostic(args.phase, args.cell)
+            stacker.run_diagnostic(args.phase, args.cell, args.observe_seconds)
         elif mode == "accept":
             stacker.assert_action_ready()
             for cell in ACCEPTANCE_CELLS:
