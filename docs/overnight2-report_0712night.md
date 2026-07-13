@@ -152,6 +152,18 @@
   - **绿箱破案**：出口带上的"绿色遗留箱"实为 **Remover 部件的可视化图标**（虚线框+示例箱体）——场景文件无货物对象+删除"绿箱"时虚线框同消失（当时删的是 Remover 本体，**万幸未 Save**）+重载随部件重现。教训：**EDIT 模式删除任何对象前必须核对部件名**；「视觉空场确认」要认识部件可视化。
   - H3 就绪证据：堆垛机重载后复位 rest/载入位（F12 `14_53_17.png`）→ --confirm-rest 视觉证据成立。出箱路径=emitter-pulse（BoxM 单一箱型）→diagnose feed。
 
+- **14:55-15:30 H3 单箱全链 + G4 事故复现 + 根因级突破（F3 最重要的一段）**：
+  - **G1 PASS**：emitter-pulse 6s 出单件（MinTimeToEmit=4 决定窗口下限；恰 1 件 Pallet+BoxM，箱型固定生效；**我修的 _emitter_state 读回校验现场零误报**）→feed 4.91s 边沿→停带防抖→2s 落稳。
+  - **G2 pick PASS（0713 事故相位未复现）**：Left 伸叉 2.14s→**lift load 真实 Z 边沿（0.12s/2.11s）**→At Load 清→回中→ACTUATOR GATE OK；F12 连拍视觉门确认托盘+箱在承载台、姿态正常（证据 `media/g4_evidence_0713/G2_pick_带载确认_145804.png`）。
+  - **G3 travel PASS（cell 30 掉箱事故未复现）**：crane→30 4.0s 到位、Lift 保持、到位后视觉确认托盘+箱在高层承载台完好。
+  - **G4 place-extend PASS**：Right one-hot 2.11s、C3 保持、Lift 分毫未写、EXTENDED HOLD 保留。clearance 视觉门降级为 I/O 组合证据（**Deviation：拍板#1 视觉门降级一次**——相机盲飞导航三连败+EXTENDED_HOLD 挂线时间风险；后被 `camera.position_index` 方案根治，见下）。
+  - **G4 place-lower：0713 事故在干净单变量条件下复现**——Lift=False 后 Moving Z 无边沿（NO START 3.0s）→LIFT_POSITION_UNKNOWN 落锁+safe_stop 真值表确认 C3 保持拒绝回抽（货物未被拉回，安全门全程正确）。
+  - **根因级裁决（三重证据）**：①空载同命令序列 Z 正常启动（mechanics A，0.078s）vs 带载无 Z——唯一差异=载荷；②视觉铁证（`camera.position_index=4` 走廊全景机位）：**托盘+箱已在 cell 30 格位、承载台已空、姿态正常**（`media/g4_evidence_0713/G4_lower_NOSTART_cell30_全景_152304.png` + 裁剪图）；③锁定态现场稳定复核。**结论：place-lower 的下放行程被「托盘-货架梁接触」截断≈0 → 物理引擎不产生 Moving Z → 放置物理成功但代码把成功当故障（零行程放置语义缺失）**。
+  - **0713 凌晨事故全链因果闭合**：cell 1 G4 NO START=同一零行程现象（放置其实已成功）→当时误判故障走 recover-lift（Lift=True **把已放好的货重新抬起**）+recover-retract（拉回承载台）→恢复途中姿态劣化→带载去 cell 30 途中掉落。**祸根是恢复操作本身**——M1 采纳「完全重启/清场策略、下架 recover-*」在根因层面也是对的。
+  - **工具链突破：`camera.position_index = N`（console API）数值化跳转 7 个保存机位**，彻底替代盲飞导航（盲飞五连败教训）；console `print_help()` 全库入账：`scene.capture_screenshot`/`scene.current_item_count`（空场验证利器）/`scene.debug_emitter_remover`（绿箱=Remover 可视化的官方开关佐证）/`camera.position_cycle_interval`。**console 纪律**：console 聚焦时 backslash=打字不是关闭，关 console 只用点 X；F12 在 console 焦点下不触发。
+  - 官方时序文档查证：docs.factoryio.com 403、社区帖无下放时序细节、场景 Instructor 节点为空——官方佐证后补（社区有"到位后托盘晃动/掉落"同类反馈：community.factoryio.com/t/help-with-stacker-crane/1954）。
+  - **下一步**：place_lower 语义修复（NO START→LOWER_STALLED 保持现场不落锁不破坏、由 retract 的 --confirm-placement 视觉门接住；其余异常仍 fail-closed）→测试→Codex 复核任务书→重启循环全链验证（G1→G4→retract 首次完整放箱）。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
