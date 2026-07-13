@@ -164,6 +164,15 @@
   - 官方时序文档查证：docs.factoryio.com 403、社区帖无下放时序细节、场景 Instructor 节点为空——官方佐证后补（社区有"到位后托盘晃动/掉落"同类反馈：community.factoryio.com/t/help-with-stacker-crane/1954）。
   - **下一步**：place_lower 语义修复（NO START→LOWER_STALLED 保持现场不落锁不破坏、由 retract 的 --confirm-placement 视觉门接住；其余异常仍 fail-closed）→测试→Codex 复核任务书→重启循环全链验证（G1→G4→retract 首次完整放箱）。
 
+- **15:37-16:00 全链验证轮：零行程假设被 retract 证伪 + 官方语义拿到 + P1 测量（认知大反转，如实记录）**：
+  - H1.2（`fa49c08`，126/126）现场首验：place-lower 报 ZERO-DROP CANDIDATE、保持现场不落锁 ✓（新语义机制本身工作正常）；retract 链二值兼容 ✓；**retract 收叉后终验帧（15:42:06）显示托盘+箱跟着叉回到承载台——没有留在格内**。
+  - **误读更正**：15:23/15:40 的"货在格位、承载台空"判读是错的——那是**叉带着货伸进格位上方**的画面（叉伸出去所以承载台看着空）。零行程"放置已成功"不成立。**好消息：货全程无掉落**（叉抽回=带货回中，货完好回到承载台）。
+  - **官方一手语义（docs.factoryio.com/manual/parts/stations）**：`Lift = "Slightly raises the platform for loading/unloading operations"`（微抬位）；**`Number of cells: 18`/rack**——54 格=3 段 Rack 拼接（XML 3 个 Rack 部件吻合）；**官方强调 "Each rack must be aligned with one of the rail ends, making the stacker crane stop at the correct position"**——rack 对齐直接决定停止位正确性（Codex 几何假设的官方依据）。我们的放箱时序（extend→Lift False→retract）与官方语义一致，理论正确。
+  - **P1 测量（带载+Middle，Web API force Lift）**：True/False 双向均无 Moving Z（force 生效已确认）。对照矩阵：空载 Middle 抬↑有 Z（A 基线）/空载 Right 降↓有 Z（A 实验）/**带载任何姿态任何方向=无 Z**（G4+P1）。pick 的 Lift True 有 Z 不矛盾（那一刻是空载→带载的转变沿）。
+  - **统一失配链候选**：place-lower 的 Lift False 从未物理执行→平台滞留微抬位→凌晨 postF6 G2 的"Lift True 无 Z"=no-op（已在高位）——全部事故一条失配链。剩余两个终极假设：①debug 场景 rack 对齐/停止高度坏（官方警告的对齐问题）②Factory I/O 引擎带载 Lift 抑制（则放箱需重新设计时序）。
+  - **P3 终极对照实验（下一循环）**：重启（顺带清 Lift 的 force 残留）→载入**官方库原版** Automated Warehouse（非 My Scenes 副本——凌晨几何复核只证明了两个副本互相一致，不代表与官方模板一致）→原版预置托盘上用 Web API force 驱动完整取/放序列→原版有 Z=我们场景坏（修场景/换基线）；原版同样无 Z=引擎行为（重设计时序）。
+  - Deviation 补记：P1 使用 Web API force 作为研究测量通道（受控+记录+重启清除），非绕锁作业。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
