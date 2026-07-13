@@ -18,6 +18,7 @@ class SequenceContractTests(unittest.TestCase):
         stacker.wait_motion_cycle = Mock()
         stacker.wait_stable = Mock()
         stacker.box_at_load = Mock(return_value=True)
+        stacker.assert_loaded_transport_ready = Mock()
         return stacker
 
     def test_pick_uses_left_forks_then_lifts_and_centers(self):
@@ -141,6 +142,46 @@ class SequenceContractTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "Moving X/Z"):
             stacker.assert_action_ready()
+
+    def test_loaded_transport_gate_rejects_unsafe_state(self):
+        stacker = f3.Stacker.__new__(f3.Stacker)
+        inputs = [False] * len(f3.INPUT_NAMES)
+        inputs[f3.IN_AT_MIDDLE] = True
+        inputs[f3.IN_AT_LOAD] = True
+        coils = [False] * len(f3.COIL_NAMES)
+        coils[f3.C_LIFT] = False
+        stacker.snapshot = Mock(return_value={
+            "inputs": inputs,
+            "coils": coils,
+            "target": 0,
+        })
+
+        with self.assertRaisesRegex(RuntimeError, "Lift=True"):
+            stacker.assert_loaded_transport_ready()
+
+    def test_loaded_transport_gate_accepts_middle_lifted_and_load_clear(self):
+        stacker = f3.Stacker.__new__(f3.Stacker)
+        inputs = [False] * len(f3.INPUT_NAMES)
+        inputs[f3.IN_AT_MIDDLE] = True
+        inputs[f3.IN_AT_LOAD] = True
+        coils = [False] * len(f3.COIL_NAMES)
+        coils[f3.C_LIFT] = True
+        stacker.snapshot = Mock(return_value={
+            "inputs": inputs,
+            "coils": coils,
+            "target": 0,
+        })
+
+        stacker.assert_loaded_transport_ready()
+
+    def test_travel_checks_loaded_gate_before_motion(self):
+        stacker = self.make_stacker()
+        stacker.assert_loaded_transport_ready = Mock()
+
+        stacker.travel_loaded_to(30)
+
+        stacker.assert_loaded_transport_ready.assert_called_once_with()
+        stacker.goto.assert_called_once_with(30, "(loaded travel to cell 30)")
 
     def test_pick_does_not_lower_or_sleep_before_loaded_travel(self):
         stacker = self.make_stacker()

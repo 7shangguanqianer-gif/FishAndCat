@@ -165,6 +165,26 @@ class Stacker:
             )
         print("PREFLIGHT OK: settled, forks Middle, C0..C6=False")
 
+    def assert_loaded_transport_ready(self) -> None:
+        """带载移动前只放行已抬起、回中并离开载入位的控制状态。"""
+        snap = self.snapshot()
+        problems = []
+        if not snap["inputs"][IN_AT_MIDDLE]:
+            problems.append("forks are not Middle")
+        if snap["inputs"][IN_MOVING_X] or snap["inputs"][IN_MOVING_Z]:
+            problems.append("crane still moving")
+        if not snap["inputs"][IN_AT_LOAD]:
+            problems.append("At Load still blocked")
+        if not snap["coils"][C_LIFT]:
+            problems.append("Lift=True required for loaded travel")
+        if snap["coils"][C_FORKS_L] or snap["coils"][C_FORKS_R]:
+            problems.append("fork outputs must be False at Middle")
+        if problems:
+            raise RuntimeError(
+                "loaded transport gate failed: " + "; ".join(problems)
+            )
+        print("LOADED GATE OK: Middle, Lift=True, At Load clear")
+
     # ---- 等待与安全 ----
     def wait_stable(
         self,
@@ -341,6 +361,7 @@ class Stacker:
     def travel_loaded_to(self, cell: int) -> None:
         if not 1 <= cell <= 54:
             raise ValueError(f"cell must be 1..54, got {cell}")
+        self.assert_loaded_transport_ready()
         self.goto(cell, f"(loaded travel to cell {cell})")
 
     def store_to(self, cell: int) -> None:
