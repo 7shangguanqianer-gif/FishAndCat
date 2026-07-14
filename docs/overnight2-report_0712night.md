@@ -187,6 +187,12 @@
   - **H5 9/9 验收全部通过（19:09-19:18，混出箱型按拍板#5 恢复）**：cell 1/30/54 各 3 次完整链（pulse→feed→pick→travel→place-extend→place-lower→retract），全部 PLACEMENT VERIFIED+SAFE STOP VERIFIED；lower 真实 Z 启动 0.06-0.14s；**零故障零掉箱零落锁**。66 份 diagnose 日志（logs/）+抽查帧+终验帧（`media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png`）。
   - **F3 签绿（A2 授权：9/9 通过→自主签绿）**。口径不变：Python 直控技术预演/54 格代表性物理 I/O 与时序验证。悬置：正式素材（干净画面链）在 F4 前补录；Codex F3 复核任务书随后签发（新常态拍板#10）。
 
+- **19:20-19:45 素材补录 + F4 3b 完成（负结果+替代路线）**：
+  - **素材**：cell 30 完整链 F12 连拍 40 帧+ffmpeg 合成 `media/F3_素材_cell30全链_0713/F3_cell30_全链素材.mp4`（0.4MB，本地不入库；踩坑：1200×767 高度奇数需 pad=1200:768）。
+  - **F4 3b（成败均档→负结果实锤）**：AB 项目备份后加 Symbol Configuration（OPC UA features ✓，发布 GVL_Data/Param/WH）→Build 0 errors→Login+下载仿真 PLC→RUN 全部成功；但 4840 未监听，**组件级证据**：VirtualAC500_V3 runtime 目录 0 个 OPC 文件+CODESYSControl.cfg 104 组件无 CmpOPCUAServer——**仿真 runtime 无 OPC UA server 组件，非配置问题**。全记录 `l2_factoryio/3b_ab_opcua_实验记录.md`。
+  - **F5 路线改判**：原「Factory I/O OPC client 直连 AB」不可行（server 侧不存在）+CODESYS 兜底不可行（未装+下载需注册）。**新路线组件级可行**：runtime 含 SysSocket/SysSocketABB → **AC500 ST 用 Modbus TCP client 库直连 Factory I/O Modbus server（127.0.0.1:502）**——AC500 仿真作为主站直接驱动仓储仿真，叙事上比 OPC 中转更贴比赛主线。F5 实测该路线。
+  - Symbol Configuration 保留（实机部署直接可用）；AB 项目改动备份 `.bak_0713_F4`。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
