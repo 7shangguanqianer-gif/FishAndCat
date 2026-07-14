@@ -232,6 +232,12 @@
   - **过程杂项**：仿真模式实测 **2h 上限自停**（解开 20:33"No connection"之谜——当时是仿真到时不是网络故障）；Simulation 取消再勾选+Login 可重启新实例满血 2h；AB 编辑两次误操作（open_application 误拉第三实例→Stop-Process 清理；双击坐标漂移把 ParallelProcessing 换成 502→整段重贴修复）——AB 的 GUI 自动化再次验证"能整段贴就不逐 token 改"。
   - **反思行（本段）**：①对抗复核的价值第二次兑现——"设备树为空"是我上轮完全漏看的配置面，Codex 从官方 PDF 挖出来；②差分实验（可达 vs 不可达端口）一次就把"栈死 vs 远端问题"劈开，比堆重试有效得多；③"重做完不自签、回交二审"执行到位——上轮教训（自签边界被打回）没有重犯。
 
+- **23:45-00:10 C6 双栈 demo 交付桌面评审夹（任务#16 收口，等用户选栈+视角）**：
+  - **PyVista 栈**（`l2_factoryio/c6_demo_pyvista.py`）：20×20 逻辑仓+骨架+琥珀 I/O 口,真实 AWRA CSV 120 件逐件入库(琥珀闪入→重量蓝三档定格),缓慢环绕运镜+中文 KPI 浮层(微软雅黑 font_file)→ `awra_布局成形_12s.mp4`(288帧@24fps, 2.8MB)+三候选视角静帧。**踩坑记录**:①`open_movie` 需 `imageio` 包(imageio-ffmpeg 不够)——且 `| tail` 管道吞了失败码,后台任务"exit 0"是假象,查产物才发现;②**off_screen 下改 camera_position 不自动重渲染**,screenshot 拿缓存帧(三视角 MD5 全同暴露)→ 每次设相机后显式 `pl.render()` 修复。
+  - **Three.js 栈**（`l2_factoryio/c6_demo_threejs_gen.py`→`awra_交互回放.html`）：同一 CSV 内嵌 JSON、同三视角参数(公平对比)、OrbitControls 拖拽、播放/暂停/重置、**captureStream+MediaRecorder 录制 15s→webm 按钮**;three.min.js r128+OrbitControls 从 npmmirror 本地化(零外网依赖)。无头验证:THREE r128/120 件/WebGL 全通,step() 逐步 API 驱动 120/120 逻辑正确;RAF 在遮挡标签被节流(面板环境限制,真浏览器无碍),toDataURL 在面板环境返回空——如实写进对比说明第 3 条。
+  - **交付**:`Desktop\C6_demo评审\{一页对比说明.md, PyVista\*, ThreeJS\*}`;作战面板 NOW 卡已指向评审夹(拍板格式="选 XX,视角 X");KPI 口径诚实声明(demo 的 9.52s=单程简单均值,非头条 exp_t)。
+  - **反思行(本段)**:①"exit 0 但无产物"教训——管道会吃退出码,后台长任务收口必须验产物存在性,不能只看退出码;②三文件 MD5 相同是比"看起来对"更硬的异常信号,离线渲染管线值得常备哈希自检;③两栈公平对比的关键是把"视角参数化"共享(同一 set_camera 数学),否则比的是运镜品味不是渲染栈。
+
 ## 五、待拍板清单
 - ~~C6 渲染层 D1-D4~~ → **0713 夜已全拍**（D1-C/D2-C/D3 双栈 demo/D4-C + 场景=20×20，见 22:25 段）。
 - ~~在线门线待真机~~ → **判决收回**：Codex 复核证明 F5 是用法缺陷未排除（设备树 Client Protocols+AbbETrig3 节奏），F5 重做已授权执行中，C4/C5/F6 改判"待 F5 重做结果"。
