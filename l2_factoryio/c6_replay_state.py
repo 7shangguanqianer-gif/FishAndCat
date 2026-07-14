@@ -80,6 +80,7 @@ class WarehouseFrame:
     attempt: int
     crane_cell: int | None            # 堆垛机当前服务的物理格（1..54），None=rest/出入口
     occupied_cells: frozenset[int]    # 该帧后已入库占用的物理格集合（1..54）
+    completed_so_far: int             # 截至该帧的累计完成任务数（吞吐曲线纵轴）
     fault_code: FaultCode
     message: str
 
@@ -108,6 +109,7 @@ class ReplaySummary:
     final_occupancy: int
     faults: tuple[FaultMark, ...]
     span_seconds: float | None        # 末帧-首帧秒数；时间戳不可解析时为 None
+    avg_cycle_seconds: float | None   # 完成任务的平均周期(首见→DONE)；无可解析时间戳时 None
 
 
 @dataclass(frozen=True)
@@ -121,6 +123,27 @@ class ReplayTimeline:
     def occupancy_series(self) -> list[int]:
         """每帧占用数序列——2D 仪表的占用曲线直接用。"""
         return [f.occupancy for f in self.frames]
+
+    def throughput_series(self) -> list[int]:
+        """每帧累计完成任务数序列——2D 仪表的吞吐曲线直接用。"""
+        return [f.completed_so_far for f in self.frames]
+
+    def task_cycle_seconds(self) -> dict[int, float]:
+        """{task_id: 周期秒数}——首见事件→DONE 事件，仅含时间戳可解析的完成任务。"""
+        first: dict[int, datetime] = {}
+        done: dict[int, datetime] = {}
+        for f in self.frames:
+            ts = _parse_ts(f.timestamp)
+            if ts is None:
+                continue
+            first.setdefault(f.task_id, ts)
+            if f.status is TaskStatus.DONE:
+                done[f.task_id] = ts
+        return {
+            tid: (done[tid] - first[tid]).total_seconds()
+            for tid in done
+            if tid in first
+        }
 
 
 def _parse_ts(ts: str) -> datetime | None:
@@ -142,6 +165,20 @@ def _span_seconds(frames: Sequence[WarehouseFrame]) -> float | None:
     return (last - first).total_seconds()
 
 
+def _avg_cycle_seconds(
+    first_seen_ts: dict[int, str], done_ts: dict[int, str]
+) -> float | None:
+    cycles: list[float] = []
+    for tid, done in done_ts.items():
+        t0 = _parse_ts(first_seen_ts.get(tid, ""))
+        t1 = _parse_ts(done)
+        if t0 is not None and t1 is not None:
+            cycles.append((t1 - t0).total_seconds())
+    if not cycles:
+        return None
+    return sum(cycles) / len(cycles)
+
+
 def build_replay(
     events: Iterable[TaskEvent],
     initial_occupancy: Iterable[int] | None = None,
@@ -155,17 +192,21 @@ def build_replay(
     frames: list[WarehouseFrame] = []
     faults: list[FaultMark] = []
     tasks_seen: set[int] = set()
+    first_seen_ts: dict[int, str] = {}      # task_id → 首见时间戳（算周期用）
+    done_ts: dict[int, str] = {}            # task_id → DONE 时间戳
     tasks_done = 0
     tasks_faulted = 0
 
     for seq, ev in enumerate(events):
         tasks_seen.add(ev.task_id)
+        first_seen_ts.setdefault(ev.task_id, ev.timestamp)
 
         if ev.status is TaskStatus.DONE:
             key = (ev.task_id, ev.request_seq)
             if key not in settled:
                 settled.add(key)
                 tasks_done += 1
+                done_ts[ev.task_id] = ev.timestamp
                 if ev.operation in (Operation.OUTBOUND, Operation.DUAL):
                     if ev.physical_source is not None:
                         occupied.discard(ev.physical_source)
@@ -195,6 +236,7 @@ def build_replay(
             attempt=ev.attempt,
             crane_cell=_crane_cell_for(ev),
             occupied_cells=frozenset(occupied),
+            completed_so_far=tasks_done,
             fault_code=ev.fault_code,
             message=ev.message,
         ))
@@ -208,6 +250,7 @@ def build_replay(
         final_occupancy=len(occupied),
         faults=tuple(faults),
         span_seconds=_span_seconds(frames),
+        avg_cycle_seconds=_avg_cycle_seconds(first_seen_ts, done_ts),
     )
     return ReplayTimeline(frames=tuple(frames), summary=summary)
 
@@ -233,6 +276,7 @@ def build_replay_from_jsonl(
 def _format_summary(timeline: ReplayTimeline) -> str:
     s = timeline.summary
     span = "n/a" if s.span_seconds is None else f"{s.span_seconds:.1f}s"
+    avg_cyc = "n/a" if s.avg_cycle_seconds is None else f"{s.avg_cycle_seconds:.1f}s"
     lines = [
         "=== C6 同源回放摘要 ===",
         f"事件/帧数    : {s.total_events}",
@@ -240,6 +284,7 @@ def _format_summary(timeline: ReplayTimeline) -> str:
         f"完成 / 故障  : {s.tasks_done} / {s.tasks_faulted}",
         f"末态占用格数 : {s.final_occupancy}",
         f"时间跨度     : {span}",
+        f"平均任务周期 : {avg_cyc}",
     ]
     if s.faults:
         lines.append(f"故障点({len(s.faults)}):")

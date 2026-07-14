@@ -161,6 +161,39 @@ def test_span_none_on_unparseable_ts():
     assert tl.summary.span_seconds is None
 
 
+def test_throughput_series_is_cumulative_done():
+    tl = build_replay([
+        _ev(1, TaskStatus.RUNNING, operation=Operation.INBOUND, physical_target=1),
+        _ev(1, TaskStatus.DONE, operation=Operation.INBOUND, physical_target=1),
+        _ev(2, TaskStatus.RUNNING, operation=Operation.INBOUND, physical_target=2),
+        _ev(2, TaskStatus.DONE, operation=Operation.INBOUND, physical_target=2),
+    ])
+    assert tl.throughput_series() == [0, 1, 1, 2]
+    assert tl.frames[-1].completed_so_far == 2
+
+
+def test_avg_cycle_and_per_task_cycles():
+    tl = build_replay([
+        _ev(1, TaskStatus.QUEUED, operation=Operation.INBOUND, physical_target=1,
+            ts="2026-07-14T02:00:00Z"),
+        _ev(1, TaskStatus.DONE, operation=Operation.INBOUND, physical_target=1,
+            ts="2026-07-14T02:00:10Z"),
+        _ev(2, TaskStatus.QUEUED, operation=Operation.INBOUND, physical_target=2,
+            ts="2026-07-14T02:00:00Z"),
+        _ev(2, TaskStatus.DONE, operation=Operation.INBOUND, physical_target=2,
+            ts="2026-07-14T02:00:20Z"),
+    ])
+    cycles = tl.task_cycle_seconds()
+    assert cycles == {1: 10.0, 2: 20.0}
+    assert tl.summary.avg_cycle_seconds == 15.0
+
+
+def test_avg_cycle_none_without_done():
+    tl = build_replay([_ev(1, TaskStatus.RUNNING, ts="2026-07-14T02:00:00Z")])
+    assert tl.summary.avg_cycle_seconds is None
+    assert tl.task_cycle_seconds() == {}
+
+
 def test_jsonl_roundtrip(tmp_path: Path):
     events = [
         _ev(1, TaskStatus.RUNNING, operation=Operation.INBOUND, physical_target=8),
