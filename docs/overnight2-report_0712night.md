@@ -193,6 +193,16 @@
   - **F5 路线改判**：原「Factory I/O OPC client 直连 AB」不可行（server 侧不存在）+CODESYS 兜底不可行（未装+下载需注册）。**新路线组件级可行**：runtime 含 SysSocket/SysSocketABB → **AC500 ST 用 Modbus TCP client 库直连 Factory I/O Modbus server（127.0.0.1:502）**——AC500 仿真作为主站直接驱动仓储仿真，叙事上比 OPC 中转更贴比赛主线。F5 实测该路线。
   - Symbol Configuration 保留（实机部署直接可用）；AB 项目改动备份 `.bak_0713_F4`。
 
+- **19:45-20:35 F5 联调：编译/加载级可行性证成 + 运行期连接负结果（冻结，全记录 `l2_factoryio/5_ac500_modbus_master_实验记录.md`）**：
+  - **AC500 仿真做 Modbus TCP 主站直驱 Factory I/O**（3b §4 替代路线）。新 POU `PRG_FIO_Bridge`（ModTcpConfig fbCfg + ModTcpMast fbRead/fbWrite；FC2 读 At Load + FC5 写 coil7=Start 指示灯心跳，无执行机构线圈），PLC_PRG 每周期调用。
+  - **编译期修复链**：`Eth:='ETH1'`(STRING)→`Eth:=0`(BYTE 接口索引)；触发字段 `Enable→Execute`（编译期确认 ModTcpMast/ModTcpConfig 均 EXTENDS AbbETrig3，全 5 处 Replace All）→**Build 0 errors**；Messages 大量 `Generate code for MODTCPMAST/MODTCPCONFIG/MODBUSTCPCLIENT` = **库成功编入应用**。
+  - **运行期实测（全下载+RUN，wCycle 652+ 正常循环）**：fbCfg **自报 `xCfgDone=TRUE + NO_ERROR + Port=502`**，但 fbRead 内部 **`ErrorID=ERR_INTERNAL_UNEXPECTED`、连接指针 `pFC22/pFC23=NULL`、`wPort/byUnitID/byFunctionCode=0`、`wReadOk` 恒 0**——**主站取不到连接资源，Modbus 事务从不完成**。接口输入全对（IPAdr=127.0.0.1/Fct=2/Addr=1/UnitID=1）。端口通道干净（502 LISTEN 无竞争、无 Python client、work_0713 server Started）。
+  - **一次运行期修复尝试（失败）**：原 `IF NOT xCfgDone` 只调用一次 fbCfg → 改**每扫描周期调用**（连接管理器须每周期运行）。改后 xCfgDone 仍 TRUE 但 pFC 仍 NULL、wReadOk 仍 0——**未解决**。
+  - **判决（与 F4 同构的仿真边界）**：主站库在 V3 仿真 **target 兼容**（编译+codegen+下载+加载+FB 执行全通过，**杀死 3b §4 最大开放风险**），但**实际主站连接在仿真运行期建不出**。两未定根因（需库示例/手册或真机区分）：①仿真 runtime 不支持出站 Modbus 主站连接（首选，pFC 恒 NULL 即证据）；②桥接异步 FB 经 xToggle 每隔一扫描才调用的节奏问题（次要，解释不了 pFC NULL）。
+  - **冻结依据**：三连败冻结纪律 + 无人值守保守原则（GUI 编辑本轮已一次误粘贴 PLC_PRG 后 Ctrl+Z 恢复——AB 剪贴板 type 会残留旧源码，改用 write_clipboard 逐串写入）。继续盲试须库官方示例/真机，超出无人值守安全边界。**不签绿；口径=技术预演+编译/加载级可行性已证+运行期连接待核**（禁称 AC500 闭环驱动/400 格孪生）。
+  - 产出：PRG_FIO_Bridge（0 errors 已保存）+PLC_PRG 增一行；备份 `.bak_0713_F5`；场景侧无改动。
+  - **反思行（本小时）**：负结果也是结果——F5 从"路线识别(3b §4)"推进到"编译/加载级可行性实证 + 运行期连接边界清晰刻画"，是真实增量。教训：①AB 在线 GUI 的多行选区+剪贴板 type 极易错，单行编辑+write_clipboard 才稳；②深库 FB 用法（config↔mast 链接约定）在无人值守下不宜盲试，该点名待用户在场；③配置块自报 Done/NO_ERROR ≠ 连接真建立，必看 mast 内部 pFC 指针——"自报成功"要用底层证据证伪。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
