@@ -53,10 +53,10 @@ OBJECTIVES = ["holistic", "lexicographic", "speed"]   # 检测器三档(F18-3:�
 FIXED = ["random", "seq", "near", "score", "awra", "cb", "tob"]
 
 
-def load_detail():
+def load_detail(path=DETAIL):
     """detail.csv → {(scenario, seed): {strat: row}};行内数值字段转 float/int。"""
     inst = defaultdict(dict)
-    with open(DETAIL, encoding="utf-8-sig") as fp:
+    with open(path, encoding="utf-8-sig") as fp:
         for r in csv.DictReader(fp):
             key = (r["scenario"], int(r["seed"]))
             inst[key][r["strat"]] = dict(exp_t=float(r["exp_t"]), fail=int(r["fail"]),
@@ -93,7 +93,11 @@ def _fmt(value, spec):
 
 
 def main():
-    inst = load_detail()
+    accel = "--accel" in sys.argv          # F2 补跑:读 H 口径 detail,输出 *_accel,不覆盖 legacy
+    suf = "_accel" if accel else ""
+    # 输入走 DETAIL(import 时冻结,测试可 patch OUT 只改输出而输入仍指真实 out/);accel 取同目录变体
+    in_path = DETAIL if not accel else os.path.join(os.path.dirname(DETAIL), "instgen_detail_accel.csv")
+    inst = load_detail(in_path)
     scenarios = sorted({k[0] for k in inst}, key=lambda s: list(ig.SCENARIOS).index(s))
     seeds = sorted({k[1] for k in inst})
     n_inst = len(inst)
@@ -190,8 +194,8 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     prof_rows = [dict(scenario=s, seed=sd, **profiles[(s, sd)]) for s in scenarios
                  for sd in seeds]
-    for fname, rows in (("oracle_gap_detail.csv", rows_detail), ("oracle_gap.csv", rows_agg),
-                        ("oracle_gap_profiles.csv", prof_rows)):
+    for fname, rows in ((f"oracle_gap_detail{suf}.csv", rows_detail), (f"oracle_gap{suf}.csv", rows_agg),
+                        (f"oracle_gap_profiles{suf}.csv", prof_rows)):
         with open(os.path.join(OUT, fname), "w", newline="", encoding="utf-8-sig") as fp:
             w = csv.DictWriter(fp, fieldnames=list(rows[0].keys()))
             w.writeheader(); w.writerows(rows)
@@ -256,8 +260,19 @@ def main():
     for scn in scenarios:
         picks = sorted(set(agg_acc[(scn, "det_lexicographic")]["strat"]))
         L.append(f"- {scn}: {' '.join(picks)}")
-    with open(os.path.join(OUT, "oracle_gap_summary.txt"), "w", encoding="utf-8") as fp:
+    with open(os.path.join(OUT, f"oracle_gap_summary{suf}.txt"), "w", encoding="utf-8") as fp:
         fp.write("\n".join(L) + "\n")
+
+    if accel:
+        # F2 补跑:只出数据与判读,跳过绘图(不覆盖 legacy fig13),打印口径对比摘要
+        _la = _mean_or_none(glob["det_lexicographic"]["attain"])
+        _ha = _mean_or_none(glob["det_holistic"]["attain"])
+        _sa = _mean_or_none(glob["det_speed"]["attain"])
+        print(f"[H口径 ACCEL] 检测器 attainment:lexicographic {_fmt(_la,'.2f')}% / "
+              f"holistic {_fmt(_ha,'.2f')}% / speed {_fmt(_sa,'.2f')}%;"
+              f"可比 lex {len(glob['det_lexicographic']['gap'])}/{len(glob['det_lexicographic']['total'])}")
+        print(f"输出:out/oracle_gap{suf}.csv / oracle_gap_summary{suf}.txt")
+        return
 
     # ---- fig13:左=检测器三档+SBS 逐场景 gap;右=7 固定策略全局 gap 排名 ----
     import matplotlib

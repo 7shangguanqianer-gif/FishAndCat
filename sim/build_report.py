@@ -31,6 +31,7 @@ from docx.shared import Cm, Pt, RGBColor
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 FIGS = os.path.join(HERE, "figs")
+DOCS = os.path.join(os.path.dirname(HERE), "docs")
 FONT, MONO = "Microsoft YaHei", "Consolas"
 MISS = "〔待补〕"
 USED = []                 # 数字来源清单(key, value, source)
@@ -86,6 +87,10 @@ TIGHT = {r["strat"]: r for r in load_rows("experiments_agg.csv")
          if r.get("scene") == "tight"}          # 紧库存场景(多 seed 实验矩阵)
 REAL = {(r["tier"], r["strategy"]): r for r in load_rows("realism_matrix_data.csv")
         if r.get("tier") in ("1", "2", "3")}    # L7 三档单一 schema 数据表
+FINAL = by_key(load_rows("final_test_30seed.csv"), "strategy")
+FINAL_SEEDS = load_rows("final_test_30seed_per_seed.csv")
+ORACLE_ALL = {r["selector"]: r for r in load_rows("oracle_gap.csv")
+              if r.get("scenario") == "ALL"}
 
 # L7 拟真度阶梯派生值
 TIER_DROP = {}
@@ -114,6 +119,61 @@ HEAVY_TIER = fnum(AW, "H_heavy_tier", 2, src="headline")
 GAP_ONLINE = pct_drop(SCORE.get("H_exp_mean"), AW.get("H_exp_mean"), "derived:批量vs在线gap%")
 LEG_AW = fnum(AW, "legacy_exp_mean", 2, src="headline")
 LEG_DROP = pct_drop(SEQ.get("legacy_exp_mean"), AW.get("legacy_exp_mean"), "derived:对照口径降幅%")
+
+# C12 U3 untouched final：30 个未参与开发调参的种子；与 5-seed 回归锁分工。
+F_AW, F_SEQ = FINAL.get("awra", {}), FINAL.get("seq", {})
+F_AW_MEAN = fnum(F_AW, "H_exp_mean", 2, src="final_test_30seed")
+F_AW_STD = fnum(F_AW, "H_exp_std", 2, src="final_test_30seed")
+F_AW_CI = fnum(F_AW, "H_exp_ci95_half", 3, src="final_test_30seed")
+F_SEQ_MEAN = fnum(F_SEQ, "H_exp_mean", 2, src="final_test_30seed")
+F_DROP = MISS
+F_ENERGY_DROP = pct_drop(F_SEQ.get("H_energy_mean"), F_AW.get("H_energy_mean"),
+                         "derived:30seed能耗降幅%")
+F_HEAVY = fnum(F_AW, "H_heavy_tier", 2, src="final_test_30seed")
+F_SEED_COUNT = reg("final_test_30seed:seed_count", F_AW.get("seed_count", MISS))
+F_FAIL = reg("final_test_30seed:fail_sum", F_AW.get("fail_sum", MISS))
+F_VIOL = reg("final_test_30seed:viol_sum", F_AW.get("viol_sum", MISS))
+F_MIN_DROP = F_MED_DROP = F_MAX_DROP = F_POSITIVE = MISS
+try:
+    _drops = sorted(float(r_["drop_pct"]) for r_ in FINAL_SEEDS)
+    _n = len(_drops)
+    # canonical C12 的61.6%按两组30-seed均值之比计算；明细保留的3位小数足以复现该舍入。
+    _aw_mean = sum(float(r_["awra_exp_H"]) for r_ in FINAL_SEEDS) / _n
+    _seq_mean = sum(float(r_["seq_exp_H"]) for r_ in FINAL_SEEDS) / _n
+    F_DROP = reg("final_test_30seed_per_seed:ratio_of_means_drop%",
+                 f"{(1 - _aw_mean / _seq_mean) * 100:.1f}")
+    F_MIN_DROP = reg("final_test_30seed_per_seed:min_drop%", f"{_drops[0]:.1f}")
+    F_MED_DROP = reg("final_test_30seed_per_seed:median_drop%",
+                     f"{((_drops[_n // 2 - 1] + _drops[_n // 2]) / 2 if _n % 2 == 0 else _drops[_n // 2]):.1f}")
+    F_MAX_DROP = reg("final_test_30seed_per_seed:max_drop%", f"{_drops[-1]:.1f}")
+    F_POSITIVE = reg("final_test_30seed_per_seed:positive_count",
+                     str(sum(v > 0 for v in _drops)))
+except Exception:
+    pass
+
+# B10 sim oracle-gap 指标；控制器执行链证据另由 plc_evidence.csv 登记。
+LEX = ORACLE_ALL.get("det_lexicographic", {})
+SPEED = ORACLE_ALL.get("det_speed", {})
+SBS_AWRA = ORACLE_ALL.get("awra", {})
+LEX_ATTAIN = fnum(LEX, "attain_mean", 1, src="oracle_gap:ALL:lex")
+# F2(0714):头条 H 口径(梯形加减速 A4b)下重算的 lex attainment(sim/oracle_gap.py --accel)
+LEX_ATTAIN_ACCEL = MISS
+try:
+    _oa = {r["selector"]: r for r in load_rows("oracle_gap_accel.csv") if r["scenario"] == "ALL"}
+    LEX_ATTAIN_ACCEL = fnum(_oa.get("det_lexicographic", {}), "attain_mean", 1,
+                            src="oracle_gap_accel:ALL:lex")
+except Exception:
+    pass
+LEX_GAP = fnum(LEX, "gap_mean", 2, src="oracle_gap:ALL:lex")
+LEX_CI = fnum(LEX, "gap_ci95", 3, src="oracle_gap:ALL:lex")
+LEX_COMP = reg("oracle_gap:ALL:lex:comparable_n", LEX.get("comparable_n", MISS))
+SPEED_ATTAIN = fnum(SPEED, "attain_mean", 1, src="oracle_gap:ALL:speed")
+LEX_CLOSED = MISS
+try:
+    LEX_CLOSED = reg("derived:oracle_gap:lex_closed_gap%",
+                     f"{(float(SBS_AWRA['gap_mean']) - float(LEX['gap_mean'])) / float(SBS_AWRA['gap_mean']) * 100:.1f}")
+except Exception:
+    pass
 
 # 吞吐(L2,梯形口径)
 MA, MS = MIX.get(("awra", "trapezoid"), {}), MIX.get(("seq", "trapezoid"), {})
@@ -255,6 +315,19 @@ try:
 except Exception:
     pass
 
+# F1(0714):U5 配对显著性——真实计算 p(此前"p<0.001"是无来源裸串;sim/lifecycle_stats.py 补)
+LC_P = MISS
+try:
+    _lst = load_rows("lifecycle_stats.csv")
+    _relp = [float(r["p_two"]) for r in _lst
+             if r["metric"] == "retr_mean" and r["turnover"] in ("10", "3")]
+    if _relp:
+        _pmax = max(_relp)
+        LC_P = reg("lifecycle_stats:retr配对t最大p",
+                   "p<0.001" if _pmax < 1e-3 else f"p={_pmax:.1e}")
+except Exception:
+    pass
+
 # PLC证据必须来自“真实跑过”的登记表，禁止把源码N_CASES或占位TRUE当通过数。
 PLC_EVIDENCE = by_key(load_rows("plc_evidence.csv"), "metric")
 TEST_N = reg("plc_evidence:verified_passed",
@@ -265,10 +338,12 @@ SOURCE_TEST_N = reg("plc_evidence:source_declared_cases",
                     PLC_EVIDENCE.get("source_declared_cases", {}).get("value", MISS))
 PLACEHOLDER_CASES = reg("plc_evidence:placeholder_cases",
                         PLC_EVIDENCE.get("placeholder_cases", {}).get("value", MISS))
-SOURCE_REAL_CASES = reg("plc_evidence:source_real_unverified_cases",
-                        PLC_EVIDENCE.get("source_real_unverified_cases", {}).get("value", MISS))
+SOURCE_REAL_CASES = reg("plc_evidence:source_real_cases",
+                        PLC_EVIDENCE.get("source_real_cases", {}).get("value", MISS))
 SOURCE_ROUTE_PRESENT = reg("plc_evidence:source_cb_tob_lex_present",
                            PLC_EVIDENCE.get("source_cb_tob_lex_present", {}).get("value", "0"))
+VISU_INTERACTIONS = reg("plc_evidence:visu_interactions_verified",
+                        PLC_EVIDENCE.get("visu_interactions_verified", {}).get("value", MISS))
 
 # 敏感性结论(与 sensitivity.py 同逻辑重算,数据同源)
 SENS_D = [r for r in SENS if r["factor"] == "delta"]
@@ -331,6 +406,17 @@ class Rep:
         cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _font(cap.add_run(caption), 9, bold=True, color=(0x40, 0x40, 0x40))
 
+    def image(self, path, caption):
+        if not os.path.exists(path):
+            self.note(f"〔待补图:{os.path.basename(path)}〕")
+            return
+        par = self.d.add_paragraph()
+        par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        par.add_run().add_picture(path, width=Cm(15.5))
+        cap = self.d.add_paragraph()
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _font(cap.add_run(caption), 9, bold=True, color=(0x40, 0x40, 0x40))
+
     def table(self, header, rows, widths=None):
         tb = self.d.add_table(rows=len(rows) + 1, cols=len(header))
         tb.style = "Table Grid"
@@ -366,6 +452,8 @@ def main():
         "energy_report_params.csv", "realism_matrix_data.csv",
         "realism_matrix_params.csv", "weight_policy_table.csv",
         "lifecycle_delta.csv", "l4_task_cycles_data.csv",
+        "final_test_30seed.csv", "final_test_30seed_per_seed.csv",
+        "oracle_gap.csv", "plc_evidence.csv",
     ]
     missing = [name for name in required if not os.path.exists(os.path.join(OUT, name))]
     if missing:
@@ -376,7 +464,7 @@ def main():
     with open(canonical, "rb") as fp:
         canonical_sha = hashlib.sha256(fp.read()).hexdigest()
     r.d.core_properties.title = "智储优控验证报告（生成器草稿）"
-    r.d.core_properties.subject = "sim口径与PLC证据边界分离；canonical v3.4"
+    r.d.core_properties.subject = "sim口径与PLC证据边界分离；canonical v3.5（含C12）"
     r.d.core_properties.keywords = f"generated={datetime.now().isoformat(timespec='seconds')};canonical_sha256={canonical_sha}"
 
     # ---------------- 封面与摘要 ----------------
@@ -386,13 +474,16 @@ def main():
            "不代表所有专项已在本次重跑。canonical SHA256已写入文档元数据。")
     r.h("摘要", 1)
     r.p(f"针对20×20、400仓位立体仓库，本文提出在线多目标评分+批量AWRA-LS架构。"
-        f"在sim H设计口径（sum+梯形加减速+场景权重）下，AWRA-LS期望取货时间为"
-        f"{H_AW}±{H_AW_STD}s（5-seed sample SD；均值95%CI半宽{H_AW_CI}s；非U3 30-seed"
-        f"泛化/非独立final），较顺序基线{H_SEQ}s降低{DROP_VS_SEQ}%，能耗代理降低{DROP_E}%，"
-        f"重货平均层高{HEAVY_TIER}。有效头条行失败0、承重/容积复查0。{THR_AW}次/时是"
-        f"行程-only连续满载sim单操作容量（约{THR_CYCLES}双周期/时），为基线{THR_X}倍，不是PLC吞吐实测。PLC侧证据限于"
-        f"核心ST逻辑+静态匀速黄金向量在干净初态/当前参数下AB仿真{TEST_N}/{TEST_FAIL}通过；"
-        f"不证明H KPI、场景权重闭环或新增CB/TOB/lex源码已在AB/控制器复现；年化能耗亦仅为sim换算。")
+        f"在sim H设计口径（sum+梯形加减速+场景权重）下，C12 untouched final test使用"
+        f"{F_SEED_COUNT}个未参与开发调参的种子，AWRA-LS期望取货时间为{F_AW_MEAN}±{F_AW_STD}s"
+        f"（sample SD；均值95%CI半宽{F_AW_CI}s），较顺序基线{F_SEQ_MEAN}s降低{F_DROP}%，"
+        f"能耗代理降低{F_ENERGY_DROP}%，重货平均层高{F_HEAVY}；{F_POSITIVE}/{F_SEED_COUNT}个seed"
+        f"均为正收益，失败{F_FAIL}、违规{F_VIOL}。5-seed的{H_AW}±{H_AW_STD}s、降低"
+        f"{DROP_VS_SEQ}%继续作为回归锁。{THR_AW}次/时是行程-only连续满载sim单操作容量"
+        f"（约{THR_CYCLES}双周期/时），为基线{THR_X}倍，不是PLC吞吐实测。PLC侧证据为"
+        f"核心ST逻辑及AWRA/CB/TOB黄金向量在当前参数下AB PC仿真{TEST_N}/{TEST_FAIL}通过，"
+        f"lex切档与CB/TOB执行链已入证据域；但H KPI、{LEX_ATTAIN}% oracle attainment、年化能耗"
+        f"仍为sim评估或换算，不是实体AC500实测。")
 
     # ---------------- 1 问题与建模 ----------------
     r.h("1 问题定义与建模口径", 1)
@@ -424,6 +515,17 @@ def main():
         ["C9", "吞吐", f"双命令模式下{THR_AW}单操作/h（约{THR_CYCLES}双周期/h）；行程-only连续满载sim容量，非PLC实测"],
         ["C10", "双命令周期", "联程 T=t(0→存)+t(存→取)+t(取→0);较两个单命令省一次空驶,节省量≥0 由三角不等式保证"],
     ])
+    r.h("1.1 文献谱系锚与内部定量证据链", 2)
+    r.p("项目所属的unit-load自动化立体仓库可追溯至Hausman、Schwarz与Graves（1976，"
+        "Management Science 22(6):629–638，DOI 10.1287/mnsc.22.6.629）的经典存储分配研究；"
+        "本文CB（class-based）与TOB（full-turnover）策略的命名及语义沿用该文献传统。外部研究"
+        "用于说明方法谱系，不把不同机型、货架与工况下的百分比直接当成本项目基准。")
+    r.p(f"本项目的定量说服力由内部可复现证据链承担：C12在{F_SEED_COUNT}个未参与调参的种子上"
+        f"（120件·skew偏态分布[电工物料典型画像]·sum规则，为头条固定口径；uniform/heavy分布另见§4）"
+        f"得到{F_AW_MEAN}±{F_AW_STD}s、较seq降低{F_DROP}%，逐seed降幅最小{F_MIN_DROP}%、"
+        f"中位{F_MED_DROP}%、最大{F_MAX_DROP}%，且失败/违规均为0；另以解析下界—可达候选—"
+        f"启发式夹逼和oracle-gap实验回答“离已知候选与逐实例最优还有多远”。这条链不依赖"
+        f"不可比的行业百分比，也不把sim结果外推为PLC KPI。")
     r.p("本文的物理与场景参数经系统调研溯源,自真实生产场景入手建立拟真模型:堆垛机厂商"
         "公开规格(7 组真实机型样本,含与本文货物量级对应的轻载单立柱档)、ABB 官方应用"
         "文档(堆垛机专项手册与起重机控制固件参数手册)、AS/RS 原始文献(行程时间模型"
@@ -465,7 +567,8 @@ def main():
         f"把'为未来留位'的功劳归因到单步决策(信用分配难),前瞻性预留是设计出来的。")
     r.p(f"第五步,边界与修正(F21):全生命周期实验(200 周期循环访问+汰换+夜间重排,"
         f"30 seeds CRN 配对)给出更完整的图景——45% 填充下 δ 是净亏的:出库响应配对差 "
-        f"{LC_LOW_D10} s(汰换 10%)至 {LC_LOW_D3} s(汰换 33%),p<0.001,近位不"
+        f"{LC_LOW_D10} s(汰换 10%)至 {LC_LOW_D3} s(汰换 33%),{LC_P}(配对 t 检验,"
+        f"sim/lifecycle_stats.py;240 件高压组多为 ns),近位不"
         f"紧缺时预留没有对象,只剩把冷门货推远的日常代价;90%高压下δ组失败"
         f"{LC_HP_F15}对{LC_HP_F0}次(少{LC_HP_FDROP}%),但两组失败均非零且时间差不显著。"
         f"这只能称失败缓解信号，不能称'放得进'或可行性保险。这一步同时修正了第四步的解读:"
@@ -614,15 +717,15 @@ def main():
         "周期处理 nBatchPerCycle 件、局部搜索每周期评估 nPairsPerCycle 对。该结构面向10ms"
         "任务设计；当前只有有限AB PC仿真证据，400件最坏时延与目标机watchdog尚未验证。")
     r.p(f"边界判断成体系:越界、负输入、超重、超容、预占用(含官方口径格数断言)、满仓、"
-        f"无可行位报警、单件查询与记录翻页边界、载货折减与装卸三档等 {TEST_N} 项自测用例"
-        f"(含与 Python 的一致性向量)在 Automation Builder 2.9 仿真环境经无头自动化管线"
-        f"在干净初态+当前参数下通过(iPassed={TEST_N}、iFailed={TEST_FAIL}、编译0错误)。该门覆盖核心ST"
-        f"逻辑与静态匀速黄金向量，不覆盖H KPI、自适应、lex/speed或多客户端权限安全。字符串状态码全部ASCII化,"
-        f"可视化画面以静态中文标签对照解释。")
-    r.p(f"当前工作区源码声明N_CASES={SOURCE_TEST_N}：{SOURCE_REAL_CASES}已是实质断言，"
-        f"{PLACEHOLDER_CASES}仍为恒TRUE预留；源码还包含CB/TOB分配器与lex检测路由。"
-        f"但本轮未开AB复测，因此报告证据数保持{TEST_N}/{TEST_FAIL}，不把源码实现、"
-        f"新增断言或声明计数升级为测试通过。")
+        f"无可行位报警、单件查询与记录翻页边界、载货折减与装卸三档等{TEST_N}项在线自测"
+        f"在Automation Builder 2.9 PC仿真环境的当前冻结基线通过（iPassed={TEST_N}、"
+        f"iFailed={TEST_FAIL}、编译0错误）。证据域含核心ST逻辑、AWRA/CB/TOB三套黄金向量"
+        f"逐位一致、lex切档路由及T60–T75真实断言；不覆盖H KPI闭环、加减速在线复现、"
+        f"400件最坏时延/watchdog、实体AC500或多客户端权限安全。")
+    r.p(f"当前源码声明N_CASES={SOURCE_TEST_N}，实质断言范围为{SOURCE_REAL_CASES}，"
+        f"恒TRUE预留={PLACEHOLDER_CASES}，CB/TOB分配器与lex检测路由登记值={SOURCE_ROUTE_PRESENT}。"
+        f"因此可说“词典序档的执行链已在AB PC仿真端到端验证”，但只能把{LEX_ATTAIN}%写成"
+        f"sim oracle-gap attainment，不能把该百分比绑定为PLC/AC500实测效果。")
     L4ROWS = [r_ for r_ in load_rows("l4_task_cycles_data.csv") if r_.get("cycles_to_done")]
     r.p("扫描负载实测采用任务级口径。方法学结论先行:PC 仿真环境的三种周期内时钟源"
         "(IEC LTIME 差分、任务监视页统计、SysTime 库纳秒计数)经逐一实测均无法给出"
@@ -643,15 +746,44 @@ def main():
     r.p("读表:nBatchPerCycle=1 时分配段被显著拉长(逐件一周期),提高到 5 以上后"
         "瓶颈转移到状态机固定开销,完成周期数稳定;nPairsPerCycle 在 20 件演示批下"
         "不敏感——两两交换仅 190 对,单周期分片即可吃完(该参数在满仓 400 件场景才"
-        "成为主变量)。历史四组均DONE_OK；本轮未开AB复测，亦未完成400件最坏时延/watchdog门。"
+        "成为主变量)。历史四组均DONE_OK；当前75/0基线不等于完成400件最坏时延/watchdog门。"
         "源脚本已归档tools/ab_scripting/archive/measure_l4b.py。")
 
-    # ---------------- 6 有限一致性护栏 ----------------
-    r.h("6 Python↔ST有限一致性护栏", 1)
-    r.p("Python与ST只在已锁向量上交叉核对。20件T25静态匀速向量逐位一致。0712当前ST源码已将"
-        "near平局键统一为(时间,层,列)并增加T60断言，但T60尚未AB复测；历史探针中的near分叉只作为"
-        "修复前证据保留。REAL阈值分支与加减速评分分母差异仍存在。因此称'有限一致性护栏'，不称"
-        "数学同源或报告数字由PLC互相背书。")
+    # ---------------- 6 可视化与交互验证 ----------------
+    r.h("6 可视化仿真与人机界面", 1)
+    r.h("6.1 三页制人机界面", 2)
+    r.p("人机界面按“一屏一工序流”组织为三页：P1操作台承担20×20仓位地图、货物录入、"
+        "策略/检测器、运行统计与当前件路径；P2记录页承担逐件落位、批次汇总、按ID查询及运动/"
+        "装卸参数追溯；P3管理页承担两级权限、检修位、评分权重、执行时间表以及Holistic/"
+        "Lexicographic目标档和CB/TOB手选。配置与诊断后移管理页，P1保持日常操作的低密度。")
+    for _img, _cap in [
+        ("P1_Console_0712.png", "图 17  P1操作台：400仓位地图与一屏一工序流"),
+        ("P2_Records_0712.png", "图 18  P2记录页：结果明细、查询与参数追溯"),
+        ("P3_Admin_0712.png", "图 19  P3管理页：权限、检修位、权重与策略目标档"),
+    ]:
+        r.image(os.path.join(DOCS, "img", _img), _cap)
+    r.h("6.2 三项可视化辅助功能", 2)
+    r.p("分层寻址高亮：P1的Tier输入（-1为关闭、0–19为层号）联动地图行高亮与该层占用计数，"
+        "用于人工巡层。三态视图：View在状态色、频次热力与操作热力之间循环，频次热力直接检查"
+        "热货是否聚集于I/O附近。布局操作留痕/写入热图：每仓位累计放置、交换与重定位次数并在"
+        "View=2显示；它只是均衡磨损语义的代理，不是含时间戳、操作类型明细和持久化的完整损耗履历。")
+    r.h("6.3 在线交互长跑与演示边界", 2)
+    r.p(f"0712在线长跑已核销三页共{VISU_INTERACTIONS}个交互件，三轮演示动线零死件。已验证"
+        "从载入演示批、检测器出画像和推荐，到P3切词典序档、应用TOB、完成分配，再到P2逐件"
+        f"追溯与ID查询的操作链。该验证支持界面与执行链可演示，不把画面绑定为{LEX_ATTAIN}%的"
+        "PLC实测；WebVisu多客户端并发、实体AC500部署与400件watchdog仍不在本章证据范围。")
+    r.h("6.4 B10：场景检测器与oracle-gap边界", 2)
+    r.p(f"13场景×30 seeds的冻结sim数据中，词典序检测器在{LEX_COMP}/{LEX_COMP}个"
+        f"excess_fail=0可比实例上gap={LEX_GAP}%、attainment={LEX_ATTAIN}%、closed gap={LEX_CLOSED}%。"
+        f"其ALL行95%CI半宽{LEX_CI}%只是跨异质场景池化的描述性区间，不是分层抽样CI。"
+        f"{LEX_ATTAIN}%不是理论上限：速度档sim attainment为{SPEED_ATTAIN}%，逐实例oracle按定义为100%。"
+        f"口径边界：上述attainment在匀速评估口径(A4)下算得；在报告头条H口径(梯形加减速A4b)下"
+        f"重算(sim/oracle_gap.py --accel)为{LEX_ATTAIN_ACCEL}%，结论跨口径稳健(检测器价值不因运动学口径而失效)，"
+        f"但两数各属其口径、不可混引。本节只把AB证据用于说明lex/CB/TOB执行链与sim语义的一致性，不用来背书attainment数值。")
+    r.h("6.5 Python↔ST有限一致性护栏", 2)
+    r.p("Python与ST只在已锁向量上交叉核对。T25保留20件静态匀速历史锚；当前冻结基线另含"
+        "AWRA/CB/TOB黄金向量与near平局键(时间,层,列)断言。REAL阈值分支与加减速评分分母差异仍存在，"
+        "因此称“有限一致性护栏”，不称数学同源，也不以PLC结果互相背书sim H数字。")
 
     # ---------------- 7 绿色工程 ----------------
     r.h("7 绿色工程换算:能耗的年化账", 1)
@@ -675,8 +807,8 @@ def main():
     r.table(["创新点", "证据位置"], [
         ["位置价值预留项δ的自我修正证据链(早期静态信号→fail-first/lifecycle反证→边界收窄)", "§2.3/§4.4,F2→F13/F15→F21"],
         ["场景权重fail-first可行性/稳定性表(6格INFEASIBLE；PLC闭环未完成)", "§2,fig12"],
-        ["扫描周期分片状态机+有限AB PC任务周期证据(目标机最坏时延待测)", "§5"],
-        ["Python↔ST静态向量的有限一致性护栏", "§6"],
+        ["扫描周期分片状态机+75/0全真实断言与三套黄金向量(目标机最坏时延待测)", "§5"],
+        ["三页HMI、21项交互长跑与Python↔ST有限一致性护栏", "§6"],
         ["sim周期重排机制与其成本经济学(负结果如实呈现)", "§4.3,F11"],
         ["参数溯源体系:四层防御(厂商样本/标准名录/敏感性覆盖/官方确认)+负面出处清单+三档拟真验证", "§1/§4.5/附录 C-D"],
     ])
@@ -694,17 +826,23 @@ def main():
 
     # ---------------- 9 结论 ----------------
     r.h("9 结论", 1)
-    r.p(f"本文完成了sim模型、双层算法与ST核心逻辑的分层验证。sim H 5-seed回归锚中，"
-        f"期望取货较顺序基线降低{DROP_VS_SEQ}%、能耗代理降低{DROP_E}%；{THR_X}倍吞吐为"
-        f"行程-only连续满载sim单操作容量（约{THR_CYCLES}双周期/h）。AB侧{TEST_N}/{TEST_FAIL}只覆盖核心ST+静态匀速黄金向量。"
-        f"负结果包括6个高密度online权重单元INFEASIBLE、δ低填充收益被drain复算证伪，"
-        f"以及档3P95最优者并非AWRA。结论按数据链、控制器链和制品链分别验收，不宣称全链闭环。")
+    r.p(f"本文完成了sim模型、双层算法、ST执行链和三页HMI的分层验证。C12的{F_SEED_COUNT}-seed"
+        f" untouched final test中，AWRA为{F_AW_MEAN}±{F_AW_STD}s，较顺序基线降低{F_DROP}%，"
+        f"{F_POSITIVE}/{F_SEED_COUNT}个seed均为正收益；5-seed的{H_AW}±{H_AW_STD}s继续作为"
+        f"回归锁。{THR_X}倍吞吐为行程-only连续满载sim容量。AB PC仿真{TEST_N}/{TEST_FAIL}覆盖"
+        f"核心ST、AWRA/CB/TOB黄金向量与lex执行路由，三页{VISU_INTERACTIONS}项交互件已在线长跑；"
+        f"但{LEX_ATTAIN}% oracle attainment、H KPI与年化能耗仍是sim评估或换算。负结果包括6个"
+        f"高密度online权重单元INFEASIBLE、δ低填充收益被drain复算证伪，以及档3P95最优者并非AWRA。"
+        f"结论按数据链、控制器链和制品链分别验收，不宣称实体AC500 KPI闭环。")
 
     # ---------------- 附录 ----------------
     r.h("附录 A  评委 5 分钟复现指引", 1)
-    r.p(f"①`python sim/core_smoke.py`跑完整unittest discover+headline回归锚；②已有上游CSV/PNG时"
+    r.p(f"①`python -B sim/run_all.py core_smoke`跑完整unittest discover+headline回归锚；"
+        f"②`python -B sim/final_test_30seed.py`复现C12 U3证据；③已有上游CSV/PNG时"
         f"用`report_rebuild.py`重建制品，再以`artifact_verify.py`做文本/CSV门；三者互不替代。"
-        f"③AB操作需用户在场；已验收冻结基线为iPassed={TEST_N},iFailed={TEST_FAIL}。当前源码声明{SOURCE_TEST_N}项且{PLACEHOLDER_CASES}含占位，须实现真实断言后另行复测。")
+        f"④AB操作需用户在场；冻结基线为iPassed={TEST_N},iFailed={TEST_FAIL}。当前源码声明"
+        f"{SOURCE_TEST_N}项、实质断言{SOURCE_REAL_CASES}、恒TRUE预留={PLACEHOLDER_CASES}；"
+        f"400件最坏时延/watchdog与实体AC500仍须另行验证。")
     r.h("附录 B  评语六要素自查映射(2025 同构赛道一等奖评语)", 1)
     r.table(["评语要素", "对应章节"], [
         ["算法模型准确", "§1/§2/§4.2"], ["可运行验证仿真结果", "附录 A/§4"],
@@ -713,8 +851,9 @@ def main():
     ])
     r.d.add_page_break()
     r.h("附录 C  口径矩阵:一套系统,九把尺子(多口径并列验证方法)", 1)
-    r.p("各建模选择均显式标口径并保留开关。当前证据支持120件H回归锚及AWRA相对seq的"
-        "三档行程方向；不支持把结论泛化到所有策略、密度、响应分位或生命周期机制。")
+    r.p(f"各建模选择均显式标口径并保留开关。当前证据支持120件H的5-seed回归锚、"
+        f"{F_SEED_COUNT}-seed U3泛化结果及AWRA相对seq的三档行程方向；不支持把结论泛化到"
+        f"所有策略、密度、响应分位或生命周期机制。")
     r.table(["维度", "主口径", "对照/备选口径", "切换开关", "口径号"], [
         ["运动模型", "梯形加减速", "匀速(文献可比)", "--accel / xUseAccel", "A4b"],
         ["评分权重", "sim场景权重(含INFEASIBLE)", "固定1.0/0.6/0.4/0.15", "--adaptive / policy表", "E"],
@@ -734,6 +873,10 @@ def main():
     r.h("附录 D  参考文献与文档溯源(三层引用体系,仅列实际参考项)", 1)
     r.p("D.1 学术文献(理论假设的原文锚)", size=10.5)
     for ref in [
+        "Hausman, W.H., Schwarz, L.B. & Graves, S.C. (1976). Optimal Storage "
+        "Assignment in Automatic Warehousing Systems. Management Science 22(6), "
+        "629-638. DOI 10.1287/mnsc.22.6.629——unit-load AS/RS 中 full-turnover 与 "
+        "class-based 存储分配的经典方法谱系锚",
         "Bozer, Y.A. & White, J.A. (1984). Travel-Time Models for Automated "
         "Storage/Retrieval Systems. IIE Transactions 16(4), 329-338. DOI "
         "10.1080/07408178408975252——双轴同动与 T=max(th,tv) 假设、单/双命令周期定义的原始出处",

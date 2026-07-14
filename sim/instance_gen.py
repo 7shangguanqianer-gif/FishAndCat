@@ -201,7 +201,12 @@ def main():
     ap.add_argument("--seeds", type=int, default=30, help="复制次数(默认 30)")
     ap.add_argument("--scenarios", default="all", help="逗号分隔场景名,或 all")
     ap.add_argument("--rule", default="sum", choices=["sum", "and", "or", "linear"])
+    ap.add_argument("--accel", action="store_true",
+                    help="H口径:梯形加减速(A4b,ws.ACCEL=True);输出 *_accel.csv,不覆盖 legacy 匀速口径")
     a = ap.parse_args()
+    if a.accel:
+        ws.ACCEL = True          # F2 补跑:头条 H 口径下重算 exp_t(检测器画像基于货物属性,口径无关)
+    suf = "_accel" if a.accel else ""
     seeds = [2026 + i for i in range(a.seeds)]
     names = list(SCENARIOS) if a.scenarios == "all" else a.scenarios.split(",")
 
@@ -241,8 +246,8 @@ def main():
                     fail_b=round(st.mean([r["fail"] for r in res[y]]), 2)))
 
     os.makedirs(OUT, exist_ok=True)
-    for fname, rows in (("instgen_detail.csv", detail), ("instgen_agg.csv", agg),
-                        ("instgen_pairs.csv", pairs)):
+    for fname, rows in ((f"instgen_detail{suf}.csv", detail), (f"instgen_agg{suf}.csv", agg),
+                        (f"instgen_pairs{suf}.csv", pairs)):
         with open(os.path.join(OUT, fname), "w", newline="", encoding="utf-8-sig") as fp:
             w = csv.DictWriter(fp, fieldnames=list(rows[0].keys()))
             w.writeheader()
