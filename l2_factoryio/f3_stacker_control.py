@@ -949,13 +949,16 @@ class Stacker:
     def place_lower(self, cell: int) -> None:
         """G4 第二段：视觉门通过后才下放。
 
-        0713 15:16 根因裁决（media/g4_evidence_0713/）：带载时托盘在
-        place-extend 后往往已接触货架梁，下放行程≈0，物理引擎不产生
-        Moving Z——「NO START」在此形态下是放置成功而非故障（凌晨事故
-        正是把它误判为故障后用 recover 把已放好的货拉回导致的）。
-        因此 NO START 且现场保守自检通过 -> LOWER_STALLED 保持现场，
-        由 retract 的 --confirm-placement 人工视觉门做最终裁决（画面
-        为准）；自检不过或其他异常仍 fail-closed 落持久锁。
+        0713 18:56 真根因（P3 对照+Modbus 决胜测量，34 采样 Z 立即启动）：
+        堆垛机的 Lift 微升降以 Target 给出的名义高度为 Z setpoint；相位间
+        safe_stop 把 Target 清 0（官方语义"停在当前位置"）后，Lift=False
+        的微降没有参考高度可降 -> Moving Z 永不产生。凌晨全部"无 Z"事故
+        （cell 1 G4、postF6 G2）与 P3/pick 的成功（Target 仍保持）由此
+        统一解释。修复：写 Lift=False 前恢复 Target=cell（机构已在位，
+        写寄存器不产生 X 运动），成功后再清回 0。
+
+        NO START+保守自检通过的 LOWER_STALLED 分支保留为 fail-safe
+        （真故障时保持现场、由 retract 人工视觉门或 mark-fault 消费）。
         """
         if not 1 <= cell <= 54:
             raise ValueError(f"cell must be 1..54, got {cell}")
@@ -969,7 +972,12 @@ class Stacker:
                 f"confirmed={self.position_hint}, cell={cell}"
             )
         self.assert_fork_position(IN_AT_RIGHT, "Right")
-        print(f"* 放箱-下放段：Lift=False，期待 Z 边沿或零行程停驻（货位 {cell}）")
+        print(
+            f"* 放箱-下放段：恢复 Target={cell} 作为 Z 基准 setpoint，"
+            "再 Lift=False（货位已在位，写寄存器不产生 X 运动）"
+        )
+        self.target(cell)
+        time.sleep(0.2)
         self.coil(C_LIFT, False)
         try:
             self.wait_motion_cycle("lower load", lambda: self.din(IN_MOVING_Z))
@@ -1003,6 +1011,8 @@ class Stacker:
             raise
         print(f"* placement settle dwell: {PLACEMENT_SETTLE_DWELL:.1f}s")
         time.sleep(PLACEMENT_SETTLE_DWELL)
+        # 下放完成，Z setpoint 使命结束；清回 0 与全库"静止=Target 0"约定一致。
+        self.target(0)
         self.assert_placement_hold_ready()
         self.load_state = LoadState.PLACED_PENDING
         print("PLACEMENT HOLD: inspect rack support before running retract")

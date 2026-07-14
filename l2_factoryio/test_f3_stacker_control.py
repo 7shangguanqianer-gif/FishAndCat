@@ -155,6 +155,7 @@ class SequenceContractTests(unittest.TestCase):
         stacker.load_state = f3.LoadState.EMPTY
         stacker.position_hint = f3.POS_REST
         stacker.fork_hold = None
+        stacker.target = Mock()
         stacker.goto = Mock()
         stacker.forks_left_hold = Mock()
         stacker.forks_right_hold = Mock()
