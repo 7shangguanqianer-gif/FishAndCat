@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智储优控 · 提交包导览</title>
+<style>
+  :root{--abb:#e2001a;--ink:#1a1a1a;--dim:#666;--line:#d9d9d9;--bg:#f4f5f6;--card:#fff;
+    --blue:#1b4f8a;--blue-m:#4f8fc4;--amber:#f2b13d;--ok:#1d7a3e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+    line-height:1.7;padding-bottom:60px}
+  a{color:var(--blue);text-decoration:none}
+  /* 品牌栏 */
+  #brand{height:56px;background:#111;display:flex;align-items:center;gap:14px;padding:0 26px;
+    border-bottom:3px solid var(--abb);position:sticky;top:0;z-index:9}
+  #brand .logo{color:var(--abb);font-weight:900;font-size:26px;font-family:Arial}
+  #brand .title{color:#fff;font-size:18px;font-weight:600}
+  #brand .badge{margin-left:auto;color:#bbb;font-size:12px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 26px}
+  /* Hero */
+  #hero{padding:34px 0 10px}
+  #hero h1{font-size:30px;letter-spacing:.5px}
+  #hero .sub{color:var(--dim);font-size:15px;margin-top:6px}
+  #stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0 8px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 18px;
+    border-top:3px solid var(--blue)}
+  .stat .v{font-size:26px;font-weight:800}
+  .stat .k{font-size:12px;color:var(--dim)}
+  .stat .tag{font-size:10.5px;color:#999}
+  /* 分区标题 */
+  h2{font-size:19px;margin:30px 0 12px;padding-left:10px;border-left:4px solid var(--abb)}
+  /* 目录卡 */
+  #dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .dir{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px;
+    display:flex;flex-direction:column;gap:6px}
+  .dir .ico{font-size:26px}
+  .dir h3{font-size:15.5px}
+  .dir p{font-size:12.5px;color:var(--dim);flex:1}
+  .dir .row{display:flex;gap:8px;align-items:center}
+  .dir .open{padding:5px 14px;background:var(--blue);color:#fff;border-radius:4px;font-size:13px}
+  .dir .copy{padding:5px 10px;border:1px solid var(--line);border-radius:4px;font-size:12px;
+    cursor:pointer;background:#fafafa}
+  .dir .path{font-size:10.5px;color:#999;word-break:break-all}
+  /* 十件网格 */
+  #feats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-height:118px;
+    display:flex;flex-direction:column}
+  .feat .ico{font-size:20px}
+  .feat h4{font-size:13.5px;margin:4px 0 2px}
+  .feat p{font-size:11px;color:var(--dim);flex:1;line-height:1.55}
+  .feat .st{font-size:10.5px;padding:2px 8px;border-radius:8px;align-self:flex-start;margin-top:6px}
+  .feat .st.wip{background:#fff3d6;color:#8a6100}
+  .feat .st.ok{background:#e0f2e5;color:var(--ok)}
+  /* 提示条 */
+  .tip{background:#eef4fb;border:1px solid #c9dcf2;border-radius:6px;padding:10px 14px;
+    font-size:12.5px;color:#274b73;margin-top:14px}
+  #foot{margin-top:36px;border-top:1px solid var(--line);padding-top:12px;font-size:11px;color:#999}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
+    padding:8px 18px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="brand">
+  <span class="logo">ABB</span><span class="title">智储优控 · 自动化立体仓库存取优化</span>
+  <span class="badge">提交包导览 · 初赛+决赛全套 · <b>v0.1 壳版(内容灌入中)</b></span>
+</div>
+<div class="wrap">
+  <div id="hero">
+    <h1>放对每一件货,省下每一秒</h1>
+    <div class="sub">20 列 × 20 层自动化立体仓库 · 布局优化算法 + AC500 PLC 实现 + 三页 HMI + 物理级验证 —— 本页是全部提交材料的导览与展示中心</div>
+    <div id="stats">
+      <div class="stat"><div class="v">-61.6%</div><div class="k">期望取货时间 vs 顺序基线</div><div class="tag">30-seed 统计 (sim)</div></div>
+      <div class="stat"><div class="v">75 / 0</div><div class="k">PLC 在线自测 通过/失败</div><div class="tag">AB PC 仿真 · 全真实断言</div></div>
+      <div class="stat"><div class="v">9 / 9</div><div class="k">物理全链取放验证</div><div class="tag">Factory I/O 技术预演</div></div>
+      <div class="stat"><div class="v">98.5%</div><div class="k">检测器 oracle 达成率</div><div class="tag">390 可比实例 (sim)</div></div>
+    </div>
+  </div>
+
+  <h2>提交材料导航(五目录)</h2>
+  <div id="dirs"></div>
+  <div class="tip">💡 <b>打开方式</b>:视频/图片/网页点「打开」即可直接查看;Word/PPT/AB 工程文件受浏览器安全策略限制可能变为下载——点「复制路径」后粘贴到资源管理器地址栏回车,原生打开最稳。</div>
+
+  <h2>展示中心(十件 · 本页承载)</h2>
+  <div id="feats"></div>
+
+  <div id="foot">
+    口径纪律:凡仿真数据均标注 (sim);物理验证=Factory I/O 54 格代表性技术预演;红色仅用于报警语义。
+    <br>本页为 v0.1 壳版——导航骨架与功能占位已就位,内容按开发计划分批灌入;十件状态徽章实时反映进度。
+  </div>
+</div>
+<div id="toast">路径已复制</div>
+
+<script>
+/* ── 五目录数据(相对路径按提交包终态;壳期指向占位) ── */
+const DIRS=[
+ {ico:"📑",name:"01_验证报告",desc:"WORD 全文(证据深度)+ PPT(评审快览)——同源生成,口径一致",
+  path:"01_验证报告/",open:"01_验证报告/"},
+ {ico:"⚙️",name:"02_PLC代码",desc:"ABB AC500(AB 2.9)完整工程 + ST 源码导出 + 75/0 在线自测证据",
+  path:"02_PLC代码/",open:"02_PLC代码/"},
+ {ico:"🧪",name:"03_建模与仿真",desc:"Python 仿真全源码 + 关键结果数据 + 00_先读:一键复现(bat)",
+  path:"03_建模与仿真/",open:"03_建模与仿真/"},
+ {ico:"🎬",name:"04_可视化仿真(决赛件)",desc:"本展示件全源码 + 演示录屏——「编程实现代码及演示录屏」双件",
+  path:"04_可视化仿真_决赛件/",open:"04_可视化仿真_决赛件/"},
+ {ico:"🏗️",name:"05_物理预演素材(加分)",desc:"Factory I/O 54 格全链取放实录(技术预演口径)+ 说明",
+  path:"05_物理预演素材_加分/",open:"05_物理预演素材_加分/"},
+ {ico:"📄",name:"README.md",desc:"纯文本版导览(与本页同内容)——任何环境可读的双保险",
+  path:"README.md",open:"README.md"}];
+/* ── 十件数据(状态:wip=灌入中 ok=已就绪) ── */
+const FEATS=[
+ {ico:"🎞️",name:"视频集成中心",desc:"物理预演/HMI 三页动线/3D 电影段,统一在此播放",st:"wip"},
+ {ico:"🧊",name:"3D 布局回放",desc:"120 件真实分配结果逐件入库,风格化定稿渲染",st:"wip"},
+ {ico:"📊",name:"交互数据看板",desc:"占用/吞吐/单件周期曲线,五策略切换对比",st:"wip"},
+ {ico:"🧭",name:"项目故事线",desc:"赛题→建模→算法→PLC→物理验证→结果,六章导览",st:"wip"},
+ {ico:"🎛️",name:"算法现场演示",desc:"真实 P3 管理页交互实录:切目标档→推荐当场改变",st:"wip"},
+ {ico:"🖥️",name:"HMI 三页讲解",desc:"操作台/记录/管理三页,控件级热点说明",st:"wip"},
+ {ico:"📜",name:"PLC 代码导览",desc:"ST 关键段高亮讲解 + 75/0 测试徽章",st:"wip"},
+ {ico:"🔗",name:"证据链索引",desc:"每个主张 → 证据文件与提交物内路径对照",st:"wip"},
+ {ico:"🪞",name:"孪生对照",desc:"54 格物理预演与 20×20 逻辑仓并排同步回放",st:"wip"},
+ {ico:"✅",name:"评分自检表",desc:"赛题要求逐条 → 我们的实现 → 证据直达",st:"wip"}];
+
+const dirs=document.getElementById('dirs');
+DIRS.forEach(d=>{const el=document.createElement('div');el.className='dir';
+  el.innerHTML=`<div class="ico">${d.ico}</div><h3>${d.name}</h3><p>${d.desc}</p>
+   <div class="row"><a class="open" href="${d.open}">打开</a>
+   <button class="copy" data-p="${d.path}">📋 复制路径</button></div>
+   <div class="path">${d.path}</div>`;
+  dirs.appendChild(el);});
+const feats=document.getElementById('feats');
+FEATS.forEach(f=>{const el=document.createElement('div');el.className='feat';
+  el.innerHTML=`<div class="ico">${f.ico}</div><h4>${f.name}</h4><p>${f.desc}</p>
+   <span class="st ${f.st}">${f.st==='ok'?'✓ 已就绪':'⏳ 内容灌入中'}</span>`;
+  feats.appendChild(el);});
+/* 复制路径:file:// 下 clipboard API 可能受限,execCommand 兜底 */
+function copyText(t){
+  if(navigator.clipboard&&window.isSecureContext!==false){
+    return navigator.clipboard.writeText(t).catch(()=>fallback(t));}
+  return fallback(t);
+  function fallback(x){const ta=document.createElement('textarea');ta.value=x;
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.copy');if(!b)return;
+  copyText(b.dataset.p);
+  const t=document.getElementById('toast');t.style.opacity=1;setTimeout(()=>t.style.opacity=0,1200);});
+</script>
+</body>
+</html>
