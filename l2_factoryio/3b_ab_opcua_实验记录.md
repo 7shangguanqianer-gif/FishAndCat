@@ -1,8 +1,13 @@
 # 3b 实验记录：AB 仿真 PLC 试开 OPC UA server（F4，0713 夜）
 
-> 结论先行：**负结果（组件级证据）**——AB 2.9 的 AC500 V3 仿真 runtime
-> （VirtualAC500_V3）不含 OPC UA server 组件，仿真模式无法开 OPC UA。
-> 非配置问题，无法通过设置解决。**F5 替代路线已验证可行性**（见 §4）。
+> 结论先行：**负结果（组件级证据，Codex 独立复核已接受·0713 22:04）**——AB 2.9 的
+> **当前 `VirtualAC500_V3` 仿真实例**未加载 OPC UA server runtime 组件
+> （CmpOPCUAServer/CmpOPCUAStack），本机本轮无法用 AC500 仿真 PLC 作 OPC UA server；
+> Symbol Configuration 只证明符号发布数据已生成，不能替代 server 组件。
+> **保守口径（按复核修正）**：只断言"当前实例/本机安装未加载"，不断言"一切 AC500 V3
+> 仿真永不可能通过 add-on 获得"。Codex 补查了实际加载的 %TEMP% 实例 cfg 与安装模板
+> cfg 组件段一致（复核回执 `_通信/codex_out/0713_F4F5复核.md` F4-1/F4-2）。
+> **F5 替代路线已验证编译级可行性**（见 §4；F5 运行期结论后被复核打回重做，见 5_ 文档）。
 
 ## 1. 实验步骤（全部成功的部分）
 

@@ -1,12 +1,15 @@
 # 5 实验记录：AC500 仿真做 Modbus TCP 主站直驱 Factory I/O（F5，0713 夜）
 
-> 结论先行：**部分结果 / 运行期负结果（证据链清晰）**——AC500 V3 仿真里，
-> AC500_ModbusTcp 主站库能**编译、下载、加载、运行**，配置块（ModTcpConfig）
-> 自报 `Done + NO_ERROR`，但主站事务块（ModTcpMast）取不到连接资源
-> （内部连接指针 pFC22/pFC23 = NULL、ErrorID = `ERR_INTERNAL_UNEXPECTED`），
-> **实际 Modbus 事务从不完成**（wReadOk 恒为 0）。
-> 与 F4 的 OPC UA 结果同构：库/组件在仿真里"半可用"，真实连接能力疑需实机固件。
-> **不签绿；口径仅为"技术预演 + 编译/加载级可行性已证 + 运行期连接待核"。**
+> **⚠️ 复核裁决（Codex 0713 22:04，Claude 23:05 受理）：本文件的"首选仿真能力边界"
+> 结论被打回，不再成立。** 详见文末【附录 A·复核裁决与重做】。有效结论收窄为：
+> **编译/加载级可行性已证；运行期事务未通；未排除两个用法缺陷**——
+> ①设备树未配置 `Protocols (Client Protocols) → Modbus TCP Client`（ABB 3ADR010980
+> §5.1 要求，本轮从未做）；②AbbETrig3 边沿 FB 调用节奏违反官方语义。
+> F5 状态=**重做待执行（用户 0713 夜已授权"现在就重做"）**。以下正文为原始记录，
+> 其中被裁决推翻/修正的表述以附录 A 为准。
+>
+> （原结论，已被打回）~~部分结果 / 运行期负结果——主站事务从不完成，与 F4 同构，
+> 疑需实机固件。~~ 不签绿口径维持：技术预演 + 编译/加载级可行性已证 + 运行期待核。
 
 ## 1. 目标与路线
 - 路线来源：`3b_ab_opcua_实验记录.md` §4——OPC UA 直连不可行后的替代路线：
@@ -73,3 +76,44 @@
 - 场景侧无改动；Factory I/O work_0713 Modbus server 保持 Started。
 - 口径同 3b：本实验证"仿真运行期主站连接未建立"，不代表 AC500 实机不支持
   （实机固件含完整 Modbus TCP 主站，为已知产品特性）。
+
+---
+
+## 附录 A · 复核裁决与重做（0713 22:04 Codex 复核 → 23:05 Claude 受理）
+
+**裁决**（全文见 `_通信/codex_out/0713_F4F5复核.md`）：部分接受/打回——
+"首选=仿真不支持出站 Modbus 主站连接"证据不足，不能签成能力边界。
+
+**三条打回依据（Claude 复核后全部认账）**：
+1. **设备树协议对象缺失（最可能主因）**：ABB 官方应用例 3ADR010980 §5.1——客户端
+   需在 `Protocols (Client Protocols)` 下添加 **Modbus TCP Client**，`ModTcpMast`
+   才能读写。本轮只写了 POU+引库，从未配置/核查设备树；`pFC22/pFC23=NULL +
+   连接级字段全 0` 的最优解释=本地连接/协议栈资源未注册，而非仿真 stub。
+2. **AbbETrig3 节奏违规**：官方语义=Execute 上升沿启动单次操作→**每周期持续调用直到
+   Done/Error**→`Execute:=FALSE` 至少一周期→再上升沿。本轮"每扫描 TRUE"不产生新边沿
+   （§4 的"修复尝试"因此无效），masts 经 xToggle 隔扫描调用直接违规；
+   `BUSY/ERR_INTERNAL_IO_RETRY` 都是 "call again" 语义。
+3. **错误码分类**：远端不通应报 `ERR_FAILED_CONNECT/ERR_TIMEOUT/ERR_CONNECTION_CLOSED`
+   或 Modbus exception；实测 `ERR_INTERNAL_UNEXPECTED`+内部指针 NULL 指向本地资源未建。
+
+**正文修正**：§2 "Eth:=0（BYTE 接口索引）✓" 改判——官方文档明示 `Eth` 为
+**兼容性字段、被库忽略**（"input is ignored, existing for compatibility reasons
+only"），取值不是决定因素，不应表述为"正确接口索引"。§5 两个"未定根因"作废，
+以本附录三条依据取代。
+
+**重做要点（Codex 5 条，用户已授权立即执行）**：
+1. 先核查/添加设备树 `Protocols (Client Protocols) → Modbus TCP Client`，
+   截图记录对象名/IP/Port/Unit/Active；
+2. `ModTcpConfig` 按 AbbETrig3 语义：上升沿一次→等 Done/Error→拉低 ≥1 周期；
+3. 事务块**每周期调用**直到 Done/Error；优先试 `ModTcpMast2`（3ADR010980：
+   使用本地连接参数，不依赖 general config）；
+4. 一次一个请求：FC2 读通再试 FC5；`ParallelProcessing:=FALSE`；完成拉低再触发；
+5. **新判据**：配置完整+节奏正确后若报 `FAILED_CONNECT/TIMEOUT/CONNECTION_CLOSED`
+   才讨论仿真 socket 边界；仍 `pFC=NULL/ERR_INTERNAL_UNEXPECTED` 则继续查
+   Client Protocols 与库内部注册。
+
+**连锁修正**：C4/C5/F6 在线门线"待真机"判决收回，改为"待 F5 重做结果"。
+重做记录见【附录 B】（重做执行时追加）。
+
+外部出处：ABB 3ADR010980《AC500 V3 - Modbus TCP》、ABB Help ModTcpMast/ModTcpConfig
+（URL 见复核回执文末）。
