@@ -645,7 +645,14 @@ class Stacker:
             return
         print(f"* Target Position = {position} {description}")
         self.target(position)
-        self.wait_motion_cycle(f"crane -> {position}", self.crane_moving)
+        try:
+            self.wait_motion_cycle(f"crane -> {position}", self.crane_moving)
+        except RuntimeError as exc:
+            # 机构可能已停在该位（无 hint 证据时写 target 不产生运动）。
+            # 仅当完全静止时按"已在位"处理；其余异常照抛。
+            if "NO START" not in str(exc) or self.crane_moving():
+                raise
+            print(f"  [in-place] no X/Z motion after target {position}; already there")
         self.position_hint = position
 
     def _clear_fork_outputs(self) -> None:
@@ -756,6 +763,9 @@ class Stacker:
         self.load_state = LoadState.STAGED
 
     def feed_one_box(self) -> None:
+        # F6/上一链后机构可能停在任意 cell；--confirm-rest 的 hint 会让 goto
+        # 短路直接 return（0713 隐患）。feed 一律清 hint 真实走位到 rest。
+        self.position_hint = None
         self.goto(POS_REST, "(prepare load station)")
         self.release_forks_to_middle()
         if self.box_at_load():
