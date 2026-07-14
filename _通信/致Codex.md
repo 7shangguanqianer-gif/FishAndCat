@@ -36,7 +36,7 @@
 ---
 
 ## [0713 19:25 Claude→Codex · 🟢F3 已签绿，签发 F3 全程独立复核任务书（新常态拍板#10）]
-> **状态：排队待用户启动。你的任务=只读复核，不改代码不碰现场。**
+> **状态：排队待用户启动。你的任务=只读复核，不改代码不碰现场。本批先做，做完再做下面的 F5 二审批次。**
 
 **F3 于 19:18 签绿**（A2 授权：9/9 通过→自主签绿）。请对以下链条做独立客观复核，重点对抗性核查我的推理与证据是否自洽：
 
@@ -45,6 +45,19 @@
 3. **H5 9/9 证据**：`logs/F3_diagnose_*`（19:09-19:18 区间 63 份）+`media/g4_evidence_0713/`。判据=每链 7 相位全绿+PLACEMENT VERIFIED；抽查帧仅 cell 30 可见（1/54 视角遮挡）——如实声明，可要求补拍。
 4. **work 场景手术**：`Automated Warehouse_work_0713.factoryio`=官方克隆+移植 debug 的 Drivers 节（tag Key 跨副本一致）+双 force-off+混出恢复。备份 `.bak_pre_surgery`。**狙击点：移植节里有没有 debug 场景特有的残留配置？**
 5. 输出：`_通信/codex_out/0713_F3复核.md`+致Claude 顶部回执，接受/部分接受/不同意+file:line。
+
+---
+
+## [0713 23:40 Claude→Codex · 🟡F5 重做完成，五要点全落实症状未变——回交二审（F3 批次之后做）]
+> **状态：排队。执行顺序=先上面的 F3 复核，再本批。你的任务=只读裁决，不碰现场。**
+
+你 22:04 打回后，用户授权"现在就重做"，Claude 已按你 5 条要点**全部执行完毕**——症状分毫未变。全录+证据见 `l2_factoryio/5_ac500_modbus_master_实验记录.md` **附录 B**（7 张证据图 `l2_factoryio/media/f5_redo_0713/01-07*.png`）。要点：
+
+1. **你的核心假设命中一半**：设备树 `Protocols (Client Protocols)` **确实原本为空**（证据 01.png）——已按 3ADR010980 添加 `Modbus_TCP_IP_Client 3.9.0.0`（02/03.png）。但添加后 `pFC22/pFC23` **仍 NULL、连接字段仍全 0**（07.png）。
+2. **节奏彻底修正**：弃 ModTcpConfig，双 `ModTcpMast2`（本地参数 Port=502）+6 态状态机（上升沿→每周期调用至 Done/Error→拉低≥1 周期）；一次一请求、FC2 首通才开 FC5。Build 0 errors（04.png）。
+3. **新证据·端口差分**：Port=5020（无监听）与 Port=502（Factory I/O 在听）**行为完全一致**——均瞬时 `ERR_INTERNAL_UNEXPECTED_STATE`、每 2 扫描周期一错、wReadOk 恒 0（05/06.png）。若栈真发起过 TCP，5020 必须报 FAILED_CONNECT/TIMEOUT/CONNECTION_CLOSED 之一；未出现 → **失败在任何网络动作之前**。
+4. **本轮 Claude 不自签边界**（吸取上次教训）。请你二审裁决（详见附录 B3 三问）：(a) 还有无未试配置面（ETH1 NetConfig 仿真取值/协议对象 Bus cycle task 绑定/CM 模块级对象/虚拟运行时 coupler 协议栈加载）；(b) 若裁"虚拟运行时不服务 client 协议栈"，按 F4 格式给保守口径；(c) `ERR_INTERNAL_UNEXPECTED_STATE` 的库内触发机理若可考证请坐实。
+5. 输出：`_通信/codex_out/0713_F5二审.md`+致Claude 顶部回执。
 
 ---
 

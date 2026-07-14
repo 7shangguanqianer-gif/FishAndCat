@@ -113,7 +113,61 @@ only"），取值不是决定因素，不应表述为"正确接口索引"。§5 
    Client Protocols 与库内部注册。
 
 **连锁修正**：C4/C5/F6 在线门线"待真机"判决收回，改为"待 F5 重做结果"。
-重做记录见【附录 B】（重做执行时追加）。
+重做记录见【附录 B】。
 
 外部出处：ABB 3ADR010980《AC500 V3 - Modbus TCP》、ABB Help ModTcpMast/ModTcpConfig
 （URL 见复核回执文末）。
+
+---
+
+## 附录 B · 重做执行记录（0713 23:10-23:35，Codex 5 要点全部执行完毕）
+
+> **结论先行：5 条重做要点全部落实后，症状分毫未变**——`pFC22/pFC23` 仍 NULL、
+> 仍瞬时 `ERR_INTERNAL_UNEXPECTED_STATE`（每 2 扫描周期一错）、`wReadOk` 恒 0。
+> 新增**端口差分实验**：Port=5020（无监听）与 Port=502（Factory I/O 在听）行为
+> **完全一致**→ 协议栈从未发起任何 TCP 尝试（同步失败于触发周期）。
+> **本轮不自签边界结论**（上次教训），全部证据回交 Codex 二审裁决。
+
+### B1 要点执行情况（对照 Codex 5 条）
+
+| # | 要点 | 执行 | 证据 |
+|---|---|---|---|
+| 1 | 设备树 `Protocols (Client Protocols)` 核查/添加 | ✅ **核实原本为空**（Codex 假设命中）→ 已添加 `Modbus_TCP_IP_Client`（ABB AG, 3.9.0.0, Bus cycle task=Task） | `media/f5_redo_0713/01`(空,改动前)/`02`(已加)/`03`(对象信息页).png |
+| 2 | fbCfg 按 AbbETrig3 语义 | ✅ 更彻底：**删除 ModTcpConfig 依赖**，改用 ModTcpMast2 本地参数 | 代码（重做版 PRG_FIO_Bridge） |
+| 3 | 事务块每周期调用+优先 ModTcpMast2 | ✅ 全新 6 态状态机：触发(上升沿)→每周期调用等 Done/Error→拉低≥1 周期→再触发；fbRead/fbWrite 均 ModTcpMast2（RespTimeout=2000/KeepAlive=1000/BIG/Port=502/ConnectTimeout=默认） | `04_重做代码_Build0错误.png`；本地库文档接口核对（AB_LibDoc modtcpmast2.html） |
+| 4 | 一次一请求 | ✅ ParallelProcessing=FALSE；FC2 首通(xReadProven)后才启用 FC5；读写不并发 | 代码 |
+| 5 | 新判据观测 | ✅ 见 B2 | `05`/`06`/`07`.png |
+
+### B2 观测结果（Build 0 errors → 全下载 → RUN，仿真重启后满 2h 窗口）
+
+- **Port=502（Factory I/O Modbus Server 在监听，无竞争连接）**：
+  `fbRead.Error` 每次触发即出，`wReadErr` 以 ≈200 错/秒攀升（wCycle:wReadErr≈2:1
+  =触发当周期同步失败）；`wReadOk=0`；`eReadErr=ERR_INTERNAL_UNEXPECTED_STATE`；
+  瞬时采样 `fbRead.ErrorID` 在复位期显示 NO_ERROR（AbbETrig3 输出复位行为，正常）。
+- **端口差分：fbRead Port=5020（无任何监听）**：行为**完全一致**——仍瞬时
+  INTERNAL 错、wReadErr 同速攀升。**若栈真在发起 TCP，此处必须出现
+  ERR_FAILED_CONNECT/ERR_TIMEOUT/ERR_CONNECTION_CLOSED 之一**（官方错误码表）；
+  未出现 → 失败发生在任何网络动作之前。
+- **协议对象已添加后的内部状态**（决定性）：`pFC22=16#00000000`、
+  `pFC23=16#00000000`、`dwIPAddress=0`、`wPort=0`、`byUnitID=0`、
+  `byFunctionCode=0`——与添加协议对象**之前完全相同**。
+- 环境核对：`netstat` 502 LISTEN 无既有连接；仿真为新拉起实例（2h 窗口满额）；
+  Build 0 errors；下载/RUN 正常；wCycle 正常攀升（程序在跑）。
+
+### B3 移交 Codex 二审的问题
+
+1. 五要点全部落实 + 端口差分证明"无任何 TCP 尝试" + pFC 恒 NULL——
+   还有没有**未试过的配置面**？（候选：ETH1 NetConfig 的 IP 设置在仿真里的取值、
+   协议对象的 Bus cycle task 绑定、是否需要 CM 通信模块级对象、
+   虚拟运行时是否根本不加载 coupler 级协议栈服务。）
+2. 若裁决为"虚拟运行时不服务 Modbus TCP Client 协议栈"，保守口径怎么写
+   （同 F4 格式：只断言当前实例/本机安装，不断言产品线）。
+3. `ERR_INTERNAL_UNEXPECTED_STATE` 在库内部的确切触发点（若可从库文档/例程判断），
+   以坐实"同步失败于栈资源缺失"的机理解释。
+
+### B4 工程状态
+
+- 项目已保存：设备树含 `Modbus_TCP_IP_Client`（保留——按官方文档本就该有，
+  对实机部署直接可用）；`PRG_FIO_Bridge` = 重做版（0 errors）。
+- 全过程 7 张证据图：`l2_factoryio/media/f5_redo_0713/01-07*.png`。
+- F5 状态：**重做完成，边界裁决权移交 Codex 二审**；C4/C5/F6 判决继续挂起待二审。
