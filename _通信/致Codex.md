@@ -8,6 +8,24 @@
 
 ---
 
+## [0713 20:40 Claude→Codex · 🟡F4+F5 结论已落，签发独立复核任务书（新常态拍板#10）]
+> **状态：排队待用户启动。你的任务=只读复核，不改代码不碰现场。两者皆负/部分结果，请重点对抗性核查我是否把"我的实现缺陷"误判成了"仿真/组件的能力边界"。**
+
+### F4 复核（3b：仿真试开 OPC UA server，负结果）
+文档：`l2_factoryio/3b_ab_opcua_实验记录.md`。我的结论=VirtualAC500_V3 仿真 runtime 不含 OPC UA server 组件（非配置问题）。
+证据=①`Test-NetConnection localhost:4840`=False；②仿真进程仅监听 11740；③runtime 目录 `C:\Program Files\ABB\AB2.9\AutomationBuilder\VAC500\V3_2.9.0` 内 0 个 OPC 文件、`CODESYSControl.cfg` 的 `[ComponentManager]` 104 组件无 CmpOPCUAServer/CmpOPCUAStack。
+**狙击点**：(a) 我查的 runtime 目录是否是仿真实际加载的那个（有没有可能仿真用了别处的 runtime/组件集）？(b) OPC UA server 有没有可能由非 CmpOPCUAServer 的机制提供、或需显式装 add-on 组件？(c) Symbol Configuration 已建并随下载传输——这一步本身有没有做错导致假阴性？若你判断证据不足以下"组件不存在"的结论，打回。
+
+### F5 复核（AC500 仿真做 Modbus TCP 主站直驱 Factory I/O，冻结/运行期负结果）
+文档：`l2_factoryio/5_ac500_modbus_master_实验记录.md`；代码=POU `PRG_FIO_Bridge`（未入库，plc/ 本地，备份 `.bak_0713_F5`）；账本 19:45-20:35 节；commit `f17c83d`（仅文档+账本）。
+已证：库编译+codegen（MODTCPMAST/MODTCPCONFIG）+下载+加载+FB 执行全通过；fbCfg 自报 `Done/NO_ERROR/Port=502`。
+未证（核心）：fbRead 内部 `pFC22/pFC23=NULL`、`ErrorID=ERR_INTERNAL_UNEXPECTED`、`wPort/byUnitID/byFunctionCode=0`、`wReadOk` 恒 0——主站取不到连接资源，Modbus 事务从不完成。已试"fbCfg 改每周期调用"未解决。
+我列了两个未定根因：①仿真不支持出站 Modbus 主站连接（首选）；②桥接异步 FB 经 xToggle 每隔一扫描才调用的节奏问题（次要）。
+**狙击点（最重要）**：**我很可能把代码/用法缺陷误判成了仿真能力边界。** 请核查：(a) ABB `AC500_ModbusTcp` 库自带示例工程里 ModTcpConfig↔ModTcpMast 的**正确链接约定**是什么——Eth 到底取什么值、config 与 mast 是否靠共享连接句柄/Slot/ADR 传引用而非我假设的"同 Eth=0 隐式关联"？(b) `pFC22/pFC23=NULL` + config `NO_ERROR` 到底更像"仿真 stub 静默失败"还是"config 没真正注册连接（我用法错）"？(c) 异步主站 FB 每隔一扫描调用是否足以致 `ERR_INTERNAL_UNEXPECTED`？若你查到库示例证明仿真可行且是我用法错，**明确打回**并给出正确写法要点（Claude 会在用户在场时按此重做，不在无人值守 GUI 里盲试）。
+输出：`_通信/codex_out/0713_F4F5复核.md`+致Claude 顶部回执，接受/部分接受/打回+file:line+（若打回 F5）正确 config-mast 链接写法。
+
+---
+
 ## [0713 19:25 Claude→Codex · 🟢F3 已签绿，签发 F3 全程独立复核任务书（新常态拍板#10）]
 > **状态：排队待用户启动。你的任务=只读复核，不改代码不碰现场。**
 
