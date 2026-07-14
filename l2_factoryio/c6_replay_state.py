@@ -17,10 +17,11 @@
   - DUAL   完成 → 先释放 `physical_source` 再占用 `physical_target`。
 - 每个 (task_id, request_seq) 的 DONE 只结算一次（幂等，容忍事件流重复）。
 
-堆垛机当前服务格（crane_cell）为回放启发式，仅供视图定位，不参与占用结算：
-- INBOUND / DUAL 的 store 相位 → physical_target；
-- OUTBOUND / DUAL 的 retrieve 相位 → physical_source；
-- go_rest / unload 收尾相位 → None（在 rest/出入口，不在货架格）。
+堆垛机当前服务格（crane_cell）按 orchestrator 的**真实相位契约**精确映射
+（来源=task_orchestrator._plan/execute 的相位常量），仅供视图定位，不参与占用结算：
+- STORE_TARGET → physical_target；RETRIEVE_SOURCE → physical_source；
+- 其余相位（DISPATCH/ACK/START/FEED/PICK_LOAD/RETURN_IO/UNLOAD/RETURN_REST/
+  COMPLETE/SAFE_STOP*/未知）→ None——堆垛机不在货架格或位置不明，诚实不标。
 """
 
 from __future__ import annotations
@@ -35,35 +36,19 @@ from event_log import TaskEvent
 from task_contract import FaultCode, Operation, TaskStatus
 
 
-# 收尾/出入口相位（此时堆垛机不定位到某个货架格）——按子串小写匹配，容忍命名差异
-_REST_PHASE_HINTS = ("rest", "unload", "park", "idle", "done")
-# retrieve（取）相位提示——DUAL 时据此判断当前服务 source 还是 target
-_RETRIEVE_PHASE_HINTS = ("retrieve", "pick", "source", "feed", "load")
-
-
-def _phase_is_rest(phase: str) -> bool:
-    p = (phase or "").lower()
-    return any(h in p for h in _REST_PHASE_HINTS)
-
-
-def _phase_is_retrieve(phase: str) -> bool:
-    p = (phase or "").lower()
-    return any(h in p for h in _RETRIEVE_PHASE_HINTS)
+# orchestrator 真实相位契约（task_orchestrator._plan/execute 的相位常量）中
+# 唯二"堆垛机正在服务某个货架格"的相位；其余相位（含未知）诚实置 None。
+_PHASE_AT_TARGET = "STORE_TARGET"
+_PHASE_AT_SOURCE = "RETRIEVE_SOURCE"
 
 
 def _crane_cell_for(event: TaskEvent) -> int | None:
-    """回放启发式：该事件时堆垛机正在服务的物理格（None=rest/出入口）。"""
-    if _phase_is_rest(event.phase):
-        return None
-    op = event.operation
-    if op is Operation.OUTBOUND:
-        return event.physical_source
-    if op is Operation.INBOUND:
+    """该事件时堆垛机正在服务的物理格（None=出入口/在途/位置不明）。"""
+    if event.phase == _PHASE_AT_TARGET:
         return event.physical_target
-    # DUAL：按相位区分取/放腿
-    if _phase_is_retrieve(event.phase):
-        return event.physical_source if event.physical_source is not None else event.physical_target
-    return event.physical_target if event.physical_target is not None else event.physical_source
+    if event.phase == _PHASE_AT_SOURCE:
+        return event.physical_source
+    return None
 
 
 @dataclass(frozen=True)

@@ -117,18 +117,22 @@ def test_intermediate_statuses_do_not_change_occupancy():
     assert tl.summary.tasks_done == 0
 
 
-def test_crane_cell_heuristic():
-    inbound = build_replay([_ev(1, TaskStatus.RUNNING, operation=Operation.INBOUND,
-                                phase="store", physical_target=42)])
-    assert inbound.frames[0].crane_cell == 42
+def test_crane_cell_exact_phase_mapping():
+    # 真实相位契约（task_orchestrator）：仅 STORE_TARGET/RETRIEVE_SOURCE 标格
+    at_target = build_replay([_ev(1, TaskStatus.RUNNING, operation=Operation.INBOUND,
+                                  phase="STORE_TARGET", physical_target=42)])
+    assert at_target.frames[0].crane_cell == 42
 
-    outbound = build_replay([_ev(1, TaskStatus.RUNNING, operation=Operation.OUTBOUND,
-                                 phase="retrieve", physical_source=11)])
-    assert outbound.frames[0].crane_cell == 11
+    at_source = build_replay([_ev(1, TaskStatus.RUNNING, operation=Operation.OUTBOUND,
+                                  phase="RETRIEVE_SOURCE", physical_source=11)])
+    assert at_source.frames[0].crane_cell == 11
 
-    rest = build_replay([_ev(1, TaskStatus.DONE, operation=Operation.INBOUND,
-                             phase="go_rest", physical_target=42)])
-    assert rest.frames[0].crane_cell is None
+    # DUAL 的 FEED/PICK_LOAD 是 store 腿前置（在出入口），不得标 source（旧启发式的误判）
+    for ph in ("DISPATCH", "ACK", "START", "FEED", "PICK_LOAD", "RETURN_IO",
+               "UNLOAD", "RETURN_REST", "COMPLETE", "SAFE_STOP", "unknown-phase"):
+        tl = build_replay([_ev(1, TaskStatus.RUNNING, operation=Operation.DUAL,
+                               phase=ph, physical_source=5, physical_target=50)])
+        assert tl.frames[0].crane_cell is None, f"phase={ph} 应为 None"
 
 
 def test_occupancy_series_and_span():
@@ -216,3 +220,48 @@ def test_jsonl_tolerates_blank_lines(tmp_path: Path):
     ev = _ev(1, TaskStatus.DONE, operation=Operation.INBOUND, physical_target=4)
     p.write_text(json.dumps(ev.to_dict()) + "\n\n", encoding="utf-8")
     assert len(load_events_jsonl(p)) == 1
+
+
+# ---------- 集成：真实 orchestrator 的相位契约锁 ----------
+
+class _NullAdapter:
+    """DeviceAdapter 无副作用实现（仅供契约锁测试）。"""
+
+    def feed(self): pass
+    def pick_load(self): pass
+    def store(self, cell): pass
+    def retrieve(self, cell): pass
+    def go_rest(self): pass
+    def unload(self): pass
+    def safe_stop(self): pass
+
+
+def test_real_orchestrator_phase_contract(tmp_path: Path):
+    """用真实 TaskOrchestrator 事件流锁死 crane_cell 契约——orchestrator
+    相位名若漂移（如改名 STORE_TARGET），本测试立即红。"""
+    from event_log import JsonlEventLog
+    from task_contract import WarehouseTask
+    from task_orchestrator import TaskOrchestrator
+
+    log = JsonlEventLog(tmp_path / "events.jsonl")
+    orch = TaskOrchestrator(_NullAdapter(), log)
+    orch.execute(WarehouseTask(1, 1, Operation.INBOUND, goods_id=9, logical_target=399))
+    orch.execute(WarehouseTask(2, 2, Operation.DUAL, goods_id=8,
+                               logical_source=399, logical_target=0))
+
+    tl = build_replay(log.read_all())
+    by_phase = {}
+    for f in tl.frames:
+        by_phase.setdefault((f.task_id, f.phase), f)
+
+    # INBOUND：STORE_TARGET 标 target(=54)，收尾/出入口相位不标格
+    assert by_phase[(1, "STORE_TARGET")].crane_cell == 54
+    for ph in ("DISPATCH", "START", "FEED", "PICK_LOAD", "RETURN_REST", "COMPLETE"):
+        assert by_phase[(1, ph)].crane_cell is None
+    # DUAL：store 腿标 target(=1)，retrieve 腿标 source(=54)，其余 None
+    assert by_phase[(2, "STORE_TARGET")].crane_cell == 1
+    assert by_phase[(2, "RETRIEVE_SOURCE")].crane_cell == 54
+    for ph in ("FEED", "PICK_LOAD", "RETURN_IO", "UNLOAD", "RETURN_REST"):
+        assert by_phase[(2, ph)].crane_cell is None
+    # 占用结算跟着走：入 54 → DUAL 释 54 入 1
+    assert tl.frames[-1].occupied_cells == frozenset({1})

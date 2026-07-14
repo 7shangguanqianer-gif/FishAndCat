@@ -214,6 +214,9 @@
 - **21:30-22:00 F8 全作品健康审计（任务池主线尽→转 F8）**：主队列（F3 绿/F4 档/F5 冻/F7 复核书）尽、在线门线（C4/C5/F6）待真机、C6 渲染待拍板 → 按 F8"全作品找优化点"做健康审计。**全项目绿**：`sim/run_all.py core_smoke` PASS（完整 unittest discover + 5-seed headline 回归锚，AWRA-LS 期望取货 8.40s/较基线降 62.0%/能耗降 67.3%/违规 Σ=0 全部完好）+ l2_factoryio 142/142。无回归、无隐患。**本会话交付小结**：F5 冻结（根因诊断 pFC NULL/ERR_INTERNAL_UNEXPECTED，commit f17c83d）→ F7 F4+F5 复核书签发（dbedd71）→ C6 同源数据层建成+补 KPI（c6_replay_state/test/sample_gen，142/142，e2aa4ae+3b4b4cd）+启动决策文档 → F8 健康审计全绿。高确定性自主工作到边界：余下需用户拍板（C6 渲染 D1-D4）或真机（在线门线）。
   - **反思行（本小时）**：负结果的战略价值兑现——F5 一个仿真边界，早判早转（C6 纯软件线 + F8 健康审计），比在阻塞的在线门线上反复撞墙产出高得多；"任务池尽转 F8"的机制让无人值守不空转也不盲干。
 
+- **21:49-22:15 F8 轮 2：C6 crane_cell 启发式换真实相位契约（自查自纠）**：兜底唤醒到点，Codex 无新回执（致Claude.md 仍 14:26）→F8 自查昨轮 C6 代码，发现 `_crane_cell_for` 的子串启发式是**没对照 orchestrator 真源写的猜测**——真实相位名为大写 `FEED/PICK_LOAD/STORE_TARGET/RETRIEVE_SOURCE/RETURN_IO/UNLOAD/RETURN_REST/COMPLETE/SAFE_STOP*`（task_orchestrator._plan/execute 实读），旧启发式会把 DUAL 的 FEED/PICK_LOAD 误标 source（实为 store 腿前置）、把 RETURN_IO/SAFE_STOP 虚标格位。修复=删猜测辅助函数，换**精确相位映射**（仅 STORE_TARGET→target、RETRIEVE_SOURCE→source，其余含未知一律 None 诚实不标）+ 新增**真实 orchestrator 集成契约锁测试**（INBOUND+DUAL 全相位逐一断言，相位名漂移即红）。C6 测试 17 个，**全量 143/143**。用户期间回过一句「对齐面板」——桌面作战面板已刷新到 0713 夜现状（备份 .bak_0713）。
+  - **反思行（本轮）**：又一次「写码时没读真源」——crane 启发式与 F5 的 Enable/Eth 同病：接口/契约先猜后对。矫正动作可制度化：凡消费他模块产出（相位名/字段/时间戳格式），写码前先 grep 真源一次 + 用真实生产者跑一个集成锁测试，成本 5 分钟，抓住两类漂移（我猜错 + 上游改名）。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - **C6 渲染层 4 决策（D1-D4，详见 `docs/C6_启动决策_0713夜.md`）**：数据源口径/双视图形态/3D 渲染栈/交付形态。Claude 均有推荐（数据源走 orchestrator 事件流、版式沿用 0706 的 3:7、渲染栈 PyVista、先出离线 mp4）；一句"按推荐走"即可放行 Claude 独立建渲染层。数据层已就绪，改版式/换栈不影响地基。
