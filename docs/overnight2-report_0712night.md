@@ -179,6 +179,14 @@
   - **终极裁决**：控制序列/时序/代码全程正确（官方语义吻合）；**debug 场景本身是坏的**（同序列在 debug 场景 G4 无 Z）。凌晨全部事故（cell 1 无 Z、postF6 G2 无 Z、恢复后掉箱）根源=坏场景+把场景故障误判为控制问题后的恢复操作。具体坏点（rack 对齐/stacker 校准/场景内部状态）不再深挖——**处置=抛弃 debug 场景，基于官方原版重建工作场景**（配 Modbus driver 映射+Emitter BoxM/force-off 治理→另存新副本），在新场景上跑 f3_stacker_control 全链+9/9 验收（H5）。
   - P3 全日志与帧：`scratchpad/p3_official_replay.py` 输出（本节）+`Screenshots/15_58_15.png`（放箱成功帧，将归档 media）。
 
+- **18:52-19:20 真根因修复 + work 场景投产 + H5 9/9 全部通过 → F3 签绿**：
+  - **中断自查（如实）**：16:35 兜底唤醒被误处理为"正常工作中仅重设"，实际 ScheduleWakeup 后 turn 已结束——损失 ~2.3h 挂机时间。教训：**兜底唤醒到来时若上一轮 turn 已结束就是中断，必须继续干活**；「重设兜底+继续工作」要在同一 turn 完成。
+  - **真根因（推翻 15:30 的"坏场景"判决）**：work 场景（原版克隆+Drivers 移植）单链复现无 Z → 与 P3 唯一差异=**Target 寄存器状态**。Modbus 决胜测量：LOWER_STALLED 现场写回 Target=30 的瞬间 Z 立即启动（0.1s/34 采样）。**堆垛机 Lift 微升降以 Target 名义高度为 Z setpoint；相位间 safe_stop 清 Target=0（官方语义"停在当前位置"）后微降失去参考 → Moving Z 永不产生**。凌晨全部无 Z 事故、pick 一直正常（Target=55 在）、P3 成功（Target 保持）统一解释；**debug 场景无罪恢复名誉**（真凶=分相位收尾清 Target 的设计与 Factory I/O setpoint 语义的相互作用）。
+  - **H1.3/H1.3b（`8c072b4`/`c342f83`，126/126）**：place_lower 写 Lift False 前 `self.target(cell)` 恢复 setpoint、完成后清回 0；feed 清 hint 真实走位+goto 已在位分支（NO START+静止=在位）。LOWER_STALLED 分支保留为 fail-safe。
+  - **work 场景投产**：`Automated Warehouse_work_0713.factoryio`=官方模板克隆+**XML 移植 debug 场景的完整 Modbus Drivers 节**（tag Key 跨副本一致性实证——零 GUI 拖拽）+Emitter/Remover 持久 force-off+手术备份 `.bak_pre_surgery`；P3 的 8 处 force 残留清理（含 Target force 0 的隐形杀手）。Modbus 映射冒烟+单链验证全绿。
+  - **H5 9/9 验收全部通过（19:09-19:18，混出箱型按拍板#5 恢复）**：cell 1/30/54 各 3 次完整链（pulse→feed→pick→travel→place-extend→place-lower→retract），全部 PLACEMENT VERIFIED+SAFE STOP VERIFIED；lower 真实 Z 启动 0.06-0.14s；**零故障零掉箱零落锁**。66 份 diagnose 日志（logs/）+抽查帧+终验帧（`media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png`）。
+  - **F3 签绿（A2 授权：9/9 通过→自主签绿）**。口径不变：Python 直控技术预演/54 格代表性物理 I/O 与时序验证。悬置：正式素材（干净画面链）在 F4 前补录；Codex F3 复核任务书随后签发（新常态拍板#10）。
+
 ## 五、待拍板清单
 - **演示录屏的"演讲技巧 10%"载体**：无现场答辩（0713 澄清），录屏讲解=用户配音 vs 字幕（Claude 可代做字幕本）——待用户回来定。
 - （随夜间积累）
