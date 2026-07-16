@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>C6 demo · Three.js 交互回放（AWRA-LS, sim）</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d1117;color:#e6edf3;
+    font-family:"Microsoft YaHei",system-ui,sans-serif;overflow:hidden}
+  #hud{position:fixed;top:12px;left:14px;z-index:9;font-size:14px;line-height:1.8;
+    background:rgba(13,17,23,.72);border:1px solid #2d3644;border-radius:10px;padding:10px 14px}
+  #hud b{color:#f2b13d}
+  #bar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:9;display:flex;gap:8px}
+  button{background:#161b22;color:#e6edf3;border:1px solid #2d3644;border-radius:8px;
+    padding:6px 14px;font-size:13px;cursor:pointer}
+  button:hover{background:#1c2330}
+  button.rec{border-color:#f2b13d;color:#f2b13d}
+  #tip{position:fixed;right:14px;top:12px;z-index:9;font-size:12px;color:#9aa7b8;text-align:right}
+</style>
+</head>
+<body>
+<div id="hud">AWRA-LS 布局回放(sim)<br>已入库 <b id="n">0</b> / <span id="total">?</span><br>平均单程 <b id="mt">0.00</b> s</div>
+<div id="tip">拖拽=旋转 · 滚轮=缩放 · 右键拖=平移<br>视角与 PyVista 版 A/B/C 对齐</div>
+<div id="bar">
+  <button id="play">▶ 播放</button>
+  <button id="reset">⟲ 重置</button>
+  <button data-cam="A">视角A 等轴测</button>
+  <button data-cam="B">视角B 正面高位</button>
+  <button data-cam="C">视角C 低角走廊</button>
+  <button id="rec" class="rec">● 录制 15s → webm</button>
+</div>
+<script src="./lib/three.min.js"></script>
+<script src="./lib/OrbitControls.js"></script>
+<script>
+const GOODS = [{"id":1,"col":3,"tier":8,"w":13.9,"t":16.0},{"id":2,"col":16,"tier":1,"w":69.5,"t":8.0},{"id":3,"col":7,"tier":4,"w":50.1,"t":8.0},{"id":4,"col":9,"tier":4,"w":46.1,"t":8.0},{"id":5,"col":11,"tier":2,"w":61.3,"t":5.5},{"id":6,"col":19,"tier":4,"w":51.1,"t":9.5},{"id":7,"col":13,"tier":4,"w":38.7,"t":8.0},{"id":8,"col":17,"tier":3,"w":56.0,"t":8.5},{"id":9,"col":4,"tier":0,"w":78.5,"t":2.0},{"id":10,"col":11,"tier":0,"w":80.0,"t":5.5},{"id":11,"col":10,"tier":7,"w":30.5,"t":14.0},{"id":12,"col":0,"tier":4,"w":39.3,"t":8.0},{"id":13,"col":0,"tier":5,"w":48.3,"t":10.0},{"id":14,"col":13,"tier":6,"w":32.3,"t":12.0},{"id":15,"col":10,"tier":4,"w":48.9,"t":8.0},{"id":16,"col":15,"tier":4,"w":43.0,"t":8.0},{"id":17,"col":10,"tier":3,"w":41.8,"t":6.0},{"id":18,"col":4,"tier":3,"w":36.5,"t":6.0},{"id":19,"col":18,"tier":5,"w":43.8,"t":10.0},{"id":20,"col":9,"tier":8,"w":14.7,"t":16.0},{"id":21,"col":18,"tier":1,"w":71.5,"t":9.0},{"id":22,"col":6,"tier":5,"w":40.3,"t":10.0},{"id":23,"col":10,"tier":1,"w":71.4,"t":5.0},{"id":24,"col":3,"tier":2,"w":40.2,"t":4.0},{"id":25,"col":11,"tier":5,"w":45.9,"t":10.0},{"id":26,"col":17,"tier":6,"w":28.1,"t":12.0},{"id":27,"col":8,"tier":3,"w":40.9,"t":6.0},{"id":28,"col":4,"tier":7,"w":27.1,"t":14.0},{"id":29,"col":14,"tier":3,"w":54.2,"t":7.0},{"id":30,"col":9,"tier":5,"w":44.2,"t":10.0},{"id":31,"col":16,"tier":7,"w":24.5,"t":14.0},{"id":32,"col":7,"tier":1,"w":67.0,"t":3.5},{"id":33,"col":6,"tier":1,"w":73.0,"t":3.0},{"id":34,"col":19,"tier":0,"w":73.8,"t":9.5},{"id":35,"col":14,"tier":2,"w":63.9,"t":7.0},{"id":36,"col":2,"tier":0,"w":77.4,"t":1.0},{"id":37,"col":5,"tier":6,"w":40.9,"t":12.0},{"id":38,"col":1,"tier":6,"w":42.4,"t":12.0},{"id":39,"col":8,"tier":6,"w":35.8,"t":12.0},{"id":40,"col":0,"tier":19,"w":5.0,"t":38.0},{"id":41,"col":15,"tier":7,"w":11.2,"t":14.0},{"id":42,"col":7,"tier":3,"w":51.6,"t":6.0},{"id":43,"col":13,"tier":3,"w":55.1,"t":6.5},{"id":44,"col":1,"tier":7,"w":28.5,"t":14.0},{"id":45,"col":13,"tier":0,"w":76.2,"t":6.5},{"id":46,"col":15,"tier":8,"w":15.1,"t":16.0},{"id":47,"col":5,"tier":0,"w":76.9,"t":2.5},{"id":48,"col":2,"tier":8,"w":11.3,"t":16.0},{"id":49,"col":0,"tier":1,"w":63.8,"t":2.0},{"id":50,"col":17,"tier":5,"w":35.9,"t":10.0},{"id":51,"col":8,"tier":8,"w":19.8,"t":16.0},{"id":52,"col":19,"tier":1,"w":71.6,"t":9.5},{"id":53,"col":7,"tier":6,"w":31.5,"t":12.0},{"id":54,"col":15,"tier":5,"w":43.3,"t":10.0},{"id":55,"col":0,"tier":7,"w":29.5,"t":14.0},{"id":56,"col":4,"tier":4,"w":47.9,"t":8.0},{"id":57,"col":2,"tier":5,"w":44.0,"t":10.0},{"id":58,"col":16,"tier":4,"w":49.9,"t":8.0},{"id":59,"col":11,"tier":6,"w":34.9,"t":12.0},{"id":60,"col":0,"tier":8,"w":8.4,"t":16.0},{"id":61,"col":12,"tier":5,"w":38.9,"t":10.0},{"id":62,"col":5,"tier":2,"w":58.3,"t":4.0},{"id":63,"col":12,"tier":4,"w":44.7,"t":8.0},{"id":64,"col":17,"tier":0,"w":76.7,"t":8.5},{"id":65,"col":14,"tier":6,"w":34.2,"t":12.0},{"id":66,"col":12,"tier":8,"w":10.9,"t":16.0},{"id":67,"col":6,"tier":7,"w":24.8,"t":14.0},{"id":68,"col":19,"tier":6,"w":36.2,"t":12.0},{"id":69,"col":2,"tier":6,"w":41.2,"t":12.0},{"id":70,"col":2,"tier":2,"w":64.8,"t":4.0},{"id":71,"col":1,"tier":3,"w":22.4,"t":6.0},{"id":72,"col":16,"tier":3,"w":53.4,"t":8.0},{"id":73,"col":9,"tier":2,"w":68.7,"t":4.5},{"id":74,"col":7,"tier":7,"w":31.4,"t":14.0},{"id":75,"col":6,"tier":4,"w":47.9,"t":8.0},{"id":76,"col":12,"tier":2,"w":58.7,"t":6.0},{"id":77,"col":13,"tier":7,"w":21.1,"t":14.0},{"id":78,"col":3,"tier":5,"w":46.7,"t":10.0},{"id":79,"col":16,"tier":0,"w":76.6,"t":8.0},{"id":80,"col":0,"tier":2,"w":61.9,"t":4.0},{"id":81,"col":1,"tier":4,"w":52.3,"t":8.0},{"id":82,"col":17,"tier":2,"w":67.8,"t":8.5},{"id":83,"col":12,"tier":7,"w":24.6,"t":14.0},{"id":84,"col":9,"tier":1,"w":72.4,"t":4.5},{"id":85,"col":1,"tier":19,"w":6.2,"t":38.0},{"id":86,"col":5,"tier":8,"w":14.2,"t":16.0},{"id":87,"col":14,"tier":0,"w":75.2,"t":7.0},{"id":88,"col":3,"tier":4,"w":50.5,"t":8.0},{"id":89,"col":15,"tier":1,"w":74.4,"t":7.5},{"id":90,"col":1,"tier":0,"w":39.7,"t":0.5},{"id":91,"col":6,"tier":2,"w":56.5,"t":4.0},{"id":92,"col":13,"tier":1,"w":74.3,"t":6.5},{"id":93,"col":4,"tier":6,"w":31.7,"t":12.0},{"id":94,"col":14,"tier":8,"w":6.8,"t":16.0},{"id":95,"col":7,"tier":0,"w":76.9,"t":3.5},{"id":96,"col":15,"tier":2,"w":62.6,"t":7.5},{"id":97,"col":5,"tier":5,"w":45.7,"t":10.0},{"id":98,"col":18,"tier":2,"w":59.1,"t":9.0},{"id":99,"col":11,"tier":8,"w":13.9,"t":16.0},{"id":100,"col":11,"tier":3,"w":53.6,"t":6.0},{"id":101,"col":18,"tier":4,"w":48.4,"t":9.0},{"id":102,"col":9,"tier":7,"w":22.9,"t":14.0},{"id":103,"col":6,"tier":8,"w":14.4,"t":16.0},{"id":104,"col":8,"tier":0,"w":75.1,"t":4.0},{"id":105,"col":19,"tier":7,"w":24.1,"t":14.0},{"id":106,"col":18,"tier":7,"w":25.8,"t":14.0},{"id":107,"col":5,"tier":3,"w":28.6,"t":6.0},{"id":108,"col":12,"tier":1,"w":68.0,"t":6.0},{"id":109,"col":10,"tier":0,"w":77.1,"t":5.0},{"id":110,"col":2,"tier":3,"w":52.5,"t":6.0},{"id":111,"col":19,"tier":3,"w":54.3,"t":9.5},{"id":112,"col":1,"tier":1,"w":40.3,"t":2.0},{"id":113,"col":4,"tier":1,"w":69.7,"t":2.0},{"id":114,"col":3,"tier":1,"w":34.9,"t":2.0},{"id":115,"col":10,"tier":6,"w":22.4,"t":12.0},{"id":116,"col":3,"tier":7,"w":20.1,"t":14.0},{"id":117,"col":8,"tier":5,"w":46.2,"t":10.0},{"id":118,"col":14,"tier":5,"w":48.5,"t":10.0},{"id":119,"col":16,"tier":6,"w":16.5,"t":12.0},{"id":120,"col":8,"tier":2,"w":66.0,"t":4.0}];
+const COLS=20, TIERS=20, CW=1.0, CH=0.6, CD=0.8, GAP=0.12;
+const SPANX=COLS*(CW+GAP), SPANZ=TIERS*(CH+GAP);
+const W_SORTED=[...GOODS].map(g=>g.w).sort((a,b)=>a-b);
+const W33=W_SORTED[Math.floor(W_SORTED.length/3)], W66=W_SORTED[Math.floor(2*W_SORTED.length/3)];
+const BLUES=[0x9ecae8,0x4f8fc4,0x1b4f8a], AMBER=0xf2b13d;
+
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0d1117);
+const camera=new THREE.PerspectiveCamera(50, innerWidth/innerHeight, .1, 500);
+const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+const controls=new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(SPANX/2-CW/2, 0, SPANZ*0.45); controls.enableDamping=true;
+
+scene.add(new THREE.AmbientLight(0xffffff,.55));
+const dir=new THREE.DirectionalLight(0xffffff,.75); dir.position.set(-30,-40,60); scene.add(dir);
+
+// 地面 / 骨架 / IO 口（Z 轴向上与 PyVista 对齐: three 默认 y-up, 这里直接用 z 当高度并把相机 up 设 z）
+camera.up.set(0,0,1);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(SPANX+6,4.5),
+  new THREE.MeshLambertMaterial({color:0x20262e}));
+floor.position.set(SPANX/2-CW/2, .6, -.45); scene.add(floor);
+const frameMat=new THREE.MeshLambertMaterial({color:0x3a4656,transparent:true,opacity:.55});
+for(let c=0;c<=COLS;c++){const m=new THREE.Mesh(new THREE.BoxGeometry(.06,CD*.9,SPANZ),frameMat);
+  m.position.set(c*(CW+GAP)-(CW+GAP)/2,0,SPANZ/2-CH/2);scene.add(m);}
+for(let t=0;t<=TIERS;t+=4){const m=new THREE.Mesh(new THREE.BoxGeometry(SPANX,CD*.9,.05),frameMat);
+  m.position.set(SPANX/2-CW/2,0,t*(CH+GAP)-(CH+GAP)/2);scene.add(m);}
+const io=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.4,.1),
+  new THREE.MeshLambertMaterial({color:AMBER})); io.position.set(0,.9,-.38); scene.add(io);
+
+// 货物
+const boxGeo=new THREE.BoxGeometry(CW*.92, CD, CH*.9);
+const mats=BLUES.map(c=>new THREE.MeshLambertMaterial({color:c}));
+const amberMat=new THREE.MeshLambertMaterial({color:AMBER});
+function tierOf(w){return w<=W33?0:(w<=W66?1:2);}
+const meshes=GOODS.map(g=>{
+  const m=new THREE.Mesh(boxGeo, mats[tierOf(g.w)]);
+  m.position.set(g.col*(CW+GAP), 0, g.tier*(CH+GAP)); m.visible=false; scene.add(m);
+  return m;});
+
+// 预设视角(与 PyVista set_camera 同参数化)
+function setCam(azim,elev,zoom){
+  const f=controls.target, dist=SPANX*1.55/zoom, a=azim*Math.PI/180, e=elev*Math.PI/180;
+  camera.position.set(f.x+dist*Math.sin(a)*Math.cos(e), f.y-dist*Math.cos(a)*Math.cos(e), f.z+dist*Math.sin(e));
+  camera.lookAt(f);}
+const CAMS={A:[-35,22,1.0], B:[-5,32,1.05], C:[-62,8,0.9]};
+setCam(...CAMS.A);
+document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>setCam(...CAMS[b.dataset.cam]));
+
+// 回放状态机
+let idx=0, playing=false, acc=0, lastMesh=null;
+const PLACE_MS=100;   // 每件 100ms ≈ PyVista 每 2 帧@24fps
+const nEl=document.getElementById('n'), mtEl=document.getElementById('mt');
+document.getElementById('total').textContent=GOODS.length;
+let travelSum=0;
+function step(){
+  if(idx>=GOODS.length){playing=false;return;}
+  if(lastMesh) lastMesh.material=mats[tierOf(GOODS[idx-1].w)];
+  const g=GOODS[idx], m=meshes[idx];
+  m.visible=true; m.material=amberMat; lastMesh=m;
+  travelSum+=g.t; idx++;
+  nEl.textContent=idx; mtEl.textContent=(travelSum/idx).toFixed(2);}
+document.getElementById('play').onclick=e=>{playing=!playing;e.target.textContent=playing?'❚❚ 暂停':'▶ 播放';};
+document.getElementById('reset').onclick=()=>{idx=0;travelSum=0;playing=false;lastMesh=null;
+  meshes.forEach(m=>m.visible=false);nEl.textContent=0;mtEl.textContent='0.00';
+  document.getElementById('play').textContent='▶ 播放';};
+
+// 录制(官方机制: canvas.captureStream + MediaRecorder)
+document.getElementById('rec').onclick=()=>{
+  const stream=renderer.domElement.captureStream(30);
+  let mime='video/webm;codecs=vp9';
+  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm;codecs=vp8';
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6_000_000});
+  const chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
+  rec.onstop=()=>{const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
+    a.download='awra_threejs_录制15s.webm'; a.click();};
+  document.getElementById('reset').click(); document.getElementById('play').click();
+  rec.start(); setTimeout(()=>rec.stop(), 15000);};
+
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  if(playing){acc+=now-last; while(acc>=PLACE_MS){acc-=PLACE_MS; step();}} else {acc=0;}
+  last=now; controls.update(); renderer.render(scene,camera);}
+requestAnimationFrame(loop);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+</script>
+</body>
+</html>

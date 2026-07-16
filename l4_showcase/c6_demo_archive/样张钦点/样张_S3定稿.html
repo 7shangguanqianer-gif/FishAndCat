@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>样张 · S3 定稿版(锚 0706 正式版基准)</title>
+<style>
+  :root{--abb:#e2001a;--ink:#1a1a1a;--dim:#666;--line:#d9d9d9;--bg:#f4f5f6;--card:#fff;
+    --blue-d:#1b4f8a;--blue-m:#4f8fc4;--blue-l:#9ecae8;--amber:#f2b13d;--alarm:#d0021b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);
+    font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;overflow:hidden}
+  #brand{height:52px;background:#111;display:flex;align-items:center;gap:14px;padding:0 18px;
+    border-bottom:3px solid var(--abb)}
+  #brand .logo{color:var(--abb);font-weight:900;font-size:24px;letter-spacing:1px;font-family:Arial}
+  #brand .title{color:#fff;font-size:17px;font-weight:600}
+  #brand .badge{margin-left:auto;color:#bbb;font-size:12px}
+  #brand .badge b{color:#fff}
+  #kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px 12px;background:#ececec}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:6px 12px}
+  .kpi .v{font-size:20px;font-weight:700}
+  .kpi .k{font-size:11px;color:var(--dim);margin-top:1px}
+  .kpi.alarm{border:2px solid var(--alarm)}
+  .kpi.alarm .v{color:var(--alarm)}
+  #main{display:flex;height:calc(100% - 52px - 66px - 50px - 26px)}
+  #left{width:28%;min-width:300px;padding:8px 6px 8px 12px;display:flex;flex-direction:column;gap:8px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;flex:1;
+    display:flex;flex-direction:column;padding:6px 8px 4px}
+  .panel .cap{font-size:12px;text-align:center;margin-bottom:2px}
+  .panel canvas{flex:1;width:100%}
+  .panel .note{font-size:10px;color:#999;text-align:right}
+  #right{flex:1;position:relative;margin:8px 12px 8px 6px;background:#fff;
+    border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  #gl{position:absolute;inset:0}
+  #taskline{position:absolute;top:8px;left:12px;font-size:13px;z-index:3;
+    background:rgba(255,255,255,.82);padding:2px 8px;border-radius:3px}
+  #bar{height:50px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;
+    border-top:1px solid var(--line)}
+  #bar .desc{flex:1;font-size:12.5px;color:var(--dim)}
+  #bar .exp{padding:8px 16px;border:1px solid var(--blue-d);color:var(--blue-d);border-radius:4px;
+    background:#fff;font-size:13px;cursor:pointer}
+  #foot{height:26px;display:flex;align-items:center;padding:0 14px;font-size:10.5px;color:#999;
+    background:#ececec;justify-content:space-between}
+</style>
+</head>
+<body>
+<div id="brand">
+  <span class="logo">ABB</span><span class="title">智储优控 · 3D 数字孪生回放</span>
+  <span class="badge">样张 <b>S3 定稿版</b> · 锚 0706 正式版基准 · <b>SIM</b></span>
+</div>
+<div id="kpis">
+  <div class="kpi"><div class="v">16/20 件</div><div class="k">已入库</div></div>
+  <div class="kpi"><div class="v">3 件</div><div class="k">到达排队</div></div>
+  <div class="kpi"><div class="v">149.2 s</div><div class="k">累计行程</div></div>
+  <div class="kpi"><div class="v">65.0 s</div><div class="k">平均响应(本批,含排队)</div></div>
+  <div class="kpi"><div class="v">0.45 kWh</div><div class="k">累计能耗</div></div>
+  <div class="kpi alarm"><div class="v">1(未确认)</div><div class="k">活动报警</div></div>
+</div>
+<div id="main">
+  <div id="left">
+    <div class="panel"><div class="cap">当前行程速度曲线:G016 → 库位(15,6)</div><canvas id="c1"></canvas><div class="note">示意曲线,灌入期接真数据</div></div>
+    <div class="panel"><div class="cap">入口到达队列长度(泊松到达,ρ≈0.9)</div><canvas id="c2"></canvas><div class="note">示意曲线,灌入期接真数据</div></div>
+    <div class="panel"><div class="cap">单件服务时长分解 s(行程+两端装卸)</div><canvas id="c3"></canvas><div class="note">示意曲线,灌入期接真数据</div></div>
+  </div>
+  <div id="right"><div id="taskline">当前:G016(43.0 kg,中货) → 库位(15,6) · 放货驻留</div><div id="gl"></div></div>
+</div>
+<div id="bar">
+  <div class="desc"><b>S3 定稿要点</b>:封闭格背板蜂窝架 · 货物嵌格 · 双轴运动学真实轨迹(水平 2.0 / 垂直 0.5 m/s 合成,流动动画)· 近正面低仰视角 · 左上柔光淡影 · 入口排队 · 底座列刻度</div>
+  <button class="exp" id="exp">导出 PNG</button>
+</div>
+<div id="foot">
+  <span>运动学/布局=canonical 真值 | 数字为 0706 版示意(样张只评风格) | 蓝三档=货物重量分级 · 深红=报警(ISA-18.2) · 琥珀=I/O 口</span>
+  <span>鼠标拖拽可微调视角 · 导出即当前画面</span>
+</div>
+
+<script src="./lib/three.min.js"></script>
+<script src="./lib/OrbitControls.js"></script>
+<script>
+/* ── 左列示意图(同前版) ── */
+function draw2d(){
+  const ink='#1b4f8a', amber='#f2b13d', grid='#e8e8e8';
+  function prep(id){const c=document.getElementById(id);const r=c.getBoundingClientRect();
+    c.width=r.width*devicePixelRatio;c.height=r.height*devicePixelRatio;
+    const g=c.getContext('2d');g.scale(devicePixelRatio,devicePixelRatio);
+    g.clearRect(0,0,r.width,r.height);g.strokeStyle=grid;g.lineWidth=1;
+    for(let i=1;i<5;i++){g.beginPath();g.moveTo(0,r.height*i/5);g.lineTo(r.width,r.height*i/5);g.stroke();}
+    return [g,r.width,r.height];}
+  {const [g,w,h]=prep('c1');g.strokeStyle=ink;g.lineWidth=2;g.beginPath();
+   [[0,.95],[.08,.95],[.16,.25],[.30,.25],[.38,.95],[.44,.95],[.50,.45],[.60,.45],[.68,.95],[1,.95]]
+   .forEach((p,i)=>{i?g.lineTo(p[0]*w,p[1]*h):g.moveTo(p[0]*w,p[1]*h);});g.stroke();
+   g.strokeStyle=amber;g.lineWidth=3;g.beginPath();g.moveTo(.40*w,h*.98);g.lineTo(.40*w,h*.60);g.stroke();}
+  {const [g,w,h]=prep('c2');g.strokeStyle=ink;g.lineWidth=2;g.beginPath();
+   [[0,.8],[.15,.8],[.15,.55],[.3,.55],[.3,.7],[.45,.7],[.45,.35],[.6,.35],[.6,.55],[.8,.55],[.8,.45],[1,.45]]
+   .forEach((p,i)=>{i?g.lineTo(p[0]*w,p[1]*h):g.moveTo(p[0]*w,p[1]*h);});g.stroke();
+   g.strokeStyle=amber;g.lineWidth=2;g.beginPath();g.moveTo(.55*w,0);g.lineTo(.55*w,h);g.stroke();}
+  {const [g,w,h]=prep('c3');const n=16,bw=w/(n+3);
+   for(let i=0;i<n;i++){const x=(i+1)*bw;const t=(.35+.5*Math.abs(Math.sin(i*2.3)))*h;const load=.28*t;
+     g.fillStyle='#9ecae8';g.fillRect(x,h-t,bw*.7,t-load);
+     g.fillStyle='#1b4f8a';g.fillRect(x,h-load,bw*.7,load);}}
+}
+/* ═════════ 3D · S3 定稿 ═════════ */
+const COLS=20,TIERS=20,CW=1.0,CH=.64,CD=.85,GAP=.06;   // 紧凑格距→蜂窝观感
+const SPANX=COLS*(CW+GAP),SPANZ=TIERS*(CH+GAP);
+const mount=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+mount.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+const camera=new THREE.PerspectiveCamera(44,1,.1,500);camera.up.set(0,0,1);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+/* 视角:近正面微右偏、低仰角(锚基准图) */
+controls.target.set(SPANX*.52,0,SPANZ*.42);
+(function(){const f=controls.target,d=SPANX*1.18,a=-10*Math.PI/180,e=8.5*Math.PI/180;
+  camera.position.set(f.x+d*Math.sin(a)*Math.cos(e),f.y-d*Math.cos(a)*Math.cos(e),f.z+d*Math.sin(e));
+  camera.lookAt(f);})();
+controls.enableDamping=true;
+
+/* 灯光:明亮均匀左上柔光+淡阴影 */
+scene.add(new THREE.HemisphereLight(0xffffff,0xe8eaed,.85));
+const sun=new THREE.DirectionalLight(0xffffff,.5);
+sun.position.set(-SPANX*.35,-SPANZ*.9,SPANZ*1.35);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-0.0005;
+Object.assign(sun.shadow.camera,{left:-SPANX*.9,right:SPANX*1.1,top:SPANZ*1.2,bottom:-SPANZ*.4,far:320});
+scene.add(sun);
+scene.add(new THREE.DirectionalLight(0xfff6e8,.18)).position.set(SPANX*.9,-SPANZ*.6,SPANZ*.5);
+
+/* 材质(PBR 亚光白净) */
+const M={
+ shelf:new THREE.MeshStandardMaterial({color:0xf1f2f4,roughness:.62,metalness:.18}),
+ back :new THREE.MeshStandardMaterial({color:0xe9ebee,roughness:.75,metalness:.08}),
+ base :new THREE.MeshStandardMaterial({color:0xc8ccd2,roughness:.5,metalness:.35}),
+ floor:new THREE.MeshStandardMaterial({color:0xfafbfc,roughness:.35,metalness:.02}),
+ bD:new THREE.MeshStandardMaterial({color:0x1b4f8a,roughness:.72}),
+ bM:new THREE.MeshStandardMaterial({color:0x4f8fc4,roughness:.75}),
+ bL:new THREE.MeshStandardMaterial({color:0x9ecae8,roughness:.78}),
+ amber:new THREE.MeshStandardMaterial({color:0xf2b13d,roughness:.5}),
+ alarm:new THREE.MeshStandardMaterial({color:0xd0021b,roughness:.55}),
+ mast:new THREE.MeshStandardMaterial({color:0x24457a,roughness:.4,metalness:.55})};
+function sh(m,c,r){m.castShadow=c;m.receiveShadow=r;scene.add(m);return m;}
+
+/* 地面+极淡网格 */
+sh(new THREE.Mesh(new THREE.PlaneGeometry(SPANX*2.4,SPANZ*1.7),M.floor),false,true)
+  .position.set(SPANX*.5,3.2,-CH*.95);
+const grid=new THREE.GridHelper(SPANX*2.2,44,0xe3e6ea,0xeef0f3);
+grid.rotation.x=Math.PI/2;grid.position.set(SPANX*.5,3.2,-CH*.93);scene.add(grid);
+
+/* ── 蜂窝货架:整背板+竖隔板×21+横隔板×21(封闭格观感) ── */
+sh(new THREE.Mesh(new THREE.BoxGeometry(SPANX+ .3,.06,SPANZ+.3),M.back),false,true)
+  .position.set(SPANX/2-CW/2, CD*.52, SPANZ/2-CH/2);
+for(let c=0;c<=COLS;c++)
+  sh(new THREE.Mesh(new THREE.BoxGeometry(.07,CD,SPANZ+.16),M.shelf),true,true)
+    .position.set(c*(CW+GAP)-(CW+GAP)/2,0,SPANZ/2-CH/2);
+for(let t=0;t<=TIERS;t++)
+  sh(new THREE.Mesh(new THREE.BoxGeometry(SPANX+.16,CD,.06),M.shelf),false,true)
+    .position.set(SPANX/2-CW/2,0,t*(CH+GAP)-(CH+GAP)/2);
+/* 底座+列刻度 */
+sh(new THREE.Mesh(new THREE.BoxGeometry(SPANX+1.8,CD*1.9,CH*.9),M.base),true,true)
+  .position.set(SPANX/2-CW/2,0,-CH*.88);
+(function marks(){
+  const cv=document.createElement('canvas');cv.width=1024;cv.height=64;
+  const g=cv.getContext('2d');g.fillStyle='#6b7280';g.font='38px Arial';
+  [0,5,10,15,20].forEach(n=>{const x=n/20*(SPANX)/(SPANX+1.8)*1024+38;g.fillText(String(n),x,46);});
+  const tex=new THREE.CanvasTexture(cv);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(SPANX+1.8,CH*.42),
+    new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+  m.position.set(SPANX/2-CW/2,-CD*.96,-CH*.80);m.rotation.x=Math.PI/2*0.92;scene.add(m);})();
+
+/* 货物(嵌入格内) */
+const boxG=new THREE.BoxGeometry(CW*.78,CD*.7,CH*.72);
+const GOODS=[[1,1,'D'],[2,2,'D'],[4,1,'M'],[5,3,'M'],[6,1,'D'],[7,4,'M'],[8,2,'L'],[9,5,'L'],
+ [10,3,'M'],[11,1,'D'],[12,6,'L'],[13,4,'M'],[14,2,'M'],[16,5,'L'],[17,3,'L'],[18,7,'L']];
+GOODS.forEach(([c,t,k])=>{
+  sh(new THREE.Mesh(boxG,k==='D'?M.bD:k==='M'?M.bM:M.bL),true,true)
+    .position.set(c*(CW+GAP),CD*.06,t*(CH+GAP));});
+/* 报警格(15,4):红箱+红描边 */
+const al=sh(new THREE.Mesh(boxG,M.alarm),true,true);al.position.set(15*(CW+GAP),CD*.06,4*(CH+GAP));
+const alE=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(CW*.96,CD*.86,CH*.9)),
+  new THREE.LineBasicMaterial({color:0xd0021b}));alE.position.copy(al.position);scene.add(alE);
+
+/* 入口 I/O 台+排队箱(3 件,呼应 KPI) */
+const io=sh(new THREE.Mesh(new THREE.BoxGeometry(1.7,1.5,.14),M.amber),false,true);
+io.position.set(-.2,1.15,-CH*.86);
+[[-1.7,2.6],[-2.9,2.9],[-4.1,3.2]].forEach(([x,y],i)=>{
+  sh(new THREE.Mesh(boxG,i? M.bL:M.bM),true,true).position.set(x,y,-CH*.55);});
+
+/* ── 双轴运动学真实轨迹:水平 2.0 / 垂直 0.5 m/s(几何单位≈m) ── */
+const TARGET=[15,6];
+function kinPath(cx,tz){
+  const x1=cx*(CW+GAP), z1=tz*(CH+GAP);
+  const x0=-.2, z0=-CH*.55;                 // I/O 台起点
+  const Tx=Math.abs(x1-x0)/2.0, Tz=Math.abs(z1-z0)/0.5, T=Math.max(Tx,Tz);
+  const pts=[];
+  for(let i=0;i<=64;i++){const u=i/64*T;
+    const x=x0+(x1-x0)*Math.min(u,Tx)/Tx;
+    const z=z0+(z1-z0)*Math.min(u,Tz)/Tz;
+    pts.push(new THREE.Vector3(x,CD*.62,z));}
+  return pts;}
+const pathPts=kinPath(...TARGET);
+const curve=new THREE.CatmullRomCurve3(pathPts,false,'catmullrom',.02);
+const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,96,.055,8,false),
+  new THREE.MeshBasicMaterial({color:0x4f8fc4}));
+scene.add(tube);
+/* 流动虚线(运动感):贴轨迹的 dashed line + offset 动画 */
+const lineGeo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(160));
+const dash=new THREE.Line(lineGeo,new THREE.LineDashedMaterial({color:0x1b4f8a,dashSize:.5,gapSize:.35,linewidth:1}));
+dash.computeLineDistances();dash.position.y-=.001;scene.add(dash);
+/* 堆垛机:立柱在目标列+托台在目标格旁 */
+const mast=sh(new THREE.Mesh(new THREE.BoxGeometry(.24,.24,SPANZ+1.4),M.mast),true,false);
+mast.position.set(TARGET[0]*(CW+GAP),CD*.85,SPANZ/2-CH/2);
+const carr=sh(new THREE.Mesh(new THREE.BoxGeometry(CW*.85,CD*.55,CH*.55),M.mast),true,false);
+carr.position.set(TARGET[0]*(CW+GAP),CD*.7,TARGET[1]*(CH+GAP));
+
+document.getElementById('exp').onclick=()=>{renderer.render(scene,camera);
+  const a=document.createElement('a');a.href=renderer.domElement.toDataURL('image/png');
+  a.download='样张_S3定稿.png';a.click();};
+function resize(){const r=mount.getBoundingClientRect();renderer.setSize(r.width,r.height);
+  camera.aspect=r.width/r.height;camera.updateProjectionMatrix();draw2d();}
+addEventListener('resize',resize);
+/* 运动感:托台沿运动学轨迹缓慢巡航(9s 一程) */
+let t0=performance.now();
+(function loop(now){requestAnimationFrame(loop);
+  const u=((now-t0)/9000)%1;
+  const p=curve.getPointAt(u);carr.position.set(p.x,CD*.7,p.z);
+  controls.update();renderer.render(scene,camera);})(t0);
+resize();
+</script>
+</body>
+</html>

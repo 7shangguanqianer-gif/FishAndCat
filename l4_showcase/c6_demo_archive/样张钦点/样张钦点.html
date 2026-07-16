@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>样张钦点 · S1-S5 风格切换(锚 0706 正式版)</title>
+<style>
+  :root{--abb:#e2001a;--ink:#1a1a1a;--dim:#666;--line:#d9d9d9;--bg:#f4f5f6;--card:#fff;
+    --blue-d:#1b4f8a;--blue-m:#4f8fc4;--blue-l:#9ecae8;--amber:#f2b13d;--alarm:#d0021b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);
+    font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;overflow:hidden}
+  /* ── 品牌栏(锚 0706) ── */
+  #brand{height:52px;background:#111;display:flex;align-items:center;gap:14px;padding:0 18px;
+    border-bottom:3px solid var(--abb)}
+  #brand .logo{color:var(--abb);font-weight:900;font-size:24px;letter-spacing:1px;font-family:Arial}
+  #brand .title{color:#fff;font-size:17px;font-weight:600}
+  #brand .badge{margin-left:auto;color:#bbb;font-size:12px}
+  #brand .badge b{color:#fff}
+  /* ── 六卡 KPI ── */
+  #kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px 12px;background:#ececec}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:6px 12px}
+  .kpi .v{font-size:20px;font-weight:700}
+  .kpi .k{font-size:11px;color:var(--dim);margin-top:1px}
+  .kpi.alarm{border:2px solid var(--alarm)}
+  .kpi.alarm .v{color:var(--alarm)}
+  /* ── 主区 3:7 ── */
+  #main{display:flex;height:calc(100% - 52px - 66px - 58px - 26px)}
+  #left{width:28%;min-width:300px;padding:8px 6px 8px 12px;display:flex;flex-direction:column;gap:8px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;flex:1;
+    display:flex;flex-direction:column;padding:6px 8px 4px}
+  .panel .cap{font-size:12px;color:var(--ink);text-align:center;margin-bottom:2px}
+  .panel canvas{flex:1;width:100%}
+  .panel .note{font-size:10px;color:#999;text-align:right}
+  #right{flex:1;position:relative;margin:8px 12px 8px 6px;background:var(--card);
+    border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  #gl{position:absolute;inset:0}
+  #taskline{position:absolute;top:8px;left:12px;font-size:13px;color:var(--ink);z-index:3;
+    background:rgba(255,255,255,.75);padding:2px 8px;border-radius:3px}
+  /* ── 风格切换条 ── */
+  #styles{height:58px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#fff;
+    border-top:1px solid var(--line)}
+  #styles .sbtn{padding:8px 18px;border:1px solid var(--line);border-radius:4px;background:#fafafa;
+    font-size:14px;font-weight:700;cursor:pointer}
+  #styles .sbtn.on{background:var(--abb);color:#fff;border-color:var(--abb)}
+  #styles .desc{flex:1;font-size:12.5px;color:var(--dim);line-height:1.5}
+  #styles .exp{padding:8px 14px;border:1px solid var(--blue-d);color:var(--blue-d);border-radius:4px;
+    background:#fff;font-size:13px;cursor:pointer}
+  /* ── 脚注 ── */
+  #foot{height:26px;display:flex;align-items:center;padding:0 14px;font-size:10.5px;color:#999;
+    background:#ececec;justify-content:space-between}
+</style>
+</head>
+<body>
+<div id="brand">
+  <span class="logo">ABB</span><span class="title">智储优控 · 3D 数字孪生回放</span>
+  <span class="badge">风格样张 <b id="curS">S1</b>/5 · 版式锚 0706 正式版 · 同帧同相机 · <b>SIM</b></span>
+</div>
+<div id="kpis">
+  <div class="kpi"><div class="v">16/20 件</div><div class="k">已入库</div></div>
+  <div class="kpi"><div class="v">3 件</div><div class="k">到达排队</div></div>
+  <div class="kpi"><div class="v">149.2 s</div><div class="k">累计行程</div></div>
+  <div class="kpi"><div class="v">65.0 s</div><div class="k">平均响应(本批,含排队)</div></div>
+  <div class="kpi"><div class="v">0.45 kWh</div><div class="k">累计能耗</div></div>
+  <div class="kpi alarm"><div class="v">1(未确认)</div><div class="k">活动报警</div></div>
+</div>
+<div id="main">
+  <div id="left">
+    <div class="panel"><div class="cap">当前行程速度曲线:G016 → 库位(15,4)</div><canvas id="c1"></canvas><div class="note">示意曲线,灌入期接真数据</div></div>
+    <div class="panel"><div class="cap">入口到达队列长度(泊松到达,ρ≈0.9)</div><canvas id="c2"></canvas><div class="note">示意曲线,灌入期接真数据</div></div>
+    <div class="panel"><div class="cap">单件服务时长分解 s(行程+两端装卸)</div><canvas id="c3"></canvas><div class="note">示意曲线,灌入期接真数据</div></div>
+  </div>
+  <div id="right"><div id="taskline">当前:G016(43.0 kg,中货) → 库位(15,4) · 空载回程</div><div id="gl"></div></div>
+</div>
+<div id="styles">
+  <button class="sbtn on" data-s="1">S1</button><button class="sbtn" data-s="2">S2</button>
+  <button class="sbtn" data-s="3">S3</button><button class="sbtn" data-s="4">S4</button>
+  <button class="sbtn" data-s="5">S5</button>
+  <div class="desc" id="sdesc"></div>
+  <button class="exp" id="exp">导出当前档 PNG</button>
+</div>
+<div id="foot">
+  <span>运动学/布局=canonical 真值 | 数字为 0706 版示意(样张只评风格) | 蓝三档=货物重量分级 · 深红=报警(ISA-18.2) · 琥珀=I/O 口</span>
+  <span>鼠标拖拽可微调视角 · 按钮切档不改内容只改渲染</span>
+</div>
+
+<script src="./lib/three.min.js"></script>
+<script src="./lib/OrbitControls.js"></script>
+<script src="./lib/postprocessing/EffectComposer.js"></script>
+<script src="./lib/postprocessing/RenderPass.js"></script>
+<script src="./lib/postprocessing/ShaderPass.js"></script>
+<script src="./lib/shaders/CopyShader.js"></script>
+<script src="./lib/shaders/LuminosityHighPassShader.js"></script>
+<script src="./lib/postprocessing/UnrealBloomPass.js"></script>
+<script src="./lib/shaders/BokehShader.js"></script>
+<script src="./lib/postprocessing/BokehPass.js"></script>
+<script>
+/* ═══════════ 左列三张示意图(2D canvas 手绘) ═══════════ */
+function draw2d(){
+  const ink='#1b4f8a', amber='#f2b13d', grid='#e8e8e8';
+  function prep(id){const c=document.getElementById(id);const r=c.getBoundingClientRect();
+    c.width=r.width*devicePixelRatio;c.height=r.height*devicePixelRatio;
+    const g=c.getContext('2d');g.scale(devicePixelRatio,devicePixelRatio);
+    g.clearRect(0,0,r.width,r.height);
+    g.strokeStyle=grid;g.lineWidth=1;
+    for(let i=1;i<5;i++){g.beginPath();g.moveTo(0,r.height*i/5);g.lineTo(r.width,r.height*i/5);g.stroke();}
+    return [g,r.width,r.height];}
+  { // c1 速度梯形×2
+    const [g,w,h]=prep('c1');g.strokeStyle=ink;g.lineWidth=2;g.beginPath();
+    const pts=[[0,.95],[.08,.95],[.16,.25],[.30,.25],[.38,.95],[.44,.95],[.50,.45],[.60,.45],[.68,.95],[1,.95]];
+    pts.forEach((p,i)=>{const x=p[0]*w,y=p[1]*h;i?g.lineTo(x,y):g.moveTo(x,y);});g.stroke();
+    g.strokeStyle=amber;g.lineWidth=3;g.beginPath();g.moveTo(.40*w,h*.98);g.lineTo(.40*w,h*.60);g.stroke();
+  }
+  { // c2 队列阶梯
+    const [g,w,h]=prep('c2');g.strokeStyle=ink;g.lineWidth=2;g.beginPath();
+    const steps=[[0,.8],[.15,.8],[.15,.55],[.3,.55],[.3,.7],[.45,.7],[.45,.35],[.6,.35],[.6,.55],[.8,.55],[.8,.45],[1,.45]];
+    steps.forEach((p,i)=>{const x=p[0]*w,y=p[1]*h;i?g.lineTo(x,y):g.moveTo(x,y);});g.stroke();
+    g.strokeStyle=amber;g.lineWidth=2;g.beginPath();g.moveTo(.55*w,0);g.lineTo(.55*w,h);g.stroke();
+  }
+  { // c3 堆叠条
+    const [g,w,h]=prep('c3');const n=16,bw=w/(n+3);
+    for(let i=0;i<n;i++){const x=(i+1)*bw;const t=(.35+.5*Math.abs(Math.sin(i*2.3)))*h;
+      const load=.28*t;
+      g.fillStyle='#9ecae8';g.fillRect(x,h-t,bw*.7,t-load);
+      g.fillStyle='#1b4f8a';g.fillRect(x,h-load,bw*.7,load);}
+  }
+}
+/* ═══════════ 3D 场景(五档共享同帧内容) ═══════════ */
+const COLS=20,TIERS=20,CW=.94,CH=.62,CD=.8,GAP=.10;
+const SPANX=COLS*(CW+GAP),SPANZ=TIERS*(CH+GAP);
+const mount=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+mount.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(46,1,.1,400);camera.up.set(0,0,1);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.target.set(SPANX*.52,0,SPANZ*.34);controls.enableDamping=true;
+function setCam(){const f=controls.target,d=SPANX*1.32,a=-31*Math.PI/180,e=17*Math.PI/180;
+  camera.position.set(f.x+d*Math.sin(a)*Math.cos(e),f.y-d*Math.cos(a)*Math.cos(e),f.z+d*Math.sin(e));
+  camera.lookAt(f);}
+setCam();
+
+/* —— 材质库:每档一套 —— */
+const C={rackL:0xf2f3f4,rackD:0xdfe2e5,base:0xcfd3d7,floor:0xf7f8f9,
+  blueD:0x1b4f8a,blueM:0x4f8fc4,blueL:0x9ecae8,amber:0xf2b13d,alarm:0xd0021b,mast:0x2a3f6e};
+function matSet(style){
+  const std=style>=3;
+  function M(color,opt={}){
+    if(std) return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.8,metalness:.05},opt));
+    return new THREE.MeshLambertMaterial({color});}
+  return {
+    rack : M(C.rackL, std?{roughness:.38,metalness:.55}:{}),
+    beam : M(C.rackD, std?{roughness:.45,metalness:.5}:{}),
+    base : M(C.base , std?{roughness:.6 ,metalness:.3}:{}),
+    floor: M(C.floor, std?{roughness:.22,metalness:.05}:{}),
+    bD:M(C.blueD,std?{roughness:.78}:{}), bM:M(C.blueM,std?{roughness:.8}:{}), bL:M(C.blueL,std?{roughness:.82}:{}),
+    amber:M(C.amber,std?{roughness:.5,emissive:style>=4?0x332200:0}:{}),
+    alarm:M(C.alarm,std?{roughness:.5,emissive:style>=4?0x550000:0,emissiveIntensity:1.2}:{}),
+    mast:M(C.mast,std?{roughness:.4,metalness:.6}:{})};
+}
+/* 占用分布(锚 0706 帧近似:中下部 16 件,蓝三档;报警格(15,4)) */
+const GOODS=[[1,1,'D'],[2,2,'D'],[4,1,'M'],[5,3,'M'],[6,1,'D'],[7,4,'M'],[8,2,'L'],[9,5,'L'],
+  [10,3,'M'],[11,1,'D'],[12,6,'L'],[13,4,'M'],[14,2,'M'],[16,5,'L'],[17,3,'L'],[18,7,'L']];
+const ALARM=[15,4], CUR=[15,4];
+
+let group=null, mats=null, curStyle=1;
+function buildScene(style){
+  if(group){scene.remove(group);group.traverse(o=>{o.geometry&&o.geometry.dispose();});}
+  mats=matSet(style); group=new THREE.Group();
+  const sh = style>=2; // 阴影档
+  function add(mesh,cast,recv){mesh.castShadow=sh&&cast;mesh.receiveShadow=sh&&recv;group.add(mesh);return mesh;}
+  // 地面
+  add(new THREE.Mesh(new THREE.PlaneGeometry(SPANX*2.2,SPANZ*1.6),mats.floor),false,true)
+    .position.set(SPANX*.5,2.2,-CH*.8);
+  // 底座
+  const baseM=add(new THREE.Mesh(new THREE.BoxGeometry(SPANX+1.6,CD*1.5,CH*.8),mats.base),true,true);
+  baseM.position.set(SPANX/2-CW/2,0,-CH*.78);
+  // 货架骨架:竖柱+横梁(白净薄件)
+  for(let c=0;c<=COLS;c++){const m=add(new THREE.Mesh(new THREE.BoxGeometry(.07,CD*.92,SPANZ),mats.rack),true,true);
+    m.position.set(c*(CW+GAP)-(CW+GAP)/2,0,SPANZ/2-CH/2);}
+  for(let t=0;t<=TIERS;t++){const m=add(new THREE.Mesh(new THREE.BoxGeometry(SPANX,CD*.92,.045),mats.beam),false,true);
+    m.position.set(SPANX/2-CW/2,0,t*(CH+GAP)-(CH+GAP)/2);}
+  // 货物
+  const boxG=new THREE.BoxGeometry(CW*.86,CD*.92,CH*.82);
+  const edgeM=new THREE.LineBasicMaterial({color:0x8899aa,transparent:true,opacity:.5});
+  GOODS.forEach(([c,t,k])=>{
+    const m=add(new THREE.Mesh(boxG,k==='D'?mats.bD:k==='M'?mats.bM:mats.bL),true,true);
+    m.position.set(c*(CW+GAP),0,t*(CH+GAP));
+    if(curStyle>=3){const e=new THREE.LineSegments(new THREE.EdgesGeometry(boxG),edgeM);m.add(e);}});
+  // 报警格:红盒+红框
+  const al=add(new THREE.Mesh(boxG,mats.alarm),true,true);
+  al.position.set(ALARM[0]*(CW+GAP),0,ALARM[1]*(CH+GAP));
+  const alEdge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(CW*1.02,CD*1.05,CH*1.0)),
+    new THREE.LineBasicMaterial({color:C.alarm}));
+  alEdge.position.copy(al.position);group.add(alEdge);
+  // 堆垛机:立柱+托台+轨迹线
+  const mast=add(new THREE.Mesh(new THREE.BoxGeometry(.22,.22,SPANZ+1.2),mats.mast),true,false);
+  mast.position.set(CUR[0]*(CW+GAP),CD*.75,SPANZ/2-CH/2);
+  const carr=add(new THREE.Mesh(new THREE.BoxGeometry(CW*.9,CD*.5,CH*.5),mats.amber),true,false);
+  carr.position.set(CUR[0]*(CW+GAP),CD*.75,CUR[1]*(CH+GAP));
+  const path=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0,CD*.9,0),
+    new THREE.Vector3(SPANX*.35,CD*.9,CH*2.2),
+    new THREE.Vector3(CUR[0]*(CW+GAP),CD*.9,CUR[1]*(CH+GAP))]);
+  const tube=new THREE.Mesh(new THREE.TubeGeometry(path,40,.05,6,false),
+    new THREE.MeshBasicMaterial({color:C.blueD,transparent:true,opacity:.65}));
+  group.add(tube);
+  // I/O 口
+  const io=add(new THREE.Mesh(new THREE.BoxGeometry(1.6,1.3,.12),mats.amber),false,true);
+  io.position.set(0,1.0,-CH*.7);
+  scene.add(group);
+}
+/* —— 灯光:每档一套 —— */
+let lights=[];
+function buildLights(style){
+  lights.forEach(l=>scene.remove(l));lights=[];
+  function L(l){lights.push(l);scene.add(l);return l;}
+  if(style===1){ L(new THREE.AmbientLight(0xffffff,.95));
+    L(new THREE.DirectionalLight(0xffffff,.35)).position.set(-40,-60,80); return;}
+  L(new THREE.HemisphereLight(0xffffff,0xd8dade,style>=3?.55:.7));
+  const d=L(new THREE.DirectionalLight(0xffffff,style>=3?.85:.75));
+  d.position.set(-SPANX*.4,-SPANZ*1.1,SPANZ*1.25);
+  d.castShadow=true;d.shadow.mapSize.set(style>=5?4096:2048,style>=5?4096:2048);
+  const s=d.shadow.camera;s.left=-SPANX;s.right=SPANX*1.2;s.top=SPANZ*1.2;s.bottom=-SPANZ*.6;s.far=300;
+  d.shadow.bias=-0.0004;
+  if(style>=3) L(new THREE.PointLight(0xfff4e0,.25,SPANX*2)).position.set(SPANX*.8,-SPANZ*.5,SPANZ*.9);
+}
+/* —— 后处理:S4 起 —— */
+let composer=null;
+function buildPost(style){
+  composer=null;
+  renderer.toneMapping=style>=5?THREE.ACESFilmicToneMapping:THREE.NoToneMapping;
+  renderer.toneMappingExposure=style>=5?1.12:1.0;
+  renderer.shadowMap.enabled=style>=2;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  if(style<4) return;
+  composer=new THREE.EffectComposer(renderer);
+  composer.addPass(new THREE.RenderPass(scene,camera));
+  const size=new THREE.Vector2();renderer.getSize(size);
+  const bloom=new THREE.UnrealBloomPass(size,style>=5?.42:.3,.6,.86);
+  composer.addPass(bloom);
+  const target=new THREE.Vector3(CUR[0]*(CW+GAP),0,CUR[1]*(CH+GAP));
+  const focusDist=camera.position.distanceTo(target);
+  const bokeh=new THREE.BokehPass(scene,camera,{focus:focusDist,aperture:style>=5?.00022:.00015,maxblur:.008});
+  composer.addPass(bokeh);
+}
+const DESCS={
+ 1:'S1 忠实复刻:0706 版式+平光渲染,最接近原 matplotlib 观感——零风险基线。',
+ 2:'S2 +光影:真实方向光软阴影(PCFSoft)+半球环境光,立体感与接地感立现,性能开销小。',
+ 3:'S3 +材质:PBR 金属漆货架/纸箱质感货箱/描边线/地面微反射+暖点光——工业写实第一档。',
+ 4:'S4 +景深辉光:EffectComposer 后处理——焦点锁当前任务格,浅景深+报警/琥珀辉光,电影感入场。',
+ 5:'S5 全后处理:ACES 电影色调映射+4K 阴影+增强泛光+空气雾——离线渲染质感,性能要求最高。'};
+function applyStyle(s){
+  curStyle=s;
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===s));
+  document.getElementById('curS').textContent='S'+s;
+  document.getElementById('sdesc').textContent=DESCS[s];
+  if(s>=5) scene.fog=new THREE.FogExp2(0xf4f5f6,.0035); else scene.fog=null;
+  scene.background=new THREE.Color(0xf7f8f9);
+  buildScene(s);buildLights(s);buildPost(s);
+}
+document.querySelectorAll('.sbtn').forEach(b=>b.onclick=()=>applyStyle(+b.dataset.s));
+document.getElementById('exp').onclick=()=>{
+  renderer.render(scene,camera); // 保证最新帧
+  const a=document.createElement('a');a.href=renderer.domElement.toDataURL('image/png');
+  a.download=`样张_S${curStyle}.png`;a.click();};
+function resize(){
+  const r=mount.getBoundingClientRect();renderer.setSize(r.width,r.height);
+  camera.aspect=r.width/r.height;camera.updateProjectionMatrix();
+  if(composer) composer.setSize(r.width,r.height);
+  draw2d();}
+addEventListener('resize',resize);
+function loop(){requestAnimationFrame(loop);controls.update();
+  if(composer) composer.render(); else renderer.render(scene,camera);}
+applyStyle(1);resize();loop();
+</script>
+</body>
+</html>
