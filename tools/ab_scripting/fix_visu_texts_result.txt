@@ -1,0 +1,4 @@
+VisuMain[41] CHANGED: 'Tests 75/75 | sim-ST cross-check | dwell=I/O' -> 'Tests 77/77 | sim-ST cross-check | dwell=I/O'
+VisuStats[0] CHANGED: 'Records / Query (demo IDs 901, 902, 903)' -> 'Records / Query (demo IDs 1..20)'
+SAVED changed=2
+=== FIX_VISU_TEXTS_DONE ===

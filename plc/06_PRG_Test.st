@@ -9,14 +9,14 @@
    ============================================================ *)
 PROGRAM PRG_Test
 VAR CONSTANT
-    N_CASES   : INT := 76;                  // 用例总数(0716 E7 扩容 T76 取出演示;常量化=N4-08,在线不可改)
+    N_CASES   : INT := 77;                  // 用例总数(0717 治理D 扩容 T77 FC_TMax 口径;常量化=N4-08,在线不可改)
 END_VAR
 VAR
     xRunTests : BOOL;                       // 置 TRUE 触发(自动复位)
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    aResult   : ARRAY[1..76] OF BOOL;       // 各用例结果(TRUE=通过;上界与 N_CASES 同步维护)
+    aResult   : ARRAY[1..77] OF BOOL;       // 各用例结果(TRUE=通过;上界与 N_CASES 同步维护)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
@@ -946,6 +946,21 @@ IF xRunTests THEN
     GVL_WH.iGoodsCount := 0;                            // 清场恢复
     fbInit(xExecute := FALSE, iRule := 3);
     fbInit(xExecute := TRUE,  iRule := 3);
+
+    // ---- T77 FC_TMax 跟随 xUseAccel 口径(0717 治理D;深审 P1-3) ----
+    //      匀速:TMax=MAX(19/2, 19/0.5)=38.0;
+    //      加减速:ty=FC_AxisTime(19,0.5,0.3)=19/0.5+0.5/0.3=39.6667(v²/a=0.833<d 梯形段),
+    //             tx=FC_AxisTime(19,2,0.5)=9.5+4=13.5,TMax=39.6667;
+    //      同口径下全库最远格 tNorm=分子/分母 恒 1.0(位置保留项 1-tNorm 不再为负)。
+    GVL_Param.xUseAccel := FALSE;
+    aResult[77] := (ABS(FC_TMax() - 38.0) < 0.001);
+    GVL_Param.xUseAccel := TRUE;
+    rV := FC_CalcTravelTime(x0 := 0, y0 := 0,
+                            x1 := GVL_Param.COLS - 1, y1 := GVL_Param.TIERS - 1,
+                            xSimXY := TRUE) / FC_TMax();
+    aResult[77] := aResult[77] AND (ABS(FC_TMax() - 39.666667) < 0.001)
+                   AND (ABS(rV - 1.0) < 0.000001);
+    GVL_Param.xUseAccel := FALSE;               // 恢复默认口径(测试自给自足)
 
     // ---- 汇总 ----
     FOR i := 1 TO N_CASES DO

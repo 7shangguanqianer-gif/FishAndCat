@@ -1270,6 +1270,9 @@ IF xCommit THEN                                        // ---- 取出落账(单�
     IF GVL_Visu.VisuSlotState[iGX, iGY] = 6 THEN
         GVL_Visu.VisuSlotState[iGX, iGY] := 0;         // 清高亮(交还 FB_VisuRefresh 按空闲重画)
     END_IF
+    // 0717 治理D(回执瑕疵②):清取出路径——否则 FB_VisuRefresh 的路径叠加段
+    // 每周期继续把沿途空闲格(含刚释放的目标格)染成路径蓝(state 4 显示色)。
+    GVL_Visu.VisuPathCount := 0;
     GVL_WH.aSlots[iGX, iGY].Occupied := FALSE;         // 格位释放
     GVL_WH.aSlots[iGX, iGY].GoodsId  := 0;
     GVL_WH.aGoods[iHit].Assigned := FALSE;             // 货物转未分配(查询页口径自洽:QryX/Y=-1)

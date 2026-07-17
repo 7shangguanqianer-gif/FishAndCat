@@ -1,0 +1,13 @@
+opened; active app ok
+online app created; dir: Dispose, application, application_state, create_boot_application, force_prepared_values, get_forced_expressions, get_online_device, get_prepared_expressions, get_prepared_value, is_logged_in, login, logout, operation_state, read_value, read_values, reset, set_prepared_value, set_unforce_value, source_download, start, stop, timeout, unforce_all_values, write_prepared_values
+onapp.application = ScriptObject{ScriptRecipeManContainer, NoRecipeManObject, NoRecipeDefinitionObject, NoScriptTraceObject, NoDeviceObject, NoExplicitConnectorObject, NoSymbolConfigObject, ScriptApplicationSymbolConfigExtension, NoLibManObject, LibManObjectContainer, ScriptNoProjectInfoMarker, ScriptApplication, ScriptNonTextualObject, ScriptIecLanguageObjectContainerObject, NoTaskConfigObject, NoTaskObject, ScriptImagePoolContainer, NoImagePoolObject, ScriptTextListContainer, NoTextListObject, ScriptVisualObjectContainer}(Project=0, Name=Application, guid=74993588-6e2e-4450-94f1-a27f72e3ded1)
+LOGIN_OK; state=stop
+STATE after start: run
+write xRunTests via: set_prepared_value('PRG_Test.xRunTests', 'TRUE')
+write_prepared_values ok
+PRG_Test.iPassed = INT#77
+PRG_Test.iFailed = INT#0
+PRG_Test.sLastFail = ''
+PRG_Test.xAllPass = TRUE
+LOGOUT_OK
+=== RUNTEST_DONE ===

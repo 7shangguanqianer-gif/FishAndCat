@@ -220,19 +220,23 @@ CASE eState OF
         xKickStats := FALSE;
         IF fbStats.xDone THEN
             GVL_Visu.VisuWearIndex := GVL_WH.stStats.PathTotal2Way;   // 损耗代理=路径总长(C5)
+            // 0717 治理D(回执瑕疵①):完成文本改为进入 DONE 时写一次——旧版在 DONE
+            // 驻留态每周期重写,把常驻段 Query/Retrieve 的 RETRIEVED_OK 等消息
+            // 在下一周期盖回 DONE_OK(消息只存活一个 10ms 周期,肉眼不可见)。
+            IF GVL_WH.stStats.FailedCnt > 0 THEN
+                GVL_Visu.VisuStatusText := CONCAT('DONE_FAILED_N=',
+                                                  INT_TO_STRING(GVL_WH.stStats.FailedCnt));
+                GVL_Visu.VisuAlarm := TRUE;    // 与其他异常态一致:有货无位=红灯(0705补)
+            ELSE
+                GVL_Visu.VisuStatusText := 'DONE_OK';
+            END_IF
             eState := E_MainState.STATE_DONE;
         END_IF
 
-    // ---------- 完成:结果驻留可视化;失败件数非0则警示文本+红灯 ----------
+    // ---------- 完成:结果驻留可视化(文本已在 STATS→DONE 转移时写一次;
+    //            驻留态不再重写,常驻段查询/取出消息得以留存显示) ----------
     E_MainState.STATE_DONE:
-        IF GVL_WH.stStats.FailedCnt > 0 THEN
-            GVL_Visu.VisuStatusText := CONCAT('DONE_FAILED_N=',
-                                              INT_TO_STRING(GVL_WH.stStats.FailedCnt));
-            GVL_Visu.VisuAlarm := TRUE;    // 与其他异常态一致:有货无位=红灯(0705补)
-        ELSE
-            GVL_Visu.VisuStatusText := 'DONE_OK';
-        END_IF
-        // 停留本状态;CmdReset 重来(顶部全局处理)
+        ;   // 停留本状态;CmdReset 重来(顶部全局处理)
 
     E_MainState.STATE_FAULT:
         ;   // 预留:严重故障驻留(当前边界均以文本报警+拒绝操作处理)
