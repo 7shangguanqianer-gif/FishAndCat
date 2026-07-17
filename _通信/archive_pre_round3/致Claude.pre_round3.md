@@ -1,41 +1,3 @@
-## 0716 20:58 · AB「取出」按钮中止，余项全部转交 Claude Code
-
-用户已要求 Codex 停止并把当前进度及余下任务全部交由 Claude Code。权威 handoff=.claude/handoffs/2026-07-16-205841-ab-retrieve-button-claude-takeover.md；完整回执=_通信/codex_out/0716_AB取出按钮_中止与ClaudeCode接管完整回执.md；可直接执行提示词=_通信/codex_out/0716_ClaudeCode接管提示词_AB取出按钮.md。
-
-关键现场：磁盘 plc/AB_Project/ABB_WH.project 本轮未写入，mtime 仍为 13:54:42，SHA256=04A6607B...E75FD50；但 AB 当前窗口为 ABB_WH.project*，只有未保存半成品。请第一步关闭并选择不保存，干净重开。当前未保存尝试仅可能把 P2 查询灯从 Y=60 移到约 Y=104；Found 修改因 Ctrl+A 追加成 60104 触发 Int16 错误，随后用户物理 Escape 中止；按钮尚未创建，未保存、未编译、未在线演示、未截图。
-
-本批发现签发矛盾：任务标题/正文写 P1，但“现有查询按钮同组旁”实际在 P2 VisuStats；原始施工卡、三页蓝图、报告均把 Query 定义在 P2。推荐你以签发者身份裁决为 P2，复用 InQueryId，复制 Query 洗成瞬时 CmdRetrieve；完整坐标建议、在线闭环步骤和红线见 handoff。既有 ST/在线证据仍成立：E7 代码已接线，T76 四分支，runtest_result_20260716_135644.txt 为 76/0；但它不能代替本次 GUI 闭环截图。
-
-本交接只新增 handoff/回执/提示词并追加本节；未保存 AB、未跑 ab_scripting、未做 Git 写。
-
----
-
-## 0716 11:09 · S3 冻结移交 Claude Code（用户终止 Codex 实现）
-
-用户已明确终止 Codex 的 S3 继续实现并要求全部移交。当前权威 handoff=`.claude/handoffs/2026-07-16-080158-s3-0716-freeze-and-claude-code-takeover.md`；完整回执=`_通信/codex_out/0716_S3冻结与ClaudeCode接管完整回执.md`；可粘贴接管提示词=`_通信/codex_out/0716_ClaudeCode接管提示词_S3冻结态.md`。
-
-技术状态：active fill release=`d75a06b085f9b1aef9ed`；bundle 10/10；release 8/8；三份 v7 候选各 20/20；正式页 SHA256 仍为 `b59954cb...92bedb`。但用户已否决 v7 信息架构，技术 PASS 不得解释为视觉通过。
-
-用户最新裁决：①“七步在做什么”不应常驻，应在鼠标移到具体阶段节点时渐进显示；②“容量书签”名称不学术且反复出现；③上一轮未经用户确认大体方案就直接编码，执行模式错误。故三份 v7 候选全部冻结，不得继续微调或覆盖正式页。
-
-Claude Code 第一阶段只能只读恢复后提交 2—3 套宏观信息架构/术语/显隐方案给用户过目，禁止改 HTML。用户选定后先写一页冻结规格并再次确认，二次确认后才允许实现。不开 AB/FIO、不跑 ab_scripting、不做 Git 写。
-
----
-
-## 0716 · S3 三轮 12 问收敛 + 五方案待用户选型
-
-Codex 已完成第3轮与三轮总收敛。完整决策=`research/0716/S3重构决策记录_0716.md`；一页规格=`research/0716/S3重构12问一页规格_0716.md`；五方案=`research/0716/S3五套差异化设计方案_0716.md`；回执=`_通信/codex_out/0716_S3重构第3轮与12问收敛回执.md`；给 Claude Code 的只读同步提示词=`_通信/codex_out/0716_ClaudeCode同步提示词_S3三轮收敛与五方案.md`。
-
-Q9–Q12 锁定：canonical 主线显示“管理货物 0/267→267/267、总占用 133/400→400/400”；完整连续播放为主并带每10件/关键边界慢放与快跳；算法/情景对比用两套2D+3D、共享输入 hash、event barrier 和各自 SIM 时钟；60秒点击式新手教学仅暂定，核心页完成后重新问用户。
-
-关键纠错：400/400 只是静态容量终点，现有先入后出 mixed cycle 不能在满库继续；当前 S3 仍是120件+100 paired cycles，不是满库证据；fill 必须新增独立 runner/schema。267 只是容量上限，SCORE/AUTO online 267密度尚未过 fail-closed 门。AWRA-LS 是离线批量信息集，不能与在线算法包装成实时公平胜负。当前 S3 未导出路径m、kg·m能耗、吞吐；失败域吞吐可能虚高；LAP 还缺 n>m 完整分配守门；“完美摆放比例”禁用；Python/ST accel=true 尚未证明评分同源。
-
-五方案：A货物决策链、B满仓进度仪、C策略裁判台、D仓位地形图、E答辩证据剧场。推荐但未代拍板=A主壳+B容量书签+D联动地图，C独立对比，E以后可选。**用户选定前不得改任何正式 S3 HTML。** 54格 FIO 任务继续独立，不嵌入 S3。
-
-三名 gpt-5.6-sol xhigh 只读审查已完成并关闭；执行清单已更新 `research/0716/run_manifest.json`。未开 AB/FIO、未跑 ab_scripting、未做 Git、未改正式或候选 HTML。
-
----
-
 ## 0716 · S3 第2轮锁定 + 新增空仓到满仓连续演示
 
 用户第2轮选择：`Q5-A / Q6=货架C+活动设备A / Q7=T型同侧并行双链并借鉴FIO形式 / Q8-A`。完整记录=`research/0716/S3重构决策记录_0716.md`；回执=`_通信/codex_out/0716_S3重构第2轮决策回执.md`。
@@ -195,7 +157,37 @@ H1 只读对抗审查已完成，全文：`_通信/codex_out/0713_H1对抗审查
 
 ---
 
-## 0712 轨B ST 对抗审…868 tokens truncated…32、legacy and锁7.6202；0.5306、545.4→278.9、省266.5kWh/48.9%/约141.4kg；共同arrivals后档3near P95=651.1低于AWRA=667.0；6个高密online权重格INFEASIBLE；lifecycle drain后120件δ=0.15总时高2.69%～4.53%；98.5/99.9只在excess_fail=0 sim可比域。
+## 0712 轨B ST 对抗审查回执（Codex，06:44）
+
+只读终审已完成，全文：`_通信/codex_out/轨B_ST对抗审查_0712.md`。
+
+**裁决：部分接受，阶段3尚不能标“全规格闭环”。** 默认匀速固定参数下，CB `min(start,len-1)` 与 Python 等价（420 个差分实例 0 分歧），CB/TOB 当前生成向量 20/20 逐位同源，主程序策略锁存、Guard 前置、快照纯态重建及新增生产路径的 IEC 下标防护成立；最后一轮现存 AB 原始日志也确为 Compile 0 errors/1 warning、75/0。
+
+需优先修三项：① `FB_GoodsInput` 守唯一 ID，但 `FC_LoadDemoGoods` 可重复追加固定 1..20，第二次载入即破坏契约；② `FB_Stats` 只做 good→slot 单向检查，未实现计划要求的 slot→good/一货一位，幽灵格和重复 ID 可保持 ViolCnt=0；③完整批次参数快照未落地，TOB 及 CB 的 Score/ExecTime 仍读实时参数，管理员中途改参可产生混合口径。
+
+其余缺口：`FC_TMax` 对非法速度用 0.001、行程分子用 1.0，T74 只验“>0”；`aSlotOps` 五个写点仍无 UDINT 饱和；状态文本漏 `RelocCnt`；CT FB 可 busy 中二次沿重启且未内部锁 `iMode`；测试初始化仍只清 1..59，T75 恒 TRUE，nPairs/nMax/跨批清零/锁存/快照/饱和缺自动锚；T58/T59 失败路径仍有 IEC 非短路越界风险。T60 只证明默认精确等时向量，报告另给出任意可调速度下 REAL32 舍入反例。
+
+证据边界：当前文件系统只有最后一组会覆盖的 `sync_result.txt` + `runtest_result.txt`；“最新 75/0”可独立复核，“75/0 × 三轮”没有三份独立原始日志可重建，只能依赖登记文档。未开 AB、未运行 ab_scripting、未做 git、未改 PLC/sim/docs/用户文件。
+
+---
+
+## 0712 三合一合并修复最终回执（Codex，04:44 -05:00）
+
+口径修正 + N5 Python/文档修复 + sim方法F1/F2 + 体检增补已全部落盘；未开Automation Builder、未运行 tools/ab_scripting、未做git写、未改PLC可执行ST、未扩N6。
+
+- 总对照：_通信/codex_out/0712_合并修复_总改动对照表.md
+- sim数字变化：_通信/codex_out/0712_sim数字变更表.md
+- 二进制/渲染：_通信/codex_out/0712_二进制与渲染QA.md
+- 验证日志：_通信/codex_out/0712_合并修复_验证日志.md
+- 给Claude终审提示词：_通信/codex_out/给Claude_复核0712合并修复最终结果.md
+
+最终门：core_smoke 32/32 PASS；doc_check PASS；artifact_verify PASS；报告/PPT及14份用户DOCX OOXML验证PASS。WPS实际渲染：报告20页、PPT18张、项目导览21页、AB卡9页，重点页无溢出/遮挡/乱码。
+
+最终二进制：报告SHA256=4709CD5553583A8DECC2CF0BFF86E223D79A9A04A275DA29116A9AECA5C45D7F；PPT SHA256=633F264257A997998998188A3861B2B4E951BC9E2C5CE7AEB043ADFB97F482F6。文本抽取见0712_验证报告文本抽取.md与0712_答辩PPT文本抽取.md。
+
+**并发源码最终校准（请重点复核）**：当前源码已不是N2-N5审查时状态。N_CASES=75；T60-T69为10项真实断言，T70-T75为6项恒TRUE预留；near平局、ParamGuard前置、LoadDemo容量护栏、CB/TOB执行器与lex路由均已写入源码。但本轮没有新AB读回，所以证据仍只报59/0。正确话术是“源码已实现/新增断言未验证/AB证据59/0”，既不能再写“PLC未实现CB/TOB”，也不能写“75/0已通过”。
+
+sim结论：H=8.40±0.48（5-seed sample SD，CI半宽0.592）/62.0%/67.3%/0.57；sum锁8.6232、legacy and锁7.6202；0.5306、545.4→278.9、省266.5kWh/48.9%/约141.4kg；共同arrivals后档3near P95=651.1低于AWRA=667.0；6个高密online权重格INFEASIBLE；lifecycle drain后120件δ=0.15总时高2.69%～4.53%；98.5/99.9只在excess_fail=0 sim可比域。
 
 请按终审提示词逐条回源，输出接受/部分接受/不同意与file:line。不要按旧补丁计划覆盖已落ST，也不要把源码存在升级成AB证据。
 

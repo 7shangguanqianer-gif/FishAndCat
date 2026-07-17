@@ -1,0 +1,16 @@
+{"source_id":"L01","type":"local","path":"F:/abb_wh_work/docs/L7_拟真度阶梯设计.md","role":"three-tier canonical definition"}
+{"source_id":"L02","type":"local","path":"F:/abb_wh_work/docs/3D动画设计_0706.md","role":"approved multi-good event-driven animation architecture"}
+{"source_id":"L03","type":"local","path":"F:/abb_wh_work/docs/Codex任务_S3与导览重做规格_0714.md","role":"scope reduction that excluded real queue/KPI/fault"}
+{"source_id":"L04","type":"local","path":"F:/abb_wh_work/sim/realism.py","role":"current tier3 simulation semantics"}
+{"source_id":"L05","type":"local","path":"F:/abb_wh_work/tools/anim3d_formal.py","role":"hand-authored multi-good event prototype"}
+{"source_id":"L06","type":"local","path":"F:/abb_wh_work/l4_showcase/src/样张_S3_三方向候选.html","role":"current candidate implementation"}
+{"source_id":"L07","type":"local","path":"F:/abb_wh_work/docs/canonical_assumptions.md","role":"canonical U2/G/strategy boundaries"}
+{"source_id":"L08","type":"local","path":"F:/abb_wh_work/sim/warehouse_sim.py","role":"score and AWRA-LS implementation"}
+{"source_id":"L09","type":"local","path":"F:/abb_wh_work/sim/mixed_ops.py","role":"dual-command mixed flow"}
+{"source_id":"W01","type":"official-doc","url":"https://anylogic.help/anylogic/3d/index.html","role":"integrated 3D presentation and data visualization"}
+{"source_id":"W02","type":"official-doc","url":"https://anylogic.help/anylogic/3d/camera3d.html","role":"runtime camera movement and follow behavior"}
+{"source_id":"W03","type":"official-doc","url":"https://docs.flexsim.com/en/25.1/Reference/Tools/StatisticsCollector/StatisticsCollector.html","role":"event-driven statistics from 3D/process objects"}
+{"source_id":"W04","type":"official-doc","url":"https://www.mathworks.com/help/simevents/statistics-and-data-analysis-in-simevents-models.html","role":"queue/server statistics and entity event visualization"}
+{"source_id":"W05","type":"standard-body","url":"https://www.isa.org/standards-and-publications/isa-standards/isa-101-standards","role":"HMI situational awareness"}
+{"source_id":"P01","type":"peer-reviewed","url":"https://www.sciencedirect.com/science/article/pii/S2772662224001139","role":"simulation-based smart warehouse digital twin methodology"}
+{"source_id":"P02","type":"research-paper","url":"https://arxiv.org/abs/2301.10074","role":"explainable data-driven optimization"}

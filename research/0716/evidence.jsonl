@@ -1,0 +1,20 @@
+{"id":"E01","sources":["S01","S12"],"claim":"20x20=400是算法逻辑仓位；Factory I/O当前只支持54格物理I/O与时序证据，400格物理方案已判No-Go。","strength":"high","limits":"不否定20x20逻辑三维可视化，但必须持续标为SIM。"}
+{"id":"E02","sources":["S11","S13"],"claim":"本地FIO已证实的作业边界是Entry、Load、叉臂/Lift、Rack、Unload、Exit。","strength":"high","limits":"SCANNED、EXIT_MASK、CONSUMED不是已证实物理工位。"}
+{"id":"E03","sources":["S02"],"claim":"SCORE总分由效率、稳定、能耗、预留四项加权构成，平局键继续比较行程时间、层、列。","strength":"high","limits":"现有trace未导出逐候选分项与排名。"}
+{"id":"E04","sources":["S02"],"claim":"当前h_stab与h_energy代数相同，beta和gamma不是独立数值信号。","strength":"high","limits":"这是实现事实，不代表概念上稳定与能耗永远相同。"}
+{"id":"E05","sources":["S02","S09"],"claim":"动态freq_est可能超过初始f_max，当前归一化无clamp，因此分项可能大于1。","strength":"high","limits":"静态初始批次通常仍在0到1范围。"}
+{"id":"E06","sources":["S02","S03"],"claim":"AWRA-LS与SCORE共用货位评分函数；AWRA-LS的额外价值来自批次Rank、Assign后最多5轮局部重定位/交换。","strength":"high","limits":"不能宣称全局最优或独立高级评分公式。"}
+{"id":"E07","sources":["S03","S04"],"claim":"AUTO在run start只决策一次，后续固定链运行；重量统计当前仅展示，不参与路由。","strength":"high","limits":"E18周期内建议重算仅advisory，不实际切换。"}
+{"id":"E08","sources":["S03"],"claim":"当前CB类别起点作用于动态剩余空位序列，不是固定ABC物理分区；当前TOB默认不是COI变体。","strength":"high","limits":"可视化不得画成固定三块物理区域或COI算法。"}
+{"id":"E09","sources":["S07","S08"],"claim":"S1正式证据为18情景x8模式x10 seeds=1440 runs，sim_only且用固定score权重隔离routing。","strength":"high","limits":"不可与S3代表回放合并排名。"}
+{"id":"E10","sources":["S08"],"claim":"E08/E09有大量不可行cell，E13八模式全不可行，E15为非headline压力扩展。","strength":"high","limits":"负结果必须保留，不能只展示胜出算法。"}
+{"id":"E11","sources":["S09","S10"],"claim":"S3只有45条代表回放：3 Tier x 3 profile(E01-E03) x 5模式，固定seed 2026、100 cycles。","strength":"high","limits":"不是30-seed确认，也不是1000-cycle长跑。"}
+{"id":"E12","sources":["S05","S06"],"claim":"现有货物实验覆盖E01-E18，包含密度、偏斜、重货、相关性、非法货物、噪声、故障与漂移。","strength":"high","limits":"仅E01-E03有当前三维代表回放。"}
+{"id":"E13","sources":["S02","S04","S07","S10"],"claim":"现网页切换是加载预生成trace/CSV，不是浏览器内即时重算新货物。","strength":"high","limits":"单件沙盒可新增，但无权继承统计KPI。"}
+{"id":"E14","sources":["S14","S15"],"claim":"Factory I/O用Emitter持续生成物品并以占用体积阻止重复生成，用Remover在物品相交时移除。","strength":"high","limits":"这是FIO物理场景机制，不等于现S3已经实现。"}
+{"id":"E15","sources":["S16","S17"],"claim":"FIO重载辊筒输送速度显著低于轻载模拟上限，展示速度应区分物理基准与演示倍率。","strength":"high","limits":"网页倍率不能回写sim KPI。"}
+{"id":"E16","sources":["S18"],"claim":"FIO编辑时相交部件会出现红色边界，切换到Run时相交部件会被销毁。","strength":"high","limits":"解释了为什么3D布局必须做碰撞与站点拓扑复核。"}
+{"id":"E17","sources":["S19"],"claim":"FIO原生提供固定相机、跟随视角和时间倍率；新版可借鉴预设镜头加用户自由观察。","strength":"high","limits":"仅借鉴交互模式，不宣称与FIO相机同源。"}
+{"id":"E18","sources":["S20","S21","S22"],"claim":"工业HMI应有明确层级、稳定导航、上下文信息和一致颜色角色，异常信息才占用强色。","strength":"high","limits":"具体像素布局仍需基于本项目任务测试。"}
+{"id":"E19","sources":["S23","S24","S25"],"claim":"货物等级、状态和可点击入口不能只靠颜色；tooltip和自定义控件需满足悬浮/焦点与语义可访问性。","strength":"high","limits":"WCAG是交互底线，不替代工业任务分析。"}
+{"id":"E20","sources":["S01","S10","S11"],"claim":"当前页面的几何/性能自动QA通过不等于展示口径可发布；证据边界反审查仍判NO-GO。","strength":"high","limits":"技术QA结果继续保留，不被NO-GO抹除。"}

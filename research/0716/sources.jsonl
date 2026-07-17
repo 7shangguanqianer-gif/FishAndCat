@@ -1,0 +1,25 @@
+{"id":"S01","kind":"local_truth","title":"Canonical assumptions","path":"F:/abb_wh_work/docs/canonical_assumptions.md","scope":"20x20逻辑仓位、sim/PLC/FIO边界、已重判结论","authority":"project_canonical"}
+{"id":"S02","kind":"local_code","title":"Warehouse simulation core","path":"F:/abb_wh_work/sim/warehouse_sim.py","scope":"可行性、运动学、SCORE、SEQ、NEAR、AWRA入口","authority":"implementation"}
+{"id":"S03","kind":"local_code","title":"Strategy library","path":"F:/abb_wh_work/sim/strategy_lib.py","scope":"CB、TOB、AUTO路由、阈值和原因码","authority":"implementation"}
+{"id":"S04","kind":"local_code","title":"Tier 3 realism runner","path":"F:/abb_wh_work/sim/realism.py","scope":"初始布局、动态阶段、失败语义和固定策略链","authority":"implementation"}
+{"id":"S05","kind":"local_registry","title":"Cargo scenario registry","path":"F:/abb_wh_work/sim/scenarios/cargo_dynamic_v1.json","scope":"E01-E18货物情景","authority":"project_registry"}
+{"id":"S06","kind":"local_code","title":"Cargo scenario validation","path":"F:/abb_wh_work/sim/cargo_scenarios.py","scope":"场景完整性、入口拒收、hash登记","authority":"implementation"}
+{"id":"S07","kind":"local_evidence","title":"S1 18x8 manifest","path":"F:/abb_wh_work/sim/out/cargo_dynamic_matrix/s1/cargo_dynamic_matrix_manifest.json","scope":"18情景x8模式x10 seeds，sim only","authority":"generated_evidence"}
+{"id":"S08","kind":"local_evidence","title":"S1 aggregate matrix","path":"F:/abb_wh_work/sim/out/cargo_dynamic_matrix/s1/cargo_dynamic_matrix_agg.csv","scope":"逐情景逐算法可行性和P95聚合","authority":"generated_evidence"}
+{"id":"S09","kind":"local_code","title":"S3 trace generator","path":"F:/abb_wh_work/l4_showcase/tools/generate_s3_tier3_trace.py","scope":"3 Tier x 3 profile x 5模式代表回放","authority":"implementation"}
+{"id":"S10","kind":"local_evidence","title":"S3 trace manifest","path":"F:/abb_wh_work/l4_showcase/out/s3_trace_manifest.json","scope":"45条single-seed代表回放与source hashes","authority":"generated_evidence"}
+{"id":"S11","kind":"local_truth","title":"Factory I/O I/O map","path":"F:/abb_wh_work/l2_factoryio/io_map.md","scope":"Entry/Load/Unload/Exit、叉臂与Lift交接","authority":"local_physical_evidence"}
+{"id":"S12","kind":"local_truth","title":"F3 collision and 20x20 boundary decision","path":"F:/abb_wh_work/l2_factoryio/0713_F3碰撞闭环与20x20边界设计.md","scope":"54格物理I/O验证、400格物理No-Go","authority":"project_decision"}
+{"id":"S13","kind":"official_web","title":"Factory I/O Automated Warehouse","url":"https://docs.factoryio.com/manual/scenes/automated-warehouse/","scope":"官方场景目标：运输、存储、取回箱子","authority":"vendor"}
+{"id":"S14","kind":"official_web","title":"Factory I/O Emitter","url":"https://docs.factoryio.com/manual/parts/emitter/","scope":"物品生成、生成体积占用和发射参数","authority":"vendor"}
+{"id":"S15","kind":"official_web","title":"Factory I/O Remover","url":"https://docs.factoryio.com/manual/parts/remover/","scope":"物品与移除体积相交后移除","authority":"vendor"}
+{"id":"S16","kind":"official_web","title":"Factory I/O Heavy Load Parts","url":"https://docs.factoryio.com/manual/parts/heavy-load/","scope":"重载设备低速、辊筒输送速度上限","authority":"vendor"}
+{"id":"S17","kind":"official_web","title":"Factory I/O Light Load Parts","url":"https://docs.factoryio.com/manual/parts/light-load/","scope":"轻载输送速度上限","authority":"vendor"}
+{"id":"S18","kind":"official_web","title":"Factory I/O Creating a Scene","url":"https://docs.factoryio.com/getting-started/creating-a-scene/","scope":"部件放置、相交红框、Edit到Run销毁规则","authority":"vendor"}
+{"id":"S19","kind":"official_web","title":"Factory I/O User Interface","url":"https://docs.factoryio.com/manual/user-interface/","scope":"时间倍率、Orbit/Fly/Follow/Cameras和性能警告","authority":"vendor"}
+{"id":"S20","kind":"official_web","title":"ISA-101 Series of Standards","url":"https://www.isa.org/standards-and-publications/isa-standards/isa-101-standards","scope":"HMI设计、可用性与性能标准体系","authority":"standards_body"}
+{"id":"S21","kind":"official_web","title":"ISA101 Committee","url":"https://www.isa.org/standards-and-publications/isa-standards/isa-standards-committees/isa101","scope":"菜单层级、导航、图形、颜色、动态元素和报警","authority":"standards_body"}
+{"id":"S22","kind":"official_web","title":"ABB Operator workplace and process graphics best practice","url":"https://library.e.abb.com/public/3d78c2290d004e058f33ed16fbaf2d71/3BSE068129%20en%20B%20Operator%20workplace%20and%20process%20graphics%20-%20Best%20practice%20guidelines.pdf","scope":"以人为本、统一过程图形和工作场所设计","authority":"vendor"}
+{"id":"S23","kind":"official_web","title":"W3C WCAG Use of Color","url":"https://www.w3.org/WAI/WCAG21/Understanding/use-of-color.html","scope":"颜色不能是唯一信息载体","authority":"standards_body"}
+{"id":"S24","kind":"official_web","title":"W3C WCAG Content on Hover or Focus","url":"https://www.w3.org/WAI/WCAG21/Understanding/content-on-hover-or-focus.html","scope":"悬浮/焦点补充内容可消除、可悬停、可持续","authority":"standards_body"}
+{"id":"S25","kind":"official_web","title":"W3C WCAG Name Role Value","url":"https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html","scope":"自定义控件需暴露名称、角色、状态和值","authority":"standards_body"}

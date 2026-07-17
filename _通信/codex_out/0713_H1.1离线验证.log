@@ -1,0 +1,38 @@
+H1.1 OFFLINE VALIDATION EVIDENCE
+timestamp=2026-07-13 14:16:11 -05:00
+working_directory=F:\abb_wh_work\l2_factoryio
+
+[1] COMPILE
+command=python -B -m py_compile fault_lock.py f3_stacker_control.py f3_mechanics_probe.py webapi_probe.py test_fault_lock.py test_f3_stacker_control.py test_f3_mechanics_probe.py test_webapi_probe.py
+result=PASS (exit 0)
+
+[2] UNIT/OFFLINE SUITE
+command=python -B -m unittest test_f3_stacker_control test_f3_mechanics_probe test_fault_lock test_webapi_probe test_task_contract test_event_log test_task_orchestrator
+result=PASS; Ran 121 tests in 3.153s; OK
+module_counts=test_f3_stacker_control:59,test_f3_mechanics_probe:4,test_fault_lock:37,test_webapi_probe:4,test_task_contract:7,test_event_log:1,test_task_orchestrator:9,total:121
+
+[3] REAL WINDOWS CROSS-PROCESS LOCK PROBE (temporary directory)
+parent_holds_lock_child=TIMEOUT; child_rc=23
+parent_releases_lock_child=ACQUIRED; child_rc=0
+result=WINDOWS_INTERPROCESS_LOCK_PROBE=PASS
+
+[4] TEST ISOLATION
+runtime_state_before_sha256=D3EA9DB0D4B2513FA1C03B91F51095070165C81774238A89298809CD1032A88A
+runtime_state_after_sha256=D3EA9DB0D4B2513FA1C03B91F51095070165C81774238A89298809CD1032A88A
+runtime_audit_before=False
+runtime_audit_after=False
+result=TEST_ISOLATION=PASS
+
+[5] LIVE BOUNDARY
+Factory IO was not started, controlled, paused, stopped, or written by this batch.
+Automation Builder was not opened; tools/ab_scripting was not run.
+No Git command was executed.
+These results are software/offline gates only; they are not Factory I/O physical evidence or a functional-safety certification.
+
+[6] EXTERNAL FAILURE INJECTION (temporary directories, added 14:25 -05:00)
+hard_kill_after_intent=PASS; pending retained, diagnose blocked, stop could not clear, OS lock released
+hard_kill_while_byte_locked=PASS; Windows released byte lock on process death
+delete_state_mid_command=PASS; low-level write rejected, missing state fail-closed
+audit_medium_failure=PASS; reset not cleared, completion pending retained, fault current state committed locked
+cross_process_action_fault_race=PASS; fault writer waited for action lease then became final locked state
+cross_process_reset_fault_race=PASS; fault writer waited for reset lease then became final locked state

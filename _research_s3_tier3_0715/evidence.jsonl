@@ -1,0 +1,13 @@
+{"evidence_id":"E01","source_id":"L01","location":"lines 16-24","paraphrase":"Tier3 adds handling, shared Poisson arrivals, frequency noise and faults on top of Tier2 physics; parameters are assumptions, not a field digital twin."}
+{"evidence_id":"E02","source_id":"L03","location":"line 27","paraphrase":"The 0714 S3 task explicitly excluded real arrival queues, real-time KPI calculation and multi-act fault storytelling."}
+{"evidence_id":"E03","source_id":"L06","location":"lines 409-418, 479-480, 560","paraphrase":"Three waiting boxes, one transported cargo mesh and the queue chart are independently created and have no shared good identity."}
+{"evidence_id":"E04","source_id":"L02","location":"lines 11-12, 45","paraphrase":"The earlier approved design called for physical queue boxes and one event schema driving 3D and KPI snapshots."}
+{"evidence_id":"E05","source_id":"L04","location":"lines 94-148","paraphrase":"The current Tier3 simulator is a single-server mixed-flow event model with shared arrivals and equipment downtime, but it returns aggregate metrics rather than a visualization trace."}
+{"evidence_id":"E06","source_id":"L05","location":"lines 13, 143-176, 328","paraphrase":"The formal animation has a hand-built multi-good event list; it states that sim export should replace it, and the slot-fault reroute is staged."}
+{"evidence_id":"E07","source_id":"L07","location":"line 119","paraphrase":"Canonical U2 assigns laden vertical factor 0.80 and 6/8.5/12.5 second handling tiers to Tier3."}
+{"evidence_id":"E08","source_id":"L04","location":"lines 39, 88, 128","paraphrase":"realism.py still uses a constant 15-second handling value and does not call the U2 laden travel function."}
+{"evidence_id":"E09","source_id":"W02","location":"camera documentation","paraphrase":"A runtime camera can move and a 3D window can follow it to keep moving objects under observation."}
+{"evidence_id":"E10","source_id":"W03","location":"statistics collector events","paraphrase":"A collector listens to 3D/process events and writes event values to rows, supporting one-event-source data synchronization."}
+{"evidence_id":"E11","source_id":"W04","location":"statistics and Sequence Viewer","paraphrase":"Queue lengths, server utilization and entity movements can be visualized from the same simulation behavior."}
+{"evidence_id":"E12","source_id":"W05","location":"why ISA-101 is important","paraphrase":"HMI design should reduce operator error and improve situational awareness."}
+{"evidence_id":"E13","source_id":"P02","location":"abstract","paraphrase":"Lack of interpretability can block adoption because users may not understand or trust optimization recommendations."}

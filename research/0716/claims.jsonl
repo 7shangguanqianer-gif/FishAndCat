@@ -1,0 +1,20 @@
+{"id":"C01","text":"新版必须把20x20逻辑SIM与54格FIO物理I/O验证视觉分层，并常驻可见边界标签。","evidence":["E01","E20"],"status":"accepted_constraint"}
+{"id":"C02","text":"不能把SCANNED、EXIT_MASK、CONSUMED画成已由FIO验证的物理工位。","evidence":["E02"],"status":"accepted_constraint"}
+{"id":"C03","text":"若保留FIO参照，链条应以Entry、Load、叉臂/Lift、Rack、Unload、Exit为基准。","evidence":["E02","E14"],"status":"accepted_constraint"}
+{"id":"C04","text":"当前逐候选score没有落进trace；前端不得伪造候选分数、贡献或排名。","evidence":["E03"],"status":"accepted_constraint"}
+{"id":"C05","text":"若要显示候选评分，必须先扩展sim导出score_total、四项分值、加权贡献、候选合法性和最终平局键。","evidence":["E03","E04","E05"],"status":"implementation_prerequisite"}
+{"id":"C06","text":"AWRA-LS的亮点应表述为批次重排和局部搜索，不应表述为另一套货位评分公式。","evidence":["E06"],"status":"accepted_constraint"}
+{"id":"C07","text":"AUTO应称启动时规则推荐/一次选路，不能称在线学习、逐货自适应或AI最优。","evidence":["E07","E10"],"status":"accepted_constraint"}
+{"id":"C08","text":"CB不可画成固定ABC几何区，TOB不可标为当前COI实现。","evidence":["E08"],"status":"accepted_constraint"}
+{"id":"C09","text":"算法比较必须在同一scenario、seed和evidence stage内进行，不跨情景平均排名。","evidence":["E09","E10"],"status":"accepted_constraint"}
+{"id":"C10","text":"S1统计证据与S3单seed回放必须物理分区，不能合并、相减或共同排名。","evidence":["E09","E11"],"status":"accepted_constraint"}
+{"id":"C11","text":"三种输入入口推荐层级为：预设情景主入口、规则推荐与八算法对照次入口、单件自定义独立沙盒。","evidence":["E12","E13"],"status":"recommended"}
+{"id":"C12","text":"单件自定义只能给出合法性、推荐仓位、单件路径或经导出的评分分解，不能显示P50/P95、吞吐、利用率、年化能耗或regret。","evidence":["E13"],"status":"accepted_constraint"}
+{"id":"C13","text":"E04-E18没有当前三维回放时应明确显示无代表性回放，只展示S1证据。","evidence":["E11","E12"],"status":"accepted_constraint"}
+{"id":"C14","text":"三档Tier是拟真假设层，不是算法推荐档位；UI应拆为拟真层选择与算法推荐。","evidence":["E11","E13"],"status":"accepted_constraint"}
+{"id":"C15","text":"时间倍率仅改变演示速度，不改变sim时钟和KPI；输送、堆垛、交接应按物理可辨识性重新配时。","evidence":["E15","E17"],"status":"recommended"}
+{"id":"C16","text":"固定预设镜头和自由观察可以并存；默认镜头需通过截图和盲看测试保证链条、货物、目标位均可见。","evidence":["E17","E20"],"status":"recommended"}
+{"id":"C17","text":"页面每一时刻只能有一个当前动作主入口，顶部任务卡与底部动作坞不得重复。","evidence":["E18","E20"],"status":"accepted_constraint"}
+{"id":"C18","text":"查看全部8种算法必须是显性动作入口，不能伪装成统计标签。","evidence":["E18","E19","E20"],"status":"accepted_constraint"}
+{"id":"C19","text":"地图与3D货物颜色需做截图级互认测试，并增加文字/形状等非颜色冗余编码。","evidence":["E19","E20"],"status":"accepted_constraint"}
+{"id":"C20","text":"现S3几何与性能QA继续有效，但页面在真相源到观众理解的证据边界上NO-GO，重构前不得提升为定稿。","evidence":["E20"],"status":"release_blocker"}

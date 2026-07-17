@@ -1,0 +1,47 @@
+﻿[
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\智储优控_作战面板.html",
+        "Length":  25497,
+        "SHA256":  "D7341E80F4F600A432DFA4BC0DE94C6D8778608619C056C60D9E5904AF30B29B"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\1_给你看\\周报_第1期_0710.docx",
+        "Length":  40740,
+        "SHA256":  "D033671529C354C341EB749F17D6D3AE03BC28B8AD9F2573C7BA5751F9672377"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\1_给你看\\周报_第1期_0710.md",
+        "Length":  4785,
+        "SHA256":  "919197F65A2FB80EAC87AD1D66D769ED6A8B1CE306C6823987C2D513BCF1846F"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\1_给你看\\实验发现.docx",
+        "Length":  59684,
+        "SHA256":  "F7AE59B10E7F8089AAFA43CEE8EAA54ADCCEAC3282B5A67638D420F1DC930346"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\1_给你看\\实验发现.md",
+        "Length":  34127,
+        "SHA256":  "D12601E2582F974C7B8F2801F7AEC8A5E212ED2E3C68C64D1E0C78CE4FA29218"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\1_给你看\\项目通俗导览.docx",
+        "Length":  2098271,
+        "SHA256":  "A7D500EAFB3DF652B01CAB8835AA34ACE0B4428892F9145F94B80FD5C1351A4D"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\1_给你看\\项目通俗导览.md",
+        "Length":  31874,
+        "SHA256":  "F6BBBD58539A33529D008C3C78AA22E1898C838787EE842BE46283E4B882C14D"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\sim\\build_report.py",
+        "Length":  53631,
+        "SHA256":  "7C8581D1200B82D9BD1524EFF7356B1FC50330990B962E8F818521BF5685457B"
+    },
+    {
+        "Path":  "F:\\abb_wh_work\\_通信\\codex_out\\backup_0712_trackA_20260712_215921\\sim\\out\\验证报告_draft.docx",
+        "Length":  3159462,
+        "SHA256":  "4709CD5553583A8DECC2CF0BFF86E223D79A9A04A275DA29116A9AECA5C45D7F"
+    }
+]

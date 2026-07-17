@@ -1,0 +1,7 @@
+{"claim_id":"C01","claim":"The current S3 candidate is not a complete Tier3 result; it is a Tier2 motion shell with Tier3 static labels.","supports":["E01","E02","E03"],"confidence":"high"}
+{"claim_id":"C02","claim":"The waiting goods and transported good cannot match because they are separate objects without a shared gid or event lifecycle.","supports":["E03"],"confidence":"high"}
+{"claim_id":"C03","claim":"A single authoritative event trace should drive entities, queue, charts, KPIs and labels.","supports":["E04","E10","E11"],"confidence":"high"}
+{"claim_id":"C04","claim":"The camera should frame a bounded active object group and move under master-framing constraints instead of using fixed coordinates.","supports":["E09"],"confidence":"high"}
+{"claim_id":"C05","claim":"Before claiming a real Tier3 replay, the canonical U2 versus realism.py handling and laden-motion mismatch must be resolved.","supports":["E07","E08"],"confidence":"high"}
+{"claim_id":"C06","claim":"The current truthful fault story is equipment stop-repair-recovery; slot-fault rerouting is not yet a real Tier3 output.","supports":["E05","E06"],"confidence":"high"}
+{"claim_id":"C07","claim":"The contest-facing design should explain constraint filtering and score/optimization reasoning, not only animate a target coordinate.","supports":["E12","E13"],"confidence":"medium-high"}
