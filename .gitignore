@@ -14,3 +14,6 @@ plc/AB_Project/*
 ~$*.docx
 **/~$*.docx
 
+# l4_showcase 产物(2.5GB QA 截图/帧/trace 产物,可再生;0716 卫生批次,用户批准)
+l4_showcase/out/
+
