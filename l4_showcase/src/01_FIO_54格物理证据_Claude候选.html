@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Factory I/O · 54 格物理 I/O 证据浏览器(Claude 候选)</title>
+<style>
+  :root{--abb:#e2001a;--ink:#17202b;--dim:#5e6a73;--line:#c9d0d6;--bg:#f2f4f5;--card:#fff;
+    --ok:#1d6b2e;--warn:#8a6d00;--warn-bg:#fff6d8;--stop:#8a1a1a;--stop-bg:#fde8e8;--ok-bg:#e6f2e8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font:14px/1.55 "Microsoft YaHei","Segoe UI",sans-serif}
+  a{color:#17365d}
+  #brand{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#111;border-bottom:3px solid var(--abb)}
+  #brand .logo{color:var(--abb);font-weight:900;font-size:22px;font-family:Arial;letter-spacing:1px}
+  #brand h1{color:#fff;font-size:16px;font-weight:600}
+  #brand .tag{margin-left:auto;color:#bbb;font-size:12px}
+  /* 常驻口径带 */
+  #scopeBand{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;
+    padding:8px 20px;background:#17202b;color:#fff;font-size:12.5px;border-bottom:2px solid var(--abb)}
+  #scopeBand b{color:#ffd23d}
+  #scopeBand .sep{color:#8a94a0}
+  main{max-width:1240px;margin:0 auto;padding:16px 20px 40px;display:flex;flex-direction:column;gap:18px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+  section>h2{font-size:15px;margin-bottom:4px;padding-left:9px;border-left:4px solid var(--abb)}
+  section>.sub{font-size:12px;color:var(--dim);margin-bottom:10px}
+  /* 证据画面 */
+  #views{display:grid;grid-template-columns:180px 1fr;gap:14px}
+  #viewTabs{display:flex;flex-direction:column;gap:6px}
+  #viewTabs button{padding:10px;border:1px solid var(--line);background:#f7f8f9;text-align:left;cursor:pointer;
+    font:600 13px "Microsoft YaHei",sans-serif;border-radius:3px}
+  #viewTabs button[aria-selected="true"]{border-color:var(--abb);background:#fff;box-shadow:inset 3px 0 var(--abb)}
+  #viewTabs button small{display:block;font-weight:400;color:var(--dim);font-size:11px;margin-top:2px}
+  #viewStage{min-width:0}
+  #viewStage img{width:100%;max-height:520px;object-fit:contain;background:#e9ecee;border:1px solid var(--line)}
+  #viewMeta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12.5px}
+  #viewMeta .cell{padding:8px 10px;border:1px solid var(--line);background:#fafbfc}
+  #viewMeta .cell b{display:block;font-size:11px;color:var(--dim);margin-bottom:2px}
+  #viewMeta .prove{border-left:3px solid var(--ok)}
+  #viewMeta .notprove{border-left:3px solid var(--stop)}
+  .path{font-family:Consolas,monospace;font-size:11.5px;word-break:break-all;color:#17365d}
+  /* I/O 链 */
+  #chain{display:flex;gap:6px;flex-wrap:wrap}
+  #chain button{flex:1;min-width:130px;padding:10px 8px;border:1px solid var(--line);background:#f7f8f9;
+    cursor:pointer;border-radius:3px;font:600 13px "Microsoft YaHei",sans-serif}
+  #chain button small{display:block;font-weight:400;font-size:10.5px;color:var(--dim);margin-top:2px}
+  #chain button[aria-selected="true"]{border-color:var(--abb);background:#fff;box-shadow:inset 0 3px 0 var(--abb)}
+  #chain .arrow{align-self:center;color:var(--dim);flex:0}
+  #stationDetail{margin-top:12px;border:1px solid var(--line);background:#fafbfc;padding:12px}
+  #stationDetail h3{font-size:13.5px;margin-bottom:6px}
+  #stationDetail table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  #stationDetail th,#stationDetail td{border:1px solid var(--line);padding:5px 8px;text-align:left;background:#fff}
+  #stationDetail th{background:#eef1f3;font-size:11.5px}
+  #stationDetail .sem{margin-top:6px;padding:8px 10px;background:var(--warn-bg);border-left:3px solid #d9a800;font-size:12.5px}
+  /* 矩阵 */
+  #matrix table{width:100%;border-collapse:collapse;font-size:12.5px}
+  #matrix th,#matrix td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  #matrix th{background:#eef1f3}
+  .st{display:inline-block;padding:1px 8px;border-radius:2px;font-weight:700;font-size:12px;white-space:nowrap}
+  .st.ok{background:var(--ok-bg);color:var(--ok)}
+  .st.warn{background:var(--warn-bg);color:var(--warn)}
+  .st.stop{background:var(--stop-bg);color:var(--stop)}
+  /* 负结果 */
+  #neg .item{border:1px solid var(--line);border-left:4px solid var(--stop);background:#fff;padding:10px 12px;margin-bottom:8px}
+  #neg .item h3{font-size:13px;margin-bottom:3px}
+  #neg .item p{font-size:12.5px;color:#333}
+  details{margin-top:6px}
+  summary{cursor:pointer;font-size:12.5px;color:#17365d;font-weight:600}
+  details[open] summary{margin-bottom:6px}
+  footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;font-size:11.5px;color:var(--dim)}
+  button:focus-visible,summary:focus-visible{outline:3px solid #ffd23d;outline-offset:1px}
+  @media(max-width:1000px){#views{grid-template-columns:1fr}#viewTabs{flex-direction:row}#viewTabs button{flex:1}}
+</style>
+</head>
+<body>
+<div id="brand">
+  <span class="logo">ABB</span>
+  <h1>Factory I/O · 54 格物理 I/O 证据浏览器</h1>
+  <span class="tag">Claude 候选 · 独立证据页(不属于 S3 算法页面族)</span>
+</div>
+<div id="scopeBand" role="note" aria-label="证据口径">
+  <b>口径</b>
+  <span>Factory I/O 54 格<b>代表性物理 I/O 与时序验证</b></span><span class="sep">|</span>
+  <span>Python 直控<b>技术预演</b>(pymodbus 经 Modbus TCP)</span><span class="sep">|</span>
+  <span><b>非</b> 20×20 几何孪生</span><span class="sep">|</span>
+  <span><b>不宣称</b>完整现场闭环(9/9=运行成功计数,0714 独立复核降级口径)</span>
+</div>
+<main>
+
+<!-- ═══ 1. 这页回答什么 ═══ -->
+<section aria-label="页面定位">
+  <h2>本页回答四个问题</h2>
+  <div class="sub">环境:Factory I/O v2.5.10 Ultimate · Automated Warehouse 场景(54 原生货位) · Modbus TCP/IP Server 127.0.0.1:502(Factory I/O 为 server,Python pymodbus 为 client,Slave ID 1)</div>
+  <ol style="font-size:13px;padding-left:22px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">
+    <li>54 格实际证明了哪些设备与站点?(§2 证据画面 / §3 I/O 链)</li>
+    <li>Entry → Load → 叉臂/Lift → Rack → Unload → Exit 的 I/O 和动作如何对应?(§3)</li>
+    <li>有哪些真实截图、点表、运行记录和负结果?(§2/§4/§5)</li>
+    <li>它明确<b>没有</b>证明什么?(口径带 / §4 ⛔行 / §5)</li>
+  </ol>
+</section>
+
+<!-- ═══ 2. 真实证据主画面 ═══ -->
+<section aria-label="真实证据画面">
+  <h2>真实证据画面(全部为 Factory I/O 现场截图,无重建 3D)</h2>
+  <div class="sub">三视图各答一题;每张图注明来源文件与"证明/不证明"。点击左侧切换。</div>
+  <div id="views">
+    <div id="viewTabs" role="tablist" aria-label="证据视图"></div>
+    <div id="viewStage">
+      <img id="viewImg" src="" alt="">
+      <div id="viewMeta">
+        <div class="cell"><b>来源文件(项目内真实路径)</b><span class="path" id="viewSrc"></span></div>
+        <div class="cell"><b>采集阶段</b><span id="viewStage2"></span></div>
+        <div class="cell prove"><b>它证明什么</b><span id="viewProve"></span></div>
+        <div class="cell notprove"><b>它不证明什么</b><span id="viewNot"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3. I/O 与动作链 ═══ -->
+<section aria-label="IO与动作链">
+  <h2>I/O 与动作链(点击站点查看点表证据)</h2>
+  <div class="sub">六站中文状态链;点表来源 <span class="path">l2_factoryio/io_map.md</span>(F2 侦察产物+0713 现场纠错)。传感器 15 DI / 执行器 10 Coil / 目标位 1 Holding Register。</div>
+  <div id="chain" role="tablist" aria-label="动作链站点"></div>
+  <div id="stationDetail" role="tabpanel"></div>
+</section>
+
+<!-- ═══ 4. 证据矩阵 ═══ -->
+<section id="matrix" aria-label="证据矩阵">
+  <h2>证据矩阵(主张 · 证据路径 · 状态 · 限制)</h2>
+  <div class="sub">状态三重编码:图标+文字+底色,不单靠颜色。</div>
+  <table>
+    <thead><tr><th style="width:24%">主张</th><th style="width:36%">证据路径(项目内)</th><th style="width:12%">状态</th><th>限制</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Modbus 直控链路可用(点表 15 DI/10 Coil/1 HR 全量映射)</td>
+        <td class="path">l2_factoryio/io_map.md;img/F2_modbus_server_default_mapping_0712.png;img/F2_ultimate_edition_scene_loaded_0712.png</td>
+        <td><span class="st ok">✅ 已证实</span></td>
+        <td>仅本机回环(Software Loopback);网卡曾默认落 Clash 虚拟网卡(已修,见 io_map 头注)</td>
+      </tr>
+      <tr>
+        <td>全链取放 9/9 运行成功(cell 1/30/54 各三轮,六相位完整)</td>
+        <td class="path">l2_factoryio/F3_H5证据保全_0716.md(机读账本抄录:epoch 3085b352…,revision 292,2026-07-13 19:09–19:22);logs/F3_diagnose_20260713_19*.log(54 份=9 链×6 相位);media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png</td>
+        <td><span class="st ok">✅ 已证实</span></td>
+        <td><b>运行成功计数,不等同"完全安全闭环"</b>(0714 独立复核降级,_通信/codex_out/0714_F3独立复核.md);单日单环境</td>
+      </tr>
+      <tr>
+        <td>叉臂取箱真实承载(非只看限位信号)</td>
+        <td class="path">l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png</td>
+        <td><span class="st ok">✅ 已证实</span></td>
+        <td>0713 现场纠错后才达成:此前"到限位即撤销"逻辑会把货拉回(保持型命令契约,见 §3 叉臂站)</td>
+      </tr>
+      <tr>
+        <td>放箱后货物留在格内(入架成立)</td>
+        <td class="path">l2_factoryio/media/g4_evidence_0713/P3_官方原版放箱成功_货留格内_155815.png;media/F3_素材_cell30全链_0713/(cell 30 全链帧序列+mp4)</td>
+        <td><span class="st ok">✅ 已证实</span></td>
+        <td>代表性仓位(1/30/54),未逐一验证 54 格全部</td>
+      </tr>
+      <tr>
+        <td>传感器语义正确解读(At Entry/Load/Unload/Exit 为 active-low)</td>
+        <td class="path">l2_factoryio/io_map.md「0713 实物极性复核」节</td>
+        <td><span class="st ok">✅ 已证实</span></td>
+        <td>曾凭 At Load=False 误判空载,该结论已作废(负结果 §5-3)</td>
+      </tr>
+      <tr>
+        <td>故障事件账本连续可追溯</td>
+        <td class="path">l2_factoryio/F3_H5证据保全_0716.md(fault_events.jsonl 287 行抄录;原件为运行时账本按设计不入库)</td>
+        <td><span class="st warn">⚠️ 部分证实</span></td>
+        <td>入库的是关键字段抄录;人类可读收口回执 records/F3_collision_closure_0713.md 待报告周补写(#11)</td>
+      </tr>
+      <tr>
+        <td>完全安全闭环(碰撞/掉落/交接全域防护)</td>
+        <td class="path">— (0714 独立复核明确降级;负结果清单见 §5)</td>
+        <td><span class="st stop">⛔ 未证实</span></td>
+        <td>不得在任何材料中宣称;9/9 是运行成功计数</td>
+      </tr>
+      <tr>
+        <td>20×20=400 格物理实现 / 几何孪生</td>
+        <td class="path">l2_factoryio/0713_F3碰撞闭环与20x20边界设计.md §1.3(No-Go 裁决,含厂商一手来源五条)</td>
+        <td><span class="st stop">⛔ 未证实</span></td>
+        <td>Stacker Crane Numerical 目标固定 1..54(0=停,55=rest/load);单 Rack 18 格;行程 10.5 m/6.625 m;SDK 不开放自定义三维部件(厂商 2025 答复)——<b>几何与运动学是瓶颈,与地址容量无关</b></td>
+      </tr>
+      <tr>
+        <td>与 AC500/PLC 在线联动</td>
+        <td class="path">—</td>
+        <td><span class="st stop">⛔ 未证实</span></td>
+        <td>本页全部证据为 Python 直控技术预演;AC500 证据在 AB 工程线(77/0 自检),两者未在线互联</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══ 5. 边界与负结果 ═══ -->
+<section id="neg" aria-label="边界与负结果">
+  <h2>边界与负结果(如实列出,未只展示成功)</h2>
+  <div class="sub">这些事实与成功证据同等入档;引用页面/材料时不得只取成功面。</div>
+  <div class="item">
+    <h3>① 托盘侧翻,"命令完成"≠物理成功(0712)</h3>
+    <p>动作序列日志完整结束(<span class="path">logs/F3_probe_20260712_233238.log</span>),但现场截图托盘已在装载口护栏附近侧翻——上一轮宽视角"成功"判断被撤销。此后立规:<b>物理验收只认画面证据,不认命令返回</b>。</p>
+  </div>
+  <div class="item">
+    <h3>② G4 下放 NOSTART:货物不在承载台(0713)</h3>
+    <p>下放序列启动时格位承载台为空(<span class="path">media/g4_evidence_0713/G4_lower_NOSTART_cell30_全景_152304.png、G4_货物在格位承载台空_裁剪.png</span>)。根因链见诊断日志;该轮不计成功。</p>
+  </div>
+  <div class="item">
+    <h3>③ 传感器极性误判(已作废结论)</h3>
+    <p>At Entry/Load/Unload/Exit 实为 active-low(False=有货遮挡)。曾凭远景+At Load=False 误判"空载",0713 实物极性复核后作废(<span class="path">io_map.md 头注</span>)。</p>
+  </div>
+  <div class="item">
+    <h3>④ 叉臂保持型命令契约(曾把货拉回)</h3>
+    <p>Forks Left/Right 是保持型命令,撤销即自动回 Middle——"到限位即撤销"的旧逻辑在取放中把货物拉回,已禁用;正确序列=全程保持对应叉臂输出直至交接完成(<span class="path">io_map.md「叉臂取放动作契约」</span>)。</p>
+  </div>
+  <div class="item">
+    <h3>⑤ F6 复位陷阱与"无 Z 必须重启"纪律</h3>
+    <p>F6 只清理场景货物,不能复位控制输出或微升降机构:F6 后实测 Forks Left 到位、Lift=True 却无 Moving Z。任一无 Z、recovery 或掉落后必须保存证据并<b>完整退出重启 Factory I/O</b>,不得按 F6 续跑同一验收链。</p>
+  </div>
+  <div class="item">
+    <h3>⑥ Emitter 强制值污染</h3>
+    <p>Emitter tag 曾处于 isForced=true:普通写 false 不生效,必须 <span class="path">PUT /api/tag/values-force</span> 显式 force false;单箱生成只能短暂 force true,At Entry 检出后立即 force false,否则连续生成多托货污染验收(<span class="path">io_map.md「Emitter 强制值陷阱」</span>)。</p>
+  </div>
+  <div class="item" style="border-left-color:#8a6d00">
+    <h3>⑦ 能力边界:为什么不做 400 格物理(No-Go 裁决摘要)</h3>
+    <p>Factory I/O 原生堆垛机目标位固定 1..54;Analog X/Z 只能在固定行程(10.5 m/6.625 m)内连续定位,No-Go 反证计算:若强行铺满 20×20 中心点,格距被压到约 0.553 m×0.349 m 且未扣端部余量;SDK/Web API 只开放 I/O tag,不开放自定义三维部件与碰撞体(厂商 2025 明确答复)。<b>结论:v2.5.10 内严格 400 格物理方案 No-Go——瓶颈是几何与运动学,不是地址容量。</b>一手来源五条见 <span class="path">l2_factoryio/0713_F3碰撞闭环与20x20边界设计.md §1.3</span>。</p>
+  </div>
+</section>
+
+</main>
+<footer>
+  证据边界:本页所有素材为 Factory I/O v2.5.10 Ultimate 本机技术预演;"20×20"仅在"非孪生/不等同"边界说明中出现;不宣称完全闭环、数字孪生、400 格物理实现或在线实测完成。素材与日志路径均为项目内真实文件,可回源核验。
+</footer>
+
+<script>
+"use strict";
+/* ── 数据:全部来自项目真实文件,路径可回源 ── */
+const VIEWS = [
+  {key:"overview", label:"总览", note:"三格齐放终验全景",
+   img:"../../l2_factoryio/media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png",
+   src:"l2_factoryio/media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png",
+   stage:"H5 终验(0713 19:09–19:22 验收轮,第三轮)",
+   prove:"单巷道+单堆垛机+输送链+货架同框;cell 1/30/54 三仓位均有货物留置=三链取放的终态成立",
+   not:"不证明 54 格全部逐一验证;不证明安全闭环(9/9 为运行成功计数)"},
+  {key:"vertical", label:"垂直观察", note:"三格分布抽查",
+   img:"../../l2_factoryio/media/g4_evidence_0713/H5_三格齐放_链123_抽查.png",
+   src:"l2_factoryio/media/g4_evidence_0713/H5_三格齐放_链123_抽查.png",
+   stage:"H5 终验抽查(链1/2/3 对应 cell 1/30/54)",
+   prove:"不同列/层的目标格位均可寻址并留住货物(Holding Register 目标位 1..54 有效)",
+   not:"不证明 20×20 坐标与 54 格存在一一映射(本项目明确不做该映射)"},
+  {key:"handoff", label:"交接近景", note:"叉臂带载确认",
+   img:"../../l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png",
+   src:"l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png",
+   stage:"G2 取箱验收(0713 14:58)",
+   prove:"叉臂伸出后货物真实在叉上(带载画面),取箱交接物理成立——非仅限位信号",
+   not:"不证明放箱侧;放箱证据另见 P3_官方原版放箱成功_货留格内_155815.png"}
+];
+const STATIONS = [
+  {key:"entry", label:"Entry 入口", small:"箱到场",
+   sensors:[["Input 0","At Entry","入口输送带箱到位(active-low:False=有货)"]],
+   coils:[["Coil 0","Entry Conveyor","入口输送带走"]],
+   sem:"Emitter 生成货箱须走 force 管线(短暂 force true→At Entry 检出→立即 force false),否则连续生成污染验收。",
+   ev:"io_map.md「Emitter 强制值陷阱」;logs/F3_diagnose_*_feed 相位"},
+  {key:"load", label:"Load 载入位", small:"堆垛机取箱口",
+   sensors:[["Input 1","At Load","载入位箱到位(active-low)"]],
+   coils:[["Coil 1","Load Conveyor","载入输送带走"]],
+   sem:"At Load 为 active-low:False=有货遮挡。曾凭 At Load=False 误判空载,0713 实物极性复核后作废。",
+   ev:"io_map.md「0713 实物极性复核」;media/g4_evidence_0713/G2_pick_带载确认_145804.png"},
+  {key:"forks", label:"叉臂 / Lift", small:"保持型命令",
+   sensors:[["Input 2","At Left","叉臂在左(载入输送带侧,0713 纠错后口径)"],["Input 3","At Middle","叉臂居中(收回)"],["Input 4","At Right","叉臂在右(货架侧)"],["Input 7","Moving X","水平移动中"],["Input 8","Moving Z","垂直移动中"]],
+   coils:[["Coil 2","Forks Left","叉臂伸左(输送带侧)"],["Coil 3","Forks Right","叉臂伸右(货架侧)"],["Coil 4","Lift","叉臂升(取/放行程)"]],
+   sem:"Forks Left/Right 是保持型命令:撤销即自动回 Middle。取放全程必须保持对应输出,否则货被拉回(0713 实锤,旧脉冲逻辑禁用)。无 Moving Z 异常→保存证据并完整重启 Factory I/O(F6 不能复位机构)。",
+   ev:"io_map.md「叉臂取放动作契约」;logs/F3_diagnose_20260713_19*.log(pick/place-extend/place-lower/retract 相位)"},
+  {key:"rack", label:"Rack 货架", small:"目标位 1..54",
+   sensors:[["—","(货架无独立传感器)","到位由 Moving X/Z 停止+格位画面证据判定"]],
+   coils:[["Holding Reg 0","Target Position","堆垛机目标货位号:1..54=原生货位,0=原地停止,55=rest/load(crane_3boxes.st 曾把 0 写成入库口,已纠)"]],
+   sem:"放箱成立只认画面证据(货留格内),不认命令返回——0712 侧翻事故后的验收铁律。",
+   ev:"media/g4_evidence_0713/P3_官方原版放箱成功_货留格内_155815.png;media/F3_素材_cell30全链_0713/(帧序列+mp4)"},
+  {key:"unload", label:"Unload 卸载位", small:"出库交接",
+   sensors:[["Input 5","At Unload","卸载位箱到位(active-low)"]],
+   coils:[["Coil 5","Unload Conveyor","卸载输送带走"]],
+   sem:"出库链与入库链共用堆垛机;本页证据集中在入库向,出库向证据以 cell 30 全链素材为准。",
+   ev:"media/F3_素材_cell30全链_0713/F3_cell30_全链素材.mp4"},
+  {key:"exit", label:"Exit 出口", small:"箱离场",
+   sensors:[["Input 6","At Exit","出口输送带箱到位(active-low)"],["Input 14","FACTORY I/O (Running)","仿真 RUN 状态才 True"]],
+   coils:[["Coil 6","Exit Conveyor","出口输送带走"]],
+   sem:"面板类:Input 9/10/11 Start/Reset/Stop(Stop 常闭静态 True)、Input 12 急停(常闭)、Input 13 Auto;Coil 7/8/9 为面板灯。",
+   ev:"io_map.md 默认映射表;img/F2_modbus_server_default_mapping_0712.png"}
+];
+/* ── 渲染 ── */
+const byId = id => document.getElementById(id);
+function esc(s){const d=document.createElement("i");d.textContent=s;return d.innerHTML;}
+function renderViews(active){
+  const tabs=byId("viewTabs");tabs.replaceChildren();
+  VIEWS.forEach(v=>{
+    const b=document.createElement("button");b.type="button";b.role="tab";
+    b.setAttribute("aria-selected",String(v.key===active));
+    b.innerHTML=`${esc(v.label)}<small>${esc(v.note)}</small>`;
+    b.addEventListener("click",()=>renderViews(v.key));tabs.append(b);
+  });
+  const v=VIEWS.find(x=>x.key===active);
+  const img=byId("viewImg");img.src=v.img;img.alt=`${v.label}:${v.note}(${v.src})`;
+  byId("viewSrc").textContent=v.src;byId("viewStage2").textContent=v.stage;
+  byId("viewProve").textContent=v.prove;byId("viewNot").textContent=v.not;
+}
+function renderChain(active){
+  const chain=byId("chain");chain.replaceChildren();
+  STATIONS.forEach((s,i)=>{
+    if(i){const a=document.createElement("span");a.className="arrow";a.textContent="→";a.setAttribute("aria-hidden","true");chain.append(a);}
+    const b=document.createElement("button");b.type="button";b.role="tab";
+    b.setAttribute("aria-selected",String(s.key===active));
+    b.innerHTML=`${esc(s.label)}<small>${esc(s.small)}</small>`;
+    b.addEventListener("click",()=>renderChain(s.key));chain.append(b);
+  });
+  const s=STATIONS.find(x=>x.key===active);
+  const rows=t=>t.map(r=>`<tr><td class="path">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("");
+  byId("stationDetail").innerHTML=
+    `<h3>${esc(s.label)} · 点表与语义</h3>`+
+    `<table><thead><tr><th style="width:16%">地址</th><th style="width:26%">点名</th><th>含义</th></tr></thead><tbody>`+
+    rows(s.sensors)+rows(s.coils)+`</tbody></table>`+
+    `<div class="sem"><b>保持式/语义要点:</b>${esc(s.sem)}</div>`+
+    `<details><summary>查看证据来源</summary><span class="path">${esc(s.ev)}</span></details>`;
+}
+renderViews("overview");renderChain("forks");
+</script>
+</body>
+</html>

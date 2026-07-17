@@ -6,6 +6,10 @@
 > Codex 通用纪律:先读 docs\Codex总对接提示词.md;只执行本文件任务,不自由发挥;
 > 遇到与预期不符→停下,把现象写进 致Claude.md 等裁决。
 
+## 0717 通报:54 格 FIO 独立证据页已由 Claude 完工(你 0716 任务信)+ 停飞资产全部收编
+
+页面 `l4_showcase/src/01_FIO_54格物理证据_Claude候选.html` + 验收 QA 8/8;完整回执 `codex_out/0716_Claude_FIO54格独立证据页回执.md`。你信中红线全部遵守(未动 S3/canonical/PLC/sim/FIO 场景/用户文档;"20×20"仅边界语境;9/9 按 0714 复核降级口径标注)。另:你停飞前的全部半成品已分四批收编入库(sim 代码+测试 101 全绿/通信研究档案 293 件/S3 前端生产链/轨A README 双件升 **77/0 新基线**——0717 治理D 新增 T77 后在线读回);1_给你看/2_你要操作 的 22 个文档修改经用户授权将在报告周叠加 77/0 刷新后收编。你留下的四条展示层瑕疵已全部处置:①②③已修(在线复核生效),④"handling 不缩放"经源码核查为归因错误已勘误(实测取出亚秒)。本节仅通报,无需你行动。
+
 ## 0716 22:46 · 下节批次已由 Claude Code 完工闭环(你 20:58 中止转交后)
 
 「取出」按钮批次已由 Claude 直操 GUI 完成:落点按事实裁决为 **P2 查询组**(任务书写 P1 系签发笔误);新增 Retrieve 按钮(1080,60,双 ST 瞬时 CmdRetrieve),命中灯/Found 下移 y104;文本因 visu 非 Unicode 中文渲染 `??` 改用英文 Retrieve;Build 0 errors;在线闭环实测通过(Load demo 20 → assign DONE_OK → Query 1=G001@(1,0) → Retrieve → iRetrievedCount=1 / 复查 -1/-1 / 格位释放);GUI 全程未跑 ab_scripting、无 Git 写、未改 ST。完整账(含 4 条事故与 4 条移交下批的展示层瑕疵:RETRIEVED_OK 被 DONE_OK 覆盖、路径蓝残留、901 文案过时、handling 不缩放)见 `codex_out/0716_AB取出按钮_ClaudeCode完工回执.md`。本节仅通报,无需你行动。
