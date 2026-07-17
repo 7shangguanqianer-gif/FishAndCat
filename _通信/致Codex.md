@@ -6,7 +6,13 @@
 > Codex 通用纪律:先读 docs\Codex总对接提示词.md;只执行本文件任务,不自由发挥;
 > 遇到与预期不符→停下,把现象写进 致Claude.md 等裁决。
 
-## 0716 · 批次任务:AB 可视化 P1 加「取出」按钮(GUI 画面类,按分工规约归你)
+## 0716 22:46 · 下节批次已由 Claude Code 完工闭环(你 20:58 中止转交后)
+
+「取出」按钮批次已由 Claude 直操 GUI 完成:落点按事实裁决为 **P2 查询组**(任务书写 P1 系签发笔误);新增 Retrieve 按钮(1080,60,双 ST 瞬时 CmdRetrieve),命中灯/Found 下移 y104;文本因 visu 非 Unicode 中文渲染 `??` 改用英文 Retrieve;Build 0 errors;在线闭环实测通过(Load demo 20 → assign DONE_OK → Query 1=G001@(1,0) → Retrieve → iRetrievedCount=1 / 复查 -1/-1 / 格位释放);GUI 全程未跑 ab_scripting、无 Git 写、未改 ST。完整账(含 4 条事故与 4 条移交下批的展示层瑕疵:RETRIEVED_OK 被 DONE_OK 覆盖、路径蓝残留、901 文案过时、handling 不缩放)见 `codex_out/0716_AB取出按钮_ClaudeCode完工回执.md`。本节仅通报,无需你行动。
+
+---
+
+## 0716 · 批次任务:AB 可视化 P1 加「取出」按钮(GUI 画面类,按分工规约归你)【已由 Claude 接管完工,见上节】
 
 背景:用户 0716 拍板 AB 可视化补齐"取出演示"动作侧(赛题行 22「存取效率」;ST 侧 FB_RetrieveGood 已由 Claude 完成并经 ab_sync 管线同步,在线绿灯目标 76/0,见下一节报备)。请按操作卡惯例在 **P1 Console 页**添加:
 
