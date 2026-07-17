@@ -288,7 +288,7 @@
   const activeMaterials = Object.fromEntries(Object.entries(gradeMaterial).map(([grade, material]) => {
     const clone = material.clone(); clone.transparent = true; clone.opacity = 1; return [grade, clone];
   }));
-  let stockSignature = "", pathSignature = "", livePaths = [], lastFrame = null, runtimeErrors = 0;
+  let stockSignature = "", pathSignature = "", livePaths = [], lastFrame = null, runtimeErrors = 0, lastBeaconAudit = null;
 
   function setInventory(rows, laneId, managedCount) {
     const signature = `${laneId}:${managedCount}`;
@@ -431,7 +431,7 @@
   }
 
   function layoutTarget(frame) {
-    if (!frame.slot) return;
+    if (!frame.slot) { lastBeaconAudit = null; return; }
     const viewportRect = viewportEl.getBoundingClientRect(), mountRect = mount.getBoundingClientRect();
     const ndc = new THREE.Vector3(frame.slot[0] + .5, RACK.frontY - .04, frame.slot[1] + .65).project(camera);
     const anchor = {x: mountRect.left - viewportRect.left + (ndc.x + 1) * mountRect.width / 2,
@@ -448,6 +448,13 @@
     const line = byId("targetLeader"), endX = left > anchor.x ? left : left + rect.width, endY = top + rect.height / 2;
     line.setAttribute("points", `${anchor.x.toFixed(1)},${anchor.y.toFixed(1)} ${endX.toFixed(1)},${endY.toFixed(1)}`);
     line.hidden = false; line.style.display = "";
+    /* 0717 用户验收修:标牌被边界钳位(目标格投影贴视口边/被左栏遮)时,连线距离可观测——
+       QA 据此断言"标牌要么贴格、要么有可见引线指回格位",错位不再只能靠肉眼撞见。 */
+    lastBeaconAudit = {slot: frame.slot.slice(), anchor: {x: anchor.x, y: anchor.y},
+      beacon: {left, top, width: rect.width, height: rect.height},
+      dist: Math.hypot(endX - anchor.x, endY - anchor.y),
+      clamped: Math.abs(top - (anchor.y - rect.height / 2)) > .5 || (left !== anchor.x + 22 && left !== anchor.x - rect.width - 22),
+      leaderVisible: !line.hidden && line.style.display !== "none"};
   }
 
   function canvasSurface(id) {
@@ -515,6 +522,8 @@
     document.head.append(governanceStyle);
     byId("strategySelect").innerHTML = '<option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
     byId("tierSelect").innerHTML = '<option value="fill" selected>连续填满 · SIM 数据门</option>'; byId("tierSelect").disabled = true;
+    /* 0717 用户验收:锁定下拉要说明为什么锁——本页只有一个已验证数据门;三档拟真是 02_入出闭环 页的功能。 */
+    byId("tierSelect").title = "本页为连续填满单一验证口径(加减速 SIM 数据门),故锁定;三档拟真(档1 数据模型 / 档2 加减速 / 档3 综合情景)在 02_入出闭环 页提供";
     /* 治理 C2:支持情景切换的页面(html[data-s3-scenario-switch],由页面 store 选择器声明)启用
        skew/uniform 双情景下拉,切换=改 URL 参数整页重载(每情景仍是单 payload 队列,验证契约不变);
        冻结页(fill恢复候选/三份版式候选)无标记,保持单 option disabled,行为零变化。 */
@@ -654,7 +663,9 @@
     const current = frame.idle ? 0 : simDurations[activeIndex] * localProgress;
     byId("phaseTimeCursor").style.left = `${frame.idle ? frame.managedCount === 267 ? 100 : 0 : (completed + current) / total * 100}%`;
     byId("phaseNow").textContent = frame.idle ? `容量书签 ${frame.managedCount} / 267` : `步骤 ${activeIndex + 1}/7 · ${activeStep.label}`;
-    byId("phaseClock").textContent = `本件 SIM ${total.toFixed(1)} s · 4阶段 trace → 7步几何细分`;
+    /* 0717 用户验收:口径句不常驻,收进 title(hover 可见);常显只留本件 SIM 时长。 */
+    byId("phaseClock").textContent = `本件 SIM ${total.toFixed(1)} s`;
+    byId("phaseClock").title = "七步为 4 阶段 trace 按几何与货叉阈值细分的展示口径,不是七个原生时间戳";
     Array.from(byId("processGuideRows").children).forEach((row, index) => {
       row.classList.toggle("active", !frame.idle && index === activeIndex);
       row.title = `${DISPLAY_STEPS[index].purpose}；SIM ${simDurations[index].toFixed(1)} s；演示 ${presentationDurations[index].toFixed(2)} s`;
@@ -672,9 +683,10 @@
     byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
     const displayIndex = displayStepIndex(frame), operationText = frame.idle ? frame.managedCount === 267 ? "连续填满完成" : `容量书签 · 等待第 ${frame.managedCount + 1} 件` : DISPLAY_STEPS[displayIndex].label;
     byId("sceneActionText").textContent = frame.idle ? `${operationText} · ${frame.managedCount} / 267` : `${operationText} · ${item.name} → ${target}`;
-    byId("sceneActionMeta").textContent = frame.idle ? "已验证快照 · SIM" : `步骤 ${displayIndex + 1}/7 · SIM ${frame.simTime.toFixed(1)} s`;
+    /* 0717 用户验收:dock 去重——步骤 x/7 由七步条唯一承担;货名/目标已在大字行,小字只留补充属性。 */
+    byId("sceneActionMeta").textContent = frame.idle ? "已验证快照 · SIM" : `SIM ${frame.simTime.toFixed(1)} s`;
     byId("sceneCargoMeta").textContent = frame.idle ? `${133 + frame.managedCount} / 400 总占用 · 违规 0` :
-      `${item.name} · ${item.weight_kg.toFixed(1)} kg · ${GRADE_LABEL[item.grade]} · 目标 ${target} · 当前归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
+      `${item.weight_kg.toFixed(1)} kg · ${GRADE_LABEL[item.grade]} · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
     Array.from(byId("fillBookmarkButtons").querySelectorAll("button")).forEach(button =>
       button.setAttribute("aria-current", String(Number(button.dataset.count) === frame.managedCount && frame.idle)));
   }
@@ -779,6 +791,7 @@
         uiRule: payload.score_policy.known_collinearity.ui_rule,
         disclosureVisible: state.laneId !== "score" || Boolean(document.querySelector(".scoreFactorNote")?.textContent.includes("共用“载重×层高”原始因子"))},
       runtimeErrors, duplicateAudit: visibleTextDuplicateAudit(),
+      beaconAudit: lastBeaconAudit,
       narrativeAudit: {
         scenario: SCENARIO,
         scenarioSwitchEnabled: !byId("profileSelect").disabled,

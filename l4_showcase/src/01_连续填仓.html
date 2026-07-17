@@ -390,8 +390,9 @@
   #sceneTools .scaleEnds{display:flex;justify-content:space-between;margin:3px 44px 0 70px;color:#7a858d;font:7px/1 Consolas,"Microsoft YaHei",monospace}
   #sceneTools .toolNote{margin-top:5px;color:#65717a;font-size:7px;line-height:1.25}
   #labelLeaders{position:absolute;z-index:6;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-  #labelLeaders line,#labelLeaders polyline{fill:none;stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter;vector-effect:non-scaling-stroke}
-  #targetLeader{stroke:#8a6d00}
+  /* 0717 用户验收修:标牌被视口边界钳位时全靠引线指回目标格——1.5px 暗金在 3D 花纹上不可辨,提亮加粗 */
+  #labelLeaders line,#labelLeaders polyline{fill:none;stroke-width:2.5;stroke-linecap:square;stroke-linejoin:miter;vector-effect:non-scaling-stroke}
+  #targetLeader{stroke:#e0b600;filter:drop-shadow(0 0 1.5px #17202bcc)}
   #targetBeacon{transform:none;max-width:184px;pointer-events:none}
   #targetBeacon:before{content:none!important}
   #targetBeacon{min-width:148px;padding:9px 11px 8px 12px}
@@ -899,7 +900,7 @@ reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="em
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
 const sceneTools=document.createElement('section');sceneTools.id='sceneTools';sceneTools.setAttribute('aria-label','三维镜头与回放速度');
-sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><button id="resetCamera" type="button">总览</button><input id="playbackSpeed" type="range" min="0.25" max="2" step="0.25" value="1" aria-label="演示速度倍率"><output id="playbackValue" for="playbackSpeed">1.00×</output></div><div class="toolNote">0.25× 慢放 · 2.00× 快放</div>';
+sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><button id="resetCamera" type="button">总览</button><input id="playbackSpeed" type="range" min="0.25" max="2" step="0.25" value="1" title="0.25× 慢放 — 2.00× 快放" aria-label="演示速度倍率"><output id="playbackValue" for="playbackSpeed">1.00×</output></div>';
 sceneDock.append(sceneTools);
 const labelLeaders=document.createElementNS('http://www.w3.org/2000/svg','svg');labelLeaders.id='labelLeaders';labelLeaders.setAttribute('aria-hidden','true');
 ['targetLeader'].forEach(id=>{const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.id=id;line.hidden=true;line.style.display='none';labelLeaders.append(line);});viewportEl.append(labelLeaders);

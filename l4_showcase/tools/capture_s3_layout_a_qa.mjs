@@ -321,7 +321,13 @@ try {
       const tie = laneStates[id].narrativeAudit.tieNote;
       return tie.top1TieSize > 1 ? tie.present && tie.isochroneNoted : !tie.present;
     }) && laneStates.near.narrativeAudit.tieNote.present === true &&
-      laneStates.seq.narrativeAudit.tieNote.present === false
+      laneStates.seq.narrativeAudit.tieNote.present === false,
+    /* --- 0717 用户验收门:目标标牌锚定(标牌贴格或有可见引线指回,连线距离有界) --- */
+    beaconAnchored: report.states.every(item => {
+      const audit = item.snapshot.beaconAudit;
+      return item.snapshot.target === null ? audit === null :
+        Boolean(audit) && audit.leaderVisible === true && audit.dist < 480;
+    })
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);
