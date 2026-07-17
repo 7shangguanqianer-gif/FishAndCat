@@ -55,6 +55,7 @@ MAP = [
     ("FB_VisuRefresh",      "04_FB_Warehouse.st", "pou"),
     ("FB_GoodsInput",       "04_FB_Warehouse.st", "pou"),
     ("FB_QueryGood",        "04_FB_Warehouse.st", "pou"),
+    ("FB_RetrieveGood",     "04_FB_Warehouse.st", "pou"),   # E7 取出演示(0716)
     ("FB_RecordPage",       "04_FB_Warehouse.st", "pou"),
     ("FB_SceneDetect",      "04_FB_Warehouse.st", "pou"),   # A2 场景检测器(0711)
     ("FB_UserAuth",         "04_FB_Warehouse.st", "pou"),   # A4 两级权限登录(0711)

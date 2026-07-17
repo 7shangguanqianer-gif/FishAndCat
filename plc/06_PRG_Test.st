@@ -9,14 +9,14 @@
    ============================================================ *)
 PROGRAM PRG_Test
 VAR CONSTANT
-    N_CASES   : INT := 75;                  // 用例总数(0712 轨B扩容 T60-T75;常量化=N4-08,在线不可改)
+    N_CASES   : INT := 76;                  // 用例总数(0716 E7 扩容 T76 取出演示;常量化=N4-08,在线不可改)
 END_VAR
 VAR
     xRunTests : BOOL;                       // 置 TRUE 触发(自动复位)
     iPassed   : INT;
     iFailed   : INT;
     xAllPass  : BOOL;
-    aResult   : ARRAY[1..75] OF BOOL;       // 各用例结果(TRUE=通过;上界与 N_CASES 同步维护)
+    aResult   : ARRAY[1..76] OF BOOL;       // 各用例结果(TRUE=通过;上界与 N_CASES 同步维护)
     sLastFail : STRING[64];                 // 最后失败的用例名(排错入口)
     fbInit    : FB_InitWarehouse;
     fbSel     : FB_SelectSlot;
@@ -25,6 +25,7 @@ VAR
     fbStats   : FB_Stats;                   // T25 端到端:终局统计
     fbGoodsInputT : FB_GoodsInput;          // T41:货物输入封装测试
     fbQueryT  : FB_QueryGood;               // T42:单件查询测试(块3)
+    fbRetrT   : FB_RetrieveGood;            // T76:取出演示测试(E7,0716;xInstant 直通)
     fbRecPageT : FB_RecordPage;             // T43:记录页窗口测试(块3)
     fbDetT    : FB_SceneDetect;             // T49-T53:场景检测器测试(A2,0711)
     fbCT      : FB_AssignClassTurnover;     // T63-T65:CB/TOB 批量分配测试(0712 轨B)
@@ -905,6 +906,44 @@ IF xRunTests THEN
     aResult[75] := fbCT.xDone AND (fbCT.iAssigned = 4) AND (fbCT.iFailed = 0)
                AND (GVL_WH.aGoods[3].X = 1) AND (GVL_WH.aGoods[3].Y = 1);   // CB 语义保持=锁存生效
     GVL_WH.iGoodsCount := 0;                            // 清场
+    fbInit(xExecute := FALSE, iRule := 3);
+    fbInit(xExecute := TRUE,  iRule := 3);
+
+    // ---- T76 FB_RetrieveGood 取出演示(E7 0716;赛题行22"存取效率"动作侧):
+    //      不存在REJ/未分配REJ/正常取出落账/取后查询口径 四分支;xInstant 直通单周期断言 ----
+    fbInit(xExecute := FALSE, iRule := 0);
+    fbInit(xExecute := TRUE,  iRule := 0);              // 干净仓(标准预占)
+    GVL_WH.aGoods[1].Id := 1;  GVL_WH.aGoods[1].Name := 'R1';
+    GVL_WH.aGoods[1].Weight := 10.0;  GVL_WH.aGoods[1].Freq := 5.0;  GVL_WH.aGoods[1].Volume := 0.5;
+    GVL_WH.aGoods[1].Assigned := TRUE;  GVL_WH.aGoods[1].X := 2;  GVL_WH.aGoods[1].Y := 3;
+    GVL_WH.aSlots[2, 3].Occupied := TRUE;  GVL_WH.aSlots[2, 3].GoodsId := 1;
+    GVL_WH.aGoods[2].Id := 2;  GVL_WH.aGoods[2].Name := 'R2';
+    GVL_WH.aGoods[2].Weight := 10.0;  GVL_WH.aGoods[2].Freq := 5.0;  GVL_WH.aGoods[2].Volume := 0.5;
+    GVL_WH.aGoods[2].Assigned := FALSE;
+    GVL_WH.iGoodsCount := 2;
+    GVL_Visu.iRetrievedCount := 0;
+    GVL_WH.aSlotOps[2, 3] := UDINT#0;                   // 存取计数清零(UDINT 零基锚,避免向 INT 读出)
+    // (a) 不存在 Id=999 → REJ 完成脉冲,计数不动
+    fbRetrT(xRetrieve := FALSE, iId := 999, xInstant := TRUE);
+    fbRetrT(xRetrieve := TRUE,  iId := 999, xInstant := TRUE);
+    aResult[76] := fbRetrT.xDone AND (GVL_Visu.iRetrievedCount = 0);
+    // (b) 未分配 Id=2 → REJ,格位不动
+    fbRetrT(xRetrieve := FALSE, iId := 2, xInstant := TRUE);
+    fbRetrT(xRetrieve := TRUE,  iId := 2, xInstant := TRUE);
+    aResult[76] := aResult[76] AND (GVL_Visu.iRetrievedCount = 0) AND GVL_WH.aSlots[2, 3].Occupied;
+    // (c) 正常取出 Id=1:格位释放/货物转未分配/取出计数+1/存取损耗计数+1(C6 口径)
+    fbRetrT(xRetrieve := FALSE, iId := 1, xInstant := TRUE);
+    fbRetrT(xRetrieve := TRUE,  iId := 1, xInstant := TRUE);
+    aResult[76] := aResult[76] AND (NOT GVL_WH.aSlots[2, 3].Occupied)
+                   AND (GVL_WH.aSlots[2, 3].GoodsId = 0)
+                   AND (NOT GVL_WH.aGoods[1].Assigned)
+                   AND (GVL_Visu.iRetrievedCount = 1)
+                   AND (GVL_WH.aSlotOps[2, 3] = UDINT#1);
+    // (d) 取后查询同 Id:找得到但未分配(QryX=-1)—— 与查询页口径自洽
+    fbQueryT(xQuery := FALSE, iId := 1);
+    fbQueryT(xQuery := TRUE,  iId := 1);
+    aResult[76] := aResult[76] AND GVL_Visu.QryFound AND (GVL_Visu.QryX = -1);
+    GVL_WH.iGoodsCount := 0;                            // 清场恢复
     fbInit(xExecute := FALSE, iRule := 3);
     fbInit(xExecute := TRUE,  iRule := 3);
 

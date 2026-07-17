@@ -51,10 +51,10 @@ if (-not $SyncOnly) {
         Copy-Item (Join-Path $here "runtest_result.txt") (Join-Path $logDir "runtest_result_$stamp.txt")
     }
     $out2 | Select-String -Pattern "LOGIN|STATE|iPassed|iFailed|xAllPass|LOGOUT"
-    if ($out2 -match "iPassed = INT#75" -and $out2 -match "iFailed = INT#0") {
-        Write-Output "=== ALL GREEN: iPassed=75 iFailed=0 ==="
+    if ($out2 -match "iPassed = INT#76" -and $out2 -match "iFailed = INT#0") {
+        Write-Output "=== ALL GREEN: iPassed=76 iFailed=0 ==="
     } else {
-        Write-Output "!! online test not 75/0 (full log: runtest_result.txt)"
+        Write-Output "!! online test not 76/0 (full log: runtest_result.txt)"
         exit 2
     }
 }

@@ -1160,6 +1160,133 @@ xOld := xQuery;
 END_FUNCTION_BLOCK
 
 
+(* ---------- FB_RetrieveGood:取出演示(0716 E7;赛题行22"存取效率"动作侧) ----------
+   功能:按序号取出一件已分配货物 —— 空载去程动画(I/O→货位)→ 载货回程动画(货位→I/O)
+        → 落账:格位释放、Assigned 清除、aSlotOps 存取计数 +1(C6/R5 同口径)、
+          iRetrievedCount +1、VisuStatusText 报"RETRIEVED_OK 序号+单程取货时间"。
+   设计:最大化复用 —— 路径由 FB_BuildVisuPath 生成;回程 = 就地反转 VisuPathX/Y 数组后
+        再次启动 FB_AnimatePath(它只沿数组索引回放,反转数组即视觉反向,时长对称不变)。
+   口径:单程取货时间 = FC_CalcTravelTime(切比雪夫,与 ExecTime/C2 同口径);
+        取出为演示态操作,不并入分配统计与 SIM/KPI。
+   边界:未找到/未分配/非正序号 → REJ 文本,不动任何状态;演示中 VisuPath 被外部清除
+        (复位/批量启动)时 FB_AnimatePath 自带护栏中止,本 FB 收场不落账。
+   测试:xInstant=TRUE 跳过动画立即落账(PRG_Test T43 用,单周期可断言)。 *)
+FUNCTION_BLOCK FB_RetrieveGood
+VAR_INPUT
+    xRetrieve   : BOOL;         // 取出触发(上升沿)
+    iId         : INT;          // 货物序号(画面复用 InQueryId 输入框)
+    rCycleTime  : REAL := 0.01; // 本任务周期 s
+    rSpeedScale : REAL := 5.0;  // 演示倍速(与 CmdAnimate 一致)
+    xInstant    : BOOL;         // 测试直通:TRUE=跳过动画立即完成
+END_VAR
+VAR_OUTPUT
+    xBusy : BOOL;
+    xDone : BOOL;               // 完成脉冲(含 REJ 分支)
+END_VAR
+VAR
+    xOld     : BOOL;
+    iState   : INT;             // 0=空闲 1=去程 2=回程
+    iHit     : INT;             // aGoods 命中下标(1 基;0=无)
+    iGX, iGY : INT;             // 目标货位
+    rT1      : REAL;            // 单程切比雪夫取货时间 s
+    fbPathR  : FB_BuildVisuPath;
+    fbAnimGo   : FB_AnimatePath;
+    fbAnimBack : FB_AnimatePath;
+    xPathGo, xGoStart, xBackStart : BOOL;   // 单周期脉冲线
+    xCommit  : BOOL;            // 落账请求(动画完成/测试直通共用,段尾统一执行)
+    i        : INT;
+    iTmp     : INT;
+    sMsg     : STRING[128];
+END_VAR
+
+xDone := FALSE;
+xPathGo := FALSE;  xGoStart := FALSE;  xBackStart := FALSE;  xCommit := FALSE;
+
+IF xRetrieve AND NOT xOld AND NOT xBusy THEN
+    iHit := 0;
+    IF iId > 0 THEN
+        FOR i := 1 TO GVL_WH.iGoodsCount DO
+            IF GVL_WH.aGoods[i].Id = iId THEN
+                iHit := i;
+                EXIT;                                  // 序号唯一,命中即止
+            END_IF
+        END_FOR
+    END_IF
+    IF iHit > 0 THEN
+        IF GVL_WH.aGoods[iHit].Assigned THEN
+            iGX := GVL_WH.aGoods[iHit].X;
+            iGY := GVL_WH.aGoods[iHit].Y;
+            rT1 := FC_CalcTravelTime(x0 := 0, y0 := 0, x1 := iGX, y1 := iGY,
+                                     xSimXY := GVL_Param.xSimultaneousXY);
+            IF xInstant THEN
+                xCommit := TRUE;  xDone := TRUE;       // 测试直通:立即落账
+            ELSE
+                xPathGo := TRUE;                       // 生成 I/O→货位 L 形路径
+                xGoStart := TRUE;                      // 启动去程动画
+                GVL_Visu.VisuSlotState[iGX, iGY] := 6; // 取出目标青色高亮(与查询一致)
+                GVL_Visu.VisuStatusText := CONCAT('RETRIEVING G', INT_TO_STRING(iId));
+                iState := 1;  xBusy := TRUE;
+            END_IF
+        ELSE
+            GVL_Visu.VisuStatusText := CONCAT('RETRIEVE_REJ G', CONCAT(INT_TO_STRING(iId), '_NOT_ASSIGNED'));
+            xDone := TRUE;                             // REJ:不动任何状态
+        END_IF
+    ELSE
+        GVL_Visu.VisuStatusText := CONCAT('RETRIEVE_REJ G', CONCAT(INT_TO_STRING(iId), '_NOT_FOUND'));
+        xDone := TRUE;
+    END_IF
+END_IF
+xOld := xRetrieve;
+
+fbPathR(xExecute := xPathGo, iToX := iGX, iToY := iGY);
+fbAnimGo(xStart := xGoStart, rCycleTime := rCycleTime, rSpeedScale := rSpeedScale);
+
+CASE iState OF
+    1: // 去程(空载至货位)
+        IF fbAnimGo.xDone THEN
+            // 就地反转路径点数组 → 再次正向回放即视觉回程(货位→I/O)
+            FOR i := 0 TO (GVL_Visu.VisuPathCount - 1) / 2 DO
+                iTmp := GVL_Visu.VisuPathX[i];
+                GVL_Visu.VisuPathX[i] := GVL_Visu.VisuPathX[GVL_Visu.VisuPathCount - 1 - i];
+                GVL_Visu.VisuPathX[GVL_Visu.VisuPathCount - 1 - i] := iTmp;
+                iTmp := GVL_Visu.VisuPathY[i];
+                GVL_Visu.VisuPathY[i] := GVL_Visu.VisuPathY[GVL_Visu.VisuPathCount - 1 - i];
+                GVL_Visu.VisuPathY[GVL_Visu.VisuPathCount - 1 - i] := iTmp;
+            END_FOR
+            xBackStart := TRUE;
+            GVL_Visu.VisuStatusText := CONCAT('RETRIEVE_RETURN G', INT_TO_STRING(iId));
+            iState := 2;
+        END_IF
+    2: // 回程(载货返 I/O)
+        IF fbAnimBack.xDone THEN
+            xCommit := TRUE;
+            iState := 0;  xBusy := FALSE;  xDone := TRUE;
+        END_IF
+END_CASE
+
+fbAnimBack(xStart := xBackStart, rCycleTime := rCycleTime, rSpeedScale := rSpeedScale);
+
+IF xCommit THEN                                        // ---- 取出落账(单份代码,两路共用) ----
+    IF GVL_Visu.VisuSlotState[iGX, iGY] = 6 THEN
+        GVL_Visu.VisuSlotState[iGX, iGY] := 0;         // 清高亮(交还 FB_VisuRefresh 按空闲重画)
+    END_IF
+    GVL_WH.aSlots[iGX, iGY].Occupied := FALSE;         // 格位释放
+    GVL_WH.aSlots[iGX, iGY].GoodsId  := 0;
+    GVL_WH.aGoods[iHit].Assigned := FALSE;             // 货物转未分配(查询页口径自洽:QryX/Y=-1)
+    GVL_WH.aSlotOps[iGX, iGY] := GVL_WH.aSlotOps[iGX, iGY] + 1;   // 设备损耗:取出=一次存取(与 C6 搬移/交换同口径同写法)
+    GVL_Visu.iRetrievedCount := GVL_Visu.iRetrievedCount + 1;
+    sMsg := CONCAT('RETRIEVED_OK G', INT_TO_STRING(GVL_WH.aGoods[iHit].Id));
+    sMsg := CONCAT(sMsg, ' oneway ');
+    // 0.1s 精度拼接(REAL_TO_INT 四舍五入;避开 REAL_TO_STRING——全库无先例的编译依赖)
+    iTmp := REAL_TO_INT(rT1 * 10.0);
+    sMsg := CONCAT(sMsg, INT_TO_STRING(iTmp / 10));
+    sMsg := CONCAT(sMsg, '.');
+    sMsg := CONCAT(sMsg, INT_TO_STRING(iTmp MOD 10));
+    GVL_Visu.VisuStatusText := CONCAT(sMsg, ' s');
+END_IF
+END_FUNCTION_BLOCK
+
+
 (* ---------- FB_RecordPage:统计记录页 10 行窗口(评分细则8;块3 P2) ----------
    功能:aGoods 全表 → 10 行显示窗口(aRow* 并行数组),翻页上升沿±10 并钳位;
         每周期常驻刷新(数据总最新;40 次数组访问,微秒级)。

@@ -134,6 +134,9 @@ VAR_GLOBAL
     // ---- 块3 P3 单件查询页(评分细则8"单件查询";FB_QueryGood 填充,状态6=青色高亮) ----
     InQueryId       : INT;                  // 查询输入:货物序号
     CmdQuery        : BOOL;                 // 按钮:执行查询
+    // ---- E7 取出演示(0716;赛题行22"存取效率"动作侧补齐):复用 InQueryId 输入序号 ----
+    CmdRetrieve     : BOOL;                 // 按钮:取出演示(空载去程→载货回程→格位释放;FB_RetrieveGood)
+    iRetrievedCount : INT;                  // 已取出件数(演示统计,不并入分配统计)
     QryFound        : BOOL;                 // 查到与否(FALSE 时下方字段无效)
     QryX            : INT;                  // 位置列
     QryY            : INT;                  // 位置层

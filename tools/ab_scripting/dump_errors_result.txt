@@ -1,0 +1,12 @@
+MSG[?]: ------ Build started: Application: PLC_AC500_V3.Sim.PLC_AC500_V3.Application -------
+MSG[?]: Typify code...
+MSG[?]: The connection to the PLC is currently not encrypted. Please consider switching on encrypted communication in the PLCs communication settings.
+MSG[?]: The string literal ' 未分配...' contains non-representable characters. The project option 'UTF-8 Encoding for STRING' could be used.
+MSG[?]: The string literal ' 不存在...' contains non-representable characters. The project option 'UTF-8 Encoding for STRING' could be used.
+MSG[?]: The string literal ' 单程取货 ...' contains non-representable characters. The project option 'UTF-8 Encoding for STRING' could be used.
+MSG[?]: Cannot convert type 'UDINT' to type 'INT'
+MSG[?]: Implicit conversion from unsigned Type 'UDINT' to signed Type 'DINT' : Possible change of sign
+MSG[?]: Compile complete -- 1 errors, 5 warnings
+MSG[?]: Additional code checks ...
+MSG[?]: Additional code checks complete -- 0 errors
+DONE

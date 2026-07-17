@@ -17,6 +17,7 @@ VAR
     fbVisu      : FB_VisuRefresh;       // L6:颜色镜像+堆垛机像素坐标,每周期常驻
     fbAnim      : FB_AnimatePath;       // L6:堆垛机沿路径回放动画(CmdAnimate 触发)
     fbQuery     : FB_QueryGood;         // 块3 P3:单件查询(细则8,常驻)
+    fbRetrieve  : FB_RetrieveGood;      // E7(0716):取出演示(CmdRetrieve 触发,复用 InQueryId;常驻)
     fbRecPage   : FB_RecordPage;        // 块3 P2:记录页 10 行窗口(细则8,常驻)
     fbSceneDet  : FB_SceneDetect;       // A2:场景检测器(画像→推荐,常驻自动重算)
     fbAuth      : FB_UserAuth;          // A4:两级权限登录(常驻)
@@ -241,6 +242,9 @@ END_CASE
 // 块3 P2/P3:记录页窗口+单件查询(常驻:DONE 后评委翻表/查询仍可用)
 fbRecPage(xPageUp := GVL_Visu.CmdPageUp, xPageDown := GVL_Visu.CmdPageDown);
 fbQuery(xQuery := GVL_Visu.CmdQuery, iId := GVL_Visu.InQueryId);
+// E7 取出演示(细则口径:赛题行22"存取效率"动作侧;复用查询输入框序号,倍速与 CmdAnimate 一致)
+fbRetrieve(xRetrieve := GVL_Visu.CmdRetrieve, iId := GVL_Visu.InQueryId,
+           rCycleTime := 0.01, rSpeedScale := 5.0, xInstant := FALSE);
 // A2 场景检测器:货物表变化/切目标档 自动重算画像+推荐;Auto 开=推荐直写策略档(人工覆盖=关 Auto)
 fbSceneDet(iObjective := GVL_Visu.SelObjective);
 IF fbSceneDet.xValid AND GVL_Visu.xAutoStrategy THEN
@@ -313,6 +317,7 @@ GVL_Visu.CmdReset     := FALSE;
 GVL_Visu.CmdAnimate   := FALSE;
 GVL_Visu.CmdSaveSnap  := FALSE;
 GVL_Visu.CmdQuery     := FALSE;
+GVL_Visu.CmdRetrieve  := FALSE;     // E7(0716)
 GVL_Visu.CmdPageUp    := FALSE;
 GVL_Visu.CmdPageDown  := FALSE;
 GVL_Visu.CmdLogin     := FALSE;     // A4(0711)
