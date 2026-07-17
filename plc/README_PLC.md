@@ -3,7 +3,7 @@
 > 本目录是 ST 源码骨架(文本形式)。Automation Builder(下称 AB)装好后按下述步骤导入,
 > 无实体PLC时可在AB PC仿真模式检查有限逻辑；这不等于实体AC500完整运行或性能验证。
 > 交付形式官方要求待确认(canonical D 清单),先按「AB 工程 + ST 源码」双备份准备。
-> **0712并发状态**：59/0是最后一次有AB读回依据的基线。当前`06_PRG_Test.st`声明75项，其中T60-T69为真实断言、T70-T75为恒TRUE预留；CB/TOB分配和lex检测路由已写入源码。本轮未AB复测，因此源码实现、新增断言和75/0显示值都不得当作已验证证据。
+> **0717 基线**：当前 `06_PRG_Test.st` 声明 **77 项全部为真实断言**(T01-T59 核心 ST/静态匀速黄金向量、T60-T75 轨B 平局统一/容量护栏/CB-TOB/隐患清扫、T76 取出演示四分支、T77 FC_TMax 加减速口径),在线读回铁证 **iPassed=77 / iFailed=0 / xAllPass=TRUE**(`tools/ab_scripting/logs/runtest_result_20260717_010514.txt`)。历史基线:76/0=0716(E7 取出演示)、59/0=0712(最早读回锚),引用需带日期。
 
 ## 1. 文件清单与导入对象对应
 
@@ -14,7 +14,7 @@
 | 03_Functions.st | 17 个 POU-函数 | FC_CapCoef 等纯函数 + FC_AxisTime(L1 梯形)+ FC_CalcDualCycleTime(L2 双命令)+ FC_StateToColor(L6 配色查表)+ **FC_MaintToggle**(A3 检修翻转)+ **FC_HeatColor / FC_BlendLight**(C2/C6 热力色阶、C1 层高亮混色,0711) |
 | 04_FB_Warehouse.st | 16 个 POU-功能块 | Init / SelectSlot / AssignAllGoods / **AssignClassTurnover(CB/TOB，源码待AB复测)** / LocalSwapImprove / Stats / BuildVisuPath + **FB_AnimatePath**(L6 动画回放)+ **FB_ScanLoadProbe**(L4 AB PC仿真负载探针)+ **FB_VisuRefresh**(L6 颜色镜像)+ **FB_SceneDetect / FB_UserAuth / FB_ParamGuard** |
 | 05_PRG_Main.st | 1 个 POU-程序 | 主状态机,挂循环任务 |
-| 06_PRG_Test.st | 1 个 POU-程序 | 源码声明75项：T01-T59为既有AB证据范围，T60-T69为新增真实断言，T70-T75为预留；59/0仍只指最后一次有读回依据的核心ST/静态匀速黄金向量 |
+| 06_PRG_Test.st | 1 个 POU-程序 | 77 项自检全为真实断言(0717 在线 77/0 读回);含 T22 加减速向量、T74/T77 FC_TMax 边界与口径、T76 取出演示四分支 |
 | 07_GVL_Data_generated.st | 2 DUT + 1 GVL + 1 函数 | **生成文件勿手改**,由 sim/export_st_vectors.py 重生(含 ExpTimeAccel + **T25 的 ST_AwraCell/aAwraExpect 终局向量 + LAM/MAX_LS 单源常量**,0707) |
 
 ## 2. 建工程步骤(AB 2.8+/AC500 V3)
@@ -25,7 +25,7 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. 冻结的已验收基线：PRG_Test.xRunTests:=TRUE → **iPassed=59、iFailed=0**（T01-T59，含静态匀速一致性向量）。当前源码的T60-T69虽为真实断言，T70-T75仍是预留；必须重新跑AB并保存读回依据后，才可升级证据。源码计数本身不升级证据；
+   a. 自检基线：PRG_Test.xRunTests:=TRUE → **iPassed=77、iFailed=0**(0717 在线读回;76/0=0716、59/0=0712 为历史锚)。任何 ST 改动后必须重跑 `tools\ab_scripting\ab_sync.ps1` 取得新读回,源码计数本身不升级证据;
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。
@@ -34,10 +34,10 @@
 
 - **扫描周期感知分片**:批量分配每周期只处理 nBatchPerCycle 件、局部搜索每周期 nPairsPerCycle 对,
   优化算法以非阻塞状态机跑在实时控制器上,不触发看门狗——这是"AI 算法落地 PLC"的关键工程手段。
-- **有限一致性边界**:T19/T20 与 20件 T25 锁静态匀速黄金向量；near平局顺序已在当前源码按Python统一并增加T60，但T60尚未AB复测。REAL精度和加减速评分分母仍有已知差异，不能据此称报告H数字已由PLC复现。
+- **有限一致性边界**:T19/T20 与 20件 T25 锁静态匀速黄金向量;near 平局顺序按 Python 统一(T60,已入 77/0 在线读回)。**加减速评分分母分叉已修**(0717 治理D:FC_TMax 随 xUseAccel,T77 断言匀速 38.0/加减速 39.667/tNorm≡1.0;披露见 docs/S3算法深审与治理方案_0716.md D-①)。REAL 单精度 vs Python 双精度差异仍在(容差 1e-3)。**"演示落位可在 PLC 复现"仍不可说**——行程模型(T22)与评分归一(T77)已同构验证,但同货物序列端到端逐格重放未做对拍。
 - **边界判断成体系**:越界/负输入/超重/超容/预占/满仓/无可行位报警,全部有用例(T01-T18)。
 - **口径开关**:xSimultaneousXY 切换切比雪夫(主口径)/顺序模型(对照),现场可演示两者差异。
-- **操作侧当前边界(0712并发源码)**:FB_SceneDetect 已有holistic/lexicographic切档，CB/TOB由`FB_AssignClassTurnover`路由；这些新增源码尚未AB复测。lexicographic 98.5%仍只是sim在`excess_fail=0`可比域的评估，不是控制器读回。场景权重表仍未接入运行时闭环。检修只保证**禁新入库、存量可查询**，不保证存量原地冻结。权限是单客户端演示码+ST回滚守卫；尚无多客户端隔离证据。
+- **操作侧当前边界(0717 口径)**:FB_SceneDetect holistic/lexicographic 切档与 CB/TOB 路由(`FB_AssignClassTurnover`)已入 77/0 在线读回(T61-T69/T75)。lexicographic 98.5% 仍只是 sim 在 `excess_fail=0` 可比域的评估,不是控制器读回。场景权重表(08_GVL_WeightPolicy)仍未接入运行时闭环(D-2 已知项)。检修语义:T73 已断言"冻结源位存量不被重定位搬走";权限是单客户端演示码+ST 回滚守卫,尚无多客户端隔离证据。
 
 ## 4. 已知注意项
 

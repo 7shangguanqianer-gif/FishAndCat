@@ -1,22 +1,22 @@
 # AB 工程自动化管线(ScriptEngine 无头同步,2026-07-06 建成)
 
-> **证据边界（0712）**：59/0是最后一次有AB读回依据的基线。当前工作区声明75项：T60-T69为真实断言，T70-T75为恒TRUE预留，并含CB/TOB/lex新增源码；本轮未AB复测，不得把源码计数、源码存在或新增断言当新测试证据。
+> **证据边界(0717)**:现行基线 **77/0**——T01-T77 全为真实断言(T70-T75 早已由轨B 落地为真实断言,"恒TRUE预留"陈述过时),在线读回铁证 `logs/runtest_result_20260717_010514.txt`。历史锚:76/0=0716(E7 取出演示)、59/0=0712(最早读回)。源码计数本身不升级证据——任何 ST 改动后必须重跑本管线取得新读回。
 
-**一条命令可把 `plc/*.st` 源码同步进AB工程、编译、保存并在线跑当前PRG_Test；本轮未执行：**
+**一条命令可把 `plc/*.st` 源码同步进AB工程、编译、保存并在线跑当前PRG_Test:**
 
 ```powershell
 powershell -File tools\ab_scripting\ab_sync.ps1            # 全套(约 3-5 分钟)
 powershell -File tools\ab_scripting\ab_sync.ps1 -SyncOnly  # 只同步+编译,不在线测试
 ```
 
-历史59项基线绿灯：`Compile complete -- 0 errors` + `iPassed = INT#59, iFailed = INT#0`（仅干净初态+当前参数）。任何新计数必须先消除占位断言并真实跑AB，不能沿用此历史绿灯。
+绿灯判定:`Compile complete -- 0 errors` + `iPassed = INT#77, iFailed = INT#0`(仅干净初态+当前参数;判定值硬编码在 ab_sync.ps1 :54,新增测试用例时同步维护)。
 **前提:AB 没有被人工开着**(工程文件独占);跑完想人工看,再打开 AB 即可。
 
 ## 文件(0711 治理后:根目录=现役管线,archive/=考古)
 
 | 文件 | 作用 |
 |---|---|
-| ab_sync.ps1 | 入口包装(两步串联+绿灯判定;绿灯现为 **iPassed=59**,0711 A2-A4+C1/C2/C6 扩容) |
+| ab_sync.ps1 | 入口包装(两步串联+绿灯判定;绿灯现为 **iPassed=77**,0717 治理D T77 扩容) |
 | sync_st.py | 核心:解析 .st 源→46 对象(POU/GVL/DUT)→逐对象 replace→缺席自动创建→build→save;**0711 护栏:源内 POU 未登记 MAP 即报 NOT_IN_MAP**(防"忘登记→静默跳过→not defined 级联",当日 43 错实案) |
 | run_test.py | 在线闭环:login(仿真)→start→读回 iPassed/iFailed |
 | run_probe.ps1 | 通用一次性 ScriptEngine 脚本跑手(-Script x.py -Result y.txt) |
