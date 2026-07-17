@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>智储优控 · 提交材料导览 A｜学术项目页</title>
+<style>
+  :root{--abb:#ff000f;--ink:#17191c;--muted:#626a73;--line:#d9dde2;--soft:#f5f6f8;--paper:#fff;
+    --blue:#17365d;--blue2:#4a6fa5;--green:#287a52;--amber:#9a6b00}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;line-height:1.7}
+  a{color:inherit}.topline{height:5px;background:linear-gradient(90deg,var(--abb) 0 9%,#17191c 9%)}
+  nav{position:sticky;top:0;z-index:30;height:52px;background:#ffffffef;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;padding:0 max(24px,calc((100vw - 1320px)/2));gap:22px}
+  nav .brand{font:bold 15px/1 Georgia,"SimSun",serif;margin-right:auto}nav .brand i{font:900 16px Arial;color:var(--abb);font-style:normal;margin-right:8px}
+  nav a{text-decoration:none;font-size:12px;color:#4f5760}nav a:hover{color:#000}.shell{max-width:1320px;margin:auto;padding:0 28px 80px}
+  header{text-align:center;padding:58px 0 28px}.eyebrow{font:11px/1.5 Consolas,"JetBrains Mono",monospace;letter-spacing:2px;color:#6b727a}
+  h1{font:700 clamp(34px,4.6vw,62px)/1.08 Georgia,"Songti SC","SimSun",serif;letter-spacing:-1px;margin:14px auto 10px;max-width:1050px}
+  header .sub{font-size:15px;color:var(--muted)}.badges{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:22px}
+  .badge{border:1px solid #25282c;border-radius:30px;padding:7px 14px;text-decoration:none;font-size:12px;background:#fff}.badge:hover{background:#17191c;color:#fff}
+  .hero-figure{margin:16px 0 38px;border:1px solid var(--line);background:linear-gradient(135deg,#fafbfc,#eef2f6);padding:22px;display:grid;
+    grid-template-columns:repeat(5,1fr);gap:12px;position:relative}.hero-figure:after{content:"";position:absolute;left:8%;right:8%;top:50%;height:1px;background:#aeb6bf;z-index:0}
+  .hero-node{position:relative;z-index:1;background:#fff;border:1px solid #cfd5dc;padding:13px 12px;text-align:left;min-height:88px}
+  .hero-node b{display:block;font-family:Georgia,"SimSun",serif;font-size:15px}.hero-node span{display:block;color:var(--muted);font-size:11px;margin-top:5px}
+  .manuscript{max-width:760px;margin:0 auto 48px}.manuscript h2{text-align:center;font:700 25px Georgia,"SimSun",serif;margin:0 0 14px}
+  .manuscript p{font-family:Georgia,"Songti SC","SimSun",serif;font-size:15px;text-align:justify;margin:0;color:#2c3035}
+  .section{scroll-margin-top:70px;margin-top:62px}.section-head{display:flex;align-items:end;border-bottom:2px solid #17191c;padding-bottom:9px;margin-bottom:18px}
+  .section-head h2{font:700 25px/1.1 Georgia,"SimSun",serif;margin:0}.section-head span{margin-left:auto;font:10px Consolas,monospace;color:#7b838c;letter-spacing:1.5px}
+  .grid12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}.span12{grid-column:span 12}.span8{grid-column:span 8}.span4{grid-column:span 4}
+  .pipeline{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line)}.stage-btn{border:0;border-right:1px solid var(--line);background:#fff;padding:16px 14px;text-align:left;cursor:pointer}
+  .stage-btn:last-child{border-right:0}.stage-btn .no{font:11px Consolas,monospace;color:var(--abb)}.stage-btn b{display:block;margin:4px 0;font-size:14px}.stage-btn small{color:var(--muted);font-size:10.5px}
+  .stage-btn.active{background:#17191c;color:#fff}.stage-btn.active small{color:#c3c8ce}.stage-detail{border:1px solid var(--line);border-top:0;background:var(--soft);padding:16px 18px;display:grid;grid-template-columns:2fr 1fr;gap:18px}
+  .stage-detail p{margin:0;font-size:13px}.evidence{font:11px/1.55 Consolas,"JetBrains Mono",monospace;color:#4f5963;border-left:2px solid var(--abb);padding-left:12px}
+  .result-table{border:1px solid var(--line)}.result-row{display:grid;grid-template-columns:1.15fr .8fr 1.7fr;padding:13px 15px;border-bottom:1px solid var(--line);align-items:center;font-size:12px}
+  .result-row:last-child{border-bottom:0}.result-row.head{background:#17191c;color:#fff;padding-top:8px;padding-bottom:8px;font-size:10px;letter-spacing:1px}.result-row .num{font:bold 20px Consolas,monospace;color:var(--blue)}
+  .viz{border:1px solid var(--line);padding:16px;background:#fbfcfd}.viz h3{font:700 14px Georgia,"SimSun",serif;margin:0 0 18px}.metric{margin:0 0 15px}.metric label{display:flex;justify-content:space-between;font:10px Consolas,monospace;color:#59616a}
+  .track{height:8px;background:#e6e9ed;margin-top:5px;position:relative}.track i{display:block;height:100%;background:var(--blue2)}.spark{width:100%;height:62px;margin-top:8px}
+  details.tests{margin-top:14px;border:1px solid var(--line);background:#fff}details.tests summary{cursor:pointer;padding:10px 13px;font-size:12px;font-weight:700}details.tests pre{margin:0;border-top:1px solid var(--line);padding:12px;background:#f7f8fa;
+    font:10.5px/1.65 Consolas,"JetBrains Mono",monospace;white-space:pre-wrap;color:#34404b}
+  .materials{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.material{border:1px solid var(--line);padding:15px;min-height:148px;display:flex;flex-direction:column;background:#fff}
+  .material .idx{font:11px Consolas,monospace;color:var(--abb)}.material h3{font:700 15px Georgia,"SimSun",serif;margin:5px 0}.material p{font-size:11.5px;color:var(--muted);margin:0 0 12px;flex:1}.row{display:flex;gap:7px}.open,.copy{border:1px solid #24272b;background:#fff;padding:5px 10px;text-decoration:none;font-size:11px;cursor:pointer}.open{background:#24272b;color:#fff}
+  .modules{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.module{position:relative;border:1px solid var(--line);min-height:142px;padding:13px;background:#fff;overflow:hidden;transition:.18s;cursor:pointer}
+  .module:hover,.module:focus{transform:translateY(-4px) scale(1.025);box-shadow:0 12px 24px #24314318;z-index:2;outline:none}.module .icon{font:18px Consolas,monospace;color:var(--blue)}.module h3{font-size:13px;margin:7px 0 4px}.module p{font-size:10.5px;color:var(--muted);margin:0}.module .more{opacity:0;max-height:0;transition:.18s;font-size:10px;color:#273442;margin-top:5px}.module:hover .more,.module:focus .more{opacity:1;max-height:45px}.status{position:absolute;bottom:9px;left:13px;font:9.5px Consolas,monospace;color:var(--amber)}
+  .statement{margin-top:52px;border-top:2px solid #17191c;padding-top:18px;display:grid;grid-template-columns:160px 1fr;gap:22px}.statement b{font:700 17px Georgia,"SimSun",serif}.statement p{font-size:12px;color:var(--muted);margin:0}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#17191c;color:#fff;padding:8px 15px;font-size:11px;opacity:0;pointer-events:none;transition:.2s;z-index:50}
+  @media(max-width:980px){.hero-figure,.pipeline{grid-template-columns:1fr}.hero-figure:after{display:none}.stage-btn{border-right:0;border-bottom:1px solid var(--line)}.span8,.span4{grid-column:span 12}.materials{grid-template-columns:1fr 1fr}.modules{grid-template-columns:repeat(2,1fr)}nav a{display:none}}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+<nav><div class="brand"><i>ABB</i>智储优控 / Project Page</div><a href="#overview">系统</a><a href="#results">结果</a><a href="#materials">材料</a><a href="#modules">演示模块</a><a href="#statement">证据边界</a></nav>
+<div class="shell">
+  <header><div class="eyebrow">2026 ABB CUP · INTELLIGENT WAREHOUSING</div><h1>自动化立体仓库存取货优化控制系统</h1><div class="sub">可复现建模 · 布局优化算法 · ABB AC500 ST 控制实现 · 三页 HMI · Factory I/O 代表性技术预演</div>
+    <div class="badges"><a class="badge" href="01_验证报告/">验证报告</a><a class="badge" href="02_PLC代码/">PLC 代码</a><a class="badge" href="03_建模与仿真/">建模与仿真</a><a class="badge" href="04_可视化仿真_决赛件/">可视化与录屏</a><a class="badge" href="05_物理预演素材_加分/">技术预演素材</a></div></header>
+  <div class="hero-figure" aria-label="系统五阶段总览"><div class="hero-node"><b>01 建模</b><span>20×20 几何、切比雪夫行程、梯形加减速</span></div><div class="hero-node"><b>02 算法</b><span>AWRA-LS、CB、TOB 与算法选择验证</span></div><div class="hero-node"><b>03 控制</b><span>AC500 ST 核心逻辑与测试证据</span></div><div class="hero-node"><b>04 HMI</b><span>三页结构、8 态地图与追溯视图</span></div><div class="hero-node"><b>05 预演</b><span>Factory I/O 54 位代表性场景</span></div></div>
+  <section class="manuscript"><h2>摘要</h2><p>面向单巷道、单堆垛机的 20 列×20 层自动化立体仓库，本作品构建货物画像、运动学、约束与能耗代理模型，采用 AWRA-LS 及策略库优化货位分配，并将核心逻辑落实为 ABB AC500 Structured Text 与三页制 HMI。30-seed untouched final test 显示，期望取货时间为 8.17±0.67 s，较顺序基线降低 61.6%（sim，n=30）。控制器证据基线为 75 项通过、0 失败（AB PC 仿真编译+在线回读级）；Factory I/O 全链取放 H5 9/9 运行成功，作为 54 位代表性技术预演，不外推为实体仓库联调结论。</p></section>
+
+  <section class="section" id="overview"><div class="section-head"><h2>系统总览</h2><span>METHOD → CONTROL → EVIDENCE</span></div><div class="pipeline" id="pipeline"></div><div class="stage-detail"><p id="stageText"></p><div class="evidence" id="stageEvidence"></div></div></section>
+
+  <section class="section" id="results"><div class="section-head"><h2>主要结果</h2><span>CANONICAL CALIBER</span></div><div class="grid12"><div class="span8"><div class="result-table">
+    <div class="result-row head"><span>指标</span><span>结果</span><span>口径与证据</span></div>
+    <div class="result-row"><span>期望取货时间降幅</span><span class="num">−61.6%</span><span>8.17±0.67 s；30-seed 泛化主证（sim）</span></div>
+    <div class="result-row"><span>控制器测试基线</span><span class="num">75 / 0</span><span>AB PC 仿真，编译+在线回读级</span></div>
+    <div class="result-row"><span>Factory I/O 全链取放</span><span class="num">9 / 9</span><span>H5 运行成功；当前 work 场景技术预演</span></div>
+    <div class="result-row"><span>算法选择 oracle 达成率</span><span class="num">98.5%</span><span>390 个可比实例（sim，词典序档）</span></div>
+  </div><details class="tests"><summary>PLC 75 项测试证据预览（前 5 行）</summary><pre>T01  初始化：官方 sum 规则预占计数
+T02  分配：承重/体积/占用冲突守卫
+T03  运动：切比雪夫双轴同动时间
+T04  策略：AWRA 黄金向量逐位锁
+T05  边界：非法输入钳位与失败计数
+… 展开完整清单请进入 02_PLC代码/ 的测试证据。</pre></details></div>
+  <aside class="span4 viz"><h3>证据强度快照</h3><div class="metric"><label><span>泛化收益覆盖</span><b>30 / 30 seeds</b></label><div class="track"><i style="width:100%"></i></div></div><div class="metric"><label><span>期望取货时间降幅</span><b>61.6%</b></label><div class="track"><i style="width:61.6%"></i></div></div><div class="metric"><label><span>oracle 达成率</span><b>98.5%</b></label><div class="track"><i style="width:98.5%"></i></div></div>
+  <svg class="spark" viewBox="0 0 260 62" role="img" aria-label="30个随机种子均为正收益示意"><path d="M0 44 L9 38 L18 42 L27 31 L36 35 L45 24 L54 29 L63 21 L72 26 L81 18 L90 23 L99 17 L108 20 L117 13 L126 19 L135 15 L144 17 L153 10 L162 14 L171 9 L180 12 L189 7 L198 11 L207 6 L216 10 L225 5 L234 8 L243 4 L252 7 L260 3" fill="none" stroke="#4a6fa5" stroke-width="2"/><line x1="0" y1="56" x2="260" y2="56" stroke="#cdd2d7"/><text x="0" y="61" font-size="8" fill="#6b727a">seeds 10001—10030 · all positive (sim)</text></svg></aside></div></section>
+
+  <section class="section" id="materials"><div class="section-head"><h2>材料与复现</h2><span>FIVE-DIRECTORY PACKAGE</span></div><div class="materials" id="materialGrid"></div></section>
+  <section class="section" id="modules"><div class="section-head"><h2>交互演示模块</h2><span>UI PLACEHOLDERS · HOVER FOR DETAIL</span></div><div class="modules" id="moduleGrid"></div></section>
+  <section class="statement" id="statement"><b>证据边界</b><p>仿真指标统一标注（sim）。物理部分是 Factory I/O 54 位代表性技术预演；H5 9/9 表示全链取放在当前 work 场景运行成功，Target 恢复仅作为下放成功的必要操作条件，不外推为系统级安全结论。F5 二审已结案：编译加载级可行，但当前 VirtualAC500 实例主站直驱不可用（当前环境负结果，非全产品线定理），真机 AC500 / 软 PLC 路线待做。5-seed 的 8.40±0.48 s 仅作回归锚，与本页 30-seed 泛化主证分工独立。</p></section>
+</div><div id="toast">路径已复制</div>
+<script>
+const STAGES=[
+ {n:'01',t:'建模与仿真',s:'几何、约束、运动学',d:'以 20×20 单排货架、单巷道单堆垛机为对象，行程时间采用双轴同动的切比雪夫模型；报告主口径启用梯形加减速。',e:'A1–A5 · C12\npython sim/final_test_30seed.py'},
+ {n:'02',t:'布局优化算法',s:'AWRA-LS 与策略库',d:'在可行性优先的约束门下比较货位策略；30-seed 泛化主证与 390 个可比实例的算法选择结果均来自 sim。',e:'AWRA-LS / CB / TOB\n98.5% on comparable cases (sim)'},
+ {n:'03',t:'PLC 工程实现',s:'AC500 ST 核心逻辑',d:'核心分配、策略、守卫与测试代码已进入 ST 工程；75/0 的证据级别限定为 AB PC 仿真编译与在线回读。',e:'canonical C11\nCompile 0 errors · 75 passed / 0 failed'},
+ {n:'04',t:'三页制 HMI',s:'操作、记录、管理',d:'P1 负责日常操作，P2 承载追溯与查询，P3 放置配置与诊断；地图支持 8 态色码、分层寻址和三态视图。',e:'3 pages · 21 interactions\nstatus / frequency / operation heatmap'},
+ {n:'05',t:'代表性技术预演',s:'Factory I/O 54 位',d:'H5 全链取放 9/9 运行成功；结论限于当前 work 场景。该层验证三维动作与 I/O 时序，不替代 20×20 逻辑模型。',e:'H5 9/9 runtime success\n54-slot representative preview'}];
+const MATS=[
+ ['01','验证报告','WORD 正文与 PPT 评审快览，覆盖方法、统计、工程证据与边界。','01_验证报告/'],
+ ['02','PLC 工程代码','Automation Builder 工程、ST 源码导出、黄金向量与测试证据。','02_PLC代码/'],
+ ['03','建模与仿真','Python 源码、关键 CSV/图与一键复现入口。','03_建模与仿真/'],
+ ['04','可视化仿真','Three.js 展示源码、三维轨迹回放与演示录屏。','04_可视化仿真_决赛件/'],
+ ['05','技术预演素材','Factory I/O 全链取放记录与 54 位场景说明。','05_物理预演素材_加分/'],
+ ['TXT','README','任意环境可读的纯文本导览与目录说明。','README.md']];
+const MODS=[
+ ['01','演示影音室','统一浏览技术预演、HMI 动线与三维片段','接入视频索引与章节定位'],['02','三维布局回放','逐件观察货位分配与双轴轨迹','接入事件流与预计算结果'],
+ ['03','运行数据看板','比较占用率、行程与策略指标','接入静态结果数据'],['04','工程故事线','按赛题—模型—控制—验证阅读','接入分章讲解与证据链接'],
+ ['05','检测器实录','展示目标档切换与推荐变化','接入 P3 实际录屏热点'],['06','HMI 界面详解','逐控件解释三页分工与绑定','接入三页截图与交互索引'],
+ ['07','PLC 代码导读','注解关键 ST 状态机与守卫','接入代码片段与测试徽章'],['08','证据索引','结论到命令、文件、图表的映射','接入可检索证据矩阵'],
+ ['09','数字孪生(C6 自研)','同一事件驱动逻辑视图与三维视图','接入 JSONL 事件契约'],['10','要求对照表','赛题要求、实现与证据逐项对应','接入最终评分自检表']];
+const pipe=document.getElementById('pipeline'),stageText=document.getElementById('stageText'),stageEvidence=document.getElementById('stageEvidence');
+function selectStage(i){document.querySelectorAll('.stage-btn').forEach((b,j)=>b.classList.toggle('active',i===j));stageText.textContent=STAGES[i].d;stageEvidence.textContent=STAGES[i].e;}
+STAGES.forEach((s,i)=>{const b=document.createElement('button');b.className='stage-btn';b.innerHTML=`<span class="no">${s.n}</span><b>${s.t}</b><small>${s.s}</small>`;b.onclick=()=>selectStage(i);pipe.appendChild(b)});selectStage(0);
+const mg=document.getElementById('materialGrid');MATS.forEach(m=>{const d=document.createElement('article');d.className='material';d.innerHTML=`<span class="idx">${m[0]}</span><h3>${m[1]}</h3><p>${m[2]}</p><div class="row"><a class="open" href="${m[3]}">打开</a><button class="copy" data-path="${m[3]}">复制路径</button></div>`;mg.appendChild(d)});
+const mod=document.getElementById('moduleGrid');MODS.forEach(m=>{const d=document.createElement('article');d.className='module';d.tabIndex=0;d.innerHTML=`<div class="icon">${m[0]}</div><h3>${m[1]}</h3><p>${m[2]}</p><div class="more">${m[3]}</div><span class="status">○ 建设中</span>`;mod.appendChild(d)});
+function localPath(rel){try{const u=new URL(rel,location.href);return decodeURIComponent(u.pathname).replace(/^\/([A-Za-z]:)/,'$1').replace(/\//g,'\\')}catch(_){return rel}}
+function copyText(t){if(navigator.clipboard)return navigator.clipboard.writeText(t).catch(()=>fallback(t));return fallback(t);function fallback(x){const ta=document.createElement('textarea');ta.value=x;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}}
+document.addEventListener('click',e=>{const b=e.target.closest('.copy');if(!b)return;copyText(localPath(b.dataset.path));const t=document.getElementById('toast');t.style.opacity=1;setTimeout(()=>t.style.opacity=0,1200)});
+</script>
+</body></html>

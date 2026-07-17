@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>智储优控 · 提交材料导览 A｜评委阅读工作台</title>
+<style>
+:root{--abb:#ff000f;--ink:#17191c;--muted:#626a73;--line:#d9dde2;--soft:#f4f6f8;--paper:#fff;--blue:#17365d;--blue2:#4a6fa5;--green:#287a52;--amber:#9a6b00;--rail:218px;--evidence:292px}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0}body{min-width:1080px;min-height:640px;overflow:hidden;background:#edf0f3;color:var(--ink);font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif}
+button,a{font:inherit}button{color:inherit}.topline{height:4px;background:linear-gradient(90deg,var(--abb) 0 8.5%,#17191c 8.5%)}
+.masthead{height:50px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:16px}
+.brand{font:700 15px/1 Georgia,"SimSun",serif;white-space:nowrap}.brand i{font:900 17px Arial;color:var(--abb);font-style:normal;margin-right:8px}
+.docname{color:#6a727b;font:10px/1.35 Consolas,"JetBrains Mono",monospace;letter-spacing:.8px}.masthead .scope{margin-left:auto;display:flex;align-items:center;gap:10px}
+.scope span{font-size:10px;color:#59616a}.scope b{font:10px Consolas,monospace;color:var(--green);border:1px solid #9fc5b0;background:#f2faf5;padding:4px 8px}
+.metric-ribbon{height:60px;background:#f8f9fa;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.2fr repeat(4,1fr);padding:7px 18px;gap:8px}
+.metric{min-width:0;background:#fff;border-left:2px solid #aeb6bf;padding:5px 10px}.metric.primary{border-left-color:var(--abb)}
+.metric .value{display:block;font:700 16px/1.15 Consolas,"JetBrains Mono",monospace;color:var(--blue);white-space:nowrap}.metric .label{display:block;margin-top:4px;color:#6b737c;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workspace{height:calc(100vh - 140px);display:grid;grid-template-columns:var(--rail) minmax(540px,1fr) var(--evidence);gap:10px;padding:10px 12px}
+.rail,.reader,.evidence-rail{min-height:0;background:#fff;border:1px solid var(--line)}
+.rail{display:flex;flex-direction:column;padding:14px 11px 10px}.rail-kicker{font:9px/1 Consolas,monospace;color:var(--abb);letter-spacing:1.4px}
+.rail h1{font:700 20px/1.15 Georgia,"Songti SC","SimSun",serif;margin:7px 0 5px}.rail .intro{font-size:10px;line-height:1.55;color:var(--muted);margin:0 0 11px}
+.progress-meta{display:flex;justify-content:space-between;font:9px Consolas,monospace;color:#717982}.progress{height:3px;background:#e5e8eb;margin:5px 0 11px}.progress i{display:block;height:100%;background:var(--abb);transition:.22s}
+.chapter-nav{display:flex;flex-direction:column;gap:3px}.chapter-nav button{min-height:41px;border:0;border-left:2px solid transparent;background:#fff;text-align:left;padding:6px 8px;cursor:pointer;display:grid;grid-template-columns:24px 1fr;align-items:center}
+.chapter-nav button:hover{background:#f5f7f9}.chapter-nav button[aria-selected="true"]{background:#17191c;color:#fff;border-left-color:var(--abb)}
+.chapter-nav .no{font:10px Consolas,monospace;color:#9098a1}.chapter-nav button[aria-selected="true"] .no{color:#ff8a92}.chapter-nav .name{font-size:11.5px;font-weight:650}.rail-tip{margin-top:auto;border-top:1px solid var(--line);padding-top:8px;color:#7a828a;font-size:9px;line-height:1.5}
+.reader{display:grid;grid-template-rows:38px minmax(0,1fr);overflow:hidden}.readerbar{border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 13px;gap:8px;background:#fbfcfd}
+.crumb{font:10px Consolas,"Microsoft YaHei",monospace;color:#6b737c}.crumb b{color:#17191c}.next{margin-left:auto;border:1px solid #17191c;background:#17191c;color:#fff;padding:6px 11px;font-size:10px;cursor:pointer}.next:hover{background:#33383e}
+.page-stack{min-height:0;position:relative}.chapter{height:100%;overflow:auto;padding:18px 20px 16px;scrollbar-width:thin}.chapter[hidden]{display:none}
+.eyebrow{font:9px/1 Consolas,monospace;letter-spacing:1.6px;color:#7b838c}.chapter h2{font:700 clamp(22px,2.3vw,34px)/1.08 Georgia,"Songti SC","SimSun",serif;margin:7px 0 8px;letter-spacing:-.4px}.lede{max-width:760px;font:14px/1.65 Georgia,"Songti SC","SimSun",serif;color:#30353a;margin:0 0 14px}
+.rule-title{display:flex;align-items:center;gap:10px;margin:12px 0 8px;font-size:11px;font-weight:700}.rule-title:after{content:"";height:1px;background:var(--line);flex:1}
+.intent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.intent{border:1px solid var(--line);background:#fff;min-height:96px;text-align:left;padding:11px;cursor:pointer}.intent:hover{border-color:#17191c;background:#fafafa}
+.intent .tag{font:9px Consolas,monospace;color:var(--abb)}.intent b{display:block;font:700 14px Georgia,"SimSun",serif;margin:5px 0}.intent span{display:block;font-size:9.5px;line-height:1.5;color:var(--muted)}
+.system-strip{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);margin-top:10px}.system-strip div{padding:9px;border-right:1px solid var(--line);min-width:0}.system-strip div:last-child{border-right:0}.system-strip b{display:block;font-size:10.5px}.system-strip span{font-size:8.5px;color:#717982}
+.result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.result-card{border:1px solid var(--line);padding:12px 13px;display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:end}.result-card b{font:700 24px/1 Consolas,monospace;color:var(--blue)}.result-card h3{font:700 12px Georgia,"SimSun",serif;margin:0}.result-card p{grid-column:1/-1;font-size:9.5px;line-height:1.5;color:var(--muted);margin:1px 0 0}.result-card .cal{font:8px Consolas,monospace;color:var(--green)}
+.evidence-band{margin-top:9px;padding:10px 12px;background:#f3f5f7;border-left:3px solid var(--blue);display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px}.evidence-band b{font-size:10px}.evidence-band span{display:block;color:#69717a;font-size:9px;line-height:1.5;margin-top:3px}
+.method-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:10px}.method-flow{border:1px solid var(--line)}.method-step{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line)}.method-step:last-child{border-bottom:0}.method-step i{font:10px Consolas,monospace;color:var(--abb);font-style:normal}.method-step b{font-size:11px}.method-step small{display:block;color:var(--muted);font-size:9px;margin-top:2px}
+.fact-sheet{background:#17191c;color:#fff;padding:13px}.fact-sheet h3{font:700 14px Georgia,"SimSun",serif;margin:0 0 8px}.fact-sheet dl{margin:0}.fact-sheet div{display:grid;grid-template-columns:76px 1fr;border-top:1px solid #ffffff24;padding:7px 0}.fact-sheet dt{font:9px Consolas,monospace;color:#aeb7c0}.fact-sheet dd{margin:0;font-size:9.5px;line-height:1.45}
+.hmi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.hmi{border:1px solid var(--line);padding:12px;min-height:122px}.hmi .p{font:10px Consolas,monospace;color:var(--abb)}.hmi h3{font:700 14px Georgia,"SimSun",serif;margin:5px 0}.hmi p{font-size:9.5px;line-height:1.55;color:var(--muted);margin:0}.control-proof{margin-top:9px;display:grid;grid-template-columns:116px 1fr;border:1px solid var(--line)}.control-proof strong{background:var(--blue);color:#fff;display:grid;place-items:center;font:700 25px Consolas,monospace}.control-proof div{padding:10px}.control-proof b{font-size:11px}.control-proof p{font-size:9.5px;color:var(--muted);margin:4px 0 0;line-height:1.5}
+.compare{display:grid;grid-template-columns:1fr 36px 1fr;align-items:stretch}.compare-card{border:1px solid var(--line);padding:13px}.compare-card h3{font:700 15px Georgia,"SimSun",serif;margin:4px 0 7px}.compare-card p{font-size:9.5px;line-height:1.6;color:var(--muted);margin:0}.compare-card .big{font:700 22px Consolas,monospace;color:var(--blue)}.compare .bridge{display:grid;place-items:center;font:bold 17px Georgia;color:#858e97}.boundary-box{margin-top:10px;border-top:2px solid #17191c;padding:10px 0 0;display:grid;grid-template-columns:105px 1fr;gap:12px}.boundary-box b{font:700 13px Georgia,"SimSun",serif}.boundary-box p{font-size:9.5px;line-height:1.55;color:var(--muted);margin:0}
+.module-layout{display:grid;grid-template-columns:1.35fr .65fr;gap:10px}.module-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.module{border:1px solid var(--line);background:#fff;text-align:left;padding:8px 9px;min-height:52px;cursor:pointer;display:grid;grid-template-columns:25px 1fr;align-items:center}.module:hover,.module.selected{border-color:#17191c;background:#f6f7f8}.module .id{font:10px Consolas,monospace;color:var(--blue)}.module b{display:block;font-size:10.5px}.module small{display:block;font-size:8px;color:var(--amber);margin-top:2px}.module-detail{border:1px solid var(--line);background:#17191c;color:#fff;padding:13px}.module-detail .id{font:9px Consolas,monospace;color:#ff858d}.module-detail h3{font:700 15px Georgia,"SimSun",serif;margin:6px 0}.module-detail p{font-size:9px;line-height:1.6;color:#c2c8ce}.module-detail b{display:block;border-top:1px solid #ffffff26;padding-top:8px;font-size:9px;color:#fff}
+.material-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.material-row{border:1px solid var(--line);background:#fff;text-align:left;padding:9px 10px;min-height:70px;cursor:pointer;display:grid;grid-template-columns:30px 1fr;gap:7px}.material-row:hover,.material-row.selected{border-color:#17191c;background:#f6f7f8}.material-row .id{font:10px Consolas,monospace;color:var(--abb)}.material-row b{font:700 12px Georgia,"SimSun",serif}.material-row span span{display:block;font-size:8.5px;line-height:1.45;color:var(--muted);margin-top:3px}
+.evidence-rail{display:flex;flex-direction:column;padding:15px 14px 12px;overflow:hidden}.ev-kicker{font:9px Consolas,monospace;color:var(--abb);letter-spacing:1.3px}.evidence-rail h2{font:700 18px/1.18 Georgia,"Songti SC","SimSun",serif;margin:7px 0}.caliber{align-self:flex-start;border:1px solid #aab2ba;padding:3px 6px;font:8px Consolas,monospace;color:#4d5660}.claim{font:11px/1.65 Georgia,"Songti SC","SimSun",serif;margin:10px 0;color:#2e3338}.ev-block{border-top:1px solid var(--line);padding-top:9px;margin-top:2px}.ev-block b{display:block;font-size:9px;margin-bottom:5px}.ev-block pre{white-space:pre-wrap;word-break:break-word;background:#f4f6f8;border:1px solid #e0e3e6;margin:0;padding:8px;font:8.5px/1.5 Consolas,monospace;color:#394550}.ev-block p{font-size:8.8px;line-height:1.55;color:#69717a;margin:0}
+.context-actions{margin-top:9px;border-top:1px solid var(--line);padding-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:6px}.context-actions[hidden]{display:none}.context-actions a,.context-actions button{border:1px solid #17191c;text-align:center;text-decoration:none;padding:7px 5px;font-size:9px;cursor:pointer}.context-actions a{background:#17191c;color:#fff}.context-actions button{background:#fff}
+.evidence-foot{margin-top:auto;padding-top:8px;border-top:1px solid var(--line);font:8px/1.5 Consolas,"Microsoft YaHei",monospace;color:#7b838c}
+.statusbar{height:26px;background:#17191c;color:#c7cdd3;display:flex;align-items:center;padding:0 14px;gap:12px;font:8.5px Consolas,"Microsoft YaHei",monospace}.statusbar b{color:#fff}.statusbar span:last-child{margin-left:auto;color:#ff8b92}
+#toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:#17191c;color:#fff;padding:7px 13px;font-size:9px;opacity:0;pointer-events:none;transition:.18s;z-index:50}
+@media(max-width:1120px){:root{--rail:198px;--evidence:266px}.workspace{gap:7px;padding-left:7px;padding-right:7px}.chapter{padding-left:15px;padding-right:15px}.metric-ribbon{padding-left:10px;padding-right:10px}.metric .value{font-size:14px}}
+@media(max-width:980px){body{min-width:0;min-height:0;overflow:auto}.metric-ribbon{height:auto;grid-template-columns:repeat(2,1fr)}.workspace{height:auto;grid-template-columns:1fr;padding:8px}.rail,.reader,.evidence-rail{min-height:auto}.chapter-nav{display:grid;grid-template-columns:repeat(4,1fr)}.rail-tip{display:none}.reader{min-height:620px}.evidence-rail{min-height:380px}.statusbar{display:none}.intent-grid,.hmi-grid{grid-template-columns:1fr}.method-grid,.module-layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+<header class="masthead"><div class="brand"><i>ABB</i>智储优控</div><div class="docname">SUBMISSION GUIDE / ACADEMIC REVIEW WORKSPACE</div><div class="scope"><span>当前角色：评委快速阅读</span><b>● 证据边界已加载</b></div></header>
+<section class="metric-ribbon" aria-label="全局关键指标">
+<div class="metric primary"><span class="value">8.17 ± 0.67 s</span><span class="label">30-seed 泛化主证（sim，n=30）</span></div>
+<div class="metric"><span class="value">−61.6%</span><span class="label">较顺序基线降幅（sim）</span></div>
+<div class="metric"><span class="value">75 / 0</span><span class="label">AB PC 仿真编译+在线回读级</span></div>
+<div class="metric"><span class="value">H5 · 9 / 9</span><span class="label">Factory I/O 当前 work 场景</span></div>
+<div class="metric"><span class="value">98.5%</span><span class="label">390 可比实例 oracle 达成率（sim）</span></div>
+</section>
+<div class="workspace">
+<aside class="rail">
+<div class="rail-kicker">2026 ABB CUP</div><h1>提交材料导览</h1><p class="intro">不是目录堆叠，而是一条“结论 → 方法 → 控制 → 预演 → 复现”的有限阅读路径。</p>
+<div class="progress-meta"><span id="progressText">01 / 07</span><span id="progressName">首读总览</span></div><div class="progress"><i id="progressFill" style="width:14.285%"></i></div>
+<nav class="chapter-nav" role="tablist" aria-orientation="vertical" aria-label="导览章节">
+<button role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-id="overview"><span class="no">00</span><span class="name">首读总览</span></button>
+<button role="tab" id="tab-results" aria-controls="panel-results" aria-selected="false" data-id="results" tabindex="-1"><span class="no">01</span><span class="name">核心结论</span></button>
+<button role="tab" id="tab-method" aria-controls="panel-method" aria-selected="false" data-id="method" tabindex="-1"><span class="no">02</span><span class="name">模型与算法</span></button>
+<button role="tab" id="tab-control" aria-controls="panel-control" aria-selected="false" data-id="control" tabindex="-1"><span class="no">03</span><span class="name">控制与 HMI</span></button>
+<button role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="false" data-id="preview" tabindex="-1"><span class="no">04</span><span class="name">技术预演</span></button>
+<button role="tab" id="tab-modules" aria-controls="panel-modules" aria-selected="false" data-id="modules" tabindex="-1"><span class="no">05</span><span class="name">展示模块</span></button>
+<button role="tab" id="tab-materials" aria-controls="panel-materials" aria-selected="false" data-id="materials" tabindex="-1"><span class="no">06</span><span class="name">材料与复现</span></button>
+</nav>
+<div class="rail-tip">↑↓ 切换章节 · Home / End 跳转<br>所有技术结论均在右侧显示口径与来源。</div>
+</aside>
+<main class="reader">
+<div class="readerbar"><span class="crumb">智储优控 / <b id="crumb">首读总览</b></span><button class="next" id="nextChapter" type="button">下一章 · 核心结论 →</button></div>
+<div class="page-stack">
+<section class="chapter" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+<div class="eyebrow">READING START / 约 90 秒</div><h2>先判断作品解决了什么，再决定深入哪一层。</h2>
+<p class="lede">本作品面向单巷道、单堆垛机的 20 列×20 层自动化立体仓库：以可复现运动学和约束模型为底座，用 AWRA-LS 与策略库优化货位分配，再把核心逻辑落实为 ABB AC500 Structured Text、三页制 HMI 与代表性三维技术预演。</p>
+<div class="rule-title">按评审意图进入</div><div class="intent-grid">
+<button class="intent" data-route="results"><span class="tag">01 / OUTCOME</span><b>先看结论</b><span>用 30-seed 主证、控制测试和预演结果判断有效性。</span></button>
+<button class="intent" data-route="control"><span class="tag">03 / ENGINEERING</span><b>先看工程</b><span>直接检查 ST、75/0 证据级别和三页 HMI 分工。</span></button>
+<button class="intent" data-route="materials"><span class="tag">06 / REPRODUCE</span><b>直接查证</b><span>从结论跳到命令、文件与复现入口，而非重复翻卡片。</span></button>
+</div>
+<div class="system-strip" aria-label="系统五阶段"><div><b>01 建模</b><span>20×20 / 运动学</span></div><div><b>02 算法</b><span>AWRA-LS / 策略库</span></div><div><b>03 控制</b><span>AC500 ST / 测试</span></div><div><b>04 HMI</b><span>三页 / 8 态</span></div><div><b>05 预演</b><span>Factory I/O / 代表性</span></div></div>
+</section>
+<section class="chapter" role="tabpanel" id="panel-results" aria-labelledby="tab-results" hidden>
+<div class="eyebrow">CANONICAL CALIBER</div><h2>四个数字，四种不同证据角色。</h2><p class="lede">不把 sim、控制器测试和三维预演混成一个“全链实测”。每项结果都同时给出对象、样本与证据边界。</p>
+<div class="result-grid">
+<article class="result-card"><h3>期望取货时间</h3><span class="cal">sim · n=30</span><b>8.17 ± 0.67 s</b><span></span><p>30-seed untouched final test；10001—10030，30/30 正收益。</p></article>
+<article class="result-card"><h3>相对顺序基线</h3><span class="cal">sim</span><b>−61.6%</b><span></span><p>泛化主证；5-seed 的 8.40±0.48 s 仅作回归锚。</p></article>
+<article class="result-card"><h3>控制器测试</h3><span class="cal">AB PC 仿真</span><b>75 / 0</b><span></span><p>编译通过并在线回读；不表述为实体 PLC 现场闭环。</p></article>
+<article class="result-card"><h3>算法选择</h3><span class="cal">sim · comparable</span><b>98.5%</b><span></span><p>390 个可比实例的词典序 oracle 达成率，不是理论上限。</p></article>
+</div>
+<div class="evidence-band"><div><b>泛化主证</b><span>30 seeds · untouched final test · all positive</span></div><div><b>回归锚</b><span>5 seeds · 8.40±0.48 s · 独立角色</span></div><div><b>控制证据</b><span>75 passed / 0 failed · PC simulation</span></div></div>
+</section>
+<section class="chapter" role="tabpanel" id="panel-method" aria-labelledby="tab-method" hidden>
+<div class="eyebrow">MODEL → CONSTRAINT → POLICY</div><h2>先保证可行，再比较策略。</h2><p class="lede">算法的价值不来自“智能”标签，而来自统一到达流、统一运动学、明确约束门和可重放随机种子下的公平比较。</p>
+<div class="method-grid"><div class="method-flow">
+<div class="method-step"><i>01</i><div><b>货物画像</b><small>重量、体积、频次、类别与到达情景</small></div></div>
+<div class="method-step"><i>02</i><div><b>可行性守卫</b><small>占用、承重、体积与边界先行</small></div></div>
+<div class="method-step"><i>03</i><div><b>运动学代价</b><small>双轴同动；报告主口径使用梯形加减速（sim）</small></div></div>
+<div class="method-step"><i>04</i><div><b>策略库选择</b><small>AWRA-LS、CB、TOB 与基线统一比较</small></div></div>
+<div class="method-step"><i>05</i><div><b>泛化验证</b><small>固定最终测试入口；30-seed untouched</small></div></div>
+</div><aside class="fact-sheet"><h3>模型事实卡</h3><dl>
+<div><dt>几何</dt><dd>20 列×20 层；单巷道、单堆垛机</dd></div><div><dt>时间</dt><dd>双轴同动的切比雪夫完成时间</dd></div>
+<div><dt>速度</dt><dd>VX=2.0 m/s；VZ=0.5 m/s（sim 设计口径）</dd></div><div><dt>加速度</dt><dd>AX=0.5；AZ=0.3 m/s²（sim）</dd></div>
+<div><dt>驻留</dt><dd>取货与放货各 4.0 s（sim）</dd></div></dl></aside></div>
+</section>
+<section class="chapter" role="tabpanel" id="panel-control" aria-labelledby="tab-control" hidden>
+<div class="eyebrow">CONTROL IMPLEMENTATION</div><h2>三页 HMI，让操作、追溯和配置各归其位。</h2><p class="lede">控制层承接核心分配、策略、守卫和测试逻辑；界面不堆功能，而是按使用频率和风险分层。</p>
+<div class="hmi-grid"><article class="hmi"><span class="p">P1 / 日常操作</span><h3>运行与调度</h3><p>入库、出库、模式、当前任务与 8 态库位地图；把高频动作留在首屏。</p></article>
+<article class="hmi"><span class="p">P2 / 记录追溯</span><h3>查询与解释</h3><p>任务记录、货物定位、操作热度与策略原因；服务答辩追问和复盘。</p></article>
+<article class="hmi"><span class="p">P3 / 管理诊断</span><h3>配置与边界</h3><p>管理员参数、状态诊断与受控设置；避免低频高风险动作混入 P1。</p></article></div>
+<div class="control-proof"><strong>75 / 0</strong><div><b>控制器证据基线</b><p>AB PC 仿真编译 + 在线回读级；用于证明 ST 逻辑和测试断言在该环境成立，不外推为实体 PLC 现场联调。</p></div></div>
+</section>
+<section class="chapter" role="tabpanel" id="panel-preview" aria-labelledby="tab-preview" hidden>
+<div class="eyebrow">REPRESENTATIVE TECHNICAL PREVIEW</div><h2>逻辑规模与三维预演，各自回答不同问题。</h2><p class="lede">20×20 模型回答算法和控制逻辑是否覆盖目标规模；Factory I/O 回答动作链、I/O 时序和可视观察是否可演示。二者互补，不互相冒充。</p>
+<div class="compare"><article class="compare-card"><span class="big">20×20</span><h3>目标逻辑模型</h3><p>承载货位寻址、约束、策略和运动学计算；结果以 sim 或控制器证据级别分别标注。</p></article><div class="bridge">≠</div>
+<article class="compare-card"><span class="big">54 位</span><h3>Factory I/O 代表性场景</h3><p>H5 全链取放 9/9 在当前 work 场景运行成功；作为三维动作与 I/O 时序的技术预演。</p></article></div>
+<div class="boundary-box"><b>当前负结果</b><p>F5 二审已结案：编译加载级可行，但当前 VirtualAC500 实例主站直驱不可用（当前环境负结果，非全产品线定理），真机 AC500 / 软 PLC 路线待做。Target 恢复仅作为下放成功的必要操作条件，不外推为系统级安全结论。</p></div>
+</section>
+<section class="chapter" role="tabpanel" id="panel-modules" aria-labelledby="tab-modules" hidden>
+<div class="eyebrow">SHOWCASE ROADMAP</div><h2>十个模块是一张路线图，不是假装已可点击的产品菜单。</h2><p class="lede">选择模块只更新右侧说明与接入条件；状态统一为“建设中”，避免用重复按钮制造完成错觉。</p>
+<div class="module-layout"><div class="module-grid" id="moduleGrid"></div><aside class="module-detail"><span class="id" id="moduleId">MODULE 01</span><h3 id="moduleTitle">演示影音室</h3><p id="moduleText">统一浏览技术预演、HMI 动线与三维片段。</p><b id="moduleNeed">待接入：视频索引与章节定位</b></aside></div>
+</section>
+<section class="chapter" role="tabpanel" id="panel-materials" aria-labelledby="tab-materials" hidden>
+<div class="eyebrow">EVIDENCE PACKAGE</div><h2>先选材料，再在唯一动作区打开或复制。</h2><p class="lede">目录卡只承担识别与选择；所有动作集中在右侧上下文栏，避免每张卡重复“打开 / 复制”按钮。</p>
+<div class="material-grid" id="materialGrid"></div>
+</section>
+</div>
+</main>
+<aside class="evidence-rail" aria-live="polite">
+<div class="ev-kicker" id="evKicker">EVIDENCE / 00</div><h2 id="evTitle">作品全景与阅读路径</h2><span class="caliber" id="evCaliber">总览 · 角色分离</span>
+<p class="claim" id="evClaim">本页只建立问题、方法、控制与证据之间的关系；关键数字以各自口径进入后续章节。</p>
+<div class="ev-block"><b>来源 / 复现入口</b><pre id="evSource">docs/canonical_numbers.md
+README.md
+python sim/final_test_30seed.py</pre></div>
+<div class="ev-block"><b>边界提醒</b><p id="evBoundary">仿真指标标注 sim；控制器测试、Factory I/O 技术预演和实体现场是不同证据层。</p></div>
+<div class="context-actions" id="contextActions" hidden><a id="materialOpen" href="#">打开所选</a><button id="copyPath" type="button">复制完整路径</button></div>
+<div class="evidence-foot">EVIDENCE FIRST · 一次只显示当前章节需要的来源与边界，减少视觉竞争。</div>
+</aside>
+</div>
+<footer class="statusbar"><span><b>阅读模式：</b>固定视口 / 单章呈现 / 渐进披露</span><span><b>口径：</b>sim、控制器证据、技术预演三态分离</span><span>红色仅用于品牌与关键导航</span></footer>
+<div id="toast">完整路径已复制</div>
+<script>
+const NL=String.fromCharCode(10);
+const CHAPTERS=[
+{id:'overview',name:'首读总览',ev:['EVIDENCE / 00','作品全景与阅读路径','总览 · 角色分离','本页只建立问题、方法、控制与证据之间的关系；关键数字以各自口径进入后续章节。',['docs/canonical_numbers.md','README.md','python sim/final_test_30seed.py'],'仿真指标标注 sim；控制器测试、Factory I/O 技术预演和实体现场是不同证据层。']},
+{id:'results',name:'核心结论',ev:['EVIDENCE / 01','泛化主证与工程证据','sim + AB PC 仿真','30-seed 结果承担泛化主证；75/0 只承担控制器测试证据，二者不能合并描述为同一种实测。',['python sim/final_test_30seed.py','seeds = 10001..10030','canonical C11 / C12'],'8.17±0.67 s、−61.6% 与 98.5% 均为 sim；75/0 为 AB PC 仿真编译+在线回读级。']},
+{id:'method',name:'模型与算法',ev:['EVIDENCE / 02','可行性优先的策略比较','sim 设计口径','统一货物画像、约束门、双轴运动学和外生到达流后，再比较 AWRA-LS、CB、TOB 与基线。',['sim/final_test_30seed.py','sim/export_st_vectors.py','tools/anim3d_formal.py'],'报告主口径的梯形加减速属于 sim 设计口径；不要转述为 PLC 默认运行口径。']},
+{id:'control',name:'控制与 HMI',ev:['EVIDENCE / 03','ST 核心逻辑与三页界面','AB PC 仿真','75 项断言覆盖初始化、分配、策略、边界与状态机；三页 HMI 按频率和风险分层。',['plc/06_PRG_Test.st','plc/plc_evidence.csv','02_PLC代码/'],'75/0 不等于实体 PLC 闭环；HMI 交互证据与算法 sim 指标分开陈述。']},
+{id:'preview',name:'技术预演',ev:['EVIDENCE / 04','代表性三维动作链','Factory I/O · 当前 work 场景','H5 9/9 证明当前场景的全链取放运行成功；54 位预演与 20×20 逻辑模型承担不同验证任务。',['l2_factoryio/','05_物理预演素材_加分/','H5 runtime record'],'不外推为实体仓库联调。F5 是当前 VirtualAC500 环境负结果，不是全产品线定理。']},
+{id:'modules',name:'展示模块',ev:['EVIDENCE / 05','展示能力建设路线','UI 占位 · 建设中','模块卡只表达计划能力、接入条件与证据来源；没有接入真实数据前，不赋予可交互完成态。',['l4_showcase/src/','04_可视化仿真_决赛件/'],'十个模块统一为“建设中”；模块 09 的名称固定为“数字孪生(C6 自研)”。']},
+{id:'materials',name:'材料与复现',ev:['EVIDENCE / 06','证据包与复现入口','本地交付目录','选择一类材料后，右侧显示唯一的打开与复制动作，目录卡本身不再重复按钮。',['01_验证报告/','02_PLC代码/','03_建模与仿真/'],'打开前先核对所选材料的口径说明；README 是跨环境的最低依赖入口。']}
+];
+const MODULES=[
+['01','演示影音室','统一浏览技术预演、HMI 动线与三维片段','视频索引与章节定位'],['02','三维布局回放','逐件观察货位分配与双轴轨迹','事件流与预计算结果'],
+['03','运行数据看板','比较占用率、行程与策略指标','静态结果数据'],['04','工程故事线','按赛题—模型—控制—验证阅读','分章讲解与证据链接'],
+['05','检测器实录','展示目标档切换与推荐变化','P3 实际录屏热点'],['06','HMI 界面详解','逐控件解释三页分工与绑定','三页截图与交互索引'],
+['07','PLC 代码导读','注解关键 ST 状态机与守卫','代码片段与测试徽章'],['08','证据索引','结论到命令、文件、图表的映射','可检索证据矩阵'],
+['09','数字孪生(C6 自研)','同一事件驱动逻辑视图与三维视图','JSONL 事件契约'],['10','要求对照表','赛题要求、实现与证据逐项对应','最终评分自检表']
+];
+const MATERIALS=[
+['01','验证报告','WORD 正文与评审快览；方法、统计、工程证据与边界。','01_验证报告/'],['02','PLC 工程代码','Automation Builder 工程、ST 导出、黄金向量与测试证据。','02_PLC代码/'],
+['03','建模与仿真','Python 源码、关键 CSV/图与一键复现入口。','03_建模与仿真/'],['04','可视化仿真','Three.js 展示源码、三维轨迹回放与演示录屏。','04_可视化仿真_决赛件/'],
+['05','技术预演素材','Factory I/O 全链取放记录与 54 位场景说明。','05_物理预演素材_加分/'],['TXT','README','任意环境可读的纯文本导览与目录说明。','README.md']
+];
+const tabs=[...document.querySelectorAll('[role="tab"]')],panels=[...document.querySelectorAll('[role="tabpanel"]')];let activeIndex=0,selectedMaterial=null;
+function applyEvidence(ev){['evKicker','evTitle','evCaliber','evClaim','evSource','evBoundary'].forEach(function(id,i){document.getElementById(id).textContent=Array.isArray(ev[i])?ev[i].join(NL):ev[i]})}
+function setChapter(id,writeHash){if(writeHash===undefined)writeHash=true;let idx=CHAPTERS.findIndex(function(c){return c.id===id});if(idx<0)idx=0;activeIndex=idx;const chapter=CHAPTERS[idx];
+tabs.forEach(function(t,i){const on=i===idx;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1});panels.forEach(function(p,i){p.hidden=i!==idx});
+document.getElementById('crumb').textContent=chapter.name;document.getElementById('progressText').textContent=String(idx+1).padStart(2,'0')+' / '+String(CHAPTERS.length).padStart(2,'0');
+document.getElementById('progressName').textContent=chapter.name;document.getElementById('progressFill').style.width=((idx+1)/CHAPTERS.length*100)+'%';
+const next=CHAPTERS[(idx+1)%CHAPTERS.length];document.getElementById('nextChapter').textContent=idx===CHAPTERS.length-1?'回到总览 ↺':'下一章 · '+next.name+' →';
+applyEvidence(chapter.ev);document.getElementById('contextActions').hidden=id!=='materials';if(id==='materials'&&selectedMaterial)showMaterial(selectedMaterial,false);
+if(writeHash&&location.hash!=='#/'+id)location.hash='/'+id}
+tabs.forEach(function(t,i){t.addEventListener('click',function(){setChapter(t.dataset.id)});t.addEventListener('keydown',function(e){let j=i;if(e.key==='ArrowDown'||e.key==='ArrowRight')j=(i+1)%tabs.length;else if(e.key==='ArrowUp'||e.key==='ArrowLeft')j=(i-1+tabs.length)%tabs.length;else if(e.key==='Home')j=0;else if(e.key==='End')j=tabs.length-1;else return;e.preventDefault();setChapter(tabs[j].dataset.id);tabs[j].focus()})});
+document.getElementById('nextChapter').onclick=function(){setChapter(CHAPTERS[(activeIndex+1)%CHAPTERS.length].id)};document.querySelectorAll('[data-route]').forEach(function(b){b.onclick=function(){setChapter(b.dataset.route)}});
+const moduleGrid=document.getElementById('moduleGrid');MODULES.forEach(function(m,i){const b=document.createElement('button');b.type='button';b.className='module'+(i===0?' selected':'');b.innerHTML='<span class="id">'+m[0]+'</span><span><b>'+m[1]+'</b><small>○ 建设中</small></span>';b.onclick=function(){document.querySelectorAll('.module').forEach(function(x){x.classList.remove('selected')});b.classList.add('selected');document.getElementById('moduleId').textContent='MODULE '+m[0];document.getElementById('moduleTitle').textContent=m[1];document.getElementById('moduleText').textContent=m[2];document.getElementById('moduleNeed').textContent='待接入：'+m[3];applyEvidence(['EVIDENCE / 05',m[1],'UI 占位 · 建设中',m[2],['l4_showcase/src/','待接入：'+m[3]],'未接入真实数据前，仅作为展示路线图，不表述为已交付能力。'])};moduleGrid.appendChild(b)});
+const materialGrid=document.getElementById('materialGrid');MATERIALS.forEach(function(m,i){const b=document.createElement('button');b.type='button';b.className='material-row'+(i===0?' selected':'');b.innerHTML='<span class="id">'+m[0]+'</span><span><b>'+m[1]+'</b><span>'+m[2]+'</span></span>';b.onclick=function(){showMaterial(m,true)};materialGrid.appendChild(b)});selectedMaterial=MATERIALS[0];
+function fullPath(rel){try{const u=new URL(rel,location.href);return decodeURIComponent(u.pathname).replace(/^\/([A-Za-z]:)/,'$1').replace(/\//g,'\\')}catch(_){return rel}}
+function showMaterial(m,mark){if(mark===undefined)mark=true;selectedMaterial=m;if(mark){document.querySelectorAll('.material-row').forEach(function(x,i){x.classList.toggle('selected',MATERIALS[i]===m)})}const path=fullPath(m[3]);document.getElementById('materialOpen').href=m[3];applyEvidence(['EVIDENCE / 06',m[1],'本地交付材料',m[2],[path],'材料打开后仍需按文内标注区分 sim、控制器测试与代表性技术预演。'])}
+function copyText(t){if(navigator.clipboard)return navigator.clipboard.writeText(t).catch(function(){return fallback(t)});return fallback(t);function fallback(x){const ta=document.createElement('textarea');ta.value=x;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}}
+document.getElementById('copyPath').onclick=function(){copyText(fullPath(selectedMaterial[3]));const t=document.getElementById('toast');t.style.opacity=1;setTimeout(function(){t.style.opacity=0},1200)};
+addEventListener('hashchange',function(){const m=location.hash.match(/^#\/(.+)$/);setChapter(m?m[1]:'overview',false)});const initial=location.hash.match(/^#\/(.+)$/);setChapter(initial?initial[1]:'overview',false);
+</script>
+</body>
+</html>

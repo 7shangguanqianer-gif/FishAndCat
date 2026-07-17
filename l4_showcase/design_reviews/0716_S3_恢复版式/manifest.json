@@ -1,0 +1,38 @@
+{
+  "schema_version": "s3-fill-layout-review-v1",
+  "status": "REVIEW_ONLY_FORMAL_FROZEN",
+  "source": "l4_showcase/src/样张_S3_fill恢复候选.html",
+  "source_sha256": "9e22964795bdbc1fbbab8682e7d6d0aa0f7b398f8a8b9fc93460c713293723ad",
+  "invariants": [
+    "same s3_fill_store.js",
+    "same s3_fill_candidate_runtime.js",
+    "same mature Three.js scene and camera",
+    "same current semantic QA contract; assertion count is read from each qa_report.json",
+    "layout-only CSS differences"
+  ],
+  "outputs": [
+    {
+      "id": "1_均衡双栏",
+      "layout": "balanced",
+      "summary": "2D 容量图与七步说明并列；信息密度和三维面积最均衡。",
+      "file": "l4_showcase/src/样张_S3_版式候选_1_均衡双栏.html",
+      "sha256": "3bbf92f45f421b25c21470a07c878594b32af98b067aa60bda807efe34a5532d"
+    },
+    {
+      "id": "2_地图主证",
+      "layout": "map-first",
+      "summary": "放大 20×20 同源地图；七步说明压缩，适合强调 0→267 填满证据。",
+      "file": "l4_showcase/src/样张_S3_版式候选_2_地图主证.html",
+      "sha256": "188db6c92f01dbe499548212300c69f8ca06384d4905d5ae1731ed7adea138c1"
+    },
+    {
+      "id": "3_流程主证",
+      "layout": "process-first",
+      "summary": "扩大七步目的与当前高亮；地图仍完整，适合评委理解动作链。",
+      "file": "l4_showcase/src/样张_S3_版式候选_3_流程主证.html",
+      "sha256": "083e3977a6d92659c767ff9531eb224e927170cf8a434ccfff270f680896a5be"
+    }
+  ],
+  "formal_page_untouched": "l4_showcase/src/样张_S3定稿.html",
+  "note": "HTML 必须位于 src，才能复用母版的相对资源路径；design_reviews 中同名旧文件仅为失败证据。"
+}

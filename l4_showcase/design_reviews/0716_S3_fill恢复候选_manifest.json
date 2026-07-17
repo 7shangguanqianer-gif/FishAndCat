@@ -1,0 +1,15 @@
+{
+  "schema_version": "s3-fill-recovered-candidate-build-v1",
+  "status": "CANDIDATE_ONLY_FORMAL_FROZEN",
+  "source": "l4_showcase/src/样张_S3_三方向候选.html",
+  "source_sha256": "c9a718ba772b3ef9bad28eaabfc060911d1bf7fec96de10e9c0f1a172ed77902",
+  "output": "l4_showcase/src/样张_S3_fill恢复候选.html",
+  "output_sha256": "8d5602f6ea02b2cb388443d68cc98bc86da83a1ce7a79d61e616202f080f7dfa",
+  "locked_changes": [
+    "same-side parallel dual lanes perpendicular to rack with T transfer",
+    "file-protocol fill-only store/runtime",
+    "single visible current-job source",
+    "capacity bookmarks derive from one active release"
+  ],
+  "formal_page_untouched": "l4_showcase/src/样张_S3定稿.html"
+}

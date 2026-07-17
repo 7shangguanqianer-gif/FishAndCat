@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S3 fill-only · 已废弃内部结构线框</title>
+<style>
+  :root{--red:#ff000f;--ink:#111d27;--muted:#60717e;--line:#c9d2d8;--paper:#f4f6f7;--blue:#006bb6;--cyan:#20bdd0;--navy:#123d61;--yellow:#ffd500;--pre:#7b8790}
+  *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#dfe5e8;color:var(--ink);font-family:"Microsoft YaHei","Segoe UI",sans-serif}
+  body:before{content:"";position:fixed;inset:0 auto auto 0;width:100%;height:5px;background:var(--red);z-index:20}
+  button{font:inherit}.app{height:100%;display:grid;grid-template-rows:64px 62px minmax(0,1fr)}
+  header{display:flex;align-items:center;gap:20px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--line)}
+  .brand{font-size:30px;font-weight:900;color:var(--red);letter-spacing:-2px}.title{font-size:19px;font-weight:800;border-left:1px solid var(--line);padding-left:18px}.sub{font-size:11px;color:var(--muted);margin-top:3px}
+  .tabs{margin-left:auto;display:flex;gap:6px}.tabs button{border:1px solid #aebac2;background:#fff;padding:8px 13px;cursor:pointer}.tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .gate{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 10px;background:#e6f4ec;color:#075b32;border-left:4px solid #079455}.gate b{font-size:14px}
+  .bookmarks{display:grid;grid-template-columns:180px repeat(6,1fr) 190px;align-items:stretch;background:#edf1f3;border-bottom:1px solid var(--line);padding:7px 14px;gap:5px}
+  .bookIntro,.book,.scope{background:#fff;border:1px solid var(--line);padding:7px 10px}.bookIntro strong{display:block;font-size:13px}.bookIntro span,.scope{font-size:10px;color:var(--muted)}
+  .book{position:relative;text-align:center;font-size:11px;cursor:default}.book b{display:block;font-size:15px}.book.active{border:2px solid var(--red);padding:6px 9px}.book.active:after{content:"当前";position:absolute;right:4px;top:3px;font-size:9px;color:var(--red)}
+  .scope{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.35}
+  main{min-height:0;padding:10px}.view{display:none;width:100%;height:100%;min-height:0}.view.active{display:grid}
+  .panel{background:#fff;border:1px solid #b9c5cc;min-height:0}.panel h2,.panel h3{margin:0}.eyebrow{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.08em}.sectionTitle{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:7px;border-bottom:1px solid var(--line)}.sectionTitle h3{font-size:14px}.sectionTitle span{font-size:10px;color:var(--muted)}
+  .dossier{padding:12px;display:flex;flex-direction:column;gap:9px;min-height:0}.current{border-left:5px solid var(--red);background:#f1f4f6;padding:10px}.current h2{font-size:18px;margin-top:4px}.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:9px}.fact{background:#fff;padding:7px}.fact b{display:block;font-size:15px}.fact small{font-size:9px;color:var(--muted)}
+  .stamp{display:inline-block;background:var(--ink);color:#fff;font-size:11px;padding:5px 8px;margin-top:8px}.stamp.red{background:var(--red)}
+  .reason{padding:9px;border:1px solid var(--line)}.reason .result{font-weight:800;font-size:15px;margin:4px 0}.reason p{font-size:11px;line-height:1.55;color:#40515e;margin:4px 0}
+  .top3{display:grid;gap:4px}.candidate{display:grid;grid-template-columns:34px 74px 1fr 56px;align-items:center;gap:6px;padding:6px 7px;background:#edf2f5;font-size:10px;border-left:4px solid #8fa3b1}.candidate:first-child{background:#fff8ce;border-left-color:var(--yellow)}.candidate b{font-size:12px}.bar{height:6px;background:#d9e1e6;position:relative}.bar i{display:block;height:100%;background:var(--blue)}
+  .mapCard{padding:9px;min-height:0;display:flex;flex-direction:column}.mapLegend{display:flex;gap:10px;font-size:9px;color:var(--muted);margin-top:7px;flex-wrap:wrap}.swatch{display:inline-block;width:9px;height:9px;margin-right:3px;vertical-align:-1px;border:1px solid #788895}.swatch.pre{background:repeating-linear-gradient(135deg,#66747e 0 2px,#b9c2c8 2px 4px)}.swatch.light{background:var(--cyan)}.swatch.mid{background:var(--blue)}.swatch.heavy{background:var(--navy)}.swatch.target{background:var(--yellow)}
+  .grid20{display:grid;grid-template-columns:repeat(20,1fr);grid-template-rows:repeat(20,1fr);gap:1px;aspect-ratio:1;background:#d4dce1;padding:3px;min-height:0;max-height:100%;margin:auto}.cell{min-width:0;min-height:0;background:#fff;border:1px solid #d5dde2}.cell.pre{background:repeating-linear-gradient(135deg,#6f7c85 0 2px,#bcc5cb 2px 4px);border-color:#87939b}.cell.light{background:var(--cyan)}.cell.mid{background:var(--blue)}.cell.heavy{background:var(--navy)}.cell.target{outline:3px solid var(--yellow);outline-offset:-2px;box-shadow:0 0 0 1px #111;z-index:2}
+  .stage{position:relative;overflow:hidden;background:linear-gradient(155deg,#f9fbfc 0,#e4eaed 70%,#d3dce1 100%);border:1px solid #b9c5cc}.stage:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(82,102,116,.06) 1px,transparent 1px),linear-gradient(rgba(82,102,116,.06) 1px,transparent 1px);background-size:46px 46px;transform:perspective(600px) rotateX(58deg) scale(1.8);transform-origin:50% 100%;top:60%}
+  .stageHead{position:absolute;left:16px;right:16px;top:13px;display:flex;justify-content:space-between;z-index:5}.stageHead h2{font-size:17px}.simTag{font-size:10px;background:#fff;border:1px solid #aebac2;padding:6px 8px}.stageNote{position:absolute;left:16px;bottom:12px;background:#172735;color:#fff;padding:7px 10px;font-size:10px;z-index:6}.targetNote{position:absolute;right:10%;top:35%;background:var(--yellow);padding:9px 12px;font-weight:800;font-size:14px;z-index:8;border-left:5px solid #111}.targetNote small{display:block;font-size:9px;margin-top:2px}.rack{position:absolute;right:8%;top:12%;width:70%;height:69%;padding:9px;background:#8998a2;border:7px solid #637681;box-shadow:18px 22px 30px rgba(27,46,58,.18);transform:perspective(1400px) rotateY(-7deg) rotateX(1deg);transform-origin:50% 100%}.rack .grid20{width:100%;height:100%;max-height:none;aspect-ratio:auto;background:#7d8d97;padding:2px;gap:2px}.rack .cell{border-color:#9caab2;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+  .mast{position:absolute;left:43%;top:8%;height:76%;width:18px;background:linear-gradient(90deg,#344c5d,#89b9d6 48%,#244559);z-index:4;box-shadow:7px 0 0 #6f7f89}.carrier{position:absolute;left:41.4%;top:52%;width:68px;height:22px;background:#c9d3d8;border:4px solid #294c62;z-index:6}.trace{position:absolute;left:42%;top:53%;width:33%;height:3px;background:linear-gradient(90deg,var(--red) 0 38%,transparent 38% 45%,var(--red) 45% 58%,transparent 58% 65%,var(--red) 65%);z-index:5}.conveyor{position:absolute;width:250px;height:42px;left:23%;bottom:7%;background:repeating-linear-gradient(90deg,#aeb9c0 0 8px,#edf1f3 8px 17px);border:7px solid #687983;transform:rotate(-18deg);z-index:4;box-shadow:0 12px 0 -7px #6d7d86}.conveyor.out{bottom:14%;left:18%}.station{position:absolute;left:42%;bottom:11%;width:65px;height:65px;background:#aebbc2;border:5px solid #5c707b;z-index:5}
+  .telemetry{display:grid;grid-template-columns:1.25fr repeat(3,1fr);gap:1px;background:#c6d0d6}.telemetry>div{background:#fff;padding:7px 9px}.telemetry b{display:block;font-size:14px}.telemetry small{font-size:9px;color:var(--muted)}
+  /* 已废弃线框一：决策过程纵列；不得替代成熟 S3 三维母版。 */
+  #v1{grid-template-columns:35% 65%;grid-template-rows:minmax(0,1fr) 58px;gap:8px}#v1 .dossier{grid-row:1/3}#v1 .mapCard{flex:1}#v1 .grid20{height:100%}
+  /* 方案二：地图主证 */
+  #v2{grid-template-columns:42% 58%;grid-template-rows:minmax(0,1fr) 58px;gap:8px}#v2 .leftMap{grid-row:1/3;display:grid;grid-template-rows:62% 38%;min-height:0}.mapHero{padding:12px;min-height:0;display:flex;flex-direction:column}.mapHero .grid20{height:calc(100% - 46px)}.decisionStrip{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1.15fr;gap:9px;padding:10px;min-height:0}.decisionStrip .current{margin:0}.decisionStrip .top3{align-content:start}
+  /* 方案三：舞台 + 下方证据坞 */
+  #v3{grid-template-columns:27% 73%;grid-template-rows:minmax(0,1fr) 184px;gap:8px}#v3 .compact{padding:12px;display:flex;flex-direction:column;gap:10px}#v3 .compact .mapLegend{margin-top:auto}#v3 .stage{grid-column:2;grid-row:1}.dock{grid-column:1/3;display:grid;grid-template-columns:1.05fr 260px 1.4fr .9fr;gap:1px;background:#bdc8ce}.dock>section{background:#fff;padding:10px;min-width:0}.dock .grid20{height:150px}.dock .candidate{grid-template-columns:28px 58px 1fr 48px;padding:4px}
+  .phaseRail{display:grid;gap:5px}.phaseRail div{display:grid;grid-template-columns:24px 1fr 60px;align-items:center;gap:7px;padding:7px;background:#edf2f5;font-size:11px}.phaseRail b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#72838e;color:#fff}.phaseRail .on{background:#fff5bf;border-left:4px solid var(--yellow)}.phaseRail .on b{background:var(--red)}.phaseRail small{color:var(--muted);text-align:right}.filterFacts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}.filterFacts div{background:#fff;padding:8px}.filterFacts b{display:block;font-size:16px}.filterFacts small{font-size:9px;color:var(--muted)}
+  /* C 独立对比 */
+  #vc{grid-template-rows:48px minmax(0,1fr) 116px;gap:8px}.compareHead{display:flex;align-items:center;gap:10px;padding:8px 12px}.compareHead h2{font-size:16px}.compareHead .lock{margin-left:auto;background:#e6f4ec;color:#075b32;padding:7px 10px;font-size:11px;border-left:4px solid #079455}.lanes{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0}.lane{display:grid;grid-template-columns:34% 66%;grid-template-rows:46px minmax(0,1fr);min-height:0}.laneTitle{grid-column:1/3;padding:9px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.laneTitle strong{font-size:15px}.lane .mapCard{min-height:0}.miniStage{position:relative;overflow:hidden;background:#e6ecef}.miniStage .rack{right:5%;top:8%;width:78%;height:76%}.miniStage .mast{left:27%;top:8%;height:80%}.miniStage .carrier{left:23%;top:55%;width:48px}.compareMetrics{display:grid;grid-template-columns:160px repeat(5,1fr);gap:1px;background:#c4ced4}.compareMetrics>div{background:#fff;padding:8px 10px}.compareMetrics b{display:block;font-size:15px}.compareMetrics small{font-size:9px;color:var(--muted)}.metricName{font-weight:800}.flat{color:#7f8d96;background:#edf1f3!important}.win{border-top:4px solid #079455}.lose{border-top:4px solid #e0a800}
+  .lane .mapCard .grid20{width:100%;height:auto;max-width:250px;max-height:none;aspect-ratio:1}.lane .mapLegend{justify-content:center}
+  .reviewMark{position:fixed;right:12px;bottom:8px;font-size:9px;color:#52626d;z-index:30;background:rgba(255,255,255,.85);padding:3px 6px}
+  @media(max-width:1100px){.tabs button{padding:7px 8px;font-size:11px}.bookmarks{grid-template-columns:140px repeat(6,1fr) 140px}.candidate{grid-template-columns:28px 55px 1fr 42px}.rack{width:78%;right:2%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">ABB</div>
+    <div><div class="title">内部结构线框 · 已停止采用</div><div class="sub">该页过度简化成熟三维母版，仅保留为偏离记录，不再作为视觉候选</div></div>
+    <div class="gate"><b>× 已废弃</b><span>不得用于评审或正式 S3</span></div>
+    <nav class="tabs">
+      <button data-view="v1">线框 1 · 决策过程纵列</button>
+      <button data-view="v2">方案 2 · 地图主证</button>
+      <button data-view="v3">方案 3 · 舞台证据坞</button>
+      <button data-view="vc">独立对比 C</button>
+    </nav>
+  </header>
+  <section class="bookmarks">
+    <div class="bookIntro"><strong>容量书签 B</strong><span>管理货物 / 总占用</span></div>
+    <div class="book"><b>0 / 267</b><span>133 / 400 · 起点</span></div>
+    <div class="book"><b>67 / 267</b><span>200 / 400 · 25%</span></div>
+    <div class="book active"><b>134 / 267</b><span>267 / 400 · 50%</span></div>
+    <div class="book"><b>201 / 267</b><span>334 / 400 · 75%</span></div>
+    <div class="book"><b>241 / 267</b><span>374 / 400 · 90%</span></div>
+    <div class="book"><b>267 / 267</b><span>400 / 400 · 静态终点</span></div>
+    <div class="scope">SIM 容量/回放证据<br>不等于 PLC 或满库连续运行</div>
+  </section>
+  <main>
+    <section id="v1" class="view">
+      <aside class="panel dossier">
+        <div class="sectionTitle"><h3>当前货物决策记录</h3><span>事件 134 / 267</span></div>
+        <div class="current"><div class="eyebrow">当前到货 · 偏斜货流</div><h2>G134 · 54.6 kg</h2><div class="facts"><div class="fact"><b>27.98</b><small>访问频次</small></div><div class="fact"><b>0.90</b><small>体积 m³</small></div><div class="fact"><b>重</b><small>重量分级</small></div></div><span class="stamp red">SCORE 已锁位</span></div>
+        <div class="reason"><div class="eyebrow">为何选此格</div><div class="result">目标 16 / 09 · 综合分 0.62425</div><p>134 个可行位中排名第 1；承重余量 27.4 kg。稳定性与提升功原始项共线，界面合并解释为“载重×层高联合项”。</p></div>
+        <div class="top3" data-top3></div>
+        <div class="panel mapCard"><div class="sectionTitle"><h3>20×20 联动图 D</h3><span>同一状态哈希</span></div><div class="grid20" data-grid></div><div class="mapLegend"><span><i class="swatch pre"></i>预占</span><span><i class="swatch light"></i>轻</span><span><i class="swatch mid"></i>中</span><span><i class="swatch heavy"></i>重</span><span><i class="swatch target"></i>目标</span></div></div>
+      </aside>
+      <div class="stage" data-stage></div>
+      <div class="telemetry panel" data-telemetry></div>
+    </section>
+
+    <section id="v2" class="view">
+      <aside class="panel leftMap">
+        <div class="mapHero"><div class="sectionTitle"><h3>当前货物的可行空间</h3><span>点击地图 / Top3 / 3D 三向联动</span></div><div class="grid20" data-grid></div><div class="mapLegend"><span><i class="swatch pre"></i>预占 133</span><span><i class="swatch mid"></i>已放 134</span><span><i class="swatch target"></i>目标 16/09</span></div></div>
+        <div class="decisionStrip"><div class="current"><div class="eyebrow">事件 134 · SCORE</div><h2>G134 → 16 / 09</h2><div class="facts"><div class="fact"><b>54.6</b><small>kg</small></div><div class="fact"><b>27.98</b><small>频次</small></div><div class="fact"><b>0.90</b><small>m³</small></div></div></div><div><div class="sectionTitle"><h3>胜出位与备选</h3><span>审计哈希闭合</span></div><div class="top3" data-top3></div></div></div>
+      </aside>
+      <div class="stage" data-stage></div>
+      <div class="telemetry panel" data-telemetry></div>
+    </section>
+
+    <section id="v3" class="view">
+      <aside class="panel compact"><div class="sectionTitle"><h3>一句话结论</h3><span>方案 3</span></div><div class="current"><div class="eyebrow">当前货物</div><h2>G134 · 重货</h2><span class="stamp red">去 16 / 09</span></div><div class="reason"><div class="eyebrow">当前动作</div><div class="result">载货运行 → 目标格</div><p>画面优先；详细证据集中在下方证据坞，不在三维场景内漂浮。</p></div><div class="phaseRail"><div><b>1</b><span>到货与约束过滤</span><small>已完成</small></div><div><b>2</b><span>候选排序与锁位</span><small>已完成</small></div><div class="on"><b>3</b><span>载货双轴同步运行</span><small>进行中</small></div><div><b>4</b><span>放货并空载回位</span><small>下一步</small></div></div><div class="filterFacts"><div><b>133</b><small>预占排除</small></div><div><b>133</b><small>已占排除</small></div><div><b>134</b><small>合法候选</small></div></div><div class="mapLegend"><span><i class="swatch pre"></i>预占</span><span><i class="swatch target"></i>目标</span></div></aside>
+      <div class="stage" data-stage></div>
+      <div class="dock panel"><section><div class="sectionTitle"><h3>当前事件证据</h3><span>事件 134</span></div><div class="facts"><div class="fact"><b>54.6 kg</b><small>重量</small></div><div class="fact"><b>27.98</b><small>频次</small></div><div class="fact"><b>16 / 09</b><small>目标</small></div></div><p class="sub">134 个可行候选；无回退；库存状态与审计同源。</p></section><section><div class="sectionTitle"><h3>联动图</h3><span>20×20</span></div><div class="grid20" data-grid></div></section><section><div class="sectionTitle"><h3>Top3 候选</h3><span>仅 SCORE 显示分项</span></div><div class="top3" data-top3></div></section><section><div class="sectionTitle"><h3>50% 书签</h3><span>回位静止态</span></div><div class="facts"><div class="fact"><b>14.235 s</b><small>期望取货</small></div><div class="fact"><b>3,742 m</b><small>累计双程</small></div><div class="fact"><b>20,193.8</b><small>kg·m 代理</small></div></div></section></div>
+    </section>
+
+    <section id="vc" class="view">
+      <div class="panel compareHead"><h2>独立对比 C · 同一货流、同一书签、各自 SIM 时钟</h2><span class="simTag">在线公平组：SEQ ↔ SCORE</span><span class="simTag">AWRA-LS 另列离线参照</span><div class="lock">✓ shared input hash 一致 · 禁止回退</div></div>
+      <div class="lanes"><section class="panel lane"><div class="laneTitle"><strong>左赛道 · SEQ 顺序基线</strong><span>50% 书签 · 目标 10/00</span></div><div class="mapCard"><div class="grid20" data-grid data-lane="seq"></div><div class="mapLegend"><span><i class="swatch target"></i>SEQ 当前目标</span></div></div><div class="miniStage" data-mini-stage data-lane="seq"></div></section><section class="panel lane"><div class="laneTitle"><strong>右赛道 · SCORE 多目标评分</strong><span>50% 书签 · 目标 16/09</span></div><div class="mapCard"><div class="grid20" data-grid data-lane="score"></div><div class="mapLegend"><span><i class="swatch target"></i>SCORE 当前目标</span></div></div><div class="miniStage" data-mini-stage data-lane="score"></div></section></div>
+      <div class="compareMetrics panel"><div class="metricName">267/267 终点<br><small>同一静态实例</small></div><div class="win"><b>20.039 ↔ 21.478 s</b><small>期望取货 · SEQ 较低</small></div><div class="win"><b>21.418 ↔ 20.119 s</b><small>热门 20% · SCORE 较低</small></div><div class="win"><b>9.717 ↔ 9.321 层</b><small>重货 20% · SCORE 较低</small></div><div class="win"><b>80,747 ↔ 77,112</b><small>kg·m 代理 · SCORE 较低</small></div><div class="flat"><b>10,160 m / 16,626 s</b><small>满放结构性同值 · 不排名</small></div></div>
+    </section>
+  </main>
+</div>
+<div class="reviewMark">证据：s3-fill-comparison-v1 · manifest 97313ca7… · 仅供结构选型</div>
+<script>
+const grid=[-1,29,36,-1,62,71,-1,97,111,-1,0,0,-1,0,0,-1,0,0,-1,40,15,30,-1,52,63,-1,82,98,-1,124,0,-1,0,0,-1,0,0,-1,0,85,13,-1,42,53,-1,72,83,-1,112,125,-1,0,0,-1,0,0,-1,0,0,-1,-1,27,43,-1,64,73,-1,99,113,-1,0,0,-1,0,0,-1,0,0,-1,94,12,25,-1,54,65,-1,84,100,-1,126,0,-1,0,0,-1,0,0,-1,0,0,10,-1,38,55,-1,74,86,-1,114,127,-1,0,0,-1,0,0,-1,0,0,-1,-1,24,37,-1,67,75,-1,101,115,-1,0,0,-1,0,0,-1,0,0,-1,0,9,23,-1,56,68,-1,87,102,-1,128,0,-1,0,0,-1,0,0,-1,0,0,8,-1,35,50,-1,76,88,-1,116,129,-1,0,0,-1,0,0,-1,0,0,-1,-1,22,34,-1,69,77,-1,103,117,-1,0,0,-1,0,0,-1,0,0,-1,0,7,21,-1,49,70,-1,89,104,-1,130,0,-1,0,0,-1,0,0,-1,0,0,6,-1,33,47,-1,78,90,-1,118,131,-1,0,0,-1,0,0,-1,0,0,-1,-1,19,32,-1,61,79,-1,105,119,-1,0,0,-1,0,0,-1,0,0,-1,0,5,18,-1,46,59,-1,91,106,-1,132,0,-1,0,0,-1,0,0,-1,0,0,4,-1,31,45,-1,80,92,-1,120,133,-1,0,0,-1,0,0,-1,0,0,-1,-1,17,28,-1,58,81,-1,107,121,-1,0,0,-1,0,0,-1,0,0,-1,0,3,16,-1,44,57,-1,93,108,-1,134,0,-1,0,0,-1,0,0,-1,0,0,2,-1,26,41,-1,66,95,-1,122,0,-1,0,0,-1,0,0,-1,0,0,-1,-1,14,20,-1,51,60,-1,109,123,-1,0,0,-1,0,0,-1,0,0,-1,0,1,11,-1,39,48,-1,96,110,-1,0,0,-1,0,0,-1,0,0,-1,0,0];
+const seqGrid=[-1,1,2,-1,3,4,-1,5,6,-1,7,8,-1,9,10,-1,11,12,-1,13,14,15,-1,16,17,-1,18,19,-1,20,21,-1,22,23,-1,24,25,-1,26,27,28,-1,29,30,-1,31,32,-1,33,34,-1,35,36,-1,37,38,-1,39,40,-1,-1,41,42,-1,43,44,-1,45,46,-1,47,48,-1,49,50,-1,51,52,-1,53,54,55,-1,56,57,-1,58,59,-1,60,61,-1,62,63,-1,64,65,-1,66,67,68,-1,69,70,-1,71,72,-1,73,74,-1,75,76,-1,77,78,-1,79,80,-1,-1,81,82,-1,83,84,-1,85,86,-1,87,88,-1,89,90,-1,91,92,-1,93,94,95,-1,96,97,-1,98,99,-1,100,101,-1,102,103,-1,104,105,-1,106,107,108,-1,109,110,-1,111,112,-1,113,114,-1,115,116,-1,117,118,-1,119,120,-1,-1,121,122,-1,123,124,-1,125,126,-1,127,128,-1,129,130,-1,131,132,-1,133,134,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0];
+const weights=[11.5,52.3,38.1,35.1,46.3,38.8,29.7,42.4,58.9,60,23.7,30.2,36.8,25,37.2,32.9,32,28.1,33.5,12.1,53.8,30.9,53.7,30.8,35,21.9,31.3,21.2,41.1,33.7,19.3,50.5,54.9,55.5,48.2,58.1,31.3,32.4,27.6,5,9.5,39.2,41.7,22.2,57.2,12.4,57.7,9.6,48.1,27.7,15.9,53.8,24.4,33.1,23,36.5,33.6,37.9,26.9,7.5,29.9,44.1,34.1,57.6,26.4,9.3,19.5,27.9,31.5,48.9,17.8,40.5,51.7,24.4,36.5,44.4,16.8,35.6,57.5,46.7,39.7,51.1,19.4,54.4,5.9,11.7,56.5,38.4,55.9,30.4,42.8,55.8,24.6,6.3,57.7,47.2,34.8,44.7,11.5,40.6,36.8,18.1,11.9,56.4,19,20.3,22.3,51.2,57.9,39.8,41.2,30.9,52.4,26.9,17.8,16.1,35.2,36.9,13.4,49.7,48.8,25.5,45.7,17,36.5,57.9,13.7,45.3,7.3,13.9,24.7,46.1,31.4,54.6];
+const top3=[[1,"16 / 09",.624245909],[2,"17 / 09",.624245909],[3,"19 / 09",.624245909]];
+function cellClass(value,col,tier,target){if(value===-1)return"pre";if(value===0)return"";const w=weights[value-1]||35;return (w<=25?"light":w<=45?"mid":"heavy")+((col===target[0]&&tier===target[1])?" target":"")}
+function fillGrid(el){const mode=el.dataset.lane||"score",values=mode==="seq"?seqGrid:grid,target=mode==="seq"?[10,0]:[16,9];for(let tier=19;tier>=0;tier--){for(let col=0;col<20;col++){const value=values[col*20+tier],d=document.createElement("i");d.className="cell "+cellClass(value,col,tier,target);d.title=value===-1?`预占 ${col}/${tier}`:value>0?`G${String(value).padStart(3,"0")} · ${col}/${tier}`:`空位 ${col}/${tier}`;el.append(d)}}}
+function fillTop3(el){top3.forEach(([rank,slot,score],i)=>{const row=document.createElement("div");row.className="candidate";row.innerHTML=`<b>${rank}</b><span>${slot}</span><span class="bar"><i style="width:${96-i*8}%"></i></span><span>${score.toFixed(5)}</span>`;el.append(row)})}
+function stageMarkup(mini=false){return `${mini?"":'<div class="stageHead"><div><div class="eyebrow">三维作业 · 同源状态</div><h2>载货运行至 16 / 09</h2></div><span class="simTag">SIM · 50% 书签</span></div>'}<div class="rack"><div class="grid20"></div></div><div class="mast"></div><div class="carrier"></div>${mini?"":'<div class="trace"></div><div class="targetNote">入库目标 16 / 09<small>G134 · 54.6 kg</small></div><div class="conveyor out"></div><div class="conveyor"></div><div class="station"></div><div class="stageNote">同侧并行双链 · 与货架成 T 型 · 回位后写入书签</div>'}`}
+document.querySelectorAll("[data-grid]").forEach(fillGrid);document.querySelectorAll("[data-top3]").forEach(fillTop3);
+document.querySelectorAll("[data-stage]").forEach(el=>{el.innerHTML=stageMarkup(false);fillGrid(el.querySelector(".grid20"))});document.querySelectorAll("[data-mini-stage]").forEach(el=>{el.innerHTML=stageMarkup(true);const rackGrid=el.querySelector(".grid20");rackGrid.dataset.lane=el.dataset.lane||"score";fillGrid(rackGrid)});
+document.querySelectorAll("[data-telemetry]").forEach(el=>el.innerHTML='<div><b>事件 134 · 已回位</b><small>当前动作与三维分离，不遮挡目标格</small></div><div><b>14.235 s</b><small>书签期望取货</small></div><div><b>3,742 m</b><small>累计双程路径</small></div><div><b>20,193.8 kg·m</b><small>提升功代理，非 kWh</small></div>');
+const views=["v1","v2","v3","vc"];function activate(id){views.forEach(v=>document.getElementById(v).classList.toggle("active",v===id));document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));history.replaceState(null,"",`?v=${id}`)}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>activate(b.dataset.view));const requested=new URLSearchParams(location.search).get("v");activate(views.includes(requested)?requested:"v1");
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "fill_release": {
+    "manifest_payload_sha256": "5ccf4d3c7a7ef495df496f024c4f7c20ae846b6325e9651a7bb66f2a76eba463",
+    "release_id": "5ccf4d3c7a7ef495df49"
+  },
+  "outputs": [
+    {
+      "file_sha256": "8213f62a7a8ca57bd3f0f14570da007af748617e334ef029ad27c09736a440bc",
+      "layout": "left",
+      "path": "l4_showcase/src/样张_S3_母版增量方案_1_顶部横排.html",
+      "source_recovery_verified": true
+    },
+    {
+      "file_sha256": "f8899b8630425dc91c9da62b8d985c607364b575f24b48688f326353641d17cb",
+      "layout": "map",
+      "path": "l4_showcase/src/样张_S3_母版增量方案_2_地图侧列.html",
+      "source_recovery_verified": true
+    },
+    {
+      "file_sha256": "4de873f78e7019768ff4596bb1ca80037fe0f932ee7376d7ebd9998de0427d16",
+      "layout": "insight",
+      "path": "l4_showcase/src/样张_S3_母版增量方案_3_证据卡组.html",
+      "source_recovery_verified": true
+    }
+  ],
+  "preservation_contract": "generated files contain the complete mother HTML plus one review CSS block and one review script; no 3D geometry, camera, light, motion, trace, store, or runtime source is replaced",
+  "review_status": "WITHDRAWN_FAIL_EVIDENCE_ONLY",
+  "schema_version": "s3-incremental-design-review-v2",
+  "source": "l4_showcase/src/样张_S3_三方向候选.html",
+  "source_sha256": "849beae2dff8e93c8a1445a42309ca0e30802d48e62eb244542719b262e225d0",
+  "withdrawal_reasons": [
+    "duplicate task summary remained in the mother layout",
+    "fill bookmarks were not bound to the active 2D/3D state",
+    "previous QA checked presence and overflow but not semantic equivalence"
+  ]
+}
