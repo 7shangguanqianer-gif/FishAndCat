@@ -250,24 +250,37 @@ try {
     await page.screenshot({path: join(OUT, 'pop_evidence.png'), fullPage: false});
     await page.evaluate(() => window.__S3_LAYOUT_A.hidePops());
   }
+  let diffZoom = null;
   {
     await page.evaluate(() => window.__S3_LAYOUT_A.openMap());
     await page.waitForTimeout(350);
     const zoom = await page.evaluate(() => ({
       open: document.getElementById('s3MapOverlay').classList.contains('open'),
       mapRect: document.getElementById('slotMap').getBoundingClientRect().toJSON(),
-      mapKeyVisible: getComputedStyle(document.querySelector('#slotMapWrap .mapKey')).display !== 'none'
+      mapKeyVisible: getComputedStyle(document.querySelector('#slotMapWrap .mapKey')).display !== 'none',
+      /* 0717 #26-4:overlay 内差异热力图已绘且非全零 */
+      diffRect: document.getElementById('diffMap')?.getBoundingClientRect().toJSON() || null,
+      diffAudit: window.__S3_FILL_QA.snapshot().diffAudit,
+      diffKeyText: document.querySelector('#diffMapWrap .diffKey')?.textContent || ''
     }));
+    diffZoom = zoom;
     pops.push({kind: 'mapZoom', rect: zoom.mapRect, inside: zoom.open && zoom.mapRect.width >= 380 && zoom.mapKeyVisible});
     await page.screenshot({path: join(OUT, 'pop_mapzoom.png'), fullPage: false});
     await page.evaluate(() => window.__S3_LAYOUT_A.closeMap());
   }
   report.popAudits = pops;
+  report.diffZoom = diffZoom;
 
   const laneStates = {};
   for (const algorithm of ['seq', 'near', 'score', 'AUTO']) {
     laneStates[algorithm] = await page.evaluate(value => { window.__S3_FILL_QA.setAlgorithm(value); return window.__S3_FILL_QA.seekBookmark(134); }, algorithm);
   }
+  /* 0717 #26-3:score 首件(G001 冷门送最远角)必须出冷门送远解说卡 */
+  const firstEventState = await page.evaluate(() => {
+    window.__S3_FILL_QA.setAlgorithm('score');
+    return window.__S3_FILL_QA.seekEvent(0, 'LADEN_TRAVEL', .5);
+  });
+  await page.screenshot({path: join(OUT, 'event001_score_reserve_note.png'), fullPage: false});
   report.laneStates = laneStates;
   await page.close();
 
@@ -380,7 +393,27 @@ try {
       item.placement.targetCardInDock && item.placement.beaconRetired) &&
       report.states.every(item => item.snapshot.target === null ?
         item.snapshot.targetCard.done && item.snapshot.targetCard.slotText === '267 / 267' :
-        item.snapshot.targetCard.slotText === `${String(item.snapshot.target[0]).padStart(2, '0')} / ${String(item.snapshot.target[1]).padStart(2, '0')}`)
+        item.snapshot.targetCard.slotText === `${String(item.snapshot.target[0]).padStart(2, '0')} / ${String(item.snapshot.target[1]).padStart(2, '0')}`),
+    /* --- 0717 #26-1:2D 三联同帧对比(三 lane 同 managedCount;当前 lane 目标与 snapshot 一致) --- */
+    fx26TriPanel: report.states.every(item => {
+      const audit = item.snapshot.mapAudit;
+      return Boolean(audit) && audit.mode === 'tri' && audit.managedCount === item.snapshot.managedCount &&
+        ['seq', 'near', 'score'].every(key => key in audit.targets) &&
+        (item.snapshot.target === null ? audit.targets[audit.activeLane] === null :
+          JSON.stringify(audit.targets[audit.activeLane]) === JSON.stringify(item.snapshot.target));
+    }) && laneStates.seq.mapAudit.activeLane === 'seq' && laneStates.score.mapAudit.activeLane === 'score',
+    /* --- 0717 #26-2:热门货视觉通道(3D 金顶数=在库热门数;2D/3D 图例在位;集合口径 53) --- */
+    fx26HotVisual: report.states.every(item => item.snapshot.hotVisual.hotLidCount === item.snapshot.hotVisual.hotInventoryCount &&
+      item.snapshot.hotVisual.legendPresent),
+    /* --- 0717 #26-3:冷门送远解说卡(score 首件 G001 出卡;热门件 G134 不出) --- */
+    fx26ColdFarNote: firstEventState.reserveNotePresent === true &&
+      report.states.filter(item => item.name.startsWith('event134_')).every(item => item.snapshot.reserveNotePresent === false),
+    /* --- 0717 #26-4:终态差异热力图(overlay 内已绘、非全零、图例齐) --- */
+    fx26DiffMap: Boolean(report.diffZoom) && report.diffZoom.open !== false &&
+      Boolean(report.diffZoom.diffAudit) && report.diffZoom.diffAudit.nonZeroCells > 0 &&
+      report.diffZoom.diffAudit.reservedCells === 133 &&
+      report.diffZoom.diffRect && report.diffZoom.diffRect.width >= 200 &&
+      /SCORE 放了更热门|更冷门/.test(report.diffZoom.diffKeyText)
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

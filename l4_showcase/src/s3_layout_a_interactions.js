@@ -81,8 +81,18 @@
   const mapWrap = byId("slotMapWrap");
   const zoomHint = doc.createElement("span");
   zoomHint.className = "zoomHint";
-  zoomHint.textContent = "点击放大 ⤢";
+  zoomHint.textContent = "放大 · 三联+差异 ⤢";
   mapWrap.append(zoomHint);
+  /* 0717 #26-4:终态货-格配对差异热力图(仅放大 overlay 内显示;canvas 由 runtime 绘制,
+     满仓守恒下货-格配对是唯一有信息量的终态对比) */
+  const diffWrap = doc.createElement("div");
+  diffWrap.id = "diffMapWrap";
+  diffWrap.innerHTML = '<div class="diffHead"><b>终态货-格配对差异 · SCORE − SEQ</b>' +
+    '<span>满仓终态三算法占同一 267 格集合(完工/行程守恒),差异全部在「哪件货配哪格」——每格显示两算法所放货物的访问频次差</span></div>' +
+    '<canvas id="diffMap"></canvas>' +
+    '<div class="diffKey"><span><i class="dPos"></i>SCORE 放了更热门的货</span>' +
+    '<span><i class="dNeg"></i>SCORE 放了更冷门的货</span><span><i class="dZero"></i>预占 / 无差</span></div>';
+  mapWrap.append(diffWrap);
   /* 取货指标注解(E2,0716):点明终点统计中的取货项回应赛题「存取效率」;traceStats 由 runtime 重写 innerHTML,注解放其后独立节点 */
   const retrievalNote = doc.createElement("div");
   retrievalNote.id = "retrievalNote";

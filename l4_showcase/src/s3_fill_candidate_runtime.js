@@ -292,6 +292,11 @@
   }));
   const lidMesh = new THREE.InstancedMesh(stockLidGeometry, M.lid, stockCapacity);
   lidMesh.count = 0; stockGroup.add(lidMesh);
+  /* 0717 #26-2 热门货 3D 视觉通道:hot20(freq 前 1/5)货箱换金顶盖——SCORE「热门放近」的胜利从隐形变可见。 */
+  const hotLidMaterial = M.lid.clone(); hotLidMaterial.color.set(0xd9ad00);
+  if (hotLidMaterial.emissive) hotLidMaterial.emissive.set(0x3a2e00);
+  const hotLidMesh = new THREE.InstancedMesh(stockLidGeometry, hotLidMaterial, stockCapacity);
+  hotLidMesh.count = 0; stockGroup.add(hotLidMesh);
   if (cargo.parent) cargo.parent.remove(cargo); scene.add(cargo); cargo.visible = false;
 
   const activeMaterials = Object.fromEntries(Object.entries(gradeMaterial).map(([grade, material]) => {
@@ -305,16 +310,19 @@
     const signature = `${laneId}:${managedCount}`;
     if (signature === stockSignature) return;
     stockSignature = signature;
-    const counts = {heavy: 0, mid: 0, light: 0}; let lidCount = 0;
+    const counts = {heavy: 0, mid: 0, light: 0}; let lidCount = 0, hotLidCount = 0;
     rows.forEach(row => {
       const grade = good(row.gid).grade;
       stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .46); stockDummy.updateMatrix();
       stockMeshes[grade].setMatrixAt(counts[grade]++, stockDummy.matrix);
       stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .84); stockDummy.updateMatrix();
-      lidMesh.setMatrixAt(lidCount++, stockDummy.matrix);
+      /* #26-2:热门货金顶盖,普通货灰顶盖 */
+      if (hotGids.has(row.gid)) hotLidMesh.setMatrixAt(hotLidCount++, stockDummy.matrix);
+      else lidMesh.setMatrixAt(lidCount++, stockDummy.matrix);
     });
     Object.entries(stockMeshes).forEach(([grade, mesh]) => { mesh.count = counts[grade]; mesh.instanceMatrix.needsUpdate = true; });
     lidMesh.count = lidCount; lidMesh.instanceMatrix.needsUpdate = true;
+    hotLidMesh.count = hotLidCount; hotLidMesh.instanceMatrix.needsUpdate = true;
   }
 
   function disposePaths() {
@@ -510,13 +518,15 @@
     return {context, width: rect.width, height: rect.height};
   }
 
-  function drawSlotMap(frame, model) {
-    const surface = canvasSurface("slotMap"); if (!surface) return;
-    const {context: g, width, height} = surface, size = Math.min(width - 16, height - 10), cell = size / 20;
-    const x0 = (width - size) / 2, y0 = (height - size) / 2, grid = model.grids[frame.managedCount];
-    g.fillStyle = "#eef2f4"; g.fillRect(x0, y0, size, size);
+  /* 0717 #26-1/2:2D 三联同帧对比——SEQ|NEAR|SCORE 同一进度并排推进,同帧直视分化
+     (SEQ 竖条纹 vs SCORE 低层横铺);热门货画角标。lastMapAudit 供 QA。 */
+  let lastMapAudit = null;
+  function drawGridPanel(g, frame, laneId, px, py, panel) {
+    const model = models.get(laneId), grid = model.grids[frame.managedCount], cell = panel / 20;
+    const active = laneId === state.laneId;
+    g.fillStyle = "#eef2f4"; g.fillRect(px, py, panel, panel);
     for (let col = 0; col < 20; col += 1) for (let tier = 0; tier < 20; tier += 1) {
-      const x = x0 + col * cell, y = y0 + (19 - tier) * cell, value = grid[col * 20 + tier];
+      const x = px + col * cell, y = py + (19 - tier) * cell, value = grid[col * 20 + tier];
       if (value === -1) {
         g.fillStyle = "#76848e"; g.fillRect(x + .4, y + .4, cell - .8, cell - .8);
         /* 0716 用户授权修改:斜纹裁剪到本格矩形内,修复放大视图下纹线溢出到相邻货物格的绘制缺陷。 */
@@ -525,19 +535,85 @@
         for (let d = -cell; d < cell * 2; d += Math.max(2.8, cell * .48)) { g.beginPath(); g.moveTo(x + d, y + cell); g.lineTo(x + d + cell, y); g.stroke(); }
         g.restore();
       } else if (value > 0) {
-        g.fillStyle = GRADE_CSS[good(value).grade]; g.fillRect(x + .7, y + .7, cell - 1.4, cell - 1.4);
+        g.fillStyle = GRADE_CSS[good(value).grade]; g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
+        if (hotGids.has(value)) {
+          const notch = Math.max(2.2, cell * .42);
+          g.fillStyle = "#ffd400"; g.beginPath(); g.moveTo(x + cell - .5, y + .5);
+          g.lineTo(x + cell - .5, y + notch); g.lineTo(x + cell - notch, y + .5); g.closePath(); g.fill();
+        }
       }
-      g.strokeStyle = "#c7d0d6"; g.lineWidth = .55; g.strokeRect(x, y, cell, cell);
+      if (cell >= 8) { g.strokeStyle = "#c7d0d6"; g.lineWidth = .55; g.strokeRect(x, y, cell, cell); }
     }
-    if (frame.slot) {
-      const x = x0 + frame.slot[0] * cell, y = y0 + (19 - frame.slot[1]) * cell;
-      g.strokeStyle = "#ffd400"; g.lineWidth = Math.max(2, cell * .22); g.strokeRect(x + .7, y + .7, cell - 1.4, cell - 1.4);
+    const targetSlot = frame.managedCount < 267 ?
+      model.lane.events[Math.min(frame.eventIndex, 266)].decision.selected_slot : null;
+    if (targetSlot) {
+      const x = px + targetSlot[0] * cell, y = py + (19 - targetSlot[1]) * cell;
+      g.strokeStyle = "#ffd400"; g.lineWidth = Math.max(1.6, cell * .22); g.strokeRect(x + .5, y + .5, cell - 1, cell - 1);
     }
-    if (frame.cargoVisible && ["LADEN_TRAVEL", "STORE_HANDLE"].includes(frame.operation)) {
+    if (active && frame.cargoVisible && ["LADEN_TRAVEL", "STORE_HANDLE"].includes(frame.operation)) {
       const col = clamp(frame.machine.x, 0, 19), tier = clamp(frame.machine.z, 0, 19);
-      g.beginPath(); g.arc(x0 + (col + .5) * cell, y0 + (19 - tier + .5) * cell, Math.max(2.4, cell * .31), 0, Math.PI * 2);
-      g.fillStyle = GRADE_CSS[good(frame.event.gid).grade]; g.fill(); g.strokeStyle = "#ffd400"; g.lineWidth = 1.3; g.stroke();
+      g.beginPath(); g.arc(px + (col + .5) * cell, py + (19 - tier + .5) * cell, Math.max(2.2, cell * .31), 0, Math.PI * 2);
+      g.fillStyle = GRADE_CSS[good(frame.event.gid).grade]; g.fill(); g.strokeStyle = "#ffd400"; g.lineWidth = 1.2; g.stroke();
     }
+    g.strokeStyle = active ? "#e7b800" : "#c7d0d6"; g.lineWidth = active ? 2 : 1;
+    g.strokeRect(px - .5, py - .5, panel + 1, panel + 1);
+    return targetSlot;
+  }
+  function drawSlotMap(frame) {
+    const surface = canvasSurface("slotMap"); if (!surface) return;
+    const {context: g, width, height} = surface;
+    const gap = 9, labelH = 13;
+    const panel = Math.min((width - gap * 2 - 4) / 3, height - labelH - 3);
+    const x0 = (width - panel * 3 - gap * 2) / 2, y0 = labelH + 1;
+    const targets = {};
+    ["seq", "near", "score"].forEach((laneId, index) => {
+      const px = x0 + index * (panel + gap), active = laneId === state.laneId;
+      g.font = `${active ? "800" : "700"} 9px "Microsoft YaHei"`; g.textAlign = "left";
+      g.fillStyle = active ? "#8a6a00" : "#5d6972";
+      g.fillText(`${laneId.toUpperCase()}${active ? " · 当前" : ""}`, px + 1, y0 - 4);
+      targets[laneId] = drawGridPanel(g, frame, laneId, px, y0, panel);
+    });
+    lastMapAudit = {mode: "tri", managedCount: frame.managedCount,
+      activeLane: state.laneId, targets, hotSetSize: hotGids.size};
+  }
+
+  /* 0717 #26-4:终态货-格配对差异热力图(SCORE−SEQ 每格热门度差)。满仓守恒下三算法终态占同一
+     267 格集合,总量指标数学必然全同——货-格配对是唯一有信息量的终态对比。终态静态,按尺寸画一次;
+     canvas 平时藏于放大 overlay,rect 为 0 时跳过。lastDiffAudit 供 QA。 */
+  let lastDiffAudit = null;
+  function drawDiffMap() {
+    const canvas = byId("diffMap"); if (!canvas) return;
+    const rect = canvas.getBoundingClientRect(); if (rect.width < 2 || rect.height < 2) return;
+    const signature = `${Math.round(rect.width)}x${Math.round(rect.height)}`;
+    if (canvas.dataset.drawn === signature) return;
+    const surface = canvasSurface("diffMap"); if (!surface) return;
+    canvas.dataset.drawn = signature;
+    const {context: g, width, height} = surface, size = Math.min(width - 4, height - 4), cell = size / 20;
+    const x0 = (width - size) / 2, y0 = (height - size) / 2;
+    const seqGrid = models.get("seq").grids[267], scoreGrid = models.get("score").grids[267];
+    const diffs = seqGrid.map((seqValue, index) => {
+      const scoreValue = scoreGrid[index];
+      if (seqValue === -1) return null;
+      return (scoreValue > 0 ? good(scoreValue).freq : 0) - (seqValue > 0 ? good(seqValue).freq : 0);
+    });
+    const maxAbs = Math.max(...diffs.filter(value => value !== null).map(Math.abs), 1e-9);
+    let nonZeroCells = 0;
+    g.fillStyle = "#f4f6f8"; g.fillRect(x0, y0, size, size);
+    for (let col = 0; col < 20; col += 1) for (let tier = 0; tier < 20; tier += 1) {
+      const x = x0 + col * cell, y = y0 + (19 - tier) * cell, diff = diffs[col * 20 + tier];
+      if (diff === null) { g.fillStyle = "#d7dde1"; g.fillRect(x + .4, y + .4, cell - .8, cell - .8); continue; }
+      if (Math.abs(diff) > 1e-9) {
+        nonZeroCells += 1;
+        const strength = Math.pow(Math.abs(diff) / maxAbs, .55);
+        g.fillStyle = diff > 0 ? `rgba(216,148,0,${(.14 + .82 * strength).toFixed(3)})` :
+          `rgba(11,111,191,${(.14 + .82 * strength).toFixed(3)})`;
+        g.fillRect(x + .4, y + .4, cell - .8, cell - .8);
+      }
+      if (cell >= 8) { g.strokeStyle = "#cdd5da"; g.lineWidth = .5; g.strokeRect(x, y, cell, cell); }
+    }
+    g.strokeStyle = "#9ea9b1"; g.lineWidth = 1; g.strokeRect(x0 - .5, y0 - .5, size + 1, size + 1);
+    lastDiffAudit = {nonZeroCells, maxAbs: Number(maxAbs.toFixed(3)), cells: 400,
+      reservedCells: diffs.filter(value => value === null).length};
   }
 
   function drawSpeed(frame) {
@@ -572,7 +648,10 @@
       ".gradeDot.heavy{background:#366786}.gradeDot.mid{background:#4ea9c2}.gradeDot.light{background:#abd1d8}" +
       "#sceneActionText em{font-style:normal}" +
       "#sceneActionText .hotChip{margin-left:7px;padding:1px 5px 2px;background:#fdf3cf;border:1px solid #e0b600;" +
-        "color:#5b4a00;font-size:.78em;font-weight:800;white-space:nowrap;vertical-align:1px}";
+        "color:#5b4a00;font-size:.78em;font-weight:800;white-space:nowrap;vertical-align:1px}" +
+      /* 0717 #26-3 冷门送远解说卡 */
+      "#decisionWrap .reserveNote{margin-top:4px;padding:4px 6px;border-left:3px solid #b8860b;background:#fdf7e3;" +
+        "color:#4c3d10;font:7.5px/1.35 \"Microsoft YaHei\",sans-serif}";
     document.head.append(governanceStyle);
     byId("strategySelect").innerHTML = '<option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
     /* 0717 #28 用户拍板:锁定下拉在观感上像坏控件——整个换成静态说明标签(非下拉),口径如实:
@@ -600,8 +679,16 @@
     }
     byId("traceLoadState").textContent = "数据链已验证";
     byId("railHead").querySelector(".matrix").innerHTML = "20 × 20<br>SIM / 填满";
-    const mapHead = byId("slotMapWrap").querySelector(".mapHead"); mapHead.querySelector("b").textContent = "20 × 20 容量联动图";
-    mapHead.querySelector("span").textContent = "同一 reducer · 133 预占 + 管理货 0→267"; mapHead.querySelector("strong").id = "capacityTotal";
+    /* 0717 #26-1:单图升三联同帧对比 */
+    const mapHead = byId("slotMapWrap").querySelector(".mapHead"); mapHead.querySelector("b").textContent = "三算法同帧对比 · 20 × 20";
+    mapHead.querySelector("span").textContent = "同批货同进度 · SEQ | NEAR | SCORE · 133 预占同布"; mapHead.querySelector("strong").id = "capacityTotal";
+    /* 热门图例只在决赛 01 页(target-card 模式)追加:候选页(冻结观感)加此项会把 1600×900
+       下的 slotMapWrap 撑出视口 1.3px(candidate QA viewportsInside 实测),角点绘制不受影响。 */
+    const mapKey = byId("slotMapWrap").querySelector(".mapKey");
+    if (targetCardMode && mapKey && !mapKey.querySelector(".hotKey")) {
+      const hotKey = document.createElement("span"); hotKey.className = "hotKey";
+      hotKey.innerHTML = '<i style="background:#ffd400"></i>★ 热门前 20%'; mapKey.append(hotKey);
+    }
     byId("slotMapWrap").querySelector(".mapRule span").textContent = "sum 规则：预占 133 格，不属于管理容量";
     const facts = Array.from(byId("railFacts").children); facts[0].querySelector("span").textContent = "已入库 / 267";
     facts[1].querySelector("span").textContent = "入口等待"; facts[2].querySelector("span").textContent = "约束违规";
@@ -620,7 +707,7 @@
     DISPLAY_STEPS.forEach((step, index) => { const row = document.createElement("div"); row.className = "processGuideRow"; row.dataset.step = String(index);
       row.innerHTML = `<i>${index + 1}</i><b>${step.label}</b><span>${step.purpose}</span>`; guide.querySelector("#processGuideRows").append(row); });
     byId("insightStack").append(guide);
-    byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回位</span><span class="blocked"><i></i>预占</span>';
+    byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回位</span><span class="blocked"><i></i>预占</span><span class="hotlid"><i style="background:#d9ad00"></i>金顶 = 热门前 20%</span>';
     byId("phaseNow").textContent = "容量书签 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
   }
 
@@ -658,6 +745,23 @@
         `总分 ${Number(top1.score_terms.score_total).toFixed(4)} 由 ${top1.tie_size} 个货位并列，按更短行程、更低层、更小列落位。`}` +
       "等时区现象：垂直限速 0.5 m/s 仅为水平 2.0 m/s 的 1/4，多数货位行程由层高主导、与列号无关，并列是结构性结果。</div>" : "";
     const terms = state.laneId === "score" ? top3[0].score_terms : null;
+    /* 0717 #26-3 冷门送远解说卡:保留项主导+当前货非热门时,当场讲清"为什么这件货被送远"
+       ——对冲开局镜头的直觉冲击(首件 G001 送最远角是设计行为,不是 bug);附同件货 SEQ/NEAR 对照落位。 */
+    const reserveNote = (() => {
+      if (!terms || frame.idle) return "";
+      const weighted = {efficiency: Number(terms.efficiency_weighted), stability: Number(terms.stability_weighted),
+        energy: Number(terms.energy_proxy_weighted), reserve: Number(terms.position_reservation_weighted)};
+      const reserveDominant = weighted.reserve >= Math.max(weighted.efficiency, weighted.stability, weighted.energy);
+      const cargo = good(event.gid);
+      if (!reserveDominant || hotGids.has(event.gid)) return "";
+      const slotText = value => `(${String(value[0]).padStart(2, "0")},${String(value[1]).padStart(2, "0")})`;
+      const seqSlot = models.get("seq").lane.events[event.event_index - 1].decision.selected_slot;
+      const nearSlot = models.get("near").lane.events[event.event_index - 1].decision.selected_slot;
+      return `<div class="reserveNote" role="note">冷门货让位机理：${cargo.name} 频次 ${cargo.freq.toFixed(2)}(非热门），` +
+        `四项贡献中位置保留项最大（${weighted.reserve.toFixed(4)}）——低频货被主动推向远端，近端货位为后续热门货保留。` +
+        `同件货对照：SEQ 落 ${slotText(seqSlot)} · NEAR 落 ${slotText(nearSlot)} · SCORE 落 ${slotText(selected)}。` +
+        `${event.event_index === 1 ? "开局首件即此机理的最直观案例：用远端一格换取全局热门近置（终点统计的热门取货角标即其收益）。" : ""}</div>`;
+    })();
     const breakdown = terms ? `<div class="scoreBreakdown" aria-label="选中货位评分分项">` +
       `<span title="效率项：频次与双轴行程时间的加权贡献">效率<b>${Number(terms.efficiency_weighted).toFixed(4)}</b></span>` +
       `<span title="稳定项：重量与层位耦合的加权贡献；越小越优">稳定<b>${Number(terms.stability_weighted).toFixed(4)}</b></span>` +
@@ -668,7 +772,7 @@
       `<div class="decisionLine"><span>选择依据</span><b>${reason}</b></div>` +
       `<div class="decisionLine"><span>${frame.idle && frame.managedCount === 267 ? "终点" : "下一目标"}</span><b>${frame.slot ? `${String(selected[0]).padStart(2, "0")} / ${String(selected[1]).padStart(2, "0")}` : "400 / 400 已满"}</b></div>` +
       `<div class="decisionLine"><span>候选审计</span><b>${audit.legal_count} 个合法 · 排除 ${audit.rejected_count}</b></div>` +
-      `<div class="candidates" aria-label="最多三个已审计合法候选">${candidateRows}</div>${tieNote}${breakdown}` +
+      `<div class="candidates" aria-label="最多三个已审计合法候选">${candidateRows}</div>${tieNote}${reserveNote}${breakdown}` +
       `<div class="candidateTop">第 1 名与实际货位、${score === null ? "排序依据" : `总分 ${Number(score).toFixed(4)}`}、审计引用逐项一致；临近满仓时如实显示不足 3 个候选。</div>`;
   }
 
@@ -756,7 +860,7 @@
     lastFrame = frame; setInventory(frame.rows, state.laneId, frame.managedCount);
     if (frame.idle && frame.managedCount === 267) { disposePaths(); pathSignature = ""; }
     else setPaths(frame.event, state.laneId, frame.idle ? null : frame.operation);
-    const machineWorld = setMachine(frame); setCargo(frame, machineWorld); setTarget(frame); drawSlotMap(frame, state.model); drawSpeed(frame);
+    const machineWorld = setMachine(frame); setCargo(frame, machineWorld); setTarget(frame); drawSlotMap(frame); drawSpeed(frame); drawDiffMap();
     /* #28 发光壳呼吸+箭头竖直浮动:相位取演示时钟 state.elapsed(seek 后固定,截图可复现),不用挂钟。 */
     if (targetFx && targetFx.glow.visible) {
       const pulse = (Math.sin(state.elapsed * 2.4) + 1) / 2, live = targetFx.arrow.visible;
@@ -872,6 +976,11 @@
       targetCard: byId("targetCard") ? {state: byId("targetCardState").textContent,
         slotText: byId("targetCardSlot").textContent, detail: byId("targetCardDetail").textContent,
         done: byId("targetCard").classList.contains("done")} : null,
+      mapAudit: lastMapAudit, diffAudit: lastDiffAudit,
+      hotVisual: {hotLidCount: hotLidMesh.count,
+        hotInventoryCount: lastFrame ? lastFrame.rows.filter(row => hotGids.has(row.gid)).length : 0,
+        legendPresent: /热门前 20%/.test(byId("reserveRuleBadge").textContent)},
+      reserveNotePresent: Boolean(document.querySelector("#decisionWrap .reserveNote")),
       narrativeAudit: {
         scenario: SCENARIO,
         scenarioSwitchEnabled: !byId("profileSelect").disabled,

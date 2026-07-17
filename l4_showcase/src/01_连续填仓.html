@@ -611,12 +611,26 @@
     #reserveRuleBadge{gap:4px}#reserveRuleBadge i{width:11px}#reserveRuleBadge span{font-size:6.5px}}
   @media(max-height:780px){#viewport{--scene-dock-h:70px;--scene-dock-bottom:8px}#sceneCaption{padding-top:4px;padding-bottom:4px}#speed{height:36px}}
 
-  /* 0715 Task17：方形货位图不再被拉成长卡；释放出的高度用于真实 SIM 时长标尺。 */
+  /* 0715 Task17：方形货位图不再被拉成长卡；释放出的高度用于真实 SIM 时长标尺。
+     0717 #26-1:单图升三联(SEQ|NEAR|SCORE 横排),aspect-ratio 相应扁化。 */
   #workHud{grid-template-columns:minmax(0,1.24fr) minmax(160px,.76fr);
     grid-template-rows:auto auto auto auto auto minmax(72px,1fr);
     grid-template-areas:"head head" "task task" "controls controls" "decision decision" "map insight" "phase insight"}
   #slotMapWrap{align-self:start;container-type:inline-size}
-  #slotMap{flex:none!important;width:100%;height:auto!important;min-height:0!important;aspect-ratio:1/1}
+  #slotMap{flex:none!important;width:100%;height:auto!important;min-height:0!important;aspect-ratio:2.55/1}
+  /* 0717 #26-4:差异热力图默认隐藏,仅放大 overlay 内显示 */
+  #diffMapWrap{display:none}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap{display:block;margin-top:12px;border-top:1px dashed #c9ced3;padding-top:9px}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffHead b{display:block;font-size:11px;color:#18232c}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffHead span{display:block;margin-top:2px;color:#65717c;font-size:8.5px;line-height:1.4}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMap{display:block;width:min(270px,55%);aspect-ratio:1/1;margin:8px auto 0}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffKey{display:flex;justify-content:center;gap:14px;margin-top:6px;font-size:9px;color:#53616b}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffKey i{display:inline-block;width:12px;height:9px;margin-right:4px;vertical-align:-1px}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffKey .dPos{background:#d89400}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffKey .dNeg{background:#0b6fbf}
+  html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffKey .dZero{background:#d7dde1}
+  html[data-s3-layout="A"] #s3MapOverlay .mapDock{max-height:88vh;overflow:auto}
+  html[data-s3-layout="A"] #reserveRuleBadge .hotlid i{height:7px}
   #insightStack{grid-area:insight;grid-row:5/7}
   #phaseRail{grid-area:phase;align-self:stretch;min-height:72px;padding:7px 8px;display:grid;
     grid-template-rows:auto 10px minmax(34px,1fr);gap:5px;overflow:hidden}
@@ -732,8 +746,8 @@
   html[data-s3-layout="A"] #slotMapWrap{flex:1 1 auto;order:3;min-height:150px;position:relative;cursor:zoom-in;
     display:grid!important;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;height:auto;max-height:none;
     align-self:stretch!important;width:auto!important}
-  html[data-s3-layout="A"] #slotMap{width:auto!important;height:100%!important;min-height:0!important;
-    max-width:100%;max-height:100%;aspect-ratio:1/1;justify-self:center;align-self:center;margin:4px auto 0;flex:none!important}
+  html[data-s3-layout="A"] #slotMap{width:100%!important;height:auto!important;min-height:0!important;
+    max-width:100%;max-height:100%;aspect-ratio:2.55/1;justify-self:center;align-self:start;margin:4px auto 0;flex:none!important}
   html[data-s3-layout="A"] #decisionWrap .decisionLine span{flex:none;white-space:nowrap}
   html[data-s3-layout="A"] #decisionWrap .decisionLine b{text-align:right}
   html[data-s3-layout="A"] #slotMapWrap .mapKey{display:none}
@@ -874,8 +888,8 @@
     html[data-s3-layout="A"] #fillBookmarkButtons button::after{display:block}
     html[data-s3-layout="A"] #fillBookmarks .fillHead b{font-size:13px}
     html[data-s3-layout="A"] #fillEvidence b{font-size:12.5px}
-    html[data-s3-layout="A"] #slotMapWrap .mapKey{display:flex;margin-top:5px;padding-right:64px}
-    html[data-s3-layout="A"] #slotMapWrap .zoomHint{bottom:30px}
+    html[data-s3-layout="A"] #slotMapWrap .mapKey{display:flex;flex-wrap:wrap;margin-top:5px;padding-right:112px}
+    html[data-s3-layout="A"] #slotMapWrap .zoomHint{bottom:6px}
     html[data-s3-layout="A"] .phaseSeg .phaseName{font-size:8.5px}
   }
 </style>
