@@ -1,8 +1,8 @@
 # Overnight 断点文件(滚动更新;心跳 cron 与任何续跑会话以本文件为唯一真相源)
 
 status: RUNNING
-heartbeat: 2026-07-18 03:05 (+0800)
-current: M4a 完成(双命令调度稿+30seed,f928e7d);M4b 页体侦察中(sonnet 映射 AC runtime DOM 契约),将出实现计划(页体建议留用户在场窗口)
+heartbeat: 2026-07-18 03:25 (+0800)
+current: M4 完成(M4a 调度稿+30seed;M4b 实现计划,页体延后用户在场窗口——运行时非自包含+高脆性,详计划);推进 M8/M6/M7 自足项
 
 ## 续跑指令(给心跳 cron / 冷启动会话 / compact 后续跑)
 
@@ -20,7 +20,9 @@ current: M4a 完成(双命令调度稿+30seed,f928e7d);M4b 页体侦察中(sonne
   - 已知欠账(留 M3):task12 determinism 门 flaky——changedPixels 阈值 64 现成绑定约束(实测偶发 66,maxChannelDelta 5、stateStable true=纯 GPU AA 抖动非逻辑差异);M3 拟提阈值至 96 并注释。
 - [DONE] M2 #27 结论文档(负结果;生产零改动)——docs/S3评分修订what-if结论_0718.md,含 skew/uniform 30seed 均值表+判据逐条裁决+τ 饱和点机理(19s 落高层、首件(19,0) t_norm=0.25 在饱和点下)+复现命令。
 - [DONE] M3 技术欠账:sim core_smoke PASS(unittest discover+5seed headline锚);task12 flaky 阈值 64→96(9eeb945);0716 设计评审产物点名归档 17 文件(401d9ef,含 ia_review spec/恢复版式3候选/archive_0716冻结快照)。AB 日志/l2 logs/codex_out/1_2_ 均未碰(红线)。
-- [ ] M4 #16 mixed:02_入出闭环.html+交互+新 QA+双命令调度设计稿(文档+sim 离线原型 30seed 配对vs顺序空驶节省%)
+- [DONE(拆)] M4 #16 mixed:
+  - [DONE] M4a 双命令调度设计稿+30seed 离线原型(f928e7d,docs/双命令调度设计稿_0718.md + sim/mixed_dispatch_sweep.py + 证据)。
+  - [计划就绪,页体延后] M4b 02_入出闭环.html 建页:深侦察证实 s3_ac_runtime.js **非自包含**(依赖原宿主页 684 行场景脚本的 ~30 自由变量)+严格加载序+大崩溃面+运行时自建 DOM(禁手写),盲编码夜间极易白屏。已写 **docs/implementation-notes_02入出闭环页_0718.md**(契约/配方/QA门/风险/4待澄清全前置),**页体建议用户在场窗口照单执行+目视迭代**(规格 §6-3 亦言「单独工作窗」)。
 - [进行中/半阻] M5 #17 T7:00_导览 04 章挂决赛四件实链+全页口径体检。**预扫发现(待 M4b 后定夺)**:①04章用通用名(三维作业回放/运行数据看板)非实际 01_/02_/03_ 文件名,「四件实链」含尚不存在的 02 页(M4b 延后→死链风险),故实链暂只能挂 00/01/03 三件;②行 131 断言口径写「75 项通过、0 失败」,红线锚为「77/0」——需真相源核对(夜间不碰 AB,只读存疑,记待拍板);③口径整体健康:AUTO 已标「规则选路」、AWRA 未冒充在线、oracle 双口径带 sim 免责。**M5 独立部分(口径体检修正)可做,四件实链待 02 页**。
 - [ ] M6 T6:01 页 90s 定调片(候选,Playwright 录制,落 l4_showcase/media/)
 - [ ] M7 报告周素材包+三课课件草稿(docs/,不碰 1_/2_)
