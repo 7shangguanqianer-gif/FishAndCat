@@ -503,10 +503,13 @@ async function runDeterminismAudit(page) {
   const stateStable = cameraError <= 1e-9 && JSON.stringify(coreState(firstState)) === JSON.stringify(coreState(secondState));
   const exactEqual = firstBytes.equals(secondBytes);
   /* 0717:通道容差 2→8——D3D11 光栅化在文字/线条抗锯齿处偶发 ±5 级亚像素抖动(实测 50 px/max 5,
-     同断言前一轮曾过=flaky);逻辑性差异是成千上万像素级,主闸 changedPixels/ratio 不放宽。 */
-  const pixelStable = exactEqual || (second.pixelDiff.changedPixels <= 64 && second.pixelDiff.changedRatio <= .0002 &&
+     同断言前一轮曾过=flaky);逻辑性差异是成千上万像素级,主闸 changedPixels/ratio 不放宽。
+     0718(M3):changedPixels 64→96——0718 overnight 实测偶发 66 px(maxChannelDelta 5、stateStable true=
+     纯 AA 抖动非逻辑差异),64 成 flaky 绑定约束;maxChannelDelta≤8 仍守逻辑差异(逻辑差=千像素级),
+     ratio .0002 未动(96/547776≈0.000175 仍在内)。 */
+  const pixelStable = exactEqual || (second.pixelDiff.changedPixels <= 96 && second.pixelDiff.changedRatio <= .0002 &&
     second.pixelDiff.maxChannelDelta <= 8);
-  return {equal: pixelStable, exactEqual, pixelStable, pixelTolerance:{maxChangedPixels:64,maxChangedRatio:.0002,maxChannelDelta:8},
+  return {equal: pixelStable, exactEqual, pixelStable, pixelTolerance:{maxChangedPixels:96,maxChangedRatio:.0002,maxChannelDelta:8},
     pixelDiff:second.pixelDiff, stateStable, cameraError, firstState, secondState,
     firstSha256: sha256(firstBytes), secondSha256: sha256(secondBytes), bytes: firstBytes.length};
 }
