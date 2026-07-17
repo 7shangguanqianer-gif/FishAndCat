@@ -588,8 +588,9 @@
   }
 
   function renderStats() {
-    /* 治理 A(0716 深审):指标顺序按「能区分算法的在前」重排——填满口径下期望取货被
-       “先到先得”机理支配(SEQ 天然占优),分层收益指标(热门/重货/能耗)才是算法分化的证据;
+    /* 治理 A(0716 深审)+ C1 修正(0717 跑批):指标顺序按「能区分算法的在前」重排;
+       期望取货在本展示种子(2026)恰为 SEQ 占优,但 30 种子跑批中 SCORE 四项均值全部最优
+       (evidence/s3_fill_seed_sweep_skew_2026_2055.json)——title 如实给双口径,不粉饰单种子角标;
        完工时长/总行程对落位顺序数学守恒,单列为守恒量格预讲。角标 = 相对 SEQ 基线,本组指标越低越好。 */
     const metrics = state.model.lane.metrics, host = byId("traceStats");
     const seqMetrics = models.get("seq").lane.metrics;
@@ -600,10 +601,10 @@
       return `<em class="statsDelta ${pct < 0 ? "better" : "worse"}">${pct < 0 ? "▼" : "▲"}${Math.abs(pct).toFixed(1)}%</em>`;
     };
     host.innerHTML = `<div class="statsHead"><b>当前算法终点统计</b><span>单种子 · 连续入库 · SIM</span></div><div class="statsGrid">` +
-      `<button class="metricHelp" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
-      `<button class="metricHelp" title="最重 20% 货物的平均层位，越低越稳(降低重心)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
-      `<button class="metricHelp" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
-      `<button class="metricHelp" title="全部 267 件的频次加权期望取货时间。填满口径下先到者占近格、后到者只剩远格，该均值天然偏向顺序放置；算法分化请看热门取货、重货均层、能耗代理三项"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small>${deltaBadge(metrics.expected_retrieval_s, seqMetrics.expected_retrieval_s)}</button>` +
+      `<button class="metricHelp" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益(30 种子跑批方向一致)。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
+      `<button class="metricHelp" title="最重 20% 货物的平均层位，越低越稳(降低重心；30 种子跑批方向一致)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
+      `<button class="metricHelp" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值(30 种子跑批方向一致)"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
+      `<button class="metricHelp" title="全部 267 件的频次加权期望取货时间。本页为单种子(2026)可复现样本，该种子恰 SEQ 占优；30 种子稳健性跑批(2026–2055)中 SCORE 均值最优(20.57 vs SEQ 21.70 s)，四项指标全部领先——证据 evidence/s3_fill_seed_sweep_skew_2026_2055.json"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small>${deltaBadge(metrics.expected_retrieval_s, seqMetrics.expected_retrieval_s)}</button>` +
       `<button class="metricHelp" title="本连续入库数据门的硬约束违规"><b>${metrics.violations}</b><small>约束违规 ⓘ</small></button>` +
       `<button class="metricHelp conservedCell" title="守恒量：填满口径下三种算法终态占据同一批 267 个货位，完工时长与总行程只取决于货位集合与同批货物，数学上必然三算法相等——能区分算法的是取货侧与分布侧指标"><b>${Math.round(metrics.makespan_s)} s · ${Math.round(metrics.round_trip_path_m)} m</b><small>完工/行程 · 三算法恒等 ⓘ</small></button></div>`;
   }
@@ -766,7 +767,7 @@
           models.get(id).lane.metrics.makespan_s === models.get("seq").lane.metrics.makespan_s &&
           models.get(id).lane.metrics.round_trip_path_m === models.get("seq").lane.metrics.round_trip_path_m),
         deltaBadgeCount: document.querySelectorAll("#traceStats .statsDelta").length,
-        expectedRetrievalMechanismNoted: /先到者占近格/.test(Array.from(
+        expectedRetrievalMechanismNoted: /30 种子稳健性跑批/.test(Array.from(
           document.querySelectorAll("#traceStats .metricHelp")).map(el => el.title).join("")),
         tieNote: {
           present: Boolean(document.querySelector("#decisionWrap .tieNote")),
