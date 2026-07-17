@@ -302,7 +302,26 @@ try {
     placementComplete: report.layoutAudits.every(item => Object.values(item.placement).every(Boolean)),
     reserveBadgeCompact: report.viewports.every(item => item.badgeAreaShare < .15 && item.badge.width < item.gl.width * .6),
     axisFillProgress: bookmarkOverlays[134]?.axisFill === '50.19%' && bookmarkOverlays[267]?.axisFill === '100%' && bookmarkOverlays[0]?.axisFill === '0%',
-    popsInsideViewport: report.popAudits.every(item => item.inside)
+    popsInsideViewport: report.popAudits.every(item => item.inside),
+    /* --- 治理 A+B 门(0716 深审获批,docs/S3算法深审与治理方案_0716.md) --- */
+    govStatsReordered: report.states.every(item => {
+      const order = item.snapshot.narrativeAudit.statsSmallOrder;
+      return order.length === 6 && order[0].includes('热门取货') && order[1].includes('重货均层') &&
+        order[2].includes('能耗代理') && order[3].includes('期望取货') && order[4].includes('约束违规') && order[5].includes('三算法恒等');
+    }),
+    govConservedBadge: report.states.every(item => item.snapshot.narrativeAudit.conservedCellPresent &&
+      item.snapshot.narrativeAudit.conservedValuesEqualAcrossLanes),
+    govNoSmartRoutingTerm: report.states.every(item => item.snapshot.narrativeAudit.smartRoutingTermHits === 0) &&
+      Object.values(laneStates).every(item => item.narrativeAudit.smartRoutingTermHits === 0 &&
+        /默认策略 SCORE/.test(item.narrativeAudit.strategyOptionAutoText)),
+    govExpectedRetrievalMechanism: report.states.every(item => item.snapshot.narrativeAudit.expectedRetrievalMechanismNoted),
+    govDeltaBadges: laneStates.score.narrativeAudit.deltaBadgeCount === 4 && laneStates.AUTO.narrativeAudit.deltaBadgeCount === 4 &&
+      laneStates.near.narrativeAudit.deltaBadgeCount === 4 && laneStates.seq.narrativeAudit.deltaBadgeCount === 0,
+    govTieDisclosure: ['near', 'score', 'AUTO'].every(id => {
+      const tie = laneStates[id].narrativeAudit.tieNote;
+      return tie.top1TieSize > 1 ? tie.present && tie.isochroneNoted : !tie.present;
+    }) && laneStates.near.narrativeAudit.tieNote.present === true &&
+      laneStates.seq.narrativeAudit.tieNote.present === false
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

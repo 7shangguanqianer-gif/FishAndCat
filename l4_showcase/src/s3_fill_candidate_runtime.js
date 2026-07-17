@@ -499,7 +499,18 @@
   }
 
   function configureDom() {
-    byId("strategySelect").innerHTML = '<option value="AUTO" selected>智能路由 AUTO → SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
+    /* 0716 深审治理 A+B(用户全面批准,docs/S3算法深审与治理方案_0716.md):
+       ①「智能路由」实为硬编码常量,改名「默认策略」;②统计块重排+守恒量披露;③平局兜底与等时区解说。
+       样式随 runtime 注入,五个引用页(fill恢复候选/三份版式候选/进度轴候选)同步生效,不改各页 HTML。 */
+    const governanceStyle = document.createElement("style");
+    governanceStyle.textContent =
+      ".statsDelta{position:absolute;top:2px;right:2px;padding:1px 2px;font:800 6.5px/1 Consolas,monospace}" +
+      ".statsDelta.better{color:#1d6b2e;background:#e2f2e5}.statsDelta.worse{color:#8a4a00;background:#fdeeda}" +
+      "#traceStats .conservedCell{background:#fffbe8;outline:1px dashed #c9a800;outline-offset:-1px}" +
+      "#traceStats .conservedCell b{font-size:8.5px}#traceStats .conservedCell small{color:#7a6a00}" +
+      "#decisionWrap .tieNote{margin-top:4px;padding:4px 6px;border-left:3px solid #17365d;background:#eef3f8;color:#3c4c5c;font:7.5px/1.35 \"Microsoft YaHei\",sans-serif}";
+    document.head.append(governanceStyle);
+    byId("strategySelect").innerHTML = '<option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
     byId("tierSelect").innerHTML = '<option value="fill" selected>连续填满 · SIM 数据门</option>'; byId("tierSelect").disabled = true;
     byId("profileSelect").innerHTML = '<option value="skew" selected>偏斜货流 · 可复现样本</option>'; byId("profileSelect").disabled = true;
     byId("traceLoadState").textContent = "数据链已验证";
@@ -538,7 +549,7 @@
   function renderDecision(frame) {
     const lane = state.model.lane, event = frame.event, host = byId("decisionWrap"), selected = event.decision.selected_slot;
     const reason = state.laneId === "seq" ? "按列优先选择首个可用格" : state.laneId === "near" ? "选择双轴行程时间最短的可用格" :
-      "固定四项权重的总分最小；AUTO 在本偏斜情景启动时一次选择 SCORE";
+      "固定四项权重的总分最小；页面启动默认展示本策略";
     if (frame.idle && frame.managedCount === 267) {
       host.innerHTML = '<div class="dHead"><b>连续填满完成</b><span>267 / 267 · SIM</span></div>' +
         '<div class="candidateTop">400 / 400 总占用；已无下一件货物或候选货位。</div>';
@@ -553,6 +564,14 @@
       return `<div class="cand${item.selected ? " selected" : ""}" title="单程 ${Number(item.path_one_way_m).toFixed(1)} m；双轴时间 ${Number(item.travel_time_s).toFixed(2)} s">` +
         `<b>第 ${item.rank} 名</b><span>${slot}</span><span>${objective}</span><em>${item.selected ? "选中" : "候选"}</em></div>`;
     }).join("");
+    /* 平局兜底披露(治理 B):NEAR 85.8% / SCORE 73.8% 的事件选中格与其他货位目标值并列,
+       屏上如实给出并列组人数与兜底排序键,并解释等时区的结构性根因(VZ=0.5 为 VX=2.0 的 1/4)。 */
+    const top1 = top3[0];
+    const tieNote = state.laneId !== "seq" && Number(top1.tie_size) > 1 ?
+      `<div class="tieNote" role="note">${state.laneId === "near" ?
+        `行程 ${Number(top1.travel_time_s).toFixed(2)} s 由 ${top1.tie_size} 个货位并列，按更低层、更小列落位。` :
+        `总分 ${Number(top1.score_terms.score_total).toFixed(4)} 由 ${top1.tie_size} 个货位并列，按更短行程、更低层、更小列落位。`}` +
+      "等时区现象：垂直限速 0.5 m/s 仅为水平 2.0 m/s 的 1/4，多数货位行程由层高主导、与列号无关，并列是结构性结果。</div>" : "";
     const terms = state.laneId === "score" ? top3[0].score_terms : null;
     const breakdown = terms ? `<div class="scoreBreakdown" aria-label="选中货位评分分项">` +
       `<span title="效率项：频次与双轴行程时间的加权贡献">效率<b>${Number(terms.efficiency_weighted).toFixed(4)}</b></span>` +
@@ -560,21 +579,33 @@
       `<span title="能耗代理项：重量与提升高度的加权贡献；SIM 代理，不是现场电表值">能耗代理<b>${Number(terms.energy_proxy_weighted).toFixed(4)}</b></span>` +
       `<span title="位置保留项：为后续货物保留高价值近端货位的加权贡献">位置保留<b>${Number(terms.position_reservation_weighted).toFixed(4)}</b></span></div>` +
       `<div class="scoreFactorNote" role="note">稳定与能耗代理共用“载重×层高”原始因子，仅权重不同；不可视为两项独立证据。</div>` : "";
-    host.innerHTML = `<div class="dHead"><b>${state.requested === "AUTO" ? "AUTO → SCORE" : LANE_LABEL[state.laneId]}</b><span>逐件在线 · SIM</span></div>` +
+    host.innerHTML = `<div class="dHead"><b>${state.requested === "AUTO" ? "默认策略 SCORE" : LANE_LABEL[state.laneId]}</b><span>逐件在线 · SIM</span></div>` +
       `<div class="decisionLine"><span>选择依据</span><b>${reason}</b></div>` +
       `<div class="decisionLine"><span>${frame.idle && frame.managedCount === 267 ? "终点" : "下一目标"}</span><b>${frame.slot ? `${String(selected[0]).padStart(2, "0")} / ${String(selected[1]).padStart(2, "0")}` : "400 / 400 已满"}</b></div>` +
       `<div class="decisionLine"><span>候选审计</span><b>${audit.legal_count} 个合法 · 排除 ${audit.rejected_count}</b></div>` +
-      `<div class="candidates" aria-label="最多三个已审计合法候选">${candidateRows}</div>${breakdown}` +
+      `<div class="candidates" aria-label="最多三个已审计合法候选">${candidateRows}</div>${tieNote}${breakdown}` +
       `<div class="candidateTop">第 1 名与实际货位、${score === null ? "排序依据" : `总分 ${Number(score).toFixed(4)}`}、审计引用逐项一致；临近满仓时如实显示不足 3 个候选。</div>`;
   }
 
   function renderStats() {
+    /* 治理 A(0716 深审):指标顺序按「能区分算法的在前」重排——填满口径下期望取货被
+       “先到先得”机理支配(SEQ 天然占优),分层收益指标(热门/重货/能耗)才是算法分化的证据;
+       完工时长/总行程对落位顺序数学守恒,单列为守恒量格预讲。角标 = 相对 SEQ 基线,本组指标越低越好。 */
     const metrics = state.model.lane.metrics, host = byId("traceStats");
+    const seqMetrics = models.get("seq").lane.metrics;
+    const deltaBadge = (value, base) => {
+      if (state.laneId === "seq" || !(base > 0)) return "";
+      const pct = (value - base) / base * 100;
+      if (Math.abs(pct) < .005) return "";
+      return `<em class="statsDelta ${pct < 0 ? "better" : "worse"}">${pct < 0 ? "▼" : "▲"}${Math.abs(pct).toFixed(1)}%</em>`;
+    };
     host.innerHTML = `<div class="statsHead"><b>当前算法终点统计</b><span>单种子 · 连续入库 · SIM</span></div><div class="statsGrid">` +
-      `<button class="metricHelp" title="267 件全部入库后的期望取货时间；不是现场实测"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small></button>` +
-      `<button class="metricHelp" title="热门 20% 货物的期望取货时间"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small></button>` +
-      `<button class="metricHelp" title="重货前 20% 的平均层位，越低越稳"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small></button>` +
-      `<button class="metricHelp" title="本连续入库数据门的硬约束违规"><b>${metrics.violations}</b><small>约束违规 ⓘ</small></button></div>`;
+      `<button class="metricHelp" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
+      `<button class="metricHelp" title="最重 20% 货物的平均层位，越低越稳(降低重心)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
+      `<button class="metricHelp" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
+      `<button class="metricHelp" title="全部 267 件的频次加权期望取货时间。填满口径下先到者占近格、后到者只剩远格，该均值天然偏向顺序放置；算法分化请看热门取货、重货均层、能耗代理三项"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small>${deltaBadge(metrics.expected_retrieval_s, seqMetrics.expected_retrieval_s)}</button>` +
+      `<button class="metricHelp" title="本连续入库数据门的硬约束违规"><b>${metrics.violations}</b><small>约束违规 ⓘ</small></button>` +
+      `<button class="metricHelp conservedCell" title="守恒量：填满口径下三种算法终态占据同一批 267 个货位，完工时长与总行程只取决于货位集合与同批货物，数学上必然三算法相等——能区分算法的是取货侧与分布侧指标"><b>${Math.round(metrics.makespan_s)} s · ${Math.round(metrics.round_trip_path_m)} m</b><small>完工/行程 · 三算法恒等 ⓘ</small></button></div>`;
   }
 
   function updatePhaseRail(frame) {
@@ -646,6 +677,8 @@
     const laneId = laneForRequest(requested); invariant(models.has(laneId), "不支持的在线算法");
     const count = state.idleCount === null ? locateSegment(state.model, state.elapsed).segment.eventIndex : state.idleCount;
     state.requested = requested; state.laneId = laneId; state.model = models.get(laneId); state.idleCount = count;
+    /* 下拉与实际 lane 保持一致:QA 钩子/书签路径切换算法时同步回写(程序赋值不会再触发 change)。 */
+    byId("strategySelect").value = requested;
     state.elapsed = state.model.eventStarts[count]; pathSignature = ""; stockSignature = ""; renderStats(); renderFrame(currentFrame());
   }
 
@@ -724,6 +757,23 @@
         uiRule: payload.score_policy.known_collinearity.ui_rule,
         disclosureVisible: state.laneId !== "score" || Boolean(document.querySelector(".scoreFactorNote")?.textContent.includes("共用“载重×层高”原始因子"))},
       runtimeErrors, duplicateAudit: visibleTextDuplicateAudit(),
+      narrativeAudit: {
+        strategyOptionAutoText: byId("strategySelect").querySelector('option[value="AUTO"]').textContent,
+        smartRoutingTermHits: (document.body.textContent.match(/智能路由/g) || []).length,
+        statsSmallOrder: Array.from(document.querySelectorAll("#traceStats .metricHelp small")).map(el => el.textContent.trim()),
+        conservedCellPresent: Boolean(document.querySelector("#traceStats .conservedCell")),
+        conservedValuesEqualAcrossLanes: ["seq", "near", "score"].every(id =>
+          models.get(id).lane.metrics.makespan_s === models.get("seq").lane.metrics.makespan_s &&
+          models.get(id).lane.metrics.round_trip_path_m === models.get("seq").lane.metrics.round_trip_path_m),
+        deltaBadgeCount: document.querySelectorAll("#traceStats .statsDelta").length,
+        expectedRetrievalMechanismNoted: /先到者占近格/.test(Array.from(
+          document.querySelectorAll("#traceStats .metricHelp")).map(el => el.title).join("")),
+        tieNote: {
+          present: Boolean(document.querySelector("#decisionWrap .tieNote")),
+          top1TieSize: Number(state.model.decisionEvidence.events[frame.event.event_index - 1].top3[0].tie_size) || null,
+          isochroneNoted: /等时区/.test(document.querySelector("#decisionWrap .tieNote")?.textContent || "")
+        }
+      },
       decisionEvidence: {auditSha256: state.model.decisionEvidence.events[frame.event.event_index - 1].audit_sha256,
         top3: state.model.decisionEvidence.events[frame.event.event_index - 1].top3,
         selectedSlotMatches: JSON.stringify(state.model.decisionEvidence.events[frame.event.event_index - 1].top3[0].slot) ===
