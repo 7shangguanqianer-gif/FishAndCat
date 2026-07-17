@@ -51,10 +51,22 @@
   axisRight.id = "axisRight";
   bookmarks.append(axisRight);
   axisRight.append(byId("fillEvidence"), byId("releaseBadge"));
+  /* 0717 #28 二轮(用户拍板):镜头与演示倍率整体上移到进度轴行(节点轴与计数簇之间) */
+  bookmarks.insertBefore(byId("sceneTools"), axisRight);
 
   /* ---------- 4. dock:0717 #28 四格并三格——七段微条并入「当前作业」格(仍在 sceneDock 内,
      步骤名由微条题行唯一承担,货物信息升大字);入口等待入 caption;路径图例移场景左下 ---------- */
   byId("sceneCaption").append(byId("phaseRail"));
+  /* 0717 #28 二轮(用户拍板):dock 第三格=目标货位卡——接管 3D 黄标牌的全部文字信息
+     (3D 场景只留发光壳+面框+箭头图形高亮);声明 target-card 模式供 runtime 分支。 */
+  doc.documentElement.dataset.s3TargetCard = "1";
+  const targetCard = doc.createElement("section");
+  targetCard.id = "targetCard";
+  targetCard.setAttribute("aria-label", "当前目标货位");
+  targetCard.setAttribute("aria-live", "off");
+  targetCard.innerHTML = '<div class="targetHead"><b>目标货位</b><span id="targetCardState">等待轨迹</span></div>' +
+    '<b id="targetCardSlot">-- / --</b><span id="targetCardDetail">同源 SIM 轨迹载入中</span>';
+  sceneDock.append(targetCard);
   const factsSlot = doc.createElement("span");
   factsSlot.id = "railFactsDockSlot";
   byId("sceneCaption").append(factsSlot);

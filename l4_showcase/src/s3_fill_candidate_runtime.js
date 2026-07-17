@@ -223,6 +223,15 @@
     buildLaneModel(lane, payload.capacity, evidenceByAlgorithm.get(lane.algorithm.id))]));
   const byId = id => document.getElementById(id);
   const good = gid => { const item = catalog.get(gid); invariant(item, `cargo_catalog 缺少 gid=${gid}`); return item; };
+  /* 0717 #28 二轮:热门集合口径同 sim/warehouse_sim.py:400——已放置货按 freq 降序前 1/5
+     (稳定排序保放置序),267 件→前 53;三 lane 同一到达队列,集合一致,任取一 lane 计算。 */
+  const hotGids = (() => {
+    const order = models.get("score").lane.events.map((event, index) =>
+      ({gid: event.gid, freq: good(event.gid).freq, index}));
+    order.sort((a, b) => b.freq - a.freq || a.index - b.index);
+    return new Set(order.slice(0, Math.max(1, Math.floor(order.length / 5))).map(entry => entry.gid));
+  })();
+  const targetCardMode = document.documentElement.dataset.s3TargetCard === "1";
   const infeedEntryDistance = Math.abs(INFEED.loadY - INFEED.entryY);
   const infeedTransferDistance = Math.hypot(IO.x - INFEED.x, CROSSBAR.y - INFEED.loadY) +
     Math.hypot(TRANSFER_ANCHOR.x - IO.x, TRANSFER_ANCHOR.y - CROSSBAR.y);
@@ -425,6 +434,11 @@
     const visible = Array.isArray(frame.slot);
     targetBox.visible = targetPad.visible = visible; byId("targetBeacon").hidden = !visible;
     if (targetFx && !visible) { targetFx.glow.visible = targetFx.arrow.visible = targetFx.face.visible = false; }
+    const card = byId("targetCard");
+    if (card && !visible) {
+      card.classList.add("done"); byId("targetCardState").textContent = "已填满";
+      byId("targetCardSlot").textContent = "267 / 267"; byId("targetCardDetail").textContent = "全部货位入库确认 · 违规 0";
+    }
     if (!visible) { byId("targetLeader").hidden = true; return; }
     const [col, tier] = frame.slot;
     targetBox.position.set(col + .5, RACK.loadY, tier + .5); targetPad.position.set(col + .5, RACK.loadY, tier + .075);
@@ -441,10 +455,27 @@
     }
     beacon.querySelector("b").textContent = `${completed ? "已入库货位" : "入库目标"} ${String(col).padStart(2, "0")} / ${String(tier).padStart(2, "0")}`;
     beacon.querySelector("span").textContent = `第 ${String(col).padStart(2, "0")} 列 · 第 ${String(tier).padStart(2, "0")} 层`;
+    /* 0717 #28 二轮:dock 目标货位卡接管标牌文字(3D 只留图形高亮);候选页无此卡,判空跳过。 */
+    if (card) {
+      card.classList.toggle("done", completed);
+      byId("targetCardState").textContent = completed ? "已入库" : frame.idle ? "下一目标" : "入库作业中";
+      byId("targetCardSlot").textContent = `${String(col).padStart(2, "0")} / ${String(tier).padStart(2, "0")}`;
+      byId("targetCardDetail").textContent = `第 ${String(col).padStart(2, "0")} 列 · 第 ${String(tier).padStart(2, "0")} 层`;
+    }
   }
 
   function layoutTarget(frame) {
     if (!frame.slot) { lastBeaconAudit = null; return; }
+    /* 0717 #28 二轮:target-card 模式下 3D 标牌退役(CSS display:none),文字由 dock 目标货位卡承担;
+       审计改记卡片一致性,QA beaconAnchored 门按 mode 分支。 */
+    if (targetCardMode) {
+      const slotEl = byId("targetCardSlot");
+      lastBeaconAudit = {mode: "dock-card", slot: frame.slot.slice(),
+        cardVisible: Boolean(slotEl) && slotEl.getBoundingClientRect().height > 4,
+        cardText: slotEl ? slotEl.textContent : "",
+        beaconRetired: getComputedStyle(byId("targetBeacon")).display === "none"};
+      return;
+    }
     const viewportRect = viewportEl.getBoundingClientRect(), mountRect = mount.getBoundingClientRect();
     const ndc = new THREE.Vector3(frame.slot[0] + .5, RACK.frontY - .04, frame.slot[1] + .65).project(camera);
     const anchor = {x: mountRect.left - viewportRect.left + (ndc.x + 1) * mountRect.width / 2,
@@ -539,7 +570,9 @@
       "#tierFixedTag small{font:400 7px/1.1 \"Microsoft YaHei\",sans-serif;color:#68747d;white-space:nowrap}" +
       "#sceneActionText .gradeDot{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px}" +
       ".gradeDot.heavy{background:#366786}.gradeDot.mid{background:#4ea9c2}.gradeDot.light{background:#abd1d8}" +
-      "#sceneActionText em{font-style:normal}";
+      "#sceneActionText em{font-style:normal}" +
+      "#sceneActionText .hotChip{margin-left:7px;padding:1px 5px 2px;background:#fdf3cf;border:1px solid #e0b600;" +
+        "color:#5b4a00;font-size:.78em;font-weight:800;white-space:nowrap;vertical-align:1px}";
     document.head.append(governanceStyle);
     byId("strategySelect").innerHTML = '<option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
     /* 0717 #28 用户拍板:锁定下拉在观感上像坏控件——整个换成静态说明标签(非下拉),口径如实:
@@ -697,7 +730,7 @@
   }
 
   function updateText(frame) {
-    const item = good(frame.event.gid), target = frame.slot ? `${String(frame.slot[0]).padStart(2, "0")}/${String(frame.slot[1]).padStart(2, "0")}` : "已满";
+    const item = good(frame.event.gid);
     byId("factCycle").textContent = `${frame.managedCount} / 267`; byId("factQueue").textContent = "0"; byId("factAlarm").textContent = "0";
     byId("capacityTotal").textContent = `${payload.capacity.preoccupied_slots + frame.managedCount} / 400`;
     byId("fillManaged").textContent = `${frame.managedCount} / 267`; byId("fillTotal").textContent = `${133 + frame.managedCount} / 400`;
@@ -705,15 +738,16 @@
     byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
     byId("xFill").style.setProperty("--fill", `${frame.machine.x / 19 * 100}%`); byId("zFill").style.setProperty("--fill", `${frame.machine.z / 19 * 100}%`);
     byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
-    /* 0717 #28 用户拍板:当前作业格约占半幅,大字突出运送货物本体(等级色块+名称+重量+目标格章);
-       步骤名由并入本格的七段微条题行唯一承担,小字行只留件序与归属。 */
-    const done = !frame.idle && frame.cargoOwner === "RACK";
+    /* 0717 #28 二轮(用户拍板):大字行=货物本体全属性(等级色块+名称+等级重量+体积+热门标,
+       数据门真实字段 weight_kg/volume_m3/freq,不虚构);目标格信息整体移交 dock 目标货位卡,不再重复;
+       步骤名由并入本格的七段微条题行唯一承担。 */
     byId("sceneActionText").innerHTML = frame.idle
       ? (frame.managedCount === 267 ? "连续填满完成 · 267 / 267" : `容量书签 · 已入库 ${frame.managedCount} / 267`)
-      : `<i class="gradeDot ${item.grade}"></i>${item.name} · ${GRADE_LABEL[item.grade]} ${item.weight_kg.toFixed(1)} kg<em>${done ? "已入" : "→ 目标"} ${target}</em>`;
+      : `<i class="gradeDot ${item.grade}"></i>${item.name} · ${GRADE_LABEL[item.grade]} ${item.weight_kg.toFixed(1)} kg · ${item.volume_m3.toFixed(2)} m³` +
+        (hotGids.has(item.gid) ? '<em class="hotChip">★ 热门前 20%</em>' : "");
     byId("sceneActionMeta").textContent = frame.idle ? "已验证快照 · SIM" : `SIM ${frame.simTime.toFixed(1)} s`;
     byId("sceneCargoMeta").textContent = frame.idle ? `${133 + frame.managedCount} / 400 总占用 · 违规 0` :
-      `第 ${frame.eventIndex + 1} / 267 件 · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
+      `访问频次 ${item.freq.toFixed(2)} · 第 ${frame.eventIndex + 1} / 267 件 · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
     Array.from(byId("fillBookmarkButtons").querySelectorAll("button")).forEach(button =>
       button.setAttribute("aria-current", String(Number(button.dataset.count) === frame.managedCount && frame.idle)));
   }
@@ -830,6 +864,14 @@
         faceVisible: targetFx.face.visible, glowColor: `#${targetFx.glowMat.color.getHexString()}`,
         glowOpacity: Number(targetFx.glowMat.opacity.toFixed(3)),
         glowPosition: targetFx.glow.position.toArray()} : null,
+      cargoCard: {headline: byId("sceneActionText").textContent, meta: byId("sceneCargoMeta").textContent,
+        hotChipShown: Boolean(document.querySelector("#sceneActionText .hotChip")),
+        hotMatches: lastFrame && !lastFrame.idle ?
+          Boolean(document.querySelector("#sceneActionText .hotChip")) === hotGids.has(lastFrame.event.gid) : true,
+        hotSetSize: hotGids.size},
+      targetCard: byId("targetCard") ? {state: byId("targetCardState").textContent,
+        slotText: byId("targetCardSlot").textContent, detail: byId("targetCardDetail").textContent,
+        done: byId("targetCard").classList.contains("done")} : null,
       narrativeAudit: {
         scenario: SCENARIO,
         scenarioSwitchEnabled: !byId("profileSelect").disabled,

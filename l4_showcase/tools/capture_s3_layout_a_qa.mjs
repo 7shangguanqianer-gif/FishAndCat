@@ -176,7 +176,14 @@ try {
         const dock = document.getElementById('sceneDock').getBoundingClientRect();
         const fontSize = parseFloat(getComputedStyle(document.getElementById('sceneActionText')).fontSize);
         const share = caption.width / dock.width;
-        return share > .42 && share < .60 && fontSize >= 13; })()
+        return share > .42 && share < .60 && fontSize >= 13; })(),
+      /* 0717 #28 二轮:镜头/倍率簇上移进度轴行;dock 第三格=目标货位卡;3D 黄标牌退役 */
+      toolsInAxis: document.getElementById('sceneTools').closest('#fillBookmarks') !== null,
+      targetCardInDock: (() => { const card = document.getElementById('targetCard');
+        return Boolean(card) && card.closest('#sceneDock') !== null &&
+          document.getElementById('sceneDock').children.length === 3; })(),
+      beaconRetired: getComputedStyle(document.getElementById('targetBeacon')).display === 'none' &&
+        getComputedStyle(document.getElementById('labelLeaders')).display === 'none'
     }));
     report.layoutAudits.push({width, height, ...layoutAudit, placement});
     await page.screenshot({path: join(OUT, `viewport_${width}x${height}_start.png`), fullPage: false});
@@ -336,11 +343,17 @@ try {
       return tie.top1TieSize > 1 ? tie.present && tie.isochroneNoted : !tie.present;
     }) && laneStates.near.narrativeAudit.tieNote.present === true &&
       laneStates.seq.narrativeAudit.tieNote.present === false,
-    /* --- 0717 用户验收门:目标标牌锚定(标牌贴格或有可见引线指回,连线距离有界) --- */
+    /* --- 0717 用户验收门:目标定位信息可达——dock-card 模式(0717 二轮拍板)断言目标货位卡
+       可见且与 target 一致、3D 黄标牌退役;旧模式保留引线锚定判据 --- */
     beaconAnchored: report.states.every(item => {
       const audit = item.snapshot.beaconAudit;
-      return item.snapshot.target === null ? audit === null :
-        Boolean(audit) && audit.leaderVisible === true && audit.dist < 480;
+      if (item.snapshot.target === null) return audit === null;
+      if (!audit) return false;
+      if (audit.mode === 'dock-card') {
+        const expect = `${String(item.snapshot.target[0]).padStart(2, '0')} / ${String(item.snapshot.target[1]).padStart(2, '0')}`;
+        return audit.cardVisible && audit.beaconRetired && audit.cardText === expect;
+      }
+      return audit.leaderVisible === true && audit.dist < 480;
     }),
     /* --- 0717 #28 用户拍板门:①目标格发光壳(amber 呼吸,入库完成转绿常亮)+格口箭头(完成收起) --- */
     fx28TargetGlowArrow: report.states.every(item => {
@@ -356,7 +369,18 @@ try {
     /* --- 0717 #28:②拟真档说明标签替换锁死下拉 --- */
     fx28TierTagLabel: report.layoutAudits.every(item => item.placement.tierTagPresent),
     /* --- 0717 #28:③dock 四格并三格,当前作业约占半幅且货物为大字 --- */
-    fx28DockThreeColumns: report.layoutAudits.every(item => item.placement.dockThreeColumns && item.placement.cargoHeadlineDominant)
+    fx28DockThreeColumns: report.layoutAudits.every(item => item.placement.dockThreeColumns && item.placement.cargoHeadlineDominant),
+    /* --- 0717 #28 二轮:货物属性行(重量+体积+频次为数据门真实字段;热门标与 sim 前 1/5 口径一致) --- */
+    fx28CargoAttrs: report.states.filter(item => item.name.startsWith('event134_')).every(item =>
+      /kg/.test(item.snapshot.cargoCard.headline) && /m³/.test(item.snapshot.cargoCard.headline) &&
+      /访问频次/.test(item.snapshot.cargoCard.meta)) &&
+      report.states.every(item => item.snapshot.cargoCard.hotSetSize === 53 && item.snapshot.cargoCard.hotMatches),
+    /* --- 0717 #28 二轮:目标货位卡入 dock 第三格、镜头/倍率簇入进度轴行、3D 黄标牌退役 --- */
+    fx28TargetCardAndTools: report.layoutAudits.every(item => item.placement.toolsInAxis &&
+      item.placement.targetCardInDock && item.placement.beaconRetired) &&
+      report.states.every(item => item.snapshot.target === null ?
+        item.snapshot.targetCard.done && item.snapshot.targetCard.slotText === '267 / 267' :
+        item.snapshot.targetCard.slotText === `${String(item.snapshot.target[0]).padStart(2, '0')} / ${String(item.snapshot.target[1]).padStart(2, '0')}`)
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

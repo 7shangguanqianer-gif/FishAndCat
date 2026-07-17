@@ -785,12 +785,36 @@
     color:#53616b;box-shadow:0 2px 10px #17202b17;pointer-events:none;font:700 7.5px/1 "Microsoft YaHei",sans-serif}
   html[data-s3-layout="A"] #releaseBadgeAnchor{display:none}
 
-  /* -- dock:0717 #28 用户拍板四格并三格——当前作业(含七段微条,约占半幅、货物大字) | 遥测 | 倍率 -- */
+  /* -- dock:0717 #28 用户拍板四格并三格——当前作业(含七段微条,约占半幅、货物大字) | 遥测 | 目标货位卡 -- */
   html[data-s3-layout="A"] #viewport{--scene-dock-h:92px}
   html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(430px,1.92fr) minmax(230px,1fr) minmax(170px,.78fr)}
   html[data-s3-layout="A"] #sceneDock>#sceneCaption{grid-area:auto;grid-column:1;grid-row:1}
   html[data-s3-layout="A"] #sceneDock>#sceneTelemetry{grid-area:auto;grid-column:2;grid-row:1}
-  html[data-s3-layout="A"] #sceneDock>#sceneTools{grid-area:auto;grid-column:3;grid-row:1}
+  html[data-s3-layout="A"] #sceneDock>#targetCard{grid-column:3;grid-row:1}
+  /* 0717 #28 二轮:目标货位卡(接管 3D 黄标牌文字;amber 左条,入库完成转绿) */
+  html[data-s3-layout="A"] #targetCard{padding:6px 11px;background:#fff;border-left:4px solid var(--amber);
+    display:grid;grid-template-rows:auto auto auto;align-content:center;gap:2px;transition:border-color .2s}
+  html[data-s3-layout="A"] #targetCard.done{border-left-color:#2f9e4f}
+  html[data-s3-layout="A"] #targetCard .targetHead{display:flex;justify-content:space-between;align-items:center;gap:6px}
+  html[data-s3-layout="A"] #targetCard .targetHead b{color:#5d6972;font-size:9px;font-weight:700}
+  html[data-s3-layout="A"] #targetCardState{padding:1px 6px 2px;background:var(--amber);color:#17202b;
+    font:700 8px/1.2 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  html[data-s3-layout="A"] #targetCard.done #targetCardState{background:#2f9e4f;color:#fff}
+  html[data-s3-layout="A"] #targetCardSlot{font:800 17px/1.1 Consolas,"Microsoft YaHei",monospace;color:#0f1c27;letter-spacing:.5px}
+  html[data-s3-layout="A"] #targetCard.done #targetCardSlot{color:#1d6b2e}
+  html[data-s3-layout="A"] #targetCardDetail{color:#68747d;font:8px/1.2 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  /* 0717 #28 二轮:3D 黄标牌+引线退役(target-card 模式);图形高亮(发光壳/面框/箭头)独立承担定位 */
+  html[data-s3-target-card="1"] #targetBeacon,html[data-s3-target-card="1"] #labelLeaders{display:none!important}
+  /* 0717 #28 二轮:镜头与倍率簇进进度轴行(节点轴与计数簇之间,水平紧凑) */
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools{flex:none;display:flex;align-items:center;gap:7px;
+    padding:0 12px 0 10px;border-left:1px solid #d6dde2;background:transparent;color:#26343e;pointer-events:auto}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools .toolHead{font:700 8.5px/1.1 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools .toolHead span{display:block;color:#68747d;font-size:6.5px;font-weight:500}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools .toolRow{display:flex;align-items:center;gap:6px;margin:0}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools button{height:24px;padding:0 9px;font-size:9px}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools input[type="range"]{width:96px;min-height:20px}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools #playbackValue{font-size:9px}
+  html[data-s3-layout="A"] #fillBookmarks #sceneTools .toolNote{display:none}
   html[data-s3-layout="A"] #sceneCaption{padding:6px 12px 5px;align-content:stretch;gap:2px 8px;
     grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-rows:auto auto minmax(0,1fr);
     grid-template-areas:"label cargo meta facts" "action action action action" "phase phase phase phase"}
