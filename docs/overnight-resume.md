@@ -1,14 +1,15 @@
 # Overnight 断点文件(滚动更新;心跳 cron 与任何续跑会话以本文件为唯一真相源)
 
-status: RUNNING
-heartbeat: 2026-07-18 04:55 (+0800)
-current: 全部收官。对抗验证:M2/M4a headline 数字全复现一致、结论站得住,已订正 3 处机理/标注错(whatif §1/§5、双命令 §2/§3,同步增补包)。M4b 额外起步:02页运行时可跑+治理+boot-QA 8/8(A壳布局待用户迭代)。
+status: IDLE_AWAIT_USER
+heartbeat: 2026-07-18 03:28 (+0800)
+current: 全部收官。自主队列 M0-M9 + M4b 起步 + 对抗验证全部完成并硬化。剩项全为用户阻塞,无可自主推进项;主循环空转待用户。对抗验证:M2/M4a headline 数字全复现一致、结论站得住,已订正 3 处机理/标注错(whatif §1/§5、双命令 §2/§3,同步增补包)。M4b 额外起步:02页运行时可跑+治理+boot-QA 8/8(A壳布局待用户迭代)。
 NOTE_心跳: 队列剩项(M4b 页体 rail/M6 渲染/M5 链/三课)全为**用户阻塞**,心跳**不要**尝试推进,保持存活即可;续跑物=清晨用户拍板。
 
 ## 续跑指令(给心跳 cron / 冷启动会话 / compact 后续跑)
 
+0. **若 status=IDLE_AWAIT_USER(当前即是):自主队列已全清,所有非 DONE 项均缺用户输入无法推进——回一句「心跳正常(空转待用户)」即结束,不推进任何项、不派 agent、不动文件(仅可校正本行 heartbeat 时戳)。这是正常终态,非故障。**
 1. 若 status=RUNNING 且 heartbeat 距今 < 15 分钟:主循环存活,回一句「心跳正常」即结束,勿动任何文件。
-2. 否则:读 `docs/overnight-plan_0718.md` 全文(队列+边界+红线),从下面「队列状态」第一个非 DONE 项继续;每完成一小步更新本文件 heartbeat+队列状态并 commit。
+2. 否则(status=RUNNING 但 heartbeat 陈旧):读 `docs/overnight-plan_0718.md` 全文(队列+边界+红线),从下面「队列状态」第一个**非 DONE 且非「用户阻塞」**项继续;若剩项全为「用户阻塞」,按第 0 条处理。每完成一小步更新本文件 heartbeat+队列状态并 commit。
 3. 额度未恢复导致本次失败:什么都不用做,下一次心跳会再试。
 4. **每个里程碑代码完成后必须派 verifier**(claude-opus-4-8 / effort high,Agent 工具 subagent_type=general-purpose 或直接 model 覆盖):fresh context 对照 docs/overnight-plan_0718.md 该里程碑规格+看截图,以「评委第一眼」评 1-5 分;<4 分返工,连续 3 次不达取最高分版本 commit 并记入下方待拍板。
 
