@@ -162,7 +162,21 @@ try {
       speedCanvasPresent: Boolean(document.getElementById('speed')),
       phaseRailInDock: document.getElementById('phaseRail').closest('#sceneDock') !== null,
       controlsInTopbar: document.getElementById('runtimeControls').closest('#topbarA') !== null,
-      retrievalNotePresent: /存取效率/.test(document.getElementById('retrievalNote')?.textContent || '')
+      retrievalNotePresent: /存取效率/.test(document.getElementById('retrievalNote')?.textContent || ''),
+      /* 0717 #28 用户拍板:②拟真档换说明标签(非 select 且原下拉不复存在) */
+      tierTagPresent: (() => { const tag = document.getElementById('tierFixedTag');
+        return Boolean(tag) && tag.tagName !== 'SELECT' && /SIM 数据门/.test(tag.textContent) &&
+          !document.getElementById('tierSelect'); })(),
+      /* 0717 #28:③dock 三格,七段微条并入「当前作业」格 */
+      dockThreeColumns: document.getElementById('sceneDock').children.length === 3 &&
+        document.getElementById('phaseRail').closest('#sceneCaption') !== null,
+      /* 0717 #28:「当前作业」格约占半幅且货物行为大字 */
+      cargoHeadlineDominant: (() => {
+        const caption = document.getElementById('sceneCaption').getBoundingClientRect();
+        const dock = document.getElementById('sceneDock').getBoundingClientRect();
+        const fontSize = parseFloat(getComputedStyle(document.getElementById('sceneActionText')).fontSize);
+        const share = caption.width / dock.width;
+        return share > .42 && share < .60 && fontSize >= 13; })()
     }));
     report.layoutAudits.push({width, height, ...layoutAudit, placement});
     await page.screenshot({path: join(OUT, `viewport_${width}x${height}_start.png`), fullPage: false});
@@ -327,7 +341,22 @@ try {
       const audit = item.snapshot.beaconAudit;
       return item.snapshot.target === null ? audit === null :
         Boolean(audit) && audit.leaderVisible === true && audit.dist < 480;
-    })
+    }),
+    /* --- 0717 #28 用户拍板门:①目标格发光壳(amber 呼吸,入库完成转绿常亮)+格口箭头(完成收起) --- */
+    fx28TargetGlowArrow: report.states.every(item => {
+      const fx = item.snapshot.targetFx;
+      if (!fx) return false;
+      if (item.snapshot.target === null) return !fx.glowVisible && !fx.arrowVisible;
+      const done = !item.name.startsWith('bookmark_') && item.snapshot.cargo.owner === 'RACK';
+      return fx.glowVisible && fx.arrowVisible === !done &&
+        fx.glowColor === (done ? '#2f9e4f' : '#e7b800') && fx.glowOpacity > .05 &&
+        Math.abs(fx.glowPosition[0] - (item.snapshot.target[0] + .5)) < 1e-6 &&
+        Math.abs(fx.glowPosition[2] - (item.snapshot.target[1] + .5)) < 1e-6;
+    }),
+    /* --- 0717 #28:②拟真档说明标签替换锁死下拉 --- */
+    fx28TierTagLabel: report.layoutAudits.every(item => item.placement.tierTagPresent),
+    /* --- 0717 #28:③dock 四格并三格,当前作业约占半幅且货物为大字 --- */
+    fx28DockThreeColumns: report.layoutAudits.every(item => item.placement.dockThreeColumns && item.placement.cargoHeadlineDominant)
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

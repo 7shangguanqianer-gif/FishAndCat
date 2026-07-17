@@ -785,23 +785,37 @@
     color:#53616b;box-shadow:0 2px 10px #17202b17;pointer-events:none;font:700 7.5px/1 "Microsoft YaHei",sans-serif}
   html[data-s3-layout="A"] #releaseBadgeAnchor{display:none}
 
-  /* -- dock:当前作业(唯一) | 七段微条 | 遥测 | 倍率(显式定列,防 grid-area 残留挤出) -- */
-  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(215px,1.1fr) minmax(235px,1.1fr) minmax(195px,.95fr) minmax(165px,.75fr)}
+  /* -- dock:0717 #28 用户拍板四格并三格——当前作业(含七段微条,约占半幅、货物大字) | 遥测 | 倍率 -- */
+  html[data-s3-layout="A"] #viewport{--scene-dock-h:92px}
+  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(430px,1.92fr) minmax(230px,1fr) minmax(170px,.78fr)}
   html[data-s3-layout="A"] #sceneDock>#sceneCaption{grid-area:auto;grid-column:1;grid-row:1}
-  html[data-s3-layout="A"] #sceneDock>#phaseRail{grid-column:2;grid-row:1}
-  html[data-s3-layout="A"] #sceneDock>#sceneTelemetry{grid-area:auto;grid-column:3;grid-row:1}
-  html[data-s3-layout="A"] #sceneDock>#sceneTools{grid-area:auto;grid-column:4;grid-row:1}
-  html[data-s3-layout="A"] #sceneCaption{grid-template-areas:"label meta" "action action" "cargo facts"}
-  html[data-s3-layout="A"] #sceneCaption #railFactsDockSlot{grid-area:facts;justify-self:end;color:#5d6972;font:8px/1.15 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
-  html[data-s3-layout="A"] #phaseRail{grid-area:auto;position:static;width:auto;min-height:0;padding:5px 8px 4px;border:0;border-left:1px solid #c7cfd5;
-    background:#fff;display:grid;grid-template-rows:auto 7px minmax(0,1fr);gap:3px;overflow:visible}
+  html[data-s3-layout="A"] #sceneDock>#sceneTelemetry{grid-area:auto;grid-column:2;grid-row:1}
+  html[data-s3-layout="A"] #sceneDock>#sceneTools{grid-area:auto;grid-column:3;grid-row:1}
+  html[data-s3-layout="A"] #sceneCaption{padding:6px 12px 5px;align-content:stretch;gap:2px 8px;
+    grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"label cargo meta facts" "action action action action" "phase phase phase phase"}
+  html[data-s3-layout="A"] #sceneCaption .dockLabel{align-self:center}
+  html[data-s3-layout="A"] #sceneCaption #sceneCargoMeta{grid-area:cargo;justify-self:end;align-self:center}
+  html[data-s3-layout="A"] #sceneCaption #sceneActionMeta{grid-area:meta;align-self:center}
+  html[data-s3-layout="A"] #sceneCaption #railFactsDockSlot{grid-area:facts;justify-self:end;align-self:center;color:#5d6972;font:8px/1.15 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
+  html[data-s3-layout="A"] #sceneCaption #sceneActionText{font-size:15px;font-weight:800;color:#0f1c27;letter-spacing:.2px}
+  html[data-s3-layout="A"] #sceneCaption #sceneActionText .gradeDot{display:inline-block;width:10px;height:10px;margin:0 6px 0 0;vertical-align:-1px}
+  html[data-s3-layout="A"] #sceneCaption #sceneActionText em{font-style:normal;margin-left:7px;padding:1px 6px 2px;
+    background:#fdf3cf;border:1px solid #e0b600;color:#5b4a00;font-size:12.5px;font-weight:800;white-space:nowrap}
+  /* 七段微条并入当前作业格:步骤名由微条题行唯一承担,横贯半幅更舒展 */
+  html[data-s3-layout="A"] #sceneCaption #phaseRail{grid-area:phase;position:static;width:auto;min-height:0;margin-top:1px;
+    padding:3px 0 0;border:0;border-top:1px dashed #d3dae0;background:transparent;
+    display:grid;grid-template-rows:auto 7px minmax(0,1fr);gap:2px;overflow:visible}
   html[data-s3-layout="A"] #phaseRail .phaseTitle{margin:0;font-size:8px}
+  html[data-s3-layout="A"] #phaseRail #phaseNow{font-weight:800;color:#17365d}
   html[data-s3-layout="A"] #phaseTimeScale{height:7px}
   html[data-s3-layout="A"] #phaseSegments{min-height:0;gap:2px}
-  html[data-s3-layout="A"] .phaseSeg{padding:2px 1px;cursor:help;grid-template-rows:auto;gap:0 3px}
+  html[data-s3-layout="A"] .phaseSeg{padding:1px 1px;cursor:help;grid-template-rows:auto;gap:0 3px}
   html[data-s3-layout="A"] .phaseSeg .phaseDuration{display:none}
   html[data-s3-layout="A"] .phaseSeg .phaseName{font-size:7.5px}
   html[data-s3-layout="A"] .phaseSeg:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+  @media(max-height:780px){html[data-s3-layout="A"] #viewport{--scene-dock-h:84px}
+    html[data-s3-layout="A"] #sceneCaption #sceneActionText{font-size:13px}}
 
   /* -- 共享浮层(节点快照 / 七步说明 / 证据链) -- */
   .s3aPop{position:absolute;z-index:80;width:250px;background:#fff;border:1px solid #c9ced3;border-top:3px solid var(--abb-red);
@@ -1203,6 +1217,34 @@ const targetBox=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeom
 targetBox.visible=false;scene.add(targetBox);
 const targetPadMat=new THREE.MeshStandardMaterial({color:C.amber,roughness:.72,metalness:.02,emissive:new THREE.Color(C.amber).multiplyScalar(.18),transparent:true,opacity:.52,depthWrite:false});
 const targetPad=addBox(.82,.76,.028,0,0,0,targetPadMat,false,false);targetPad.visible=false;
+/* 0717 #28 用户拍板:目标格自身强高亮——发光壳 + 大头针式竖直箭头。实体归母版,
+   runtime 经 window.__S3_TARGET_FX 驱动(共享 runtime 的候选页无此全局,判空跳过)。
+   箭头必须沿 z(层高)竖直向下:镜头视线大致沿 +y,沿 y 的几何投影后近似一个点(首版教训)。 */
+const targetGlowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide});
+const targetGlow=new THREE.Mesh(new THREE.BoxGeometry(1.0,.96,1.0),targetGlowMat);
+targetGlow.visible=false;targetGlow.renderOrder=3;scene.add(targetGlow);
+/* 格口面框:贴货架前表面的方框(外 1.0 / 内 .72),不受格内体积遮挡,正对镜头最醒目。 */
+const targetFaceShape=new THREE.Shape();
+targetFaceShape.moveTo(-.5,-.5);targetFaceShape.lineTo(.5,-.5);targetFaceShape.lineTo(.5,.5);targetFaceShape.lineTo(-.5,.5);targetFaceShape.closePath();
+const targetFaceHole=new THREE.Path();
+targetFaceHole.moveTo(-.36,-.36);targetFaceHole.lineTo(.36,-.36);targetFaceHole.lineTo(.36,.36);targetFaceHole.lineTo(-.36,.36);targetFaceHole.closePath();
+targetFaceShape.holes.push(targetFaceHole);
+const targetFaceMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.92,depthWrite:false,side:THREE.DoubleSide});
+const targetFace=new THREE.Mesh(new THREE.ShapeGeometry(targetFaceShape),targetFaceMat);
+targetFace.rotation.x=Math.PI/2;/* shape xy 面 → 法线 -y(朝巷道),shape y → 世界 z(层高) */
+targetFace.visible=false;targetFace.renderOrder=5;scene.add(targetFace);
+const targetArrowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.96,depthWrite:false});
+const targetArrow=new THREE.Group();
+/* group 原点=箭头尖端;cone 默认尖朝 +y,rotateX(-90°) 后尖朝 -z(竖直向下)。 */
+const targetArrowHead=new THREE.Mesh(new THREE.ConeGeometry(.50,1.1,14),targetArrowMat);
+targetArrowHead.rotation.x=-Math.PI/2;targetArrowHead.position.z=.55;
+const targetArrowTail=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.66,10),targetArrowMat);
+targetArrowTail.rotation.x=-Math.PI/2;targetArrowTail.position.z=1.43;
+targetArrow.add(targetArrowHead,targetArrowTail);
+targetArrow.visible=false;targetArrow.renderOrder=4;scene.add(targetArrow);
+window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
+  arrow:targetArrow,arrowMat:targetArrowMat,
+  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f),arrowY:-.45,arrowZGap:1.34,floatAmp:.22});
 /* 堆垛机：黄金单桅杆不变；功能细节随同一个 world X 组移动。 */
 const mast=addBox(.24,.24,N+.5,IO.x,IO.y,(N+Z0)/2,M.mast,true,false);
 const machineParts=[

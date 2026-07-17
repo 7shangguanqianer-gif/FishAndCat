@@ -289,6 +289,8 @@
     const clone = material.clone(); clone.transparent = true; clone.opacity = 1; return [grade, clone];
   }));
   let stockSignature = "", pathSignature = "", livePaths = [], lastFrame = null, runtimeErrors = 0, lastBeaconAudit = null;
+  /* 0717 #28:目标格发光壳+格口箭头实体由 01 页母版创建并挂 __S3_TARGET_FX;候选页无此全局,判空跳过。 */
+  const targetFx = root.__S3_TARGET_FX || null;
 
   function setInventory(rows, laneId, managedCount) {
     const signature = `${laneId}:${managedCount}`;
@@ -422,10 +424,21 @@
   function setTarget(frame) {
     const visible = Array.isArray(frame.slot);
     targetBox.visible = targetPad.visible = visible; byId("targetBeacon").hidden = !visible;
+    if (targetFx && !visible) { targetFx.glow.visible = targetFx.arrow.visible = targetFx.face.visible = false; }
     if (!visible) { byId("targetLeader").hidden = true; return; }
     const [col, tier] = frame.slot;
     targetBox.position.set(col + .5, RACK.loadY, tier + .5); targetPad.position.set(col + .5, RACK.loadY, tier + .075);
     const beacon = byId("targetBeacon"), completed = !frame.idle && frame.cargoOwner === "RACK";
+    /* 0717 #28 用户拍板:目标格自身强高亮——发光壳(入库完成转绿常亮)+ 大头针箭头(完成后收起)。 */
+    if (targetFx) {
+      targetFx.glow.visible = true; targetFx.glow.position.set(col + .5, RACK.loadY, tier + .5);
+      targetFx.face.visible = true; targetFx.face.position.set(col + .5, RACK.frontY - .012, tier + .5);
+      targetFx.glowMat.color.copy(completed ? targetFx.done : targetFx.amber);
+      targetFx.faceMat.color.copy(completed ? targetFx.done : targetFx.amber);
+      targetFx.arrow.visible = !completed;
+      targetFx.arrow.position.set(col + .5, targetFx.arrowY, tier + targetFx.arrowZGap);
+      targetFx.arrow.userData.baseZ = tier + targetFx.arrowZGap;
+    }
     beacon.querySelector("b").textContent = `${completed ? "已入库货位" : "入库目标"} ${String(col).padStart(2, "0")} / ${String(tier).padStart(2, "0")}`;
     beacon.querySelector("span").textContent = `第 ${String(col).padStart(2, "0")} 列 · 第 ${String(tier).padStart(2, "0")} 层`;
   }
@@ -518,12 +531,23 @@
       ".statsDelta.better{color:#1d6b2e;background:#e2f2e5}.statsDelta.worse{color:#8a4a00;background:#fdeeda}" +
       "#traceStats .conservedCell{background:#fffbe8;outline:1px dashed #c9a800;outline-offset:-1px}" +
       "#traceStats .conservedCell b{font-size:8.5px}#traceStats .conservedCell small{color:#7a6a00}" +
-      "#decisionWrap .tieNote{margin-top:4px;padding:4px 6px;border-left:3px solid #17365d;background:#eef3f8;color:#3c4c5c;font:7.5px/1.35 \"Microsoft YaHei\",sans-serif}";
+      "#decisionWrap .tieNote{margin-top:4px;padding:4px 6px;border-left:3px solid #17365d;background:#eef3f8;color:#3c4c5c;font:7.5px/1.35 \"Microsoft YaHei\",sans-serif}" +
+      /* 0717 #28:①拟真档说明标签(非控件观感) ②dock 货物大字行的等级色块(色值=A 布局 2D 图例采样色) */
+      "#tierFixedTag{display:flex;flex-direction:column;justify-content:center;gap:1px;min-height:25px;padding:2px 8px;box-sizing:border-box;" +
+        "border-left:3px solid #e7b800;background:#eef2f5;color:#1c2932;cursor:help}" +
+      "#tierFixedTag b{font:700 9.5px/1.15 \"Microsoft YaHei\",sans-serif;white-space:nowrap}" +
+      "#tierFixedTag small{font:400 7px/1.1 \"Microsoft YaHei\",sans-serif;color:#68747d;white-space:nowrap}" +
+      "#sceneActionText .gradeDot{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px}" +
+      ".gradeDot.heavy{background:#366786}.gradeDot.mid{background:#4ea9c2}.gradeDot.light{background:#abd1d8}" +
+      "#sceneActionText em{font-style:normal}";
     document.head.append(governanceStyle);
     byId("strategySelect").innerHTML = '<option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
-    byId("tierSelect").innerHTML = '<option value="fill" selected>连续填满 · SIM 数据门</option>'; byId("tierSelect").disabled = true;
-    /* 0717 用户验收:锁定下拉要说明为什么锁——本页只有一个已验证数据门;三档拟真是 02_入出闭环 页的功能。 */
-    byId("tierSelect").title = "本页为连续填满单一验证口径(加减速 SIM 数据门),故锁定;三档拟真(档1 数据模型 / 档2 加减速 / 档3 综合情景)在 02_入出闭环 页提供";
+    /* 0717 #28 用户拍板:锁定下拉在观感上像坏控件——整个换成静态说明标签(非下拉),口径如实:
+       本页只有一个已验证数据门;三档拟真是 02_入出闭环 页的功能。 */
+    const tierTag = document.createElement("span"); tierTag.id = "tierFixedTag";
+    tierTag.innerHTML = "<b>连续填满 · SIM 数据门</b><small>本页固定口径 · 三档拟真见 02 页</small>";
+    tierTag.title = "本页为连续填满单一验证口径(加减速 SIM 数据门),不提供档位切换;三档拟真(档1 数据模型 / 档2 加减速 / 档3 综合情景)在 02_入出闭环 页提供";
+    byId("tierSelect").replaceWith(tierTag);
     /* 治理 C2:支持情景切换的页面(html[data-s3-scenario-switch],由页面 store 选择器声明)启用
        skew/uniform 双情景下拉,切换=改 URL 参数整页重载(每情景仍是单 payload 队列,验证契约不变);
        冻结页(fill恢复候选/三份版式候选)无标记,保持单 option disabled,行为零变化。 */
@@ -681,12 +705,15 @@
     byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
     byId("xFill").style.setProperty("--fill", `${frame.machine.x / 19 * 100}%`); byId("zFill").style.setProperty("--fill", `${frame.machine.z / 19 * 100}%`);
     byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
-    const displayIndex = displayStepIndex(frame), operationText = frame.idle ? frame.managedCount === 267 ? "连续填满完成" : `容量书签 · 等待第 ${frame.managedCount + 1} 件` : DISPLAY_STEPS[displayIndex].label;
-    byId("sceneActionText").textContent = frame.idle ? `${operationText} · ${frame.managedCount} / 267` : `${operationText} · ${item.name} → ${target}`;
-    /* 0717 用户验收:dock 去重——步骤 x/7 由七步条唯一承担;货名/目标已在大字行,小字只留补充属性。 */
+    /* 0717 #28 用户拍板:当前作业格约占半幅,大字突出运送货物本体(等级色块+名称+重量+目标格章);
+       步骤名由并入本格的七段微条题行唯一承担,小字行只留件序与归属。 */
+    const done = !frame.idle && frame.cargoOwner === "RACK";
+    byId("sceneActionText").innerHTML = frame.idle
+      ? (frame.managedCount === 267 ? "连续填满完成 · 267 / 267" : `容量书签 · 已入库 ${frame.managedCount} / 267`)
+      : `<i class="gradeDot ${item.grade}"></i>${item.name} · ${GRADE_LABEL[item.grade]} ${item.weight_kg.toFixed(1)} kg<em>${done ? "已入" : "→ 目标"} ${target}</em>`;
     byId("sceneActionMeta").textContent = frame.idle ? "已验证快照 · SIM" : `SIM ${frame.simTime.toFixed(1)} s`;
     byId("sceneCargoMeta").textContent = frame.idle ? `${133 + frame.managedCount} / 400 总占用 · 违规 0` :
-      `${item.weight_kg.toFixed(1)} kg · ${GRADE_LABEL[item.grade]} · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
+      `第 ${frame.eventIndex + 1} / 267 件 · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
     Array.from(byId("fillBookmarkButtons").querySelectorAll("button")).forEach(button =>
       button.setAttribute("aria-current", String(Number(button.dataset.count) === frame.managedCount && frame.idle)));
   }
@@ -696,6 +723,13 @@
     if (frame.idle && frame.managedCount === 267) { disposePaths(); pathSignature = ""; }
     else setPaths(frame.event, state.laneId, frame.idle ? null : frame.operation);
     const machineWorld = setMachine(frame); setCargo(frame, machineWorld); setTarget(frame); drawSlotMap(frame, state.model); drawSpeed(frame);
+    /* #28 发光壳呼吸+箭头竖直浮动:相位取演示时钟 state.elapsed(seek 后固定,截图可复现),不用挂钟。 */
+    if (targetFx && targetFx.glow.visible) {
+      const pulse = (Math.sin(state.elapsed * 2.4) + 1) / 2, live = targetFx.arrow.visible;
+      targetFx.glowMat.opacity = live ? .30 + .22 * pulse : .48;
+      targetFx.faceMat.opacity = live ? .72 + .26 * pulse : .95;
+      if (live) targetFx.arrow.position.z = targetFx.arrow.userData.baseZ - targetFx.floatAmp * pulse;
+    }
     renderDecision(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
   }
 
@@ -792,6 +826,10 @@
         disclosureVisible: state.laneId !== "score" || Boolean(document.querySelector(".scoreFactorNote")?.textContent.includes("共用“载重×层高”原始因子"))},
       runtimeErrors, duplicateAudit: visibleTextDuplicateAudit(),
       beaconAudit: lastBeaconAudit,
+      targetFx: targetFx ? {glowVisible: targetFx.glow.visible, arrowVisible: targetFx.arrow.visible,
+        faceVisible: targetFx.face.visible, glowColor: `#${targetFx.glowMat.color.getHexString()}`,
+        glowOpacity: Number(targetFx.glowMat.opacity.toFixed(3)),
+        glowPosition: targetFx.glow.position.toArray()} : null,
       narrativeAudit: {
         scenario: SCENARIO,
         scenarioSwitchEnabled: !byId("profileSelect").disabled,

@@ -52,8 +52,9 @@
   bookmarks.append(axisRight);
   axisRight.append(byId("fillEvidence"), byId("releaseBadge"));
 
-  /* ---------- 4. dock:七段微条 + 入口等待;路径图例移场景左下 ---------- */
-  sceneDock.insertBefore(byId("phaseRail"), byId("sceneTelemetry"));
+  /* ---------- 4. dock:0717 #28 四格并三格——七段微条并入「当前作业」格(仍在 sceneDock 内,
+     步骤名由微条题行唯一承担,货物信息升大字);入口等待入 caption;路径图例移场景左下 ---------- */
+  byId("sceneCaption").append(byId("phaseRail"));
   const factsSlot = doc.createElement("span");
   factsSlot.id = "railFactsDockSlot";
   byId("sceneCaption").append(factsSlot);
