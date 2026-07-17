@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>方案B · 双证并列 — S3 信息架构评审线框</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#26292c; font-family:"Microsoft YaHei","Segoe UI",sans-serif; color:#1a1a1a; }
+.toolbar { background:#141618; color:#cfd3d7; padding:10px 18px; display:flex; align-items:center; gap:14px; font-size:13px; flex-wrap:wrap; }
+.toolbar b { color:#fff; font-size:15px; }
+.toolbar .tag { background:#3a2b0d; color:#f0b429; padding:2px 10px; border-radius:2px; font-size:12px; }
+.toolbar a { color:#7ab8f5; text-decoration:none; }
+.toolbar button { background:#2e3338; color:#dfe3e7; border:1px solid #4a5157; padding:4px 14px; cursor:pointer; font-size:13px; }
+.toolbar button.on { background:#e60000; border-color:#e60000; color:#fff; }
+#stageWrap { padding:16px; overflow:auto; }
+#stage { background:#f4f5f6; box-shadow:0 4px 24px rgba(0,0,0,.5); transform-origin:top left; position:relative; overflow:hidden; }
+#stage.w1280 { width:1280px; height:720px; }
+#stage.w1600 { width:1600px; height:900px; }
+.panel { background:#fff; border:1px solid #d4d7da; }
+.ptitle { font-size:12px; font-weight:bold; padding:6px 10px 2px; letter-spacing:.5px; }
+.note { color:#8a9096; font-size:10.5px; }
+
+/* 顶栏 */
+.topbar { position:absolute; top:0; left:0; right:0; height:44px; background:#fff; border-bottom:2px solid #e60000; display:flex; align-items:center; gap:10px; padding:0 14px; }
+.abb { color:#e60000; font-weight:900; font-size:20px; font-style:italic; letter-spacing:-1px; }
+.topbar .t { font-size:14px; font-weight:bold; }
+.sel { border:1px solid #b9bec3; background:#fbfbfc; font-size:12px; padding:4px 8px; color:#333; }
+.btn { border:1px solid #2b2f33; background:#fff; font-size:12px; padding:4px 12px; font-weight:bold; }
+
+/* 左:2D 主证栏 */
+.mapcol { position:absolute; top:52px; left:8px; width:340px; height:534px; display:flex; flex-direction:column; }
+.w1600 .mapcol { height:714px; width:400px; }
+.mapcol .head { display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px 2px; }
+.mapcol .head .cnt { font-size:12px; font-weight:bold; }
+.mapcol .imgbox { flex:1; display:flex; align-items:center; justify-content:center; padding:8px; min-height:0; }
+.mapcol img { max-width:100%; max-height:100%; border:1px solid #ccc; image-rendering:pixelated; }
+.sumline { padding:2px 10px 6px; font-size:10.5px; color:#6b5d1f; background:#fff7d6; border-top:1px solid #eadfa3; }
+
+/* 节点 chips */
+.chips { display:flex; gap:4px; padding:8px; border-top:1px solid #e2e5e8; }
+.chip { flex:1; text-align:center; border:1px solid #b9bec3; background:#fbfbfc; font-size:10.5px; padding:5px 0 3px; cursor:pointer; position:relative; }
+.chip b { display:block; font-size:11.5px; }
+.chip.done { border-color:#0b6fbf; color:#0b6fbf; }
+.chip.cur { border-color:#e60000; background:#ffecec; color:#c00; }
+.chip .pop { position:absolute; z-index:50; bottom:110%; left:0; width:330px; background:#fff; border:1px solid #c9ced3; border-top:3px solid #e60000; box-shadow:0 6px 22px rgba(0,0,0,.25); padding:10px 12px; font-size:11.5px; display:none; text-align:left; color:#1a1a1a; }
+.chip:hover .pop, .chip:focus-within .pop { display:block; }
+.chip:nth-child(n+4) .pop { left:auto; right:0; }
+.pop h4 { font-size:12px; margin-bottom:5px; }
+.pop table { width:100%; border-collapse:collapse; margin-bottom:6px; }
+.pop td { padding:1.5px 0; }
+.pop td:last-child { text-align:right; font-weight:bold; }
+.steps7 { border-top:1px dashed #d4d7da; padding-top:5px; }
+.steps7 .st { display:flex; justify-content:space-between; padding:1.5px 0; }
+.steps7 .st span:last-child { font-weight:bold; white-space:nowrap; }
+.pop .go { margin-top:6px; text-align:center; border:1px solid #0b6fbf; color:#0b6fbf; padding:3px; font-size:11px; }
+
+/* 右:3D */
+.view3d { position:absolute; top:52px; left:356px; right:8px; height:534px; background:url(img/3d_sample.png) right center/cover no-repeat; border:1px solid #d4d7da; }
+.w1600 .view3d { left:416px; height:714px; }
+.wm { position:absolute; left:10px; top:8px; background:rgba(255,255,255,.85); border:1px dashed #b0742a; color:#8a5a14; font-size:11px; padding:3px 8px; }
+
+/* 决策带 */
+.decision { position:absolute; left:8px; right:8px; top:594px; height:58px; background:#fff; border:1px solid #d4d7da; display:flex; align-items:center; gap:14px; padding:0 14px; font-size:12px; }
+.w1600 .decision { top:774px; }
+.decision .algo { font-weight:bold; white-space:nowrap; }
+.decision .algo small { display:block; font-weight:normal; font-size:10px; color:#8a9096; }
+.decision .cand { padding:4px 10px; border:1px solid #d4d7da; background:#fbfbfc; white-space:nowrap; }
+.decision .cand.top { background:#fff7d6; border-color:#e6ce6a; }
+.decision .cand b { color:#111; }
+.expander { position:relative; margin-left:auto; }
+.expander > button { border:1px solid #0b6fbf; color:#0b6fbf; background:#fff; font-size:11.5px; padding:4px 10px; cursor:pointer; }
+.expander .pop2 { display:none; position:absolute; bottom:120%; right:0; width:420px; background:#fff; border:1px solid #c9ced3; border-top:3px solid #e60000; box-shadow:0 6px 22px rgba(0,0,0,.25); padding:10px 12px; font-size:11.5px; z-index:50; }
+.expander:hover .pop2, .expander:focus-within .pop2 { display:block; }
+.w1600 .expander > button { display:none; }
+.w1600 .expander .pop2 { display:flex; position:static; width:auto; border:none; box-shadow:none; padding:0; gap:6px; align-items:center; }
+.subs { display:flex; gap:4px; }
+.subs div { background:#f2f3f4; text-align:center; padding:4px 8px; font-size:10.5px; color:#555; }
+.subs b { display:block; font-size:12px; color:#111; }
+.colin { margin-top:6px; font-size:10.5px; color:#6b5d1f; background:#fff7d6; padding:4px 8px; }
+.w1600 .colin { margin-top:0; max-width:260px; }
+
+/* dock */
+.dock { position:absolute; left:8px; right:8px; bottom:8px; height:52px; background:#fff; border:1px solid #d4d7da; border-left:4px solid #e60000; display:flex; align-items:center; gap:16px; padding:0 14px; }
+.dock .job { font-size:13px; font-weight:bold; white-space:nowrap; }
+.dock .job small { display:block; font-weight:normal; font-size:10.5px; color:#8a9096; }
+.dock .tele { margin-left:auto; display:flex; gap:14px; font-size:11px; color:#444; align-items:center; }
+.dock .tele b { font-size:12px; }
+.spd { display:flex; align-items:center; gap:6px; }
+.spd .track { width:90px; height:4px; background:#d9dde1; position:relative; }
+.spd .knob { position:absolute; left:48%; top:-4px; width:12px; height:12px; border-radius:50%; background:#e60000; }
+
+.memo { max-width:1280px; margin:10px 16px 30px; color:#b6bcc2; font-size:12.5px; line-height:1.75; }
+.memo h3 { color:#fff; font-size:14px; margin:14px 0 4px; }
+.memo li { margin-left:18px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <b>方案 B · 双证并列(审查优先)</b>
+  <span class="tag">信息架构评审线框 · 非实现候选 · 数据为 v7 快照静态样本(SIM)</span>
+  <button id="b1280" class="on" onclick="setVP(1280)">1280×720</button>
+  <button id="b1600" onclick="setVP(1600)">1600×900</button>
+  <span style="margin-left:auto"><a href="index.html">← 返回方案索引</a></span>
+</div>
+
+<div id="stageWrap"><div id="stage" class="w1280">
+
+  <div class="topbar">
+    <span class="abb">ABB</span><span class="t">智储优控 · 连续填仓演示</span>
+    <select class="sel"><option>算法:智能路由 AUTO → SCORE</option></select>
+    <select class="sel"><option>拟真档:连续填满 · SIM 数据门</option></select>
+    <select class="sel"><option>货物画像:偏斜货流 · 可复现样本</option></select>
+    <span style="flex:1"></span>
+    <button class="btn">继续</button><button class="btn">从头回放</button><button class="btn">导出3D帧</button>
+  </div>
+
+  <!-- 左:2D 主证 -->
+  <div class="panel mapcol">
+    <div class="head">
+      <span class="ptitle" style="padding:0">20×20 容量联动图 · 同源主证</span>
+      <span class="cnt">管理货 134/267 · 总占用 267/400 · 违规 0</span>
+    </div>
+    <div class="note" style="padding:0 10px">全页唯一计数处 · 同一 activeFrame 与 3D 同帧 · SIM</div>
+    <div class="imgbox"><img src="img/2d_sample.png" alt="2D 容量联动图"></div>
+    <div class="sumline">sum 规则:预占 133 格((col+tier) 和被 3 整除),不属于管理容量。</div>
+    <div class="chips">
+      <div class="chip done" tabindex="0"><b>0</b>0%
+        <div class="pop"><h4>容量节点 · 0 / 267(空仓)</h4>
+          <table><tr><td>管理货</td><td>0 / 267</td></tr><tr><td>总占用</td><td>133 / 400</td></tr><tr><td>违规</td><td>0</td></tr></table>
+          <div class="steps7"><b style="font-size:11px">七步展示拆分(4 阶段 trace · 几何/货叉阈值)</b>
+            <div class="st"><span>① 输送入场 — 货物沿入库链至装载工位</span><span>SIM 4.2s</span></div>
+            <div class="st"><span>② 入口交接 — T 形转接至载货台</span><span>SIM 1.8s</span></div>
+            <div class="st"><span>③ 双轴载货 — X/Z 同步至目标</span><span>SIM 23.8s</span></div>
+            <div class="st"><span>④ 货叉伸入</span><span>SIM 2.6s</span></div>
+            <div class="st"><span>⑤ 放货落位</span><span>SIM 1.1s</span></div>
+            <div class="st"><span>⑥ 货叉回叉</span><span>SIM 2.3s</span></div>
+            <div class="st"><span>⑦ 空载回位</span><span>SIM 19.7s</span></div>
+            <div class="note" style="margin-top:3px">演示时长=SIM÷倍率(1.00×),仅单调压缩;时长为当前件样本。</div>
+          </div>
+          <div class="go">跳转到此节点(线框示意)</div></div></div>
+      <div class="chip done" tabindex="0"><b>67</b>25%
+        <div class="pop"><h4>容量节点 · 67 / 267</h4>
+          <table><tr><td>管理货</td><td>67 / 267</td></tr><tr><td>总占用</td><td>200 / 400</td></tr><tr><td>违规</td><td>0</td></tr></table>
+          <div class="note">hover 内容同左:快照 + 七步说明(略,线框示意)</div>
+          <div class="go">跳转到此节点</div></div></div>
+      <div class="chip cur" tabindex="0"><b>134</b>50%
+        <div class="pop"><h4>容量节点 · 134 / 267(当前)</h4>
+          <table><tr><td>管理货</td><td>134 / 267</td></tr><tr><td>总占用</td><td>267 / 400</td></tr><tr><td>违规</td><td>0</td></tr></table>
+          <div class="note">正在此节点播放</div></div></div>
+      <div class="chip" tabindex="0"><b>201</b>75%
+        <div class="pop"><h4>容量节点 · 201 / 267</h4>
+          <table><tr><td>管理货</td><td>201 / 267</td></tr><tr><td>总占用</td><td>334 / 400</td></tr><tr><td>违规</td><td>0</td></tr></table>
+          <div class="go">跳转到此节点</div></div></div>
+      <div class="chip" tabindex="0"><b>241</b>90%
+        <div class="pop"><h4>容量节点 · 241 / 267</h4>
+          <table><tr><td>管理货</td><td>241 / 267</td></tr><tr><td>总占用</td><td>374 / 400</td></tr><tr><td>违规</td><td>0</td></tr></table>
+          <div class="go">跳转到此节点</div></div></div>
+      <div class="chip" tabindex="0"><b>267</b>100%
+        <div class="pop"><h4>容量节点 · 267 / 267(满)</h4>
+          <table><tr><td>管理货</td><td>267 / 267</td></tr><tr><td>总占用</td><td>400 / 400</td></tr><tr><td>违规</td><td>0</td></tr></table>
+          <div class="note">267=可管理容量;133 预占+267=400 总占用</div>
+          <div class="go">跳转到此节点</div></div></div>
+    </div>
+  </div>
+
+  <!-- 右:3D -->
+  <div class="view3d">
+    <div class="wm">3D 区域:成熟实体场景原样保留(v7 真实截图占位)· T 形同侧双链 · 目标浮签</div>
+  </div>
+
+  <!-- 决策带 -->
+  <div class="decision">
+    <span class="algo">AUTO → SCORE<small>逐件在线 · SIM</small></span>
+    <span>下一目标 <b>17/09</b> · 候选 133 合法 · 排除 267</span>
+    <span class="cand top">第1名 <b>17/09</b> 总分 <b>0.1972</b> 选中</span>
+    <span class="cand">第2名 19/09 · 0.1972</span>
+    <span class="cand">第3名 00/10 · 0.2033</span>
+    <div class="expander">
+      <button tabindex="0">展开分项 ▾</button>
+      <div class="pop2">
+        <div class="subs">
+          <div>效率<b>0.0093</b></div><div>稳定<b>0.0682</b></div><div>能耗代理<b>0.0455</b></div><div>位置保留<b>0.0742</b></div>
+        </div>
+        <div class="colin">稳定与能耗代理共用「载重×层高」原始因子,仅权重不同;临近满仓时如实显示不足 3 个候选(最多 3 个)。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- dock -->
+  <div class="dock">
+    <div class="job">当前作业 · 等待第 135 件<small>已验证快照 · SIM(计数见 2D 主证卡,不在此重复)</small></div>
+    <div class="tele">
+      <span>X <b>0.00 m</b></span><span>Z <b>0.00 m</b></span><span>F <b>0.00 m</b></span>
+      <div class="spd"><span>倍率</span><div class="track"><div class="knob"></div></div><b>1.00×</b></div>
+      <button class="btn" style="font-size:11px">镜头总览</button>
+    </div>
+  </div>
+
+</div></div>
+
+<div class="memo">
+  <h3>方案 B 摘要(评审备注,非页面内容)</h3>
+  <li><b>术语</b>:「容量节点」仅出现在 chips 浮层标题;chips 行本身无标题词。「容量书签」全部删除。</li>
+  <li><b>七步</b>:常驻条删除 → 挂在容量节点 chip 浮层内(快照+七步全文,你原话的字面落地);dock 不再放七步。</li>
+  <li><b>当前作业唯一</b>:底部 dock。<b>计数唯一</b>:2D 主证卡标题行一处。</li>
+  <li><b>主次</b>:2D(约1/3)+3D(约2/3)并列主证 &gt; 决策带(Top3 横排) &gt; 节点 chips &gt; dock。</li>
+  <li><b>删除</b>:七步常驻条、左栏大决策卡(改横向决策带,分项 1280 折叠/1600 常显)、右侧小计数栏、全部「容量书签」字样。</li>
+  <li><b>风险</b>:3D 被压至约 62%×74%,1280 顶视 T 形双链可辨性需重新截图验证;决策带+dock 双横带使 1280 下 3D 高 534px;chip 浮层较大(330px)向上开口防遮 2D;新浮层全部纳入视口断言+人工截图双门。</li>
+</div>
+
+<script>
+function setVP(w){
+  var s = document.getElementById('stage');
+  s.className = (w===1280) ? 'w1280' : 'w1600';
+  document.getElementById('b1280').className = (w===1280)?'on':'';
+  document.getElementById('b1600').className = (w===1600)?'on':'';
+  fit();
+}
+function fit(){
+  var s = document.getElementById('stage'), wrap = document.getElementById('stageWrap');
+  var cw = s.classList.contains('w1280') ? 1280 : 1600;
+  var avail = wrap.clientWidth - 32;
+  var k = Math.min(1, avail / cw);
+  s.style.transform = 'scale(' + k + ')';
+  wrap.style.height = (s.offsetHeight * k + 32) + 'px';
+}
+window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

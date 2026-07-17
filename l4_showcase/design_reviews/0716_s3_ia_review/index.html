@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>S3 信息架构方案评审 · 0716</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#1c1e20; font-family:"Microsoft YaHei","Segoe UI",sans-serif; color:#d6dade; padding:34px 20px 60px; }
+.wrap { max-width:1060px; margin:0 auto; }
+h1 { color:#fff; font-size:22px; }
+h1 span { color:#e60000; }
+.tag { display:inline-block; background:#3a2b0d; color:#f0b429; padding:3px 12px; border-radius:2px; font-size:12.5px; margin:10px 0 22px; }
+.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.card { background:#26292c; border:1px solid #3a3f44; border-top:3px solid #e60000; padding:16px 18px; text-decoration:none; color:#d6dade; display:block; transition:transform .12s, border-color .12s; }
+.card:hover { transform:translateY(-3px); border-color:#e60000; }
+.card h2 { color:#fff; font-size:16px; margin-bottom:6px; }
+.card .pos { color:#f0b429; font-size:12px; margin-bottom:10px; }
+.card p { font-size:12.5px; line-height:1.7; color:#a9b0b6; }
+.card .rec { display:inline-block; margin-top:10px; background:#0b6fbf; color:#fff; font-size:11px; padding:2px 8px; }
+.sec { background:#26292c; border:1px solid #3a3f44; padding:16px 20px; margin-top:22px; font-size:13px; line-height:1.85; }
+.sec h3 { color:#fff; font-size:15px; margin-bottom:8px; }
+.sec li { margin-left:20px; }
+.sec table { border-collapse:collapse; width:100%; margin-top:6px; }
+.sec td, .sec th { border:1px solid #3a3f44; padding:6px 10px; font-size:12.5px; text-align:left; }
+.sec th { color:#fff; background:#2e3338; }
+.hl { color:#f0b429; }
+code { background:#151719; padding:1px 6px; font-size:12px; color:#8fd0ff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span>S3</span> 信息架构方案评审 · 0716</h1>
+  <div class="tag">评审线框 · 非实现候选 · 冻结文件零触碰 · 数据为 v7 快照静态样本(SIM)</div>
+
+  <div class="cards">
+    <a class="card" href="plan_a.html">
+      <h2>方案 A · 进度轴驱动</h2>
+      <div class="pos">演示优先</div>
+      <p>6 个容量节点上移为 3D 顶部水平进度轴;七步挂 dock 七段微条 hover;左栏瘦身为决策卡+2D 小卡;3D 约 62%。</p>
+      <span class="rec">Claude 推荐</span>
+    </a>
+    <a class="card" href="plan_b.html">
+      <h2>方案 B · 双证并列</h2>
+      <div class="pos">审查优先</div>
+      <p>2D 联动图升为与 3D 并列的第二主证;节点 chips 挂 2D 下方,浮层含快照+七步全文(原话字面落地);算法证据下沉横向决策带。</p>
+    </a>
+    <a class="card" href="plan_c.html">
+      <h2>方案 C · 极简舞台</h2>
+      <div class="pos">渐进披露最激进</div>
+      <p>左栏整体取消;3D 约 85%;2D 改抽屉、Top3 改暂停弹卡、节点并入 dock 进度条。适合有人讲解的答辩,自看场景风险大。</p>
+    </a>
+  </div>
+
+  <div class="sec">
+    <h3>三套共同不变项(已锁定,不参与选择)</h3>
+    <li>3D 成熟实体场景(几何/相机/灯光/T 形同侧双链)原样保留,只动 2D 信息层——从 fill 恢复候选增量,不概念化重画。</li>
+    <li><code>activeFrame</code> 单真相源不动:2D/3D/目标/随载货/计数/文字同帧;0→267 与 133→400 同步推进。</li>
+    <li>当前作业唯一显示=底部 dock;顶部摘要不恢复。</li>
+    <li>事实边界文案全保留:sum 预占规则、SIM 证据边界、共线性联合解释、「最多 3 个」。</li>
+  </div>
+
+  <div class="sec">
+    <h3>术语:原「容量书签」→ 候选名(三套通用,全页仅出现一次)</h3>
+    <table>
+      <tr><th>候选</th><th>理由</th><th>顾虑</th></tr>
+      <tr><td><b class="hl">「容量节点」(推荐)</b></td><td>短;容量维度+可跳转节点语义;学术惯用</td><td>无</td></tr>
+      <tr><td>「进度节点」</td><td>最通俗</td><td>未点明容量维度</td></tr>
+      <tr><td>「填充里程碑」</td><td>中文人话,工程惯用</td><td>偏长,略管理腔</td></tr>
+    </table>
+    <li style="margin-top:8px">刻意避开「阶段」字样:trace 的 4 个原生阶段已占用该词,撞词会混淆两个维度。</li>
+  </div>
+
+  <div class="sec">
+    <h3>待拍板(可只回序号)</h3>
+    <li><b>1.</b> 选 A / B / C,或指定杂交(如「A 布局 + B 的节点浮层含七步」)。</li>
+    <li><b>2.</b> 术语:容量节点 / 进度节点 / 填充里程碑 / 你另拟。</li>
+    <li><b>3.</b> 七步浮层挂哪:A 式(dock 七段微条,单件维度更顺)还是 B 式(容量节点浮层,你原话字面落地)。</li>
+    <li><b>4.</b> 2D 图 1280 下「小图+点击放大」可接受,还是必须常驻 ≥200px(压 3D)。</li>
+    <li style="margin-top:8px" class="hl">选定后:Claude 先写一页冻结规格(区域/术语表/显隐状态机/禁止重复项/截图验收门/事实边界)→ 你二次确认 → 才进入编码。</li>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>方案A · 进度轴驱动 — S3 信息架构评审线框</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#26292c; font-family:"Microsoft YaHei","Segoe UI",sans-serif; color:#1a1a1a; }
+
+/* ===== 评审工具条(非页面内容) ===== */
+.toolbar { background:#141618; color:#cfd3d7; padding:10px 18px; display:flex; align-items:center; gap:14px; font-size:13px; flex-wrap:wrap; }
+.toolbar b { color:#fff; font-size:15px; }
+.toolbar .tag { background:#3a2b0d; color:#f0b429; padding:2px 10px; border-radius:2px; font-size:12px; }
+.toolbar a { color:#7ab8f5; text-decoration:none; }
+.toolbar button { background:#2e3338; color:#dfe3e7; border:1px solid #4a5157; padding:4px 14px; cursor:pointer; font-size:13px; }
+.toolbar button.on { background:#e60000; border-color:#e60000; color:#fff; }
+
+/* ===== 画布缩放包装 ===== */
+#stageWrap { padding:16px; overflow:auto; }
+#stage { background:#f4f5f6; box-shadow:0 4px 24px rgba(0,0,0,.5); transform-origin:top left; position:relative; overflow:hidden; }
+#stage.w1280 { width:1280px; height:720px; }
+#stage.w1600 { width:1600px; height:900px; }
+
+/* ===== 通用面板风 ===== */
+.panel { background:#fff; border:1px solid #d4d7da; }
+.ptitle { font-size:12px; font-weight:bold; padding:6px 10px 2px; letter-spacing:.5px; }
+.note { color:#8a9096; font-size:10.5px; }
+
+/* ===== 顶栏 ===== */
+.topbar { position:absolute; top:0; left:0; right:0; height:44px; background:#fff; border-bottom:2px solid #e60000; display:flex; align-items:center; gap:10px; padding:0 14px; }
+.abb { color:#e60000; font-weight:900; font-size:20px; font-style:italic; letter-spacing:-1px; }
+.topbar .t { font-size:14px; font-weight:bold; }
+.sel { border:1px solid #b9bec3; background:#fbfbfc; font-size:12px; padding:4px 8px; color:#333; }
+.btn { border:1px solid #2b2f33; background:#fff; font-size:12px; padding:4px 12px; font-weight:bold; }
+
+/* ===== 左栏 ===== */
+.leftcol { position:absolute; top:52px; left:8px; width:300px; bottom:76px; display:flex; flex-direction:column; gap:8px; }
+.deck { flex:0 0 auto; }
+.row { display:flex; justify-content:space-between; padding:3px 10px; font-size:12px; }
+.row .v { font-weight:bold; }
+.top1 { background:#fff7d6; }
+.subs { display:flex; gap:4px; padding:4px 8px 8px; }
+.subs div { flex:1; background:#f2f3f4; text-align:center; padding:5px 2px; font-size:10.5px; color:#555; }
+.subs b { display:block; font-size:12px; color:#111; }
+.warn { background:#fff7d6; border-top:1px solid #eadfa3; padding:5px 10px; font-size:10.5px; color:#6b5d1f; }
+
+/* 2D 小卡 */
+.map2d { flex:1 1 auto; display:flex; flex-direction:column; min-height:0; }
+.map2d .imgbox { flex:1; display:flex; align-items:center; justify-content:center; padding:6px; min-height:0; cursor:zoom-in; position:relative; }
+.map2d img { max-width:100%; max-height:100%; border:1px solid #ccc; }
+.map2d .zoomhint { position:absolute; right:10px; bottom:8px; background:rgba(0,0,0,.55); color:#fff; font-size:10px; padding:2px 6px; }
+
+/* ===== 3D 舞台 ===== */
+.stage3d { position:absolute; top:52px; left:316px; right:8px; bottom:76px; }
+.progressbar { height:58px; background:#fff; border:1px solid #d4d7da; border-bottom:none; display:flex; align-items:center; padding:0 14px; gap:8px; }
+.progressbar .lab { font-size:12px; font-weight:bold; white-space:nowrap; }
+.axis { flex:1; position:relative; height:26px; }
+.axis .line { position:absolute; top:12px; left:0; right:0; height:3px; background:#d9dde1; }
+.axis .fill { position:absolute; top:12px; left:0; width:50%; height:3px; background:#0b6fbf; }
+.nodew { position:absolute; top:3px; width:20px; height:20px; margin-left:-10px; }
+.node { width:14px; height:14px; margin:3px; border-radius:50%; background:#fff; border:2px solid #0b6fbf; cursor:pointer; }
+.nodew.done .node { background:#0b6fbf; }
+.nodew.cur .node { border-color:#e60000; background:#e60000; box-shadow:0 0 0 3px rgba(230,0,0,.18); }
+.nodew .pct { position:absolute; top:22px; left:50%; transform:translateX(-50%); font-size:10px; color:#777; display:none; }
+.w1600 .nodew .pct { display:block; }
+.counts { font-size:11.5px; white-space:nowrap; text-align:right; line-height:1.5; }
+.counts b { font-size:13px; }
+.view3d { position:absolute; top:58px; left:0; right:0; bottom:0; background:url(img/3d_sample.png) right center/cover no-repeat; border:1px solid #d4d7da; }
+.view3d .fade { position:absolute; inset:0; background:linear-gradient(90deg, rgba(244,245,246,.35), transparent 30%); }
+.wm { position:absolute; left:10px; top:8px; background:rgba(255,255,255,.85); border:1px dashed #b0742a; color:#8a5a14; font-size:11px; padding:3px 8px; }
+
+/* ===== 浮层(hover/focus 演示) ===== */
+.pop { position:absolute; z-index:40; background:#fff; border:1px solid #c9ced3; border-top:3px solid #e60000; box-shadow:0 6px 22px rgba(0,0,0,.25); padding:10px 12px; font-size:11.5px; width:250px; display:none; }
+.nodew:hover .pop, .nodew:focus-within .pop { display:block; }
+.pop h4 { font-size:12px; margin-bottom:6px; }
+.pop table { width:100%; border-collapse:collapse; }
+.pop td { padding:2px 0; }
+.pop td:last-child { text-align:right; font-weight:bold; }
+.pop .go { margin-top:8px; text-align:center; border:1px solid #0b6fbf; color:#0b6fbf; padding:3px; font-size:11px; }
+.nodepop { top:26px; left:50%; transform:translateX(-50%); }
+.nodew:nth-child(-n+3) .nodepop { left:0; transform:none; }
+
+/* ===== 底部 dock ===== */
+.dock { position:absolute; left:8px; right:8px; bottom:8px; height:60px; background:#fff; border:1px solid #d4d7da; border-left:4px solid #e60000; display:flex; align-items:center; gap:16px; padding:0 14px; }
+.dock .job { font-size:13px; font-weight:bold; white-space:nowrap; }
+.dock .job small { display:block; font-weight:normal; font-size:10.5px; color:#8a9096; }
+.seg7 { display:flex; gap:3px; align-items:flex-end; position:relative; }
+.seg { width:34px; height:16px; background:#dfe3e7; position:relative; cursor:pointer; font-size:9px; color:#333; text-align:center; line-height:16px; }
+.seg.done { background:#0b6fbf; color:#fff; }
+.seg.cur { background:#e60000; color:#fff; }
+.seg .pop { bottom:24px; left:50%; transform:translateX(-50%); width:300px; }
+.seg:hover .pop, .seg:focus-within .pop { display:block; }
+.seg7 .cap { position:absolute; top:-15px; left:0; font-size:10px; color:#8a9096; white-space:nowrap; }
+.dock .tele { margin-left:auto; display:flex; gap:14px; font-size:11px; color:#444; align-items:center; }
+.dock .tele b { font-size:12px; }
+.spd { display:flex; align-items:center; gap:6px; }
+.spd .track { width:90px; height:4px; background:#d9dde1; position:relative; }
+.spd .knob { position:absolute; left:48%; top:-4px; width:12px; height:12px; border-radius:50%; background:#e60000; }
+
+/* 2D 放大覆盖层 */
+#mapOverlay { display:none; position:absolute; inset:0; z-index:60; background:rgba(20,22,24,.55); align-items:center; justify-content:center; }
+#mapOverlay .inner { background:#fff; padding:14px; border-top:4px solid #e60000; text-align:center; }
+#mapOverlay img { width:430px; image-rendering:pixelated; }
+#mapOverlay .note { margin-top:6px; }
+
+/* ===== 画布下方说明(非页面内容) ===== */
+.memo { max-width:1280px; margin:10px 16px 30px; color:#b6bcc2; font-size:12.5px; line-height:1.75; }
+.memo h3 { color:#fff; font-size:14px; margin:14px 0 4px; }
+.memo li { margin-left:18px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <b>方案 A · 进度轴驱动(演示优先)</b>
+  <span class="tag">信息架构评审线框 · 非实现候选 · 数据为 v7 快照静态样本(SIM)</span>
+  <button id="b1280" class="on" onclick="setVP(1280)">1280×720</button>
+  <button id="b1600" onclick="setVP(1600)">1600×900</button>
+  <span style="margin-left:auto"><a href="index.html">← 返回方案索引</a></span>
+</div>
+
+<div id="stageWrap"><div id="stage" class="w1280">
+
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <span class="abb">ABB</span><span class="t">智储优控 · 连续填仓演示</span>
+    <select class="sel"><option>算法:智能路由 AUTO → SCORE</option></select>
+    <select class="sel"><option>拟真档:连续填满 · SIM 数据门</option></select>
+    <select class="sel"><option>货物画像:偏斜货流 · 可复现样本</option></select>
+    <span style="flex:1"></span>
+    <button class="btn">继续</button><button class="btn">从头回放</button><button class="btn">导出3D帧</button>
+  </div>
+
+  <!-- 左栏:算法决策卡 + 2D 小卡 -->
+  <div class="leftcol">
+    <div class="panel deck">
+      <div class="ptitle">AUTO → SCORE · 逐件在线 <span class="note">· SIM</span></div>
+      <div class="row"><span>下一目标</span><span class="v">17 / 09</span></div>
+      <div class="row"><span>候选审计</span><span class="v">133 合法 · 排除 267</span></div>
+      <div class="row top1"><span>第 1 名 17/09 <b style="color:#b07d00">选中</b></span><span class="v">总分 0.1972</span></div>
+      <div class="row"><span>第 2 名 19/09</span><span class="v">总分 0.1972</span></div>
+      <div class="row"><span>第 3 名 00/10</span><span class="v">总分 0.2033</span></div>
+      <div class="subs">
+        <div>效率<b>0.0093</b></div><div>稳定<b>0.0682</b></div><div>能耗代理<b>0.0455</b></div><div>位置保留<b>0.0742</b></div>
+      </div>
+      <div class="warn">稳定与能耗代理共用「载重×层高」原始因子,仅权重不同,不可视为两项独立证据;临近满仓时如实显示不足 3 个候选(最多 3 个)。</div>
+    </div>
+    <div class="panel map2d">
+      <div class="ptitle">20×20 容量联动图 <span class="note">同一 reducer · sum 规则:预占 133 格,不属于管理容量</span></div>
+      <div class="imgbox" onclick="document.getElementById('mapOverlay').style.display='flex'">
+        <img src="img/2d_sample.png" alt="2D 容量联动图缩略">
+        <span class="zoomhint">点击放大 ⤢</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D 舞台:进度轴 + 3D -->
+  <div class="stage3d">
+    <div class="progressbar">
+      <span class="lab">入库进度 · 容量节点</span>
+      <div class="axis">
+        <div class="line"></div><div class="fill"></div>
+        <div class="nodew done" style="left:0%"><div class="node" tabindex="0"></div><span class="pct">0%</span>
+          <div class="pop nodepop"><h4>容量节点 · 0 / 267(空仓)</h4>
+            <table><tr><td>管理货</td><td>0 / 267</td></tr><tr><td>总占用</td><td>133 / 400</td></tr><tr><td>约束违规</td><td>0</td></tr></table>
+            <div class="note" style="margin-top:4px">SIM 快照已验证 · 133 预占为不可管理体积</div>
+            <div class="go">跳转到此节点(线框示意)</div></div></div>
+        <div class="nodew done" style="left:25%"><div class="node" tabindex="0"></div><span class="pct">25%</span>
+          <div class="pop nodepop"><h4>容量节点 · 67 / 267</h4>
+            <table><tr><td>管理货</td><td>67 / 267</td></tr><tr><td>总占用</td><td>200 / 400</td></tr><tr><td>约束违规</td><td>0</td></tr></table>
+            <div class="go">跳转到此节点(线框示意)</div></div></div>
+        <div class="nodew cur" style="left:50%"><div class="node" tabindex="0"></div><span class="pct">50%</span>
+          <div class="pop nodepop"><h4>容量节点 · 134 / 267(当前)</h4>
+            <table><tr><td>管理货</td><td>134 / 267</td></tr><tr><td>总占用</td><td>267 / 400</td></tr><tr><td>约束违规</td><td>0</td></tr></table>
+            <div class="go">正在此节点播放</div></div></div>
+        <div class="nodew" style="left:75%"><div class="node" tabindex="0"></div><span class="pct">75%</span>
+          <div class="pop nodepop"><h4>容量节点 · 201 / 267</h4>
+            <table><tr><td>管理货</td><td>201 / 267</td></tr><tr><td>总占用</td><td>334 / 400</td></tr><tr><td>约束违规</td><td>0</td></tr></table>
+            <div class="go">跳转到此节点(线框示意)</div></div></div>
+        <div class="nodew" style="left:90%"><div class="node" tabindex="0"></div><span class="pct">90%</span>
+          <div class="pop nodepop"><h4>容量节点 · 241 / 267</h4>
+            <table><tr><td>管理货</td><td>241 / 267</td></tr><tr><td>总占用</td><td>374 / 400</td></tr><tr><td>约束违规</td><td>0</td></tr></table>
+            <div class="go">跳转到此节点(线框示意)</div></div></div>
+        <div class="nodew" style="left:100%"><div class="node" tabindex="0"></div><span class="pct">100%</span>
+          <div class="pop nodepop" style="left:auto; right:0; transform:none;"><h4>容量节点 · 267 / 267(满)</h4>
+            <table><tr><td>管理货</td><td>267 / 267</td></tr><tr><td>总占用</td><td>400 / 400</td></tr><tr><td>约束违规</td><td>0</td></tr></table>
+            <div class="note" style="margin-top:4px">267=可管理容量;133 预占+267=400 总占用</div>
+            <div class="go">跳转到此节点(线框示意)</div></div></div>
+      </div>
+      <div class="counts"><b>管理货 134 / 267</b> · 总占用 267 / 400 · 违规 0<br><span class="note">全页唯一计数处 · SIM 证据边界</span></div>
+    </div>
+    <div class="view3d">
+      <div class="fade"></div>
+      <div class="wm">3D 区域:成熟实体场景原样保留(此处为 v7 真实截图占位)· T 形同侧双链 · 目标浮签</div>
+    </div>
+  </div>
+
+  <!-- 底部 dock:当前作业唯一 + 七段微条 -->
+  <div class="dock">
+    <div class="job">当前作业 · 等待第 135 件<small>已验证快照 · SIM(计数见进度轴,不在此重复)</small></div>
+    <div class="seg7">
+      <span class="cap">本件七步 · hover 看目的与时长(4 阶段 trace → 7 展示步)</span>
+      <div class="seg done" tabindex="0">1<div class="pop"><h4>① 输送入场 — SIM 4.2 s · 演示 4.2 s(1.00×)</h4><div>货物沿入库链从入口运行至装载工位。</div><div class="note" style="margin-top:4px">演示时长=SIM÷倍率,仅单调压缩,不反转各步长短。</div></div></div>
+      <div class="seg done" tabindex="0">2<div class="pop"><h4>② 入口交接 — SIM 1.8 s · 演示 1.8 s(1.00×)</h4><div>货物经 T 形转接自输送链交接至堆垛机载货台。</div></div></div>
+      <div class="seg cur" tabindex="0">3<div class="pop"><h4>③ 双轴载货 — SIM 23.8 s · 演示 23.8 s(1.00×)</h4><div>X / Z 双轴按加减速模型同步运行至目标货位。</div></div></div>
+      <div class="seg" tabindex="0">4<div class="pop"><h4>④ 货叉伸入 — SIM 2.6 s · 演示 2.6 s(1.00×)</h4><div>货叉保持承托伸入目标货位。</div></div></div>
+      <div class="seg" tabindex="0">5<div class="pop"><h4>⑤ 放货落位 — SIM 1.1 s · 演示 1.1 s(1.00×)</h4><div>货物落位,所有权转入货架在库。</div></div></div>
+      <div class="seg" tabindex="0">6<div class="pop"><h4>⑥ 货叉回叉 — SIM 2.3 s · 演示 2.3 s(1.00×)</h4><div>货叉退回载货台。</div></div></div>
+      <div class="seg" tabindex="0">7<div class="pop" style="left:auto; right:0; transform:none;"><h4>⑦ 空载回位 — SIM 19.7 s · 演示 19.7 s(1.00×)</h4><div>堆垛机空载返回入口位。本件 SIM 合计 55.5 s。</div></div></div>
+    </div>
+    <div class="tele">
+      <span>X <b>0.00 m</b></span><span>Z <b>0.00 m</b></span><span>F <b>0.00 m</b></span>
+      <div class="spd"><span>倍率</span><div class="track"><div class="knob"></div></div><b>1.00×</b></div>
+      <button class="btn" style="font-size:11px">镜头总览</button>
+    </div>
+  </div>
+
+  <!-- 2D 放大覆盖层 -->
+  <div id="mapOverlay" onclick="this.style.display='none'">
+    <div class="inner">
+      <div class="ptitle" style="text-align:left">20×20 容量联动图(放大)· 点击任意处关闭</div>
+      <img src="img/2d_sample.png" alt="2D 放大">
+      <div class="note">同一 activeFrame 驱动 · sum 规则:预占 133 格不属于管理容量</div>
+    </div>
+  </div>
+
+</div></div>
+
+<div class="memo">
+  <h3>方案 A 摘要(评审备注,非页面内容)</h3>
+  <li><b>术语</b>:「容量节点」仅出现在进度轴标签一处;「容量书签」全部删除。</li>
+  <li><b>七步</b>:常驻条删除 → dock 七段微条,hover/focus 出浮层(步名+目的+SIM/演示时长);Tab 可逐段聚焦。</li>
+  <li><b>当前作业唯一</b>:底部 dock;顶部摘要不回来。<b>计数唯一</b>:进度轴右端一处。</li>
+  <li><b>主次</b>:3D(约62%) &gt; 进度轴 &gt; dock &gt; 算法决策卡 &gt; 2D 小卡(点击放大)。</li>
+  <li><b>删除</b>:左栏七步常驻条、左栏节点按钮组、右侧小计数栏、dock 内重复计数、全部「容量书签」字样。</li>
+  <li><b>风险</b>:1280 下 2D 约 110px 需点击放大;节点浮层向下开口防遮 3D 顶部;七段微条加序号提示可 hover;新浮层全部纳入 getBoundingClientRect 视口断言+人工截图双门。</li>
+</div>
+
+<script>
+function setVP(w){
+  var s = document.getElementById('stage');
+  s.className = (w===1280) ? 'w1280' : 'w1600';
+  document.getElementById('b1280').className = (w===1280)?'on':'';
+  document.getElementById('b1600').className = (w===1600)?'on':'';
+  fit();
+}
+function fit(){
+  var s = document.getElementById('stage'), wrap = document.getElementById('stageWrap');
+  var cw = s.classList.contains('w1280') ? 1280 : 1600;
+  var avail = wrap.clientWidth - 32;
+  var k = Math.min(1, avail / cw);
+  s.style.transform = 'scale(' + k + ')';
+  wrap.style.height = (s.offsetHeight * k + 32) + 'px';
+}
+window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
