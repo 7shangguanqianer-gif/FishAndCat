@@ -50,11 +50,14 @@
 2. **取出路径蓝色残留**:取出完成后格 (1,0) 显示路径蓝(4)而非空闲灰(0)——FB_RetrieveGood 回程路径的 VisuSlotState 清理不完全。
 3. **P2 标题文案过时**:「Records / Query (demo IDs 901, 902, 903)」与实际 demo ID(1..20)不符——ID=901 实测 Found=FALSE/位置-1,ID=1 即 G001。改文案属画面文本编辑,连同上两条一起进下批。
 4. **取出全程约 12 秒**:去/回程 travel 随 rSpeedScale=5 缩放,但两端 handling(6s×2)不缩放——录屏演示时预留等待,或下批把 handling 也纳入缩放。
+   > **⚠️ 0717 勘误:此条机理归因作废。** 源码核查(FB_RetrieveGood 全体)证实取出流程不含任何 handling 等待——rHandleT1..T3(6/8.5/12.5s)仅用于查询显示列与统计;0717 两次在线实测取出均在 ~1 秒内落账完成(G001 切比雪夫 0.5 s / 5 倍速),状态行直接印 "oneway 0.5 s"。0716 的"12 秒"观测应为当时操作与页面刷新间隔,归因"handling 不缩放"写错了。**教训:能复现≠断言有据,机理句必须回到源码。**
 
 ## 五、负结果与待补
 
 - **证据截图未落盘**:4 张关键截图(P2 取后查询快照 / P1 全景 / GVL_Visu 在线值 / P2 双按钮渲染)在会话内查验完毕,但 save_to_disk 未返回文件路径,全盘搜索无产物。**2 分钟重演脚本**:开 AB → Login(online change)→ F5 → P1 Load demo → Run assign → P2 输 1 → Query → Retrieve → 等 12s → 复查 Query → 截图。所有控件已就位,无需任何再配置。
+  > **✅ 0717 已补拍归档**(治理 D ST 修复后的干净重演,全新 download 初态):`l4_showcase/evidence/ab_retrieve_0717/` 四帧——01 P1 分配 DONE_OK 全景(Tests 77/77 新文案)/02 P2 Query1=G001@(1,0) 命中(标题已改 demo IDs 1..20)/03 P2 Retrieve 后首行 -1/-1 落账/04 P1 "RETRIEVED_OK G1 oneway 0.5 s" 驻留显示+格位无蓝残留。瑕疵①②③在线复核全部修复生效;截图工具 save_to_disk 仍不产文件,本批改用 PowerShell CopyFromScreen 落盘(grab.ps1 模式)。
 - P1 底部「Tests 75/75」静态文案未随 76/0 更新(历史文案,属 #11 清账范围)。
+  > **✅ 0717 已修**:随治理 D 批次改为「Tests 77/77」(fix_visu_texts_0717.py,在线复核显示正确)。
 
 ## 六、红线遵守
 
