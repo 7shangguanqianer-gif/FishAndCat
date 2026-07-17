@@ -618,8 +618,20 @@
     grid-template-areas:"head head" "task task" "controls controls" "decision decision" "map insight" "phase insight"}
   #slotMapWrap{align-self:start;container-type:inline-size}
   #slotMap{flex:none!important;width:100%;height:auto!important;min-height:0!important;aspect-ratio:2.55/1}
-  /* 0717 #26-4:差异热力图默认隐藏,仅放大 overlay 内显示 */
+  /* 0717 #26-4:差异热力图默认隐藏。0718 M1b:layout A 下常驻左栏(#workHud 作用域,放大态 reparent 到 overlay 后此作用域自动失配,交由下方 overlay 规则)。 */
   #diffMapWrap{display:none}
+  html[data-s3-layout="A"] #workHud #diffMapWrap{grid-row:-2/-1;display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+    min-height:0;margin-top:6px;padding-top:6px;border-top:1px dashed #d3dae0;overflow:hidden}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffHead b{display:block;font:800 9.5px/1.2 Consolas,"Microsoft YaHei",monospace;color:#17202b}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffHead span{display:none}   /* 长解释仅放大层展示,rail 版靠标题+图例自明 */
+  html[data-s3-layout="A"] #workHud #diffMap{display:block;height:100%;width:auto;aspect-ratio:1/1;max-width:100%;min-height:0;margin:2px auto 0}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:2px 8px;margin-top:3px;padding-right:92px;font:7.5px/1.2 "Microsoft YaHei",sans-serif;color:#53616b}   /* padding-right 让开右下 zoomHint 芯片(同 mapKey 避让模式) */
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey span{display:inline-flex;align-items:center}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey span:last-child{display:none}   /* rail 版仅留 热门/冷门 两项;预占灰=无差自明,三项全键见放大层 */
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey i{display:inline-block;width:9px;height:7px;margin-right:3px}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey .dPos{background:#d89400}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey .dNeg{background:#0b6fbf}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey .dZero{background:#d7dde1}
   html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap{display:block;margin-top:12px;border-top:1px dashed #c9ced3;padding-top:9px}
   html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffHead b{display:block;font-size:11px;color:#18232c}
   html[data-s3-layout="A"] #s3MapOverlay #diffMapWrap .diffHead span{display:block;margin-top:2px;color:#65717c;font-size:8.5px;line-height:1.4}
@@ -744,8 +756,9 @@
   html[data-s3-layout="A"] #railFacts{display:none}    /* 已入库/违规与唯一计数重复;入口等待由 dock 承载 */
   html[data-s3-layout="A"] #processGuide{display:none!important} /* 七步常驻面板删除 → dock 微条浮层 */
   html[data-s3-layout="A"] #slotMapWrap{flex:1 1 auto;order:3;min-height:150px;position:relative;cursor:zoom-in;
-    display:grid!important;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;height:auto;max-height:none;
+    display:grid!important;grid-template-rows:auto auto minmax(0,auto) auto minmax(0,1fr);overflow:hidden;height:auto;max-height:none;
     align-self:stretch!important;width:auto!important}
+    /* 0718 M1b:5 轨 = mapHead/mapRule/三联(可缩)/mapKey(≥1600 才显,否则空轨塌 0)/差异热力图(diffMapWrap 用 grid-row:-2/-1 钉末行 1fr,吃三联下方余量) */
   html[data-s3-layout="A"] #slotMap{width:100%!important;height:auto!important;min-height:0!important;
     max-width:100%;max-height:100%;aspect-ratio:2.55/1;justify-self:center;align-self:start;margin:4px auto 0;flex:none!important}
   html[data-s3-layout="A"] #decisionWrap .decisionLine span{flex:none;white-space:nowrap}

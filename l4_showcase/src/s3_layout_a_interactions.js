@@ -81,7 +81,7 @@
   const mapWrap = byId("slotMapWrap");
   const zoomHint = doc.createElement("span");
   zoomHint.className = "zoomHint";
-  zoomHint.textContent = "放大 · 三联+差异 ⤢";
+  zoomHint.textContent = "点击放大 ⤢";
   mapWrap.append(zoomHint);
   /* 0717 #26-4:终态货-格配对差异热力图(仅放大 overlay 内显示;canvas 由 runtime 绘制,
      满仓守恒下货-格配对是唯一有信息量的终态对比) */

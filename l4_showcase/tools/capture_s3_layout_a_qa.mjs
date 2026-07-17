@@ -250,6 +250,25 @@ try {
     await page.screenshot({path: join(OUT, 'pop_evidence.png'), fullPage: false});
     await page.evaluate(() => window.__S3_LAYOUT_A.hidePops());
   }
+  /* 0718 M1b:rail 态(未放大)差异热力图常驻左栏且已绘、非全零 */
+  await page.waitForTimeout(150);
+  report.railDiff = await page.evaluate(() => {
+    const rectOf = sel => { const el = document.querySelector(sel); if (!el) return null;
+      const cs = getComputedStyle(el); if (cs.display === 'none') return {hidden: true};
+      return el.getBoundingClientRect().toJSON(); };
+    return {
+      overlayOpen: document.getElementById('s3MapOverlay').classList.contains('open'),
+      display: getComputedStyle(document.getElementById('diffMapWrap')).display,
+      diffRect: document.getElementById('diffMap')?.getBoundingClientRect().toJSON() || null,
+      diffAudit: window.__S3_FILL_QA.snapshot().diffAudit,
+      /* 0718 M1b:堆叠顺序诊断(mapHead→mapRule→三联→mapKey→diffHead→diffMap,bottom 须单调递增不重叠) */
+      stack: {
+        mapHead: rectOf('#slotMapWrap .mapHead'), mapRule: rectOf('#slotMapWrap .mapRule'),
+        slotMap: rectOf('#slotMap'), mapKey: rectOf('#slotMapWrap .mapKey'),
+        diffHead: rectOf('#diffMapWrap .diffHead'), diffKey: rectOf('#diffMapWrap .diffKey')
+      }
+    };
+  });
   let diffZoom = null;
   {
     await page.evaluate(() => window.__S3_LAYOUT_A.openMap());
@@ -408,12 +427,16 @@ try {
     /* --- 0717 #26-3:冷门送远解说卡(score 首件 G001 出卡;热门件 G134 不出) --- */
     fx26ColdFarNote: firstEventState.reserveNotePresent === true &&
       report.states.filter(item => item.name.startsWith('event134_')).every(item => item.snapshot.reserveNotePresent === false),
-    /* --- 0717 #26-4:终态差异热力图(overlay 内已绘、非全零、图例齐) --- */
+    /* --- 0717 #26-4 / 0718 M1b:终态差异热力图 overlay 内已绘+rail 内常驻(均非全零、图例齐) --- */
     fx26DiffMap: Boolean(report.diffZoom) && report.diffZoom.open !== false &&
       Boolean(report.diffZoom.diffAudit) && report.diffZoom.diffAudit.nonZeroCells > 0 &&
       report.diffZoom.diffAudit.reservedCells === 133 &&
       report.diffZoom.diffRect && report.diffZoom.diffRect.width >= 200 &&
-      /SCORE 放了更热门|更冷门/.test(report.diffZoom.diffKeyText)
+      /SCORE 放了更热门|更冷门/.test(report.diffZoom.diffKeyText) &&
+      Boolean(report.railDiff) && report.railDiff.overlayOpen === false &&
+      report.railDiff.display !== 'none' &&
+      report.railDiff.diffRect && report.railDiff.diffRect.height > 2 && report.railDiff.diffRect.width > 2 &&
+      Boolean(report.railDiff.diffAudit) && report.railDiff.diffAudit.nonZeroCells > 0
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);
