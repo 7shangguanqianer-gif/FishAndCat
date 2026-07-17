@@ -18,6 +18,8 @@ realism.py — L7 拟真度阶梯:三档同管线sim对比(档1 数据模型 / �
 """
 import argparse
 import csv
+import hashlib
+import json
 import math
 import os
 import random
@@ -30,7 +32,8 @@ except Exception:
     pass
 
 import warehouse_sim as ws
-from mixed_ops import LBL, STRATS, build_workload, initial_layout, run_mixed
+from mixed_ops import (LBL, STRATS, build_workload, initial_layout,
+                       online_strategy_callable, resolve_strategy_mode, run_mixed)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEED, N_INIT, RULE = 2026, 120, "sum"
@@ -44,22 +47,70 @@ MTBF_S = 3000.0        # 〔G4〕忙时平均无故障时间情景值 s
 MTTR_S = 600.0         # 〔G4〕平均修复时间 s
 
 
-def noisy_clone(goods, sigma, seed):
+def stream_hash(value):
+    """Canonical SHA256 for deterministic exogenous-stream evidence."""
+    raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                     separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def build_noise_factors(goods, sigma, seed):
+    """Pre-generate one multiplicative frequency factor per gid."""
+    if sigma <= 0:
+        return {g.gid: 1.0 for g in goods}
+    rng = random.Random(seed)
+    return {g.gid: math.exp(rng.gauss(0.0, sigma)) for g in goods}
+
+
+def build_noise_stream(goods, inbound_goods, sigma, seed):
+    """Two independent, strategy-exogenous noise vectors (legacy offsets preserved)."""
+    initial = build_noise_factors(goods, sigma, seed + 21)
+    inbound = build_noise_factors(inbound_goods, sigma, seed + 22)
+    payload = {
+        "sigma": sigma,
+        "initial": [(g.gid, initial[g.gid]) for g in goods],
+        "inbound": [(g.gid, inbound[g.gid]) for g in inbound_goods],
+    }
+    return {"initial": initial, "inbound": inbound, "hash": stream_hash(payload)}
+
+
+def build_fault_intervals(cycles, seed, mtbf_s=MTBF_S):
+    """Pre-generate busy-time Exp(MTBF) gaps shared by every compared strategy."""
+    if cycles < 0:
+        raise ValueError("cycles must be non-negative")
+    if mtbf_s <= 0:
+        raise ValueError("mtbf_s must be positive")
+    rng = random.Random(seed + 29)
+    return [rng.expovariate(1.0 / mtbf_s) for _ in range(cycles + 1)]
+
+
+def _tier3_params(overrides=None):
+    overrides = overrides or {}
+    return {
+        "handle_s": float(overrides.get("handle_s", HANDLE_S)),
+        "arrival_rho": float(overrides.get("arrival_rho", RHO_PEAK)),
+        "arrival_rho_off": float(overrides.get("arrival_rho_off", RHO_OFF)),
+        "freq_noise_sigma": float(overrides.get("freq_noise_sigma", FREQ_SIGMA)),
+        "fault_mtbf_s": float(overrides.get("fault_mtbf_s", MTBF_S)),
+        "fault_mttr_s": float(overrides.get("fault_mttr_s", MTTR_S)),
+    }
+
+
+def noisy_clone(goods, sigma, seed, factors=None):
     """频次估计噪声:决策侧用 f_est 克隆(布局/评分都基于估计值),
     真实需求抽样(build_workload 的 requests)仍用 f_true——现实=画像不准但需求是真的。
     返回 gid 对齐的克隆列表;sigma=0 时返回原对象(档1/2 路径零扰动)。"""
     if sigma <= 0:
         return list(goods)
-    rng = random.Random(seed)
+    factors = factors or build_noise_factors(goods, sigma, seed)
     out = []
     for g in goods:
-        c = ws.Good(g.gid, g.name, g.weight, g.freq * math.exp(rng.gauss(0.0, sigma)),
-                    g.vol)
+        c = ws.Good(g.gid, g.name, g.weight, g.freq * factors[g.gid], g.vol)
         out.append(c)
     return out
 
 
-def build_arrivals(cycles, seed, reference_pair_s):
+def build_arrivals(cycles, seed, reference_pair_s, rho_peak=None, rho_off=None):
     """生成策略外生的共同到达流。
 
     ``reference_pair_s`` 只由统一的 seq reference 负载估计一次；不得按待比较
@@ -69,10 +120,14 @@ def build_arrivals(cycles, seed, reference_pair_s):
         raise ValueError("cycles must be non-negative")
     if reference_pair_s <= 0:
         raise ValueError("reference_pair_s must be positive")
+    rho_peak = RHO_PEAK if rho_peak is None else float(rho_peak)
+    rho_off = RHO_OFF if rho_off is None else float(rho_off)
+    if rho_peak <= 0 or rho_off <= 0:
+        raise ValueError("arrival rho values must be positive")
     rng = random.Random(seed + 23)
     arrivals, t = [], 0.0
     for k in range(cycles):
-        rho = RHO_PEAK if k < cycles // 2 else RHO_OFF
+        rho = rho_peak if k < cycles // 2 else rho_off
         t += rng.expovariate(rho / reference_pair_s)
         arrivals.append(t)
     return arrivals
@@ -89,70 +144,520 @@ def common_arrivals(goods, new_goods, requests, fn, w_max, f_max,
     return build_arrivals(cycles, seed, reference_pair_s), reference_pair_s
 
 
-def run_tier3(strat_name, goods, new_goods, requests, fn, w_max, f_max,
-              fn_batch=None, arrivals=None, cycles=100, seed=SEED):
-    """档3 事件驱动混合流:单服务台(1台堆垛机)+ 泊松到达(峰谷交替)+
-    装卸常数 + 频次噪声(经克隆注入)+ 故障注入(忙时 Exp(MTBF),修 MTTR)。
-    负载(new_goods/requests 的身份序列)与档1/2 完全相同；arrivals 必须由调用方
-    一次生成并在所有策略间共享。"""
-    if arrivals is None or len(arrivals) != cycles:
-        raise ValueError("run_tier3 requires one common arrivals vector of length cycles")
-    # 决策侧全部用带噪克隆;pos_of 按 gid 记位,取货按 gid 查位,与真值对象解耦
-    goods_est = noisy_clone(goods, FREQ_SIGMA, seed + 21)
-    new_est = noisy_clone(new_goods, FREQ_SIGMA, seed + 22)
-    wh, pos_of = initial_layout(strat_name, goods_est, fn_batch or fn, w_max, f_max)
-    online = {"seq": ws.strat_seq, "near": ws.strat_near,
-              "score": ws.strat_score, "awra": ws.strat_score}[strat_name]
+def common_arrivals_for_workload(goods, workload, fn, w_max, f_max,
+                                 fn_batch=None, seed=SEED, tier3_params=None):
+    """Scenario-aware seq reference; rejected gate cycles are not service samples."""
+    params = _tier3_params(tier3_params)
+    valid_cycles = int(workload["valid_cycles"])
+    scheduled_cycles = int(workload["scheduled_cycles"])
+    if valid_cycles <= 0:
+        raise ValueError("workload must contain at least one valid dispatch cycle")
+    all_inbound = [item["inbound_good"] for item in workload["cycles"]]
+    noise = build_noise_stream(
+        goods, all_inbound, params["freq_noise_sigma"], seed
+    )
+    goods_est = noisy_clone(
+        goods, params["freq_noise_sigma"], seed + 21, noise["initial"]
+    )
+    valid_est = []
+    for good in workload["valid_inbound_goods"]:
+        factor = noise["inbound"][good.gid]
+        valid_est.append(ws.Good(
+            good.gid, good.name, good.weight, good.freq * factor, good.vol
+        ))
+    probe = run_mixed(
+        "seq", goods_est, valid_est, workload["requests"], fn, w_max, f_max,
+        fn_batch,
+    )
+    reference_pair_s = probe["tot_dual"] / valid_cycles + 2 * params["handle_s"]
+    arrivals = build_arrivals(
+        scheduled_cycles, seed, reference_pair_s,
+        rho_peak=params["arrival_rho"], rho_off=params["arrival_rho_off"],
+    )
+    return arrivals, reference_pair_s
 
-    rng_fail = random.Random(seed + 29)
-    next_fail_busy = rng_fail.expovariate(1.0 / MTBF_S)   # 按忙时累计触发
+
+def _inventory_snapshot(pos_of):
+    return [
+        {"gid": gid, "col": pos[0], "tier": pos[1]}
+        for gid, pos in sorted(pos_of.items())
+    ]
+
+
+def _emit_event(event_sink, event):
+    if event_sink is None:
+        return
+    if callable(event_sink):
+        event_sink(event)
+        return
+    if hasattr(event_sink, "append"):
+        event_sink.append(event)
+        return
+    raise TypeError("event_sink must be callable or append-capable")
+
+
+def _legacy_event_records(new_goods, requests, cycles):
+    if len(new_goods) != cycles or len(requests) != cycles:
+        raise ValueError("legacy Tier 3 workload length must equal cycles")
+    return [
+        {"cycle": k, "status": "PAIRED_IN_OUT", "dispatch": True,
+         "inbound_good": good_in, "outbound_good": good_out}
+        for k, (good_in, good_out) in enumerate(zip(new_goods, requests))
+    ]
+
+
+def _provenance_payload(value):
+    """Turn an event payload into JSON data without dropping Good fields.
+
+    Events-only callers do not have the richer scenario-workload manifest, so
+    their provenance hash must cover every supplied record field and every
+    cargo attribute instead of maintaining a second, lossy field list.
+    """
+    if isinstance(value, ws.Good):
+        return {
+            "gid": value.gid,
+            "name": value.name,
+            "weight": value.weight,
+            "freq": value.freq,
+            "volume": value.vol,
+        }
+    if isinstance(value, dict):
+        return {key: _provenance_payload(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_provenance_payload(item) for item in value]
+    return value
+
+
+def _legacy_workload_hash(goods, records, seed):
+    """Canonical provenance for legacy-generated or events-only inputs."""
+    return stream_hash({
+        "schema_version": "events_only_workload_v2",
+        "seed": seed,
+        "initial": _provenance_payload(goods),
+        "cycles": _provenance_payload(records),
+    })
+
+
+def _completed_phases(arrival, start, finish, t_in, t_link, t_out,
+                      handle_s, fault_offsets, fault_mttr_s):
+    """Build visual phases and splice every productive-time fault crossing.
+
+    Each offset is measured from the cycle's productive-service start.  Queue
+    and prior repairs consume wall-clock time but never advance that cursor.
+    Motion/handling freezes at the exact local `u` and resumes from it.
+    """
+    if fault_offsets is None:
+        fault_offsets = []
+    elif isinstance(fault_offsets, (int, float)):
+        fault_offsets = [float(fault_offsets)]
+    else:
+        fault_offsets = [float(value) for value in fault_offsets]
+    if fault_offsets != sorted(fault_offsets):
+        raise ValueError("fault busy-time offsets must be sorted")
+
+    phases = [{"name": "QUEUE", "t0": arrival, "t1": start}]
+    operations = (
+        ("INBOUND_TRAVEL", t_in),
+        ("STORE_HANDLE", handle_s),
+        ("LINK_TRAVEL", t_link),
+        ("RETRIEVE_HANDLE", handle_s),
+        ("OUTBOUND_TRAVEL", t_out),
+    )
+    cursor = start
+    productive_cursor = 0.0
+    fault_index = 0
+    milestones = {}
+    eps = 1.0e-12
+
+    for name, duration in operations:
+        phase_start = productive_cursor
+        phase_end = phase_start + duration
+        phase_faults = []
+        while fault_index < len(fault_offsets):
+            offset = fault_offsets[fault_index]
+            if offset > phase_end + eps:
+                break
+            if offset < phase_start - eps:
+                raise ValueError("fault busy-time offsets overlap prior operation")
+            phase_faults.append((fault_index, max(phase_start, min(phase_end, offset))))
+            fault_index += 1
+
+        local_cursor = 0.0
+        for local_fault_number, (global_fault_number, offset) in enumerate(phase_faults):
+            cut = offset - phase_start
+            fraction = cut / duration if duration > 0.0 else 0.0
+            if cut > local_cursor + eps:
+                if len(phase_faults) == 1 and local_cursor == 0.0:
+                    segment = "before_fault"
+                elif local_cursor == 0.0:
+                    segment = "before_fault"
+                else:
+                    segment = "between_faults"
+                phases.append({
+                    "name": name, "segment": segment,
+                    "t0": cursor, "t1": cursor + (cut - local_cursor),
+                    "u0": (local_cursor / duration if duration > 0.0 else 0.0),
+                    "u1": fraction,
+                })
+                cursor += cut - local_cursor
+            phases.append({
+                "name": "FAULT_RECOVERY", "operation_phase": name,
+                "fault_index": global_fault_number,
+                "t0": cursor, "t1": cursor + fault_mttr_s,
+                "frozen_u": fraction, "sim_modelled": True,
+            })
+            cursor += fault_mttr_s
+            local_cursor = cut
+
+        if duration > local_cursor + eps:
+            phases.append({
+                "name": name,
+                "segment": ("after_fault" if phase_faults else "full"),
+                "t0": cursor, "t1": cursor + (duration - local_cursor),
+                "u0": (local_cursor / duration if duration > 0.0 else 0.0),
+                "u1": 1.0,
+            })
+            cursor += duration - local_cursor
+        productive_cursor = phase_end
+        if name == "STORE_HANDLE":
+            milestones["stored"] = cursor
+        elif name == "RETRIEVE_HANDLE":
+            milestones["retrieved"] = cursor
+        elif name == "OUTBOUND_TRAVEL":
+            milestones["outfeed"] = cursor
+
+    if fault_index != len(fault_offsets):
+        raise ValueError("fault busy-time offset lies outside productive service")
+    # Preserve exact metric arithmetic while forcing visual phases to close.
+    phases[-1]["t1"] = finish
+    milestones["outfeed"] = finish
+    return phases, milestones
+
+
+def run_tier3(strat_name, goods, new_goods, requests, fn, w_max, f_max,
+              fn_batch=None, arrivals=None, cycles=100, seed=SEED,
+              workload=None, events=None, fault_intervals=None,
+              event_sink=None, noise_stream=None, tier3_params=None,
+              router_objective="lexicographic", batch_known=True):
+    """Single Tier 3 event engine with an exact legacy-default compatibility path.
+
+    `workload` or `events` may contain gate-reject cycles.  Exogenous arrivals,
+    noise and busy-time fault intervals are generated outside strategy branches
+    and exposed by hash.  Event details are built only when a sink is supplied.
+    """
+    params = _tier3_params(tier3_params)
+    decision = resolve_strategy_mode(
+        strat_name, goods, batch_known=batch_known, objective=router_objective
+    )
+    picked = decision["picked"]
+    extended = any(value is not None for value in (
+        workload, events, fault_intervals, event_sink, noise_stream, tier3_params,
+    )) or str(strat_name).lower() not in {"seq", "near", "score", "awra"}
+    # The no-extension path is an exact historical-number compatibility lane.
+    # Dynamic experiments use the corrected productive busy-time clock below;
+    # the legacy lane intentionally keeps its old arithmetic byte-for-byte.
+    legacy_compat = not extended
+    if workload is not None and events is not None:
+        raise ValueError("workload and events are mutually exclusive provenance inputs")
+    if events is not None:
+        records = list(events)
+    elif workload is not None:
+        records = list(workload["cycles"])
+    else:
+        records = _legacy_event_records(new_goods, requests, cycles)
+    if len(records) != cycles:
+        raise ValueError(f"run_tier3 expected {cycles} scheduled events, got {len(records)}")
+    if arrivals is None or len(arrivals) != len(records):
+        raise ValueError("run_tier3 requires one common arrivals vector per scheduled event")
+
+    all_inbound = [item["inbound_good"] for item in records]
+    noise_stream = noise_stream or build_noise_stream(
+        goods, all_inbound, params["freq_noise_sigma"], seed
+    )
+    goods_est = noisy_clone(
+        goods, params["freq_noise_sigma"], seed + 21, noise_stream["initial"]
+    )
+    inbound_est = {}
+    for good in all_inbound:
+        factor = noise_stream["inbound"][good.gid]
+        inbound_est[good.gid] = ws.Good(
+            good.gid, good.name, good.weight, good.freq * factor, good.vol
+        )
+    intervals = list(fault_intervals) if fault_intervals is not None else build_fault_intervals(
+        len(records), seed, params["fault_mtbf_s"]
+    )
+    if not intervals or any(value <= 0 for value in intervals):
+        raise ValueError("fault_intervals must contain positive busy-time gaps")
+    shared_hashes = {
+        "workload_hash": (workload["workload_hash"] if workload is not None
+                          else _legacy_workload_hash(goods, records, seed)),
+        "arrivals_hash": stream_hash(arrivals),
+        "noise_hash": noise_stream["hash"],
+        "fault_stream_hash": stream_hash({
+            "mtbf_s": params["fault_mtbf_s"],
+            "mttr_s": params["fault_mttr_s"],
+            "intervals": intervals,
+        }),
+    }
+    planned_dispatch_count = sum(bool(item.get("dispatch", True)) for item in records)
+    planned_rejected_count = len(records) - planned_dispatch_count
+    wh, pos_of, initial_failed = initial_layout(
+        picked, goods_est, fn_batch or fn, w_max, f_max,
+        seed=seed, return_failed=True,
+    )
+    if initial_failed and not extended:
+        raise AssertionError(picked)
+    if initial_failed:
+        return {
+            "tot_dual": 0.0,
+            "busy_total": 0.0,
+            "avg_retr": 0.0,
+            "resp_p50": None,
+            "resp_p95": None,
+            "util": None,
+            "n_down": 0,
+            "downtime": 0.0,
+            "fails": len(initial_failed),
+            "viol": 0,
+            "status": "INFEASIBLE",
+            "initial_fails": len(initial_failed),
+            "initial_placed": len(pos_of),
+            "scheduled_cycles": len(records),
+            "valid_cycles": planned_dispatch_count,
+            "rejected_cycles": planned_rejected_count,
+            "processed_scheduled_cycles": 0,
+            "processed_valid_cycles": 0,
+            "processed_rejected_cycles": 0,
+            "completed_cycles": 0,
+            "unprocessed_cycles": len(records),
+            "terminal_failure_cycle": None,
+            "terminal_failure_stage": "INITIAL_LAYOUT",
+            "failure_policy": "TERMINATE_NO_FALLBACK",
+            "response_sample_n": 0,
+            "dual_time_sample_n": 0,
+            "util_sample_n": 0,
+            "productive_busy_s": 0.0,
+            "fault_clock_mode": "productive_busy_time_v1",
+            "reject_service_s": (workload.get("reject_service_s", 0)
+                                  if workload is not None else 0),
+            "router": decision,
+            "picked_strategy": picked,
+            "strategy_switches": 0,
+            "advisory_count": sum(item.get("advisory") is not None for item in records),
+            "stream_hashes": shared_hashes,
+        }
+    online = online_strategy_callable(picked, seed)
+    next_fail_busy = intervals[0]
+    fault_cursor = 1
 
     crane_free = 0.0
     busy_acc = 0.0
+    productive_busy_acc = 0.0
     tot_dual = 0.0
-    retr_t, resp = [], []
+    retr_t, responses = [], []
     fails = viol = n_down = 0
     downtime = 0.0
-    for k, (g_in, g_out) in enumerate(zip(new_est, requests)):
-        s_out = pos_of.pop(g_out.gid)
-        s_in = online(wh, g_in, fn)
+    dispatch_count = 0
+    rejected_count = 0
+    processed_scheduled_cycles = 0
+    terminal_failure_cycle = None
+    terminal_failure_stage = None
+
+    for k, record in enumerate(records):
+        processed_scheduled_cycles = k + 1
+        arrival = arrivals[k]
+        snapshot_before = _inventory_snapshot(pos_of) if event_sink is not None else None
+        if not record.get("dispatch", True):
+            rejected_count += 1
+            event = {
+                "cycle": k, "status": "REJECT_NO_DISPATCH",
+                "arrival": arrival, "start": arrival, "finish": arrival,
+                "service": 0.0, "response": None,
+                "inbound_gid": record["inbound_good"].gid,
+                "outbound_gid": None,
+                "inbound_profile": record.get("inbound_profile"),
+                "advisory": record.get("advisory"),
+                "phases": [{"name": "GATE_REJECT", "t0": arrival, "t1": arrival,
+                            "sim_modelled": True}],
+                "ownership_events": [],
+                "inventory_before": snapshot_before,
+                "inventory_after": (list(snapshot_before)
+                                    if snapshot_before is not None else None),
+            }
+            _emit_event(event_sink, event)
+            continue
+
+        dispatch_count += 1
+        true_in = record["inbound_good"]
+        good_in = inbound_est[true_in.gid]
+        good_out = record["outbound_good"]
+        if good_out is None or good_out.gid not in pos_of:
+            raise ValueError(
+                f"workload outbound gid missing before cycle {k}: "
+                f"{None if good_out is None else good_out.gid}"
+            )
+        s_out = pos_of.pop(good_out.gid)
+        s_in = online(wh, good_in, fn)
         if s_in is None:
             fails += 1
-            wh.remove(s_out[0], s_out[1])
-            continue
-        if g_in.weight > ws.tier_cap(s_in[1]) or g_in.vol > ws.CELL_VOL:
+            # Placement is planned before either leg executes.  Restore the
+            # outbound lookup and terminate this strategy run without silently
+            # switching algorithms or corrupting the pre-registered workload.
+            pos_of[good_out.gid] = s_out
+            failure_time = max(arrival, crane_free)
+            terminal_failure_cycle = k
+            terminal_failure_stage = "ONLINE_PLACEMENT"
+            event = {
+                "cycle": k, "status": "PLACEMENT_FAIL_TERMINAL",
+                "terminal": True,
+                "failure_policy": "TERMINATE_NO_FALLBACK",
+                "arrival": arrival, "start": failure_time, "finish": failure_time,
+                "service": 0.0, "response": None,
+                "inbound_gid": good_in.gid, "outbound_gid": good_out.gid,
+                "inbound_profile": record.get("inbound_profile"),
+                "advisory": record.get("advisory"),
+                "phases": [{"name": "PLACEMENT_FAIL_TERMINAL",
+                            "t0": failure_time, "t1": failure_time}],
+                "ownership_events": [],
+                "inventory_before": snapshot_before,
+                "inventory_after": (list(snapshot_before)
+                                    if snapshot_before is not None else None),
+            }
+            _emit_event(event_sink, event)
+            break
+        if good_in.weight > ws.tier_cap(s_in[1]) or good_in.vol > ws.CELL_VOL:
             viol += 1
         t_in = ws.travel_time(*s_in)
         t_link = ws.travel_time_between(s_in[0], s_in[1], s_out[0], s_out[1])
         t_out = ws.travel_time(*s_out)
-        service = t_in + t_link + t_out + 2 * HANDLE_S    # 双命令:存取各一次装卸
-        start = max(arrivals[k], crane_free)
-        # 故障:服务把忙时钟推过触发点 → 本单内插入一次修复(修完继续)
-        if busy_acc + service > next_fail_busy:
-            service += MTTR_S
-            downtime += MTTR_S
-            n_down += 1
-            next_fail_busy = busy_acc + service + rng_fail.expovariate(1.0 / MTBF_S)
+        productive_service = t_in + t_link + t_out + 2 * params["handle_s"]
+        service = productive_service
+        start = max(arrival, crane_free)
+        fault_offsets = []
+        if legacy_compat:
+            # Historical implementation: at most one failure per completed
+            # cycle and the next gap begins at that cycle's end.  Kept solely
+            # to protect the four published regression anchors.
+            if busy_acc + service > next_fail_busy:
+                fault_offsets.append(next_fail_busy - busy_acc)
+                service += params["fault_mttr_s"]
+                downtime += params["fault_mttr_s"]
+                n_down += 1
+                if fault_cursor >= len(intervals):
+                    raise ValueError("fault_intervals exhausted")
+                next_fail_busy = busy_acc + service + intervals[fault_cursor]
+                fault_cursor += 1
+        else:
+            # Correct v1 clock: every Exp gap is consumed only by productive
+            # motion/handling.  Queue and MTTR advance wall time, never MTBF.
+            cycle_productive_end = productive_busy_acc + productive_service
+            while cycle_productive_end > next_fail_busy:
+                fault_offsets.append(next_fail_busy - productive_busy_acc)
+                downtime += params["fault_mttr_s"]
+                n_down += 1
+                if fault_cursor >= len(intervals):
+                    raise ValueError("fault_intervals exhausted")
+                next_fail_busy += intervals[fault_cursor]
+                fault_cursor += 1
+            service += len(fault_offsets) * params["fault_mttr_s"]
         finish = start + service
         crane_free = finish
         busy_acc += service
-        tot_dual += t_in + t_link + t_out                 # 纯行程(跨档可比口径)
+        productive_busy_acc += productive_service
+        tot_dual += t_in + t_link + t_out
         retr_t.append(t_out)
-        resp.append(finish - arrivals[k])
-        wh.put(s_in[0], s_in[1], g_in)
-        pos_of[g_in.gid] = s_in
+        response = finish - arrival
+        responses.append(response)
+        wh.put(s_in[0], s_in[1], good_in)
+        pos_of[good_in.gid] = s_in
         wh.remove(s_out[0], s_out[1])
-    resp.sort()
-    n = len(resp)
+
+        if event_sink is not None:
+            phases, milestones = _completed_phases(
+                arrival, start, finish, t_in, t_link, t_out,
+                params["handle_s"], fault_offsets, params["fault_mttr_s"],
+            )
+            ownership_events = [
+                {"t": start, "gid": good_in.gid, "from": "QUEUE", "to": "CARRIER_IN"},
+                {"t": milestones["stored"], "gid": good_in.gid,
+                 "from": "CARRIER_IN", "to": "RACK"},
+                {"t": milestones["retrieved"], "gid": good_out.gid,
+                 "from": "RACK", "to": "CARRIER_OUT"},
+                {"t": finish, "gid": good_out.gid,
+                 "from": "CARRIER_OUT", "to": "OUTFEED"},
+            ]
+            _emit_event(event_sink, {
+                "cycle": k, "status": "COMPLETED",
+                "arrival": arrival, "start": start, "finish": finish,
+                "service": service, "response": response,
+                "inbound_gid": good_in.gid, "outbound_gid": good_out.gid,
+                "inbound_profile": record.get("inbound_profile"),
+                "advisory": record.get("advisory"),
+                "store_slot": {"col": s_in[0], "tier": s_in[1]},
+                "retrieve_slot": {"col": s_out[0], "tier": s_out[1]},
+                "faulted": bool(fault_offsets),
+                "fault_busy_offset": (fault_offsets[0] if fault_offsets else None),
+                "fault_busy_offsets": list(fault_offsets),
+                "phases": phases,
+                "ownership_events": ownership_events,
+                "inventory_before": snapshot_before,
+                "inventory_after": _inventory_snapshot(pos_of),
+            })
+
+    responses.sort()
+    n = len(responses)
     makespan = crane_free
-    return dict(tot_dual=tot_dual,
-                busy_total=busy_acc,
-                avg_retr=sum(retr_t) / len(retr_t) if retr_t else 0.0,
-                resp_p50=resp[n // 2] if n else 0.0,
-                resp_p95=resp[min(n - 1, int(n * 0.95))] if n else 0.0,
-                util=(busy_acc - downtime) / makespan if makespan else 0.0,
-                n_down=n_down, downtime=downtime,
-                fails=fails, viol=viol)
+    result = dict(tot_dual=tot_dual,
+                  busy_total=busy_acc,
+                  avg_retr=sum(retr_t) / len(retr_t) if retr_t else 0.0,
+                  resp_p50=responses[n // 2] if n else 0.0,
+                  resp_p95=responses[min(n - 1, int(n * 0.95))] if n else 0.0,
+                  util=(busy_acc - downtime) / makespan if makespan else 0.0,
+                  n_down=n_down, downtime=downtime,
+                  fails=fails, viol=viol)
+    if extended:
+        true_by_gid = {g.gid: g for g in goods}
+        true_by_gid.update({g.gid: g for g in all_inbound})
+        final_placed = [
+            (true_by_gid[gid], pos) for gid, pos in pos_of.items()
+            if gid in true_by_gid
+        ]
+        final_layout = ws.metrics(wh, final_placed, [])
+        result.update(
+            status=("FEASIBLE" if fails == 0 and viol == 0 else "INFEASIBLE"),
+            initial_fails=0,
+            initial_placed=len(goods),
+            scheduled_cycles=len(records),
+            valid_cycles=planned_dispatch_count,
+            rejected_cycles=planned_rejected_count,
+            processed_scheduled_cycles=processed_scheduled_cycles,
+            processed_valid_cycles=dispatch_count,
+            processed_rejected_cycles=rejected_count,
+            completed_cycles=len(retr_t),
+            unprocessed_cycles=len(records) - processed_scheduled_cycles,
+            terminal_failure_cycle=terminal_failure_cycle,
+            terminal_failure_stage=terminal_failure_stage,
+            failure_policy="TERMINATE_NO_FALLBACK",
+            response_sample_n=n,
+            dual_time_sample_n=len(retr_t),
+            util_sample_n=len(retr_t),
+            productive_busy_s=productive_busy_acc,
+            fault_clock_mode="productive_busy_time_v1",
+            reject_service_s=(workload.get("reject_service_s", 0)
+                              if workload is not None else 0),
+            router=decision,
+            picked_strategy=picked,
+            strategy_switches=0,
+            advisory_count=sum(item.get("advisory") is not None for item in records),
+            makespan_s=makespan,
+            drain_time_s=(max(0.0, makespan - arrivals[-1]) if arrivals else 0.0),
+            final_layout_exp_t=final_layout["exp_t"],
+            final_energy_kgm=final_layout["energy"],
+            final_heavy_tier=final_layout["heavy_tier"],
+            final_cog_m=final_layout["cog"],
+            stream_hashes=shared_hashes,
+        )
+    return result
 
 
 def tier12(tier, goods, new_goods, requests, cycles):

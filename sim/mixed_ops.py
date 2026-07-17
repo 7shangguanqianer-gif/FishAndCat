@@ -16,6 +16,8 @@ mixed_ops.py — L2 存取混合作业流仿真:补齐题面"存取效率(单位
 """
 import argparse
 import csv
+import hashlib
+import json
 import os
 import random
 import sys
@@ -27,10 +29,13 @@ except Exception:
     pass
 
 import warehouse_sim as ws
+import cargo_scenarios as cs
+import strategy_lib as sl
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEED, N_INIT, RULE = 2026, 120, "sum"
 STRATS = ["seq", "near", "score", "awra"]
+DYNAMIC_STRATS = ["random", "seq", "near", "score", "awra", "cb", "tob"]
 LBL = {"seq": "顺序基线", "near": "就近贪心", "score": "多目标评分(在线)",
        "awra": "AWRA-LS(批量)"}
 
@@ -55,25 +60,258 @@ def build_workload(init_goods, n_cycles, seed):
     return new_goods, requests
 
 
-def initial_layout(strat_name, goods, fn, w_max, f_max):
+def _canonical_hash(value):
+    raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                     separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _good_payload(good):
+    return dict(gid=good.gid, name=good.name, weight=good.weight,
+                freq=good.freq, volume=good.vol)
+
+
+def _pool_order_hash(pool):
+    """Hash the ordered identity/weight vector actually consumed by random.choices."""
+    return _canonical_hash([(g.gid, g.freq) for g in pool])
+
+
+def _registered_scenario_id(scenario):
+    """Recover the registry key without adding a duplicated mutable id field."""
+    for sid, registered in cs.load_registry()["scenarios"].items():
+        if scenario == registered:
+            return sid
+    return scenario.get("scenario_id", "CUSTOM")
+
+
+def _inbound_profile_label(scenario, cycle):
+    generator = scenario["inbound_goods_generator"]
+    if generator["type"] != "segmented_cases":
+        return scenario["profile"]
+    for segment in generator["segments"]:
+        if segment["start_cycle"] <= cycle <= segment["end_cycle"]:
+            return segment["case"]
+    raise ValueError(f"cycle {cycle} is outside the registered inbound segments")
+
+
+def build_scenario_workload(initial_goods, inbound_goods, scenario, seed):
+    """Build a registered, strategy-independent dynamic workload.
+
+    The function consumes cargo identity/frequency only.  It never receives a
+    warehouse layout, so request sampling cannot accidentally depend on slot
+    positions.  Legal cycles keep the legacy order (pick outbound from current
+    pool, remove it, then add inbound).  Illegal inbound is rejected at the
+    gate and consumes neither a request RNG draw nor a dispatch cycle.
+    """
+    scheduled = int(scenario["scheduled_cycles"])
+    if len(inbound_goods) != scheduled:
+        raise ValueError(
+            f"registered workload requires {scheduled} inbound cycles, got {len(inbound_goods)}"
+        )
+    if not initial_goods or any(not cs.is_legal_cargo(g) for g in initial_goods):
+        raise ValueError("initial inventory must be non-empty and entrance-legal")
+    all_gids = [g.gid for g in initial_goods] + [g.gid for g in inbound_goods]
+    if len(all_gids) != len(set(all_gids)):
+        raise ValueError("initial and inbound gid sets must be globally unique")
+
+    policy = scenario["request_pool_policy"]
+    if (policy.get("type") != "weighted_current_legal_inventory"
+            or policy.get("weight") != "freq"
+            or policy.get("position_blind") is not True):
+        raise ValueError(f"unsupported request pool policy: {policy!r}")
+    rng = random.Random(int(seed) + int(policy["seed_offset"]))
+    pool = list(initial_goods)
+    cycles = []
+    valid_inbound = []
+    requests = []
+    dispatch_mask = []
+    advisories = []
+    advisory_cycles = set(scenario.get("router_contract", {}).get("advisory_cycles", []))
+
+    for cycle, good_in in enumerate(inbound_goods):
+        before_count = len(pool)
+        before_hash = _pool_order_hash(pool)
+        advisory = None
+        if cycle in advisory_cycles:
+            profile = cs.scenario_profile(pool)
+            advisory = {
+                "cycle": cycle,
+                "profile": profile,
+                "objective": "lexicographic",
+                "recommended_strategy": sl.select_strategy(
+                    profile, batch_known=True, objective="lexicographic"
+                ),
+                "advisory_only": True,
+                "applied": False,
+                "existing_inventory_relayout": False,
+            }
+            advisories.append(advisory)
+
+        legal = cs.is_legal_cargo(good_in)
+        good_out = None
+        if legal:
+            weights = [g.freq for g in pool]
+            if not weights or sum(weights) <= 0.0:
+                raise ValueError("request pool must have positive total frequency")
+            good_out = rng.choices(pool, weights=weights, k=1)[0]
+            pool.remove(good_out)
+            pool.append(good_in)
+            valid_inbound.append(good_in)
+            requests.append(good_out)
+            status = "PAIRED_IN_OUT"
+            dispatch = True
+        else:
+            status = "REJECT_NO_DISPATCH"
+            dispatch = False
+
+        dispatch_mask.append(dispatch)
+        cycles.append({
+            "cycle": cycle,
+            "status": status,
+            "dispatch": dispatch,
+            "inbound_profile": _inbound_profile_label(scenario, cycle),
+            "inbound_good": good_in,
+            "outbound_good": good_out,
+            "inbound_gid": good_in.gid,
+            "outbound_gid": good_out.gid if good_out is not None else None,
+            "inventory_before": before_count,
+            "inventory_after": len(pool),
+            "pool_order_hash_before": before_hash,
+            "pool_order_hash_after": _pool_order_hash(pool),
+            "advisory": advisory,
+        })
+
+    rejected = len(cycles) - len(valid_inbound)
+    invalid_policy = scenario["invalid_inbound_policy"]
+    expected_rejected = int(invalid_policy["expected_count"])
+    if rejected != expected_rejected:
+        raise ValueError(
+            f"invalid-inbound contract mismatch: expected {expected_rejected}, got {rejected}"
+        )
+    if len(pool) != len(initial_goods):
+        raise AssertionError("paired workload did not conserve legal inventory count")
+
+    scenario_id = _registered_scenario_id(scenario)
+    cycle_payload = []
+    for item in cycles:
+        cycle_payload.append({
+            "cycle": item["cycle"],
+            "status": item["status"],
+            "dispatch": item["dispatch"],
+            "inbound_profile": item["inbound_profile"],
+            "inbound": _good_payload(item["inbound_good"]),
+            "outbound_gid": item["outbound_gid"],
+            "inventory_before": item["inventory_before"],
+            "inventory_after": item["inventory_after"],
+            "pool_order_hash_before": item["pool_order_hash_before"],
+            "pool_order_hash_after": item["pool_order_hash_after"],
+            "advisory": item["advisory"],
+        })
+    inbound_payload = [_good_payload(g) for g in inbound_goods]
+    request_payload = [item["outbound_gid"] for item in cycles]
+    workload_payload = {
+        "schema_version": "scenario_workload_v1",
+        "scenario_id": scenario_id,
+        "seed": int(seed),
+        "request_pool_policy": policy,
+        "invalid_inbound_policy": invalid_policy,
+        "initial_goods": [_good_payload(g) for g in initial_goods],
+        "cycles": cycle_payload,
+    }
+    return {
+        "schema_version": "scenario_workload_v1",
+        "scenario_id": scenario_id,
+        "seed": int(seed),
+        "scheduled_cycles": scheduled,
+        "valid_cycles": len(valid_inbound),
+        "rejected_cycles": rejected,
+        "response_sample_n": len(valid_inbound),
+        "reject_service_s": invalid_policy.get("reject_service_s", 0),
+        "cycles": cycles,
+        "valid_inbound_goods": valid_inbound,
+        "requests": requests,
+        "dispatch_mask": dispatch_mask,
+        "advisories": advisories,
+        "final_pool_gids": [g.gid for g in pool],
+        "final_inventory_count": len(pool),
+        "inbound_stream_hash": _canonical_hash(inbound_payload),
+        "request_stream_hash": _canonical_hash(request_payload),
+        "workload_hash": _canonical_hash(workload_payload),
+    }
+
+
+def resolve_strategy_mode(mode, goods, batch_known=True, objective="lexicographic"):
+    """Resolve a manual mode or AUTO exactly once from the true initial batch."""
+    normalized = str(mode).lower()
+    profile = sl.batch_profile(goods)
+    if normalized == "auto":
+        return sl.explain_selection(profile, batch_known, objective)
+    if normalized not in sl.STRATEGY_CHAINS:
+        raise ValueError(f"unknown strategy mode: {mode}")
+    chain = sl.STRATEGY_CHAINS[normalized]
+    return {
+        "router_version": "manual_override_v1",
+        "profile": profile,
+        "batch_known": bool(batch_known),
+        "objective": objective,
+        "picked": normalized,
+        "alt": None,
+        "reason_code": "MANUAL_OVERRIDE",
+        "reason": "人工固定策略；AUTO 路由未接管",
+        "reason_basis": "manual_override",
+        "thresholds": dict(sl.ROUTER_THRESHOLDS),
+        "initial_strategy": chain["initial"],
+        "online_strategy": chain["online"],
+        "selection_scope": "fixed_manual",
+        "weight_aware": False,
+        "display_only_features": ["w_mean", "w_heavy"],
+    }
+
+
+def online_strategy_callable(strat_name, seed=SEED):
+    online_name = sl.STRATEGY_CHAINS[strat_name]["online"]
+    if online_name == "random":
+        return ws.strat_random(random.Random(seed + 301))
+    return {"seq": ws.strat_seq, "near": ws.strat_near,
+            "score": ws.strat_score}[online_name]
+
+
+def initial_layout(strat_name, goods, fn, w_max, f_max, seed=SEED,
+                   return_failed=False):
+    """Execute the registered initial-stage algorithm without hidden relayout."""
     if strat_name == "awra":
         wh, placed, failed = ws.run_awra_ls(goods, RULE, fn, w_max, f_max)
+    elif strat_name == "cb":
+        wh, placed, failed = sl.run_class_based(goods, RULE)
+    elif strat_name == "tob":
+        wh, placed, failed = sl.run_full_turnover(goods, RULE)
+    elif strat_name == "random":
+        wh, placed, failed = ws.run_online(
+            ws.strat_random(random.Random(seed + 1)), goods, RULE, fn
+        )
     else:
         strat = {"seq": ws.strat_seq, "near": ws.strat_near,
                  "score": ws.strat_score}[strat_name]
         wh, placed, failed = ws.run_online(strat, goods, RULE, fn)
+    positions = {g.gid: pos for g, pos in placed}
+    if return_failed:
+        return wh, positions, failed
     assert not failed, strat_name
-    return wh, {g.gid: pos for g, pos in placed}
+    return wh, positions
 
 
 def run_mixed(strat_name, goods, new_goods, requests, fn, w_max, f_max,
-              fn_batch=None):
+              fn_batch=None, seed=SEED, batch_known=True,
+              objective="lexicographic"):
     """跑混合流:入库决策用该策略的在线形式(awra 布局的后续入库用 score 在线,
     因为混合流是逐件到达场景——批量重排不适用于单件即时决策,如实声明)。
     fn_batch:awra 初始布局用的评分(H 口径下批量/在线权重不同,A1);缺省=fn。"""
-    wh, pos_of = initial_layout(strat_name, goods, fn_batch or fn, w_max, f_max)
-    online = {"seq": ws.strat_seq, "near": ws.strat_near,
-              "score": ws.strat_score, "awra": ws.strat_score}[strat_name]
+    decision = resolve_strategy_mode(strat_name, goods, batch_known, objective)
+    picked = decision["picked"]
+    wh, pos_of = initial_layout(
+        picked, goods, fn_batch or fn, w_max, f_max, seed=seed
+    )
+    online = online_strategy_callable(picked, seed)
     tot_single = tot_dual = 0.0
     retr_t = []
     fails = viol = 0

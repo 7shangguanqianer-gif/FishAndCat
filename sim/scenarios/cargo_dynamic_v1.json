@@ -1,0 +1,233 @@
+{
+  "schema_version": "cargo_dynamic_v1",
+  "description": "S3 multi-strategy dynamic cargo registry; simulation evidence only",
+  "capacity_sum_rule": 267,
+  "seed_ranges": {
+    "S1_exploration": [2026, 2035],
+    "S2_confirmation": [31001, 31030],
+    "S3_long_run": [41001, 41010],
+    "weight_v2_untouched": [51001, 51030]
+  },
+  "rng_contract": {
+    "initial_goods_seed_offset": 0,
+    "inbound_goods_seed_offset": 7,
+    "request_seed_offset": 13,
+    "invalid_index_seed_offset": 31,
+    "rank_coupling_seed_offset": 101,
+    "attribute_draw_order": ["weight", "freq", "volume"],
+    "rank_sort_key": ["attribute_value", "gid"]
+  },
+  "default_tier3": {
+    "arrival_rho": 0.75,
+    "freq_noise_sigma": 0.0,
+    "fault_mtbf_s": 3000,
+    "fault_mttr_s": 600
+  },
+  "scenarios": {
+    "E01": {
+      "label": "120 uniform",
+      "profile": "uniform",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "uniform", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "uniform", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E02": {
+      "label": "120 skew",
+      "profile": "skew",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "skew", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E03": {
+      "label": "120 heavy",
+      "profile": "heavy",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "heavy", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "heavy", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E04": {
+      "label": "20 tiny-light",
+      "profile": "tiny_light",
+      "initial_count": 20,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "dsl", "count": 20, "seed_offset": 0, "gid_start": 1, "source": "instance_gen.SCENARIOS.tiny_light", "weight": {"dist": "uniform", "lo": 5.0, "hi": 25.0}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "inbound_goods_generator": {"type": "dsl", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "instance_gen.SCENARIOS.tiny_light", "weight": {"dist": "uniform", "lo": 5.0, "hi": 25.0}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E05": {
+      "label": "60 light-sparse",
+      "profile": "light_sparse",
+      "initial_count": 60,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "dsl", "count": 60, "seed_offset": 0, "gid_start": 1, "source": "instance_gen.SCENARIOS.light_sparse", "weight": {"dist": "uniform", "lo": 5.0, "hi": 25.0}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "inbound_goods_generator": {"type": "dsl", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "instance_gen.SCENARIOS.light_sparse", "weight": {"dist": "uniform", "lo": 5.0, "hi": 25.0}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E06": {
+      "label": "120 flat-info",
+      "profile": "flat_info",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "dsl", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "instance_gen.SCENARIOS.flat_info", "weight": {"dist": "uniform", "lo": 5.0, "hi": 80.0}, "freq": {"dist": "uniform", "lo": 40.0, "hi": 60.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "inbound_goods_generator": {"type": "dsl", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "instance_gen.SCENARIOS.flat_info", "weight": {"dist": "uniform", "lo": 5.0, "hi": 80.0}, "freq": {"dist": "uniform", "lo": 40.0, "hi": 60.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E07": {
+      "label": "60 heavy-sparse",
+      "profile": "heavy_sparse",
+      "initial_count": 60,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "dsl", "count": 60, "seed_offset": 0, "gid_start": 1, "source": "instance_gen.SCENARIOS.heavy_sparse", "weight": {"dist": "triangular", "lo": 40.0, "hi": 80.0, "mode": 72.0}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "inbound_goods_generator": {"type": "dsl", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "instance_gen.SCENARIOS.heavy_sparse", "weight": {"dist": "triangular", "lo": 40.0, "hi": 80.0, "mode": 72.0}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.1, "hi": 0.9}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E08": {
+      "label": "200 dense-skew",
+      "profile": "dense_skew",
+      "initial_count": 200,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "skew", "count": 200, "seed_offset": 0, "gid_start": 1, "source": "instance_gen.SCENARIOS.dense_200"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "instance_gen.SCENARIOS.dense_200"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E09": {
+      "label": "240 dense-skew",
+      "profile": "dense_skew",
+      "initial_count": 240,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "skew", "count": 240, "seed_offset": 0, "gid_start": 1, "source": "instance_gen.SCENARIOS.dense_240"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "instance_gen.SCENARIOS.dense_240"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E10": {
+      "label": "120 hot-heavy",
+      "profile": "hot_heavy",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "rank_coupled", "base_case": "skew", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods", "coupling": {"driver": "weight", "target": "freq", "direction": "positive", "rho_threshold": 0.75, "seed_offset": 101, "adjacent_swap_fraction": 0.10}},
+      "inbound_goods_generator": {"type": "rank_coupled", "base_case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods", "coupling": {"driver": "weight", "target": "freq", "direction": "positive", "rho_threshold": 0.75, "seed_offset": 101, "adjacent_swap_fraction": 0.10}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E11": {
+      "label": "120 hot-light",
+      "profile": "hot_light",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "rank_coupled", "base_case": "skew", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods", "coupling": {"driver": "weight", "target": "freq", "direction": "negative", "rho_threshold": -0.75, "seed_offset": 101, "adjacent_swap_fraction": 0.10}},
+      "inbound_goods_generator": {"type": "rank_coupled", "base_case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods", "coupling": {"driver": "weight", "target": "freq", "direction": "negative", "rho_threshold": -0.75, "seed_offset": 101, "adjacent_swap_fraction": 0.10}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E12": {
+      "label": "120 bulky-heavy",
+      "profile": "bulky_heavy",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "rank_coupled", "base_case": "skew", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods", "coupling": {"driver": "weight", "target": "volume", "direction": "positive", "rho_threshold": 0.75, "seed_offset": 101, "adjacent_swap_fraction": 0.10}},
+      "inbound_goods_generator": {"type": "rank_coupled", "base_case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods", "coupling": {"driver": "weight", "target": "volume", "direction": "positive", "rho_threshold": 0.75, "seed_offset": 101, "adjacent_swap_fraction": 0.10}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E13": {
+      "label": "120 near-limit",
+      "profile": "near_limit",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "dsl", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "cargo_dynamic_v1", "weight": {"dist": "uniform", "lo": 90.0, "hi": 99.5}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.90, "hi": 0.99}},
+      "inbound_goods_generator": {"type": "dsl", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "cargo_dynamic_v1", "weight": {"dist": "uniform", "lo": 90.0, "hi": 99.5}, "freq": {"dist": "pareto", "alpha": 1.16, "cap": 100.0}, "volume": {"dist": "uniform", "lo": 0.90, "hi": 0.99}},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E14": {
+      "label": "120 illegal-mix",
+      "profile": "illegal_mix",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "valid_cycles": 94,
+      "rejected_cycles": 6,
+      "initial_goods_generator": {"type": "legacy_case", "case": "skew", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "illegal_mix", "base_case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods", "invalid_count": 6, "invalid_seed_offset": 31, "overweight_range_kg": [101.0, 130.0], "oversize_range_m3": [1.05, 1.30]},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 6, "dispatch": "REJECT_NO_DISPATCH", "reject_service_s": 0, "reject_service_basis": "modelled_no_canonical_parameter"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E15": {
+      "label": "200 skew + rho=0.90",
+      "ui_label": "扩展 Tier 3 压力情景（非 canonical G2、非 H）",
+      "profile": "dense_skew",
+      "initial_count": 200,
+      "scheduled_cycles": 100,
+      "extended_pressure": true,
+      "canonical_g2": false,
+      "headline_eligible": false,
+      "initial_goods_generator": {"type": "legacy_case", "case": "skew", "count": 200, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.90, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E16": {
+      "label": "120 skew + sigma=0.45",
+      "profile": "skew",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "skew", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "skew", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.45, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    },
+    "E17": {
+      "label": "120 heavy + MTBF=1500",
+      "profile": "heavy",
+      "initial_count": 120,
+      "scheduled_cycles": 100,
+      "initial_goods_generator": {"type": "legacy_case", "case": "heavy", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "legacy_case", "case": "heavy", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods"},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 1500, "fault_mttr_s": 600}
+    },
+    "E18": {
+      "label": "99-cycle uniform-to-skew-to-heavy",
+      "profile": "distribution_drift",
+      "initial_count": 120,
+      "scheduled_cycles": 99,
+      "initial_goods_generator": {"type": "legacy_case", "case": "uniform", "count": 120, "seed_offset": 0, "gid_start": 1, "source": "warehouse_sim.gen_goods"},
+      "inbound_goods_generator": {"type": "segmented_cases", "count_source": "cycles", "seed_offset": 7, "gid_start": 10001, "source": "warehouse_sim.gen_goods_draw_contract", "segments": [{"start_cycle": 0, "end_cycle": 32, "case": "uniform"}, {"start_cycle": 33, "end_cycle": 65, "case": "skew"}, {"start_cycle": 66, "end_cycle": 98, "case": "heavy"}]},
+      "request_pool_policy": {"type": "weighted_current_legal_inventory", "weight": "freq", "seed_offset": 13, "position_blind": true, "segment_label_blind": true},
+      "invalid_inbound_policy": {"mode": "reject_at_gate", "expected_count": 0, "dispatch": "PAIRED_IN_OUT"},
+      "router_contract": {"select_once_at_run_start": true, "advisory_cycles": [33, 66], "advisory_only": true, "existing_inventory_relayout": false},
+      "tier3": {"arrival_rho": 0.75, "freq_noise_sigma": 0.0, "fault_mtbf_s": 3000, "fault_mttr_s": 600}
+    }
+  }
+}

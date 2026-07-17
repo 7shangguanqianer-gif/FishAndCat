@@ -55,6 +55,26 @@ TERMS = {
                    anchor="HSG 1976;COI 变体:Heskett 1963/64,Kallina & Lynn 1976 LP 最优性"),
 }
 
+# Dynamic mixed-flow contract.  Batch algorithms optimize only the initial
+# known batch; subsequent one-by-one arrivals use score and never trigger a
+# cost-free full relayout.
+STRATEGY_CHAINS = {
+    "random": {"initial": "random", "online": "random"},
+    "seq": {"initial": "seq", "online": "seq"},
+    "near": {"initial": "near", "online": "near"},
+    "score": {"initial": "score", "online": "score"},
+    "awra": {"initial": "awra", "online": "score"},
+    "cb": {"initial": "cb", "online": "score"},
+    "tob": {"initial": "tob", "online": "score"},
+}
+
+ROUTER_THRESHOLDS = {
+    "density_low_max": 0.25,
+    "density_high_min": 0.70,
+    "online_skew_low": 0.35,
+    "tiny_batch_max": 20,
+}
+
 
 # ---------------- 二、新增经典批量策略 ----------------
 def _slots_by_time(wh):
@@ -169,6 +189,77 @@ def select_strategy(profile, batch_known=True, objective="holistic"):
     if p["skew"] < 0.35 and p["n"] <= 20:
         return "near"                         # 极小批+无画像:简单规则即可(F18-2)
     return "awra"
+
+
+def explain_selection(profile, batch_known, objective):
+    """Explain one deterministic router decision without changing its result.
+
+    The lexicographic branch executes fixed thresholds distilled offline.  It
+    does not compute confidence intervals at runtime.  `w_mean/w_heavy` remain
+    display-only in v1 and are explicitly marked as such in the return value.
+    """
+    picked = select_strategy(profile, batch_known=batch_known, objective=objective)
+    p = profile
+    if not batch_known:
+        if p["skew"] < ROUTER_THRESHOLDS["online_skew_low"]:
+            code = "ONLINE_LOW_SKEW_NEAR"
+            reason = "skew < 0.35，逐件未知批次使用 COL/near"
+        elif p["n"] <= ROUTER_THRESHOLDS["tiny_batch_max"]:
+            code = "ONLINE_TINY_NEAR"
+            reason = "n <= 20，逐件未知批次使用简单 COL/near"
+        else:
+            code = "ONLINE_PROFILED_SCORE"
+            reason = "画像有区分度，逐件未知批次使用多准则 score"
+        basis = "runtime_fixed_thresholds_only"
+        alt = "score" if picked == "near" else "near"
+    elif objective == "lexicographic":
+        basis = ("offline_calibration_zero_excess_fail_then_exp_t_ci_tie_then_"
+                 "heavy_tier;runtime_fixed_thresholds_only")
+        if p["density"] >= ROUTER_THRESHOLDS["density_high_min"]:
+            code = "LEX_DENSE_CB"
+            reason = "density >= 0.70，离线零失败门后的高密度固定分支选择 CB"
+            alt = "awra"
+        elif (p["density"] <= ROUTER_THRESHOLDS["density_low_max"]
+              and p["n"] > ROUTER_THRESHOLDS["tiny_batch_max"]):
+            code = "LEX_SPARSE_AWRA"
+            reason = "density <= 0.25 且 n > 20，离线 CI 并列后的安全键选择 AWRA"
+            alt = "tob"
+        else:
+            code = "LEX_MID_OR_TINY_TOB"
+            reason = "中密度或极小批固定分支选择 TOB"
+            alt = "awra"
+    elif objective == "speed":
+        basis = "offline_speed_calibration_with_dense_fail_veto;runtime_fixed_thresholds_only"
+        if p["density"] >= ROUTER_THRESHOLDS["density_high_min"]:
+            code, reason, alt = "SPEED_DENSE_CB", "高密度下 TOB 漏件否决，选择 CB", "tob"
+        else:
+            code, reason, alt = "SPEED_TOB", "非高密度纯效率分支选择 TOB", "cb"
+    elif objective == "holistic":
+        basis = "offline_holistic_policy;runtime_fixed_thresholds_only"
+        if p["skew"] < ROUTER_THRESHOLDS["online_skew_low"] and p["n"] <= ROUTER_THRESHOLDS["tiny_batch_max"]:
+            code, reason, alt = "HOLISTIC_TINY_NEAR", "极小批且画像弱，使用 near", "awra"
+        else:
+            code, reason, alt = "HOLISTIC_AWRA", "综合安全/能耗口径固定选择 AWRA", "cb"
+    else:
+        raise ValueError(f"unknown objective: {objective}")
+    chain = STRATEGY_CHAINS[picked]
+    return {
+        "router_version": "scenario_router_v1_0706",
+        "profile": dict(profile),
+        "batch_known": bool(batch_known),
+        "objective": objective,
+        "picked": picked,
+        "alt": alt,
+        "reason_code": code,
+        "reason": reason,
+        "reason_basis": basis,
+        "thresholds": dict(ROUTER_THRESHOLDS),
+        "initial_strategy": chain["initial"],
+        "online_strategy": chain["online"],
+        "selection_scope": "run_start_once",
+        "weight_aware": False,
+        "display_only_features": ["w_mean", "w_heavy"],
+    }
 
 
 def recommend(profile, batch_known=True, objective="holistic",

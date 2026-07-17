@@ -25,6 +25,7 @@ cost",LAP 标准技巧)——不可行 (g,slot) 对赋 BIG,解出后检查未选
 """
 import argparse
 import csv
+import math
 import os
 import statistics as st
 import sys
@@ -51,14 +52,52 @@ def free_slots(rule):
             if not ws.preoccupied(c, t, rule)]
 
 
-def solve_lap(goods, rule, objective):
+def _score_normalizers(goods, score_normalization):
+    """返回 score 归一化参数；显式参数用于跨策略同目标证据链。"""
+    if score_normalization is None:
+        w_max = max(g.weight for g in goods)
+        f_max = max(g.freq for g in goods)
+        t_max = ws.t_max_now()
+    else:
+        required = {"w_max", "f_max", "t_max_s"}
+        if set(score_normalization) != required:
+            raise ValueError(
+                "score_normalization must contain exactly w_max, f_max, t_max_s"
+            )
+        w_max = float(score_normalization["w_max"])
+        f_max = float(score_normalization["f_max"])
+        t_max = float(score_normalization["t_max_s"])
+        runtime_t_max = float(ws.t_max_now())
+        if not math.isclose(t_max, runtime_t_max, rel_tol=0.0, abs_tol=1e-9):
+            raise ValueError(
+                "score_normalization t_max_s does not match active motion model"
+            )
+    if not (math.isfinite(w_max) and math.isfinite(f_max)
+            and math.isfinite(t_max) and w_max > 0 and f_max > 0 and t_max > 0):
+        raise ValueError("score normalization bounds must be finite and positive")
+    return w_max, f_max, t_max
+
+
+def solve_lap(goods, rule, objective, *, score_normalization=None):
     """LAP 精确最优。objective ∈ {"score", "exp_t"}。
+
+    ``score_normalization`` 为可选冻结口径 ``w_max/f_max/t_max_s``。不传时
+    保留历史脚本的样本最大值口径；发布证据必须显式传入，避免与在线策略目标漂移。
     返回 (最优目标值, assignment[(good,pos)]);任一货物无可行位→(None, 违规货物数)。"""
+    if objective not in {"score", "exp_t"}:
+        raise ValueError(f"unsupported LAP objective: {objective}")
     slots = free_slots(rule)
-    w_max = max(g.weight for g in goods)
-    f_max = max(g.freq for g in goods)
-    fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
     n, m = len(goods), len(slots)
+    if n == 0:
+        return 0.0, []
+    # scipy 对 n>m 的矩形矩阵只返回 min(n,m) 个配对；若不先拦截，
+    # 会把“只分配了部分货物”误报成完整可行解。
+    if n > m:
+        return None, n - m
+    fn = None
+    if objective == "score":
+        w_max, f_max, _ = _score_normalizers(goods, score_normalization)
+        fn = ws.make_score_fn(1.0, 0.6, 0.4, 0.15, w_max, f_max)
     C = np.full((n, m), BIG, dtype=float)
     for i, g in enumerate(goods):
         for j, (c, t) in enumerate(slots):
@@ -68,6 +107,16 @@ def solve_lap(goods, rule, objective):
                 else:                          # exp_t 口径:freq·travel_time(常数 Σf 略)
                     C[i, j] = g.freq * ws.travel_time(c, t)
     rows, cols = linear_sum_assignment(C)
+    rows = np.asarray(rows, dtype=int)
+    cols = np.asarray(cols, dtype=int)
+    if len(rows) != len(cols) or len(rows) > n:
+        raise RuntimeError("LAP solver returned an invalid complete assignment")
+    if len(rows) != n:
+        return None, n - len(rows)
+    if (sorted(rows.tolist()) != list(range(n))
+            or len(set(cols.tolist())) != n
+            or np.any(cols < 0) or np.any(cols >= m)):
+        raise RuntimeError("LAP solver returned an invalid complete assignment")
     if C[rows, cols].max() >= BIG:             # 有货物被迫走禁止边=该实例不可行
         bad = int((C[rows, cols] >= BIG).sum())
         return None, bad
@@ -92,8 +141,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=30)
     ap.add_argument("--scenarios", default="all")
-    ap.add_argument("--rule", default="sum")
+    ap.add_argument("--rule", default="sum", choices=["sum", "and", "or", "linear"])
     a = ap.parse_args()
+    if a.seeds <= 0:
+        ap.error("--seeds must be positive")
     seeds = [2026 + i for i in range(a.seeds)]
     names = list(ig.SCENARIOS) if a.scenarios == "all" else a.scenarios.split(",")
 
@@ -123,6 +174,8 @@ def main():
                 print(f"{name:<15}{obj:<7}{hm:>10.2f}{om:>10.2f}"
                       f"{m:>10.2f} ± {h:<5.2f} (n={len(gaps)})")
 
+    if not rows:
+        raise RuntimeError("no comparable LAP rows; refusing to overwrite lap_gap.csv")
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "lap_gap.csv"), "w", newline="",
               encoding="utf-8-sig") as fp:
