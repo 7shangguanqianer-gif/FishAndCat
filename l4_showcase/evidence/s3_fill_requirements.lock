@@ -1,0 +1,6 @@
+# S3 fill-only LAP evidence environment (candidate release 2026-07-16)
+# Python is recorded because scipy.optimize.linear_sum_assignment is part of
+# the exact static reference path; this is evidence provenance, not a pip input.
+python==3.9.13
+numpy==1.25.2
+scipy==1.13.1

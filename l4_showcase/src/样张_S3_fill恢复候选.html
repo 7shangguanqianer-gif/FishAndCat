@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>智储优控 · S3 三维作业轨迹回放</title>
+<style>
+  :root{--brand:#ff000f;--ink:#1a1a1a;--muted:#69717a;--line:#d5d8dc;--paper:#fff;
+    --bg:#f2f2f2;--navy:#17365d;--mid:#4a6fa5;--light:#9dbbdd;--amber:#e7b800;--alarm:#b71c1c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;min-width:760px;min-height:660px;background:var(--bg);color:var(--ink);
+    font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;overflow:hidden}
+  #brand{height:54px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:14px;padding:0 18px;
+    border-bottom:4px solid var(--brand)}
+  #brand .logo{font:900 24px/1 Arial,sans-serif;color:var(--brand);letter-spacing:.5px}
+  #brand .title{font-size:16px;font-weight:700;letter-spacing:.3px}
+  #brand .meta{margin-left:auto;font:11px/1.5 Consolas,"JetBrains Mono",monospace;color:#b7bcc4;text-align:right}
+  #brand .meta b{color:#fff}
+  #kpis{height:72px;padding:8px 12px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;background:#e5e7ea}
+  .kpi{min-width:0;background:var(--paper);border:1px solid #cfd3d7;border-radius:4px;padding:6px 11px;box-shadow:0 1px 2px #0000000b}
+  .kpi .v{font:700 18px/1.15 Consolas,"JetBrains Mono",monospace;white-space:nowrap}
+  .kpi .k{font-size:10.5px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #modebar{height:44px;display:flex;align-items:center;gap:4px;padding:5px 12px;background:#fff;border-top:1px solid #d7dade;border-bottom:1px solid #cfd3d7}
+  .viewTab{height:32px;padding:0 15px;border:1px solid transparent;border-radius:3px;background:transparent;color:#616a73;cursor:pointer;font-weight:650}
+  .viewTab:hover{background:#f1f3f5;color:#1a1a1a}.viewTab.active{background:#17202b;color:#fff;border-color:#17202b}
+  #modeHint{margin-left:10px;color:#747c85;font-size:10.5px}.modeFact{margin-left:auto;font:10px/1 Consolas,"Microsoft YaHei",monospace;color:#68717b}
+  #main{height:calc(100vh - 54px - 72px - 44px - 48px - 26px);padding:8px 12px;min-height:0}
+  .view{display:none;width:100%;height:100%;min-height:0}.view.active{display:block}
+  #dataView.active{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:8px}
+  .panel{min-height:0;background:#fff;border:1px solid #d1d5d9;border-radius:4px;padding:10px 12px 7px;display:flex;flex-direction:column;box-shadow:0 1px 2px #00000008}
+  .panel .cap{text-align:left;font-size:12px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .panel .question{font-size:10px;color:#747c85;margin:3px 0 2px}
+  .panel canvas{width:100%;height:100%;min-height:0;display:block}
+  .panel .note{text-align:right;font:9.5px/1.1 Consolas,"JetBrains Mono",monospace;color:#8d949c}
+  #dataGuide{background:#17202b;color:#f2f5f8;border-color:#17202b;padding:16px 18px;justify-content:space-between}
+  #dataGuide h2{font-size:15px;margin-bottom:7px}#dataGuide p{font-size:11px;line-height:1.7;color:#bfc7d0}
+  #dataGuide .rule{display:grid;grid-template-columns:auto 1fr;gap:7px 10px;margin-top:10px;font-size:10.5px;line-height:1.45}
+  #dataGuide .rule b{color:#f0c800}#dataGuide .source{color:#8994a0;font:9.5px/1.5 Consolas,"Microsoft YaHei",monospace}
+  #viewport{position:relative;width:100%;height:100%;min-height:0;background:#f2f2f2;border:1px solid #d1d5d9;border-radius:4px;overflow:hidden}
+  #gl{position:absolute;inset:0}
+  #workHud{position:absolute;z-index:4;top:9px;left:10px;right:10px;display:grid;grid-template-columns:minmax(360px,480px) 292px;justify-content:space-between;gap:8px;pointer-events:none}
+  #taskline{min-width:0;padding:7px 10px;border-left:3px solid var(--amber);background:#fffffff0;box-shadow:0 1px 5px #00000018;line-height:1.35}
+  #taskline .kicker{font:8.5px/1.2 Consolas,"Microsoft YaHei",monospace;color:#7a828a;letter-spacing:.6px}
+  #taskline .primary{display:flex;align-items:center;gap:8px;min-width:0;margin-top:2px;font-size:12px}
+  #taskPrimary{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#actionBadge{margin-left:auto;padding:3px 7px;background:#e7b800;color:#17202b;border-radius:2px;font-size:10px;font-weight:700;white-space:nowrap;transition:background-color .18s,color .18s}
+  #taskline .metaRow{display:flex;gap:12px;margin-top:3px;color:#69717a;font:9.5px/1.2 Consolas,"Microsoft YaHei",monospace}
+  #stepPurpose{display:flex;align-items:flex-start;gap:8px;margin-top:7px;padding:6px 7px;background:#edf2f6;color:#344653;font:10px/1.35 "Microsoft YaHei",sans-serif}
+  #stepPurpose b{flex:0 0 auto;color:#17365d;font:800 9px/1.45 Consolas,monospace;letter-spacing:.35px}
+  #axisHud{width:auto;padding:7px 9px;background:#17202be8;color:#eef3f8;
+    border:1px solid #ffffff30;border-radius:3px;box-shadow:0 3px 12px #0002;font:10px/1.55 Consolas,"JetBrains Mono",monospace}
+  #axisHud b{display:block;color:#fff;font-size:11px;margin-bottom:2px}#axisHud .axis{display:grid;grid-template-columns:22px 1fr auto;gap:5px;align-items:center}
+  #axisHud .axis i{height:3px;background:#65707c;overflow:hidden}#axisHud .axis i:after{content:"";display:block;width:var(--fill,0%);height:100%;background:var(--c,#4a6fa5)}
+  #phaseRail{position:absolute;z-index:4;left:10px;bottom:9px;width:min(51%,460px);padding:6px 8px 7px;background:#fffffff0;
+    border:1px solid #d8dadd;border-radius:3px;box-shadow:0 2px 8px #00000012}
+  #phaseRail .phaseTitle{display:flex;justify-content:space-between;margin-bottom:4px;color:#626a73;font:9px/1.2 Consolas,"Microsoft YaHei",monospace}
+  #phaseSegments{position:relative;display:grid;height:19px;gap:2px}.phaseSeg{display:flex;align-items:center;justify-content:center;background:#e3e6e9;
+    color:#69717a;font-size:8.5px;white-space:nowrap;overflow:hidden}.phaseSeg.active{font-weight:700}
+  .phaseSeg:nth-child(1).active,.phaseSeg:nth-child(3).active{background:#e7b800;color:#17202b}
+  .phaseSeg:nth-child(2).active{background:#17365d;color:#fff}.phaseSeg:nth-child(4).active{background:#8fb3e8;color:#17202b}
+  #phaseCursor{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--amber);box-shadow:0 0 0 1px #fff;pointer-events:none}
+  #legend{position:absolute;z-index:4;right:10px;bottom:9px;display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end;
+    width:min(37%,355px);padding:6px 8px;background:#ffffffe8;border:1px solid #d8dadd;border-radius:3px;font-size:9.5px;color:#555}
+  .sw{display:inline-flex;align-items:center;gap:4px}.sw i{display:inline-block;width:18px;height:3px;border-radius:2px}
+  .sw i.multi{height:7px;background:linear-gradient(90deg,#17365d 0 33%,#4a6fa5 33% 66%,#9dbbdd 66%)}
+  #cycleReset{position:absolute;z-index:10;inset:0;display:flex;align-items:center;justify-content:center;background:#e7eceff5;opacity:0;pointer-events:none;transition:opacity .12s linear}
+  #cycleReset.is-visible{opacity:1}
+  #cycleReset .resetCard{padding:11px 16px;border-left:3px solid var(--amber);background:#17202b;color:#fff;box-shadow:0 5px 20px #0003}
+  #cycleReset b{display:block;font:700 12px/1.2 Consolas,"Microsoft YaHei",monospace}#cycleReset span{display:block;margin-top:4px;color:#bfc7d0;font-size:9.5px}
+  #bar{height:48px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;border-top:1px solid #d2d5d8}
+  #bar .desc{flex:1;font-size:11px;line-height:1.45;color:#5d656d}
+  #bar .desc b{color:#1a1a1a}
+  button{font:12px/1 "Microsoft YaHei",sans-serif}
+  button:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+  .toolBtn{padding:8px 13px;background:#fff;border:1px solid var(--navy);border-radius:3px;color:var(--navy);cursor:pointer;white-space:nowrap}.toolBtn:hover{background:#eef3f9}
+  #immersiveExit{display:none;position:absolute;z-index:9;top:99px;right:10px;padding:8px 12px;background:#17202be8;color:#fff;border:1px solid #ffffff55;border-radius:3px;cursor:pointer}
+  body.immersive #brand,body.immersive #kpis,body.immersive #modebar,body.immersive #bar,body.immersive #foot{display:none}
+  body.immersive #main{height:100vh;padding:0}body.immersive #viewport{border:0;border-radius:0}body.immersive #immersiveExit{display:block}
+  body.data-mode #bar{display:none}body.data-mode #main{height:calc(100vh - 54px - 72px - 44px - 26px)}
+  #foot{height:26px;background:#e5e7ea;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 14px;
+    color:#747b83;font:9.5px/1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
+  @media(max-width:1100px){#brand .meta span{display:none}.kpi{padding-left:7px;padding-right:7px}.kpi .v{font-size:15px}.modeFact{display:none}}
+  @media(max-width:920px){#workHud{grid-template-columns:minmax(340px,1fr) 235px}#axisHud{font-size:9px}#phaseRail{width:55%}#legend{width:40%;font-size:8.5px}.panel{padding:7px 9px 5px}.panel .question{display:none}}
+  @media(max-width:800px){.kpi .v{font-size:13px}}
+
+  /* 0714-R3 A 重做：左侧同源数据与 20×20 规则地图，右侧完整 3D 与阶段性动作特写。 */
+  html,body{min-width:1280px;min-height:720px;background:#e7ebef}
+  #brand,#kpis,#modebar,#bar,#foot{display:none!important}
+  #main{height:100vh!important;padding:0!important}
+  #sceneView,#viewport{height:100%;border:0;border-radius:0}
+  #dataView{display:none!important}
+  #gl{left:var(--rail-w,32%);background:var(--scene-bg,#edf1f3)}
+  #workHud{position:absolute;z-index:5;inset:0 auto 0 0;width:var(--rail-w,32%);padding:24px 22px 18px;
+    display:flex;flex-direction:column;justify-content:flex-start;gap:13px;pointer-events:auto;background:var(--rail-bg,#f7f8fa);
+    color:var(--rail-ink,#15202b);border-right:1px solid var(--rail-line,#c6ced5);box-shadow:12px 0 30px #17202b12}
+  #railHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--rail-line,#c6ced5)}
+  #railHead .eyebrow{font:700 10px/1.2 Consolas,monospace;letter-spacing:1.5px;color:var(--accent,#17365d)}
+  #railHead h1{margin-top:5px;font-size:22px;line-height:1.12;letter-spacing:-.4px}
+  #railHead .matrix{font:700 11px/1.35 Consolas,monospace;text-align:right;color:var(--rail-muted,#65717c)}
+  #taskline{padding:12px 13px;border:1px solid var(--rail-line,#c6ced5);border-left:4px solid var(--accent,#17365d);
+    background:var(--card,#fff);box-shadow:none;line-height:1.3}
+  #taskline .kicker{color:var(--rail-muted,#65717c)}#taskline .primary{display:block;margin-top:5px;font-size:14px}
+  #taskPrimary{display:block;white-space:normal;line-height:1.35}#actionBadge{display:inline-flex;margin:10px 0 0;padding:6px 9px;font-size:11px}
+  #taskline .metaRow{margin-top:8px;justify-content:space-between;color:var(--rail-muted,#65717c)}
+  #axisHud{order:3;width:100%;padding:12px 13px;background:var(--axis-bg,#17202b);border:0;border-radius:0;box-shadow:none;font-size:11px}
+  #axisHud b{font-size:10px;letter-spacing:1.2px;color:#c7d2dc;margin-bottom:8px}
+  #axisHud .axis{grid-template-columns:20px 1fr 62px;gap:8px;margin:7px 0}#axisHud .axis i{height:5px;border-radius:0}
+  #axisHud .axis span:last-child{text-align:right;font-size:12px;color:#fff}
+  #liveChartWrap{order:5;min-height:132px;padding:10px 11px 7px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
+  #liveChartWrap .cap{display:flex;justify-content:space-between;gap:12px;font-size:10px;font-weight:700;color:var(--rail-muted,#65717c)}
+  #liveChartWrap .cap b{color:var(--rail-ink,#15202b)}#speed{display:block;width:100%;height:96px;margin-top:5px}
+  #phaseRail{order:6;position:static;width:100%;padding:10px 11px;background:var(--card,#fff);border:1px solid var(--rail-line,#c6ced5);border-radius:0;box-shadow:none}
+  #phaseRail .phaseTitle{font-size:9.5px;color:var(--rail-muted,#65717c)}#phaseSegments{height:25px}
+  .phaseSeg{font-size:9px}.phaseSeg.active{box-shadow:inset 0 0 0 2px #0f2740}.phaseSeg:nth-child(2).active{background:var(--accent,#17365d)}
+  #legend{display:none!important}
+  #railFacts{order:7;margin-top:0;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rail-line,#c6ced5);border:1px solid var(--rail-line,#c6ced5)}
+  #railFacts div{padding:9px 8px;background:var(--card,#fff)}#railFacts b{display:block;font:700 14px/1 Consolas,monospace;color:var(--rail-ink,#15202b)}
+  #railFacts span{display:block;margin-top:5px;font-size:8.5px;color:var(--rail-muted,#65717c)}
+  #slotMapWrap{order:4;flex:1 1 240px;min-height:220px;display:flex;flex-direction:column;overflow:hidden;
+    padding:10px 11px 9px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
+  #slotMapWrap .mapHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  #slotMapWrap .mapHead b{display:block;font-size:11px;line-height:1.2}#slotMapWrap .mapHead span{display:block;margin-top:3px;color:var(--rail-muted,#65717c);font:8.5px/1.25 Consolas,monospace}
+  #slotMapWrap .mapHead strong{font:800 18px/1 Consolas,monospace;color:var(--rail-ink,#17202b)}
+  #slotMapWrap .mapRule{display:flex;align-items:center;gap:7px;margin-top:7px;padding:5px 7px;background:#eef1f3;color:#35414a;font:700 9px/1.2 Consolas,"Microsoft YaHei",monospace}
+  #slotMapWrap .hatch{width:18px;height:10px;flex:none;background:repeating-linear-gradient(135deg,#65727d 0 3px,#a8b1b8 3px 5px)}
+  #slotMap{display:block;flex:1 1 auto;width:100%;min-height:120px;margin-top:6px}
+  #slotMapWrap .mapKey{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:5px;color:var(--rail-muted,#65717c);font-size:8.5px}
+  #slotMapWrap .mapKey i{display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:-1px;border:1px solid #71808b}
+  #slotMapWrap .mapKey .free{background:#e9edef}.mapKey .target{background:#f3c900}.mapKey .moving{background:#ff6a00;border-color:#7a2f00;border-radius:50%}
+  #slotMapWrap .mapKey .gradeChips{display:inline-flex;align-items:center;gap:2px;margin-right:3px;vertical-align:-2px}
+  #slotMapWrap .mapKey .gradeChips i{width:8px;height:10px;margin:0;border:0}.mapKey .gradeChips .heavy{background:#102a43}.mapKey .gradeChips .mid{background:#006bb6}.mapKey .gradeChips .light{background:#42c7e6}
+  #targetBeacon{position:absolute;z-index:7;min-width:160px;transform:translate(14px,-50%);pointer-events:none;
+    padding:9px 11px 8px 14px;background:#f3c900;color:#101820;border-left:5px solid #101820;box-shadow:0 4px 16px #10182038}
+  #targetBeacon:before{content:"";position:absolute;left:-19px;top:50%;width:18px;height:2px;background:#101820}
+  #targetBeacon b{display:block;font:800 14px/1.05 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  #targetBeacon span{display:block;margin-top:5px;font:700 9px/1 Consolas,monospace;letter-spacing:.6px}
+  #sceneCaption{position:absolute;z-index:6;left:calc(var(--rail-w,32%) + 20px);bottom:17px;padding:8px 11px;background:#17202bdc;color:#fff;
+    font:10px/1.35 Consolas,"Microsoft YaHei",monospace;pointer-events:none}
+  #reserveRuleBadge{position:absolute;z-index:6;right:18px;top:18px;display:flex;align-items:center;gap:9px;padding:8px 10px;
+    background:#ffffffed;border:1px solid #aeb8bf;color:#26343e;box-shadow:0 4px 15px #17202b1f;pointer-events:none}
+  #reserveRuleBadge i{width:25px;height:18px;background:repeating-linear-gradient(135deg,#65727d 0 4px,#aeb7be 4px 7px)}
+  #reserveRuleBadge b{display:block;font-size:10px;line-height:1.15}#reserveRuleBadge span{display:block;margin-top:3px;color:#64717b;font:8.5px/1 Consolas,monospace}
+  #cycleReset{left:var(--rail-w,32%)}
+
+  html[data-style="A"]{--rail-w:30%;--rail-bg:#f7f8fa;--scene-bg:#e9eef1;--card:#fff;--rail-ink:#17202b;--rail-muted:#65717c;--rail-line:#cbd2d8;--accent:#17365d;--axis-bg:#17202b}
+  html[data-style="B"]{--rail-w:32%;--rail-bg:#eef4f8;--scene-bg:#eaf1f5;--card:#f8fbfd;--rail-ink:#173650;--rail-muted:#557085;--rail-line:#9fb4c3;--accent:#245b78;--axis-bg:#20475e}
+  html[data-style="B"] #workHud{background-color:#eef4f8;background-image:linear-gradient(#66879b18 1px,transparent 1px),linear-gradient(90deg,#66879b18 1px,transparent 1px);background-size:20px 20px}
+  html[data-style="B"] #taskline,html[data-style="B"] #liveChartWrap,html[data-style="B"] #phaseRail{box-shadow:4px 4px 0 #9fb4c32b}
+  html[data-style="B"] #targetBeacon{background:#fff;border:2px solid #e3b900;border-left:6px solid #e3b900;color:#173650;box-shadow:none}
+  html[data-style="C"]{--rail-w:28%;--rail-bg:#10161d;--scene-bg:#202830;--card:#17212b;--rail-ink:#f1f4f6;--rail-muted:#93a0ab;--rail-line:#33414d;--accent:#3d9dda;--axis-bg:#0b1015}
+  html[data-style="C"] #workHud{box-shadow:16px 0 38px #0007}html[data-style="C"] #railHead .eyebrow{color:#ff3b30}
+  html[data-style="C"] #targetBeacon{background:#f3c900;color:#111820;border-left-color:#ff3b30;box-shadow:0 7px 24px #0008}
+  html[data-style="C"] #sceneCaption{background:#0c1116e8;border-left:3px solid #ff3b30}
+  @media(max-width:1200px){#workHud{padding:18px 16px 14px;gap:9px}#railHead h1{font-size:18px}#liveChartWrap{min-height:116px}#speed{height:80px}#railFacts div{padding:7px 6px}}
+  @media(max-height:800px){#workHud{padding:12px 14px 10px;gap:7px}#railHead{padding-bottom:7px}#railHead h1{font-size:18px;margin-top:2px}
+    #taskline{padding:8px 9px}#taskline .primary{margin-top:3px;font-size:12px}#actionBadge{margin-top:6px;padding:4px 7px}#taskline .metaRow{margin-top:5px}
+    #axisHud{padding:7px 9px}#axisHud b{margin-bottom:3px}#axisHud .axis{margin:4px 0}#axisHud .axis span:last-child{font-size:10px}
+    #slotMapWrap{min-height:145px;padding:7px 8px 6px}#slotMapWrap .mapRule{margin-top:4px;padding:3px 6px}#slotMapWrap .mapKey{margin-top:2px}
+    #liveChartWrap{min-height:94px;padding:6px 8px 4px}#speed{height:66px;margin-top:2px}#phaseRail{padding:6px 8px}#phaseSegments{height:21px}
+    #railFacts div{padding:5px 6px}#railFacts b{font-size:12px}#railFacts span{margin-top:3px}#sceneCaption{bottom:10px}}
+
+  /* A+C：算法证据与档3事件流共用左栏；无独立数据页、无第二摄像头。 */
+  #workHud{gap:8px;padding:16px 16px 12px}
+  #railHead{padding-bottom:8px}#railHead h1{font-size:19px}
+  #railHead{order:0}#runtimeControls{order:1}#taskline{order:2;padding:9px 10px}#taskline .primary{font-size:12.5px}#actionBadge{margin-top:7px;padding:4px 7px}
+  #runtimeControls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:7px 8px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
+  #runtimeControls label{display:grid;gap:3px;color:var(--rail-muted,#65717c);font:8px/1.1 Consolas,"Microsoft YaHei",monospace}
+  #runtimeControls select{width:100%;height:25px;padding:0 5px;border:1px solid #aeb8bf;background:#fff;color:#17202b;font:10px/1 "Microsoft YaHei",sans-serif}
+  #runtimeActions{grid-column:1/4;display:flex;align-items:center;gap:5px}#runtimeActions button{height:25px;padding:0 8px;border:1px solid #17365d;background:#fff;color:#17365d;cursor:pointer;font-size:9px}
+  #traceLoadState{margin-left:auto;color:#65717c;font:8px/1.2 Consolas,monospace}#traceErrorHost{grid-column:1/4;padding:6px 7px;border-left:3px solid #b71c1c;background:#fff0f0;color:#7c2020;font-size:8.5px}
+  #traceErrorHost[hidden]{display:none}#traceErrorHost .s3-trace-error{display:flex;align-items:center;gap:5px;flex-wrap:wrap}#traceErrorHost button{margin-left:auto}
+  #decisionWrap{order:3;padding:9px 10px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
+  #decisionWrap .dHead{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:10px;color:var(--rail-muted,#65717c)}
+  #decisionWrap .dHead b{font-size:11px;color:var(--rail-ink,#15202b)}
+  #decisionWrap .proofLead{margin-top:6px;padding:5px 7px;background:#edf2f6;color:var(--rail-muted,#65717c);font:9px/1.3 "Microsoft YaHei",sans-serif}
+  #decisionWrap .proofLead.proofOk{border-left:3px solid #2e7d32;color:#255f29}
+  #decisionWrap .selectionSummary{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;padding:5px 7px;background:#eaf1f6;color:#52616c;font:9px/1.2 "Microsoft YaHei",sans-serif}
+  #decisionWrap .selectionSummary strong{color:#17365d;font-size:10px;white-space:nowrap}
+  #decisionWrap .funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:7px}
+  #decisionWrap .funnel span{padding:5px 3px;background:#eef1f3;text-align:center;font:8px/1.15 Consolas,monospace;color:#65717c}
+  #decisionWrap .funnel b{display:block;margin-bottom:2px;font-size:11px;color:#17202b}
+  #decisionWrap .candidates{display:grid;gap:3px;margin-top:6px}
+  #decisionWrap .cand{display:grid;grid-template-columns:48px 1fr 43px 27px;gap:5px;align-items:center;padding:2px 3px;font:8.5px/1.2 Consolas,monospace;color:#5e6972}
+  #decisionWrap .cand.selected{background:#fff7cc;color:#17202b;font-weight:700;box-shadow:inset 3px 0 #e0b600}
+  #decisionWrap .cand em{color:#8a6b00;font:800 8px/1 "Microsoft YaHei",sans-serif;text-align:right}
+  #decisionWrap .cand i{height:5px;background:#dce2e6;overflow:hidden}.cand i:after{content:"";display:block;height:100%;width:var(--score,30%);background:#17365d}
+  #decisionWrap .scoreBreakdown{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:6px}
+  #decisionWrap .scoreBreakdown span{padding:4px 2px;background:#f1f3f5;text-align:center;color:#6b747c;font:8px/1.1 "Microsoft YaHei",sans-serif}
+  #decisionWrap .scoreBreakdown b{display:block;margin-top:2px;color:#17365d;font:8.5px/1 Consolas,monospace}
+  #decisionWrap .scoreFactorNote{margin-top:4px;padding:4px 6px;border-left:3px solid #e0b600;background:#fff8d6;color:#5f5100;font:7.5px/1.35 "Microsoft YaHei",sans-serif}
+  #decisionWrap .proofResult{display:grid;grid-template-columns:1fr 14px 1fr;align-items:center;margin-top:7px;padding:7px;background:#edf2f6;text-align:center;color:#17365d}
+  #decisionWrap .proofResult b{font:800 14px/1 Consolas,monospace}#decisionWrap .proofResult i{font-style:normal}#decisionWrap .proofResult span{grid-column:1/4;margin-top:4px;color:#65717c;font-size:8px}
+  #queueCard{order:5;padding:7px 9px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
+  #queueCard .qHead{display:flex;justify-content:space-between;font-size:9px;color:var(--rail-muted,#65717c)}#queueCard .qHead b{font-size:10px;color:var(--rail-ink,#15202b)}
+  #queueStrip{display:flex;gap:4px;align-items:center;min-height:22px;margin-top:5px;overflow:hidden}
+  #queueStrip span{min-width:41px;padding:5px 4px;border-left:4px solid #4a6fa5;background:#eef2f5;font:700 8px/1 Consolas,monospace;color:#27333d;text-align:center}
+  #queueStrip em{font:9px/1 Consolas,monospace;color:#69717a}
+  #axisHud{order:4;padding:7px 9px}#axisHud b{margin-bottom:3px}#axisHud .axis{margin:4px 0}
+  #slotMapWrap{order:6;flex:1 1 180px;min-height:155px;padding:8px 9px 6px}
+  #liveChartWrap{order:7;min-height:82px;padding:6px 8px 4px}#speed{height:58px;margin-top:2px}
+  #phaseRail{order:8;padding:6px 8px}#phaseSegments{height:22px}.phaseSeg{font-size:8px}
+  #railFacts{order:9}#railFacts div{padding:6px}#railFacts b{font-size:12px}
+  #targetBeacon{min-width:132px;max-width:170px;padding:9px 11px;font-size:11px;box-shadow:0 4px 14px #17202b2b}
+  #targetBeacon b{font-size:12px}
+  #sceneCaption{font-size:9px;letter-spacing:.1px}
+  #queue{display:block;width:100%;height:38px;margin-top:4px}
+  @media(max-height:780px){#decisionWrap{padding:6px 8px}.funnel{display:none!important}#queueCard{padding:5px 7px}#queueStrip{min-height:18px;margin-top:3px}
+    #axisHud{padding:5px 8px}#slotMapWrap{min-height:126px}#liveChartWrap{min-height:63px}#speed{height:42px}#phaseRail{padding:4px 7px}}
+
+  /* 0715 Task10：固定两列指挥台。上层回答“现在做什么/为何选”，下层回答“发生了什么”。 */
+  html[data-style="A"]{--rail-w:clamp(410px,31vw,470px)}
+  #gl{left:var(--rail-w)}
+  #workHud{inset:0 auto 0 0;width:var(--rail-w);padding:11px 12px 10px;gap:7px 8px;overflow:visible;
+    display:grid;grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);grid-template-rows:auto auto auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "controls controls" "task task" "decision axis" "map insight";align-content:stretch}
+  #railHead{grid-area:head;min-height:39px;padding:0 0 7px;align-items:center}
+  #railHead h1{margin-top:2px;font-size:18px}#railHead .eyebrow{font-size:8px;letter-spacing:1.35px}#railHead .matrix{font-size:9px}
+  #runtimeControls{grid-area:controls;align-self:start;padding:6px 7px;gap:4px 5px}
+  #runtimeControls label{font-size:7.5px}#runtimeControls select{height:24px;font-size:9.5px;border-color:#aeb8bf}
+  #runtimeActions{gap:4px}#runtimeActions button{height:23px;padding:0 7px;font-size:8.5px}
+  #traceLoadState{font-size:7.5px;white-space:nowrap}#traceErrorHost{z-index:20}
+  #taskline{grid-area:task;align-self:start;padding:8px 9px;border-left-width:3px}
+  #taskline .kicker{font-size:7.5px}#taskline .primary{display:flex;align-items:center;margin-top:3px;gap:7px;font-size:11.5px}
+  #taskPrimary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#actionBadge{flex:none;margin:0;padding:4px 6px;font-size:9px}
+  #stepPurpose{margin-top:5px;padding:5px 6px;gap:6px;font-size:9px;line-height:1.28}#stepPurpose b{font-size:8px}
+  #taskline .metaRow{margin-top:5px;font-size:8.5px}
+  #decisionWrap{grid-area:decision;align-self:stretch;min-width:0;padding:7px 8px;overflow:visible}
+  #decisionWrap .dHead{font-size:8px}#decisionWrap .dHead b{font-size:9.5px}
+  #decisionWrap .selectionSummary{margin-top:4px;padding:4px 5px;font-size:7.5px}#decisionWrap .selectionSummary strong{font-size:8.5px}
+  #decisionWrap .proofLead{margin-top:4px;padding:4px 5px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #decisionWrap .routeSignals{display:flex;gap:4px;margin-top:4px;color:#5e6a73;font:7.5px/1.2 Consolas,monospace}
+  #decisionWrap .routeSignals span{padding:3px 4px;background:#eef2f5;white-space:nowrap}
+  #axisHud{grid-area:axis;align-self:stretch;min-width:0;padding:7px 8px;font-size:9px}
+  #axisHud b{font-size:8px;margin-bottom:4px}#axisHud .axis{grid-template-columns:14px 1fr 46px;gap:5px;margin:5px 0}
+  #axisHud .axis span:last-child{font-size:9px}#axisHud .axis i{height:4px}
+  #slotMapWrap{grid-area:map;min-width:0;min-height:0;padding:7px 8px 6px;overflow:hidden}
+  #slotMapWrap .mapHead b{font-size:9.5px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:15px}
+  #slotMapWrap .mapRule{margin-top:4px;padding:3px 5px;font-size:7.5px}#slotMapWrap .hatch{width:15px;height:8px}
+  #slotMap{min-height:72px;margin-top:4px}#slotMapWrap .mapKey{gap:5px;margin-top:3px;font-size:7px;line-height:1.15}
+  #slotMapWrap .mapKey i{width:8px;height:8px;margin-right:2px}.mapKey .gradeChips i{width:6px;height:8px}
+  #insightStack{grid-area:insight;min-width:0;min-height:0;display:grid;gap:5px;align-content:stretch;
+    grid-template-rows:auto minmax(48px,.72fr) auto auto auto;overflow:visible}
+  #insightStack>*{order:0}
+  #queueCard{padding:5px 6px;min-width:0}#queueCard .qHead{font-size:7px}#queueCard .qHead b{font-size:8px}
+  #queueStrip{min-height:16px;margin-top:3px;gap:3px}#queueStrip span{min-width:32px;padding:3px 2px;font-size:7px}#queueStrip em{font-size:7px}
+  #liveChartWrap{min-width:0;min-height:0;padding:5px 6px 3px;display:grid;grid-template-rows:auto minmax(0,1fr)}
+  #liveChartWrap .cap{font-size:7.5px}#speed{height:100%;min-height:0;margin-top:2px}
+  #phaseRail{position:static;width:100%;min-width:0;padding:5px 6px;background:#fff}
+  #phaseRail .phaseTitle{font-size:7.5px;margin-bottom:3px;gap:4px}#phaseNow{font-weight:700;color:#17365d;white-space:nowrap}
+  #phaseSegments{height:18px;grid-template-columns:repeat(7,1fr)!important;gap:2px}.phaseSeg{font:800 7.5px/1 Consolas,monospace}
+  .phaseName{display:none}
+  #railFacts{margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:4px 3px}#railFacts b{font-size:9px}#railFacts span{margin-top:2px;font-size:6.5px}
+  #traceStats{position:relative;min-width:0;padding:5px 6px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff);overflow:visible}
+  #traceStats .statsHead{display:flex;justify-content:space-between;gap:4px;align-items:center;margin-bottom:4px}
+  #traceStats .statsHead b{font-size:8px}#traceStats .statsHead span{color:#69747d;font:6.5px/1 Consolas,monospace;white-space:nowrap}
+  #traceStats .statsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+  .metricHelp{position:relative;display:block;width:100%;min-width:0;padding:4px 3px;border:0;border-radius:0;appearance:none;
+    background:#eef2f5;color:#52616c;font-family:inherit;text-align:left;cursor:help;outline:none;touch-action:manipulation}
+  .metricHelp b{display:block;color:#17202b;font:800 10px/1 Consolas,monospace;white-space:nowrap}.metricHelp small{display:block;margin-top:2px;font-size:6.5px;white-space:nowrap}
+  .metricHelp:focus-visible{box-shadow:0 0 0 2px #e7b800;z-index:32}
+  .tipBubble{position:absolute;z-index:40;right:0;bottom:calc(100% + 6px);width:210px;padding:7px 8px;background:#17202b;color:#f5f7f8;
+    border-left:3px solid #e7b800;box-shadow:0 7px 20px #0004;font:8px/1.5 "Microsoft YaHei",sans-serif;white-space:normal;
+    opacity:0;visibility:hidden;transform:translateY(3px);transition:opacity .12s,transform .12s;pointer-events:none}
+  .metricHelp.is-open{z-index:42}.metricHelp.is-open .tipBubble{opacity:1;visibility:visible;transform:translateY(0)}
+  #decisionWrap .metricHelp .tipBubble{left:0;right:auto}
+  #decisionWrap .weightBlock{margin-top:4px}#decisionWrap .weightHead{display:flex;justify-content:space-between;color:#6a747c;font:7px/1.2 Consolas,monospace}
+  #decisionWrap .weightGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin-top:3px}
+  #decisionWrap .weightGrid .metricHelp{padding:3px 2px;text-align:center}#decisionWrap .weightGrid .metricHelp b{font-size:8px}#decisionWrap .weightGrid .metricHelp small{font-size:6px}
+  #decisionWrap .weightNote{margin-top:4px;padding:4px 5px;background:#eef2f5;color:#68747d;font:7.5px/1.25 "Microsoft YaHei",sans-serif}
+  #sceneCaption{left:calc(var(--rail-w) + 18px)}#cycleReset{left:var(--rail-w)}
+  @media(max-height:700px){
+    #workHud{padding:7px 9px 7px;gap:4px 6px}#railHead{min-height:31px;padding-bottom:4px}#railHead h1{font-size:15px}
+    #runtimeControls{padding:4px 5px}#runtimeControls select{height:21px}#runtimeActions button{height:20px;padding:0 5px}
+    #taskline{padding:6px 7px}#stepPurpose{margin-top:3px;padding:3px 5px}#taskline .metaRow{margin-top:3px}
+    #decisionWrap{padding:5px 6px}#decisionWrap .proofLead{display:none}#axisHud{padding:5px 6px}#axisHud .axis{margin:3px 0}
+    #slotMapWrap{padding:5px 6px 4px}#insightStack{gap:3px;grid-template-rows:auto minmax(36px,.6fr) auto auto auto}
+    #queueCard,#traceStats{padding:4px 5px}#liveChartWrap{padding:4px 5px 2px}#phaseRail{padding:4px 5px}#phaseSegments{height:15px}
+    #traceStats .statsGrid{gap:2px}.metricHelp{padding:3px 2px}#railFacts div{padding:3px 2px}
+  }
+  @media(min-width:1600px) and (min-height:900px){
+    html[data-style="A"]{--rail-w:600px}
+    #workHud{padding:16px 18px 14px;gap:10px 12px;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}
+    #railHead{min-height:48px;padding-bottom:10px}#railHead h1{font-size:24px}#railHead .eyebrow{font-size:10px}#railHead .matrix{font-size:11px}
+    #runtimeControls{padding:10px 11px;gap:7px 9px}#runtimeControls label{font-size:9px}#runtimeControls select{height:32px;font-size:11px}
+    #runtimeActions{gap:6px}#runtimeActions button{height:29px;padding:0 10px;font-size:10px}#traceLoadState{font-size:9px}
+    #taskline{padding:11px 12px;border-left-width:4px}#taskline .kicker{font-size:9px}#taskline .primary{margin-top:5px;font-size:14px}
+    #actionBadge{padding:5px 8px;font-size:10px}#stepPurpose{margin-top:7px;padding:7px 8px;font-size:10.5px}#stepPurpose b{font-size:9px}#taskline .metaRow{font-size:9.5px}
+    #decisionWrap{padding:10px 11px}#decisionWrap .dHead{font-size:9px}#decisionWrap .dHead b{font-size:11px}
+    #decisionWrap .selectionSummary{margin-top:6px;padding:6px 7px;font-size:9px}#decisionWrap .selectionSummary strong{font-size:10px}
+    #decisionWrap .proofLead{margin-top:6px;padding:6px 7px;font-size:9px}#decisionWrap .routeSignals{gap:5px;margin-top:6px;font-size:8.5px}
+    #decisionWrap .weightBlock{margin-top:6px}#decisionWrap .weightHead{font-size:8px}#decisionWrap .weightGrid{gap:4px;margin-top:4px}
+    #decisionWrap .weightGrid .metricHelp{padding:5px 3px}#decisionWrap .weightGrid .metricHelp b{font-size:9px}#decisionWrap .weightGrid .metricHelp small{font-size:7px}
+    #decisionWrap .weightNote{margin-top:5px;padding:5px 6px;font-size:8px}
+    #axisHud{padding:10px 11px;font-size:10px}#axisHud b{font-size:9px;margin-bottom:7px}#axisHud .axis{grid-template-columns:18px 1fr 54px;gap:7px;margin:8px 0}
+    #axisHud .axis span:last-child{font-size:10px}#axisHud .axis i{height:5px}
+    #slotMapWrap{align-self:start;padding:11px 12px 9px}#slotMapWrap .mapHead b{font-size:11px}#slotMapWrap .mapHead span{font-size:8.5px}
+    #slotMapWrap .mapHead strong{font-size:18px}#slotMapWrap .mapRule{margin-top:7px;padding:5px 7px;font-size:8.5px}
+    #slotMap{flex:none;height:auto;min-height:0;aspect-ratio:1/1;margin-top:7px}#slotMapWrap .mapKey{gap:8px;margin-top:6px;font-size:8px;line-height:1.25}
+    #insightStack{gap:8px;grid-template-rows:auto 130px 170px auto auto;align-content:start}
+    #queueCard{padding:7px 8px}#queueCard .qHead{font-size:8px}#queueCard .qHead b{font-size:9px}#queueStrip{min-height:20px;margin-top:5px}
+    #liveChartWrap{padding:7px 8px 5px}#liveChartWrap .cap{font-size:9px}
+    #phaseRail{padding:8px 9px}#phaseRail .phaseTitle{font-size:9px;margin-bottom:6px}
+    #phaseSegments{height:auto;grid-template-columns:1fr!important;gap:3px}.phaseSeg{justify-content:flex-start;gap:8px;min-height:17px;padding:3px 7px;font-size:8px}
+    .phaseName{display:inline;font:700 8.5px/1 "Microsoft YaHei",sans-serif}#phaseCursor{display:none}
+    #traceStats{padding:7px 8px}#traceStats .statsHead{margin-bottom:6px}#traceStats .statsHead b{font-size:9px}#traceStats .statsHead span{font-size:7px}
+    #traceStats .statsGrid{gap:4px}.metricHelp{padding:5px 4px}.metricHelp b{font-size:11px}.metricHelp small{font-size:7px}
+    #railFacts div{padding:6px 4px}#railFacts b{font-size:11px}#railFacts span{font-size:7px}
+  }
+  /* 1600×900 仍保留宽栏与较大字号，但高度不足以容纳七步纵列；恢复横条可避免 132 px 真实溢出。 */
+  @media(min-width:1600px) and (min-height:900px) and (max-height:999px){
+    #workHud{padding:10px 12px 9px;gap:7px 9px}
+    #railHead{min-height:42px;padding-bottom:7px}
+    #runtimeControls{padding:7px 8px;gap:5px 7px}#runtimeControls select{height:28px}#runtimeActions button{height:26px;padding:0 8px}
+    #taskline{padding:8px 9px}#taskline .primary{margin-top:3px}#stepPurpose{margin-top:4px;padding:5px 6px}
+    #decisionWrap{padding:7px 8px}#decisionWrap .selectionSummary{margin-top:4px;padding:4px 5px}
+    #decisionWrap .proofLead{margin-top:4px;padding:4px 5px}#decisionWrap .routeSignals{margin-top:4px}
+    #axisHud{padding:7px 8px}#axisHud b{margin-bottom:4px}#axisHud .axis{margin:5px 0}
+    #slotMapWrap{padding:8px 9px 6px}#slotMapWrap .mapRule{margin-top:5px;padding:4px 6px}#slotMap{margin-top:5px}
+    #insightStack{grid-template-rows:auto 130px auto auto auto}
+    #phaseSegments{height:23px;grid-template-columns:repeat(7,1fr)!important;gap:2px}
+    .phaseSeg{justify-content:center;min-height:0;padding:0;font-size:8px}
+    .phaseName{display:none}#phaseCursor{display:block}
+  }
+
+  /* 0715 Task12：ABB 指挥台 + 单排货架双物理工位。后置覆盖旧候选布局，旧规则仅作回归参考。 */
+  html[data-style="A"]{--rail-w:clamp(440px,31vw,560px);--abb-red:#ff000f;--abb-black:#16191d;--abb-gray:#eef1f3}
+  #gl{left:var(--rail-w)}
+  #workHud{inset:0 auto 0 0;width:var(--rail-w);padding:13px 15px 11px;overflow:hidden;
+    display:grid;grid-template-columns:minmax(0,1.22fr) minmax(168px,.78fr);
+    grid-template-rows:auto auto auto auto minmax(0,1fr) auto;
+    grid-template-areas:"head head" "task task" "controls controls" "decision decision" "map insight" "phase phase";
+    gap:8px 10px;align-content:stretch;background:#f6f7f8;border-top:4px solid var(--abb-red);border-right:1px solid #b9c2c9;
+    box-shadow:12px 0 30px #17202b12;color:#18232c}
+  #railHead{grid-area:head;min-height:42px;padding:0 0 8px;border-bottom:1px solid #bfc7cd;align-items:center}
+  #railHead .brandLock{display:flex;align-items:center;gap:11px;min-width:0}
+  #railHead .abbWord{font:900 24px/1 Arial,sans-serif;letter-spacing:-1.2px;color:var(--abb-red)}
+  #railHead .eyebrow{font-size:8px;letter-spacing:1.45px;color:#5d6871}
+  #railHead h1{margin-top:2px;font-size:18px;line-height:1;color:#16191d;white-space:nowrap}
+  #railHead .matrix{font-size:9px;color:#4e5a63}
+  #taskline{grid-area:task;align-self:start;padding:8px 10px;border:1px solid #bfc7cd;border-left:4px solid #17365d;background:#fff}
+  #taskline .kicker{font-size:7.5px;color:#66727b}#taskline .primary{display:flex;align-items:center;margin-top:3px;gap:8px;font-size:11.5px}
+  #taskPrimary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#actionBadge{flex:none;margin:0;padding:4px 7px;font-size:9px;border-radius:0}
+  #stepPurpose{margin-top:5px;padding:5px 6px;font-size:9px;line-height:1.28;background:#edf2f5}#stepPurpose b{font-size:8px}
+  #taskline .metaRow{margin-top:5px;font-size:8.5px}
+  #runtimeControls{grid-area:controls;align-self:start;padding:7px 8px;gap:5px 7px;border:1px solid #bfc7cd;background:#fff}
+  #runtimeControls label{font-size:7.5px;color:#59656e}#runtimeControls select{height:25px;border-radius:0;border-color:#9ca8b1;font-size:9.5px}
+  #runtimeActions{gap:5px}#runtimeActions button{height:24px;padding:0 8px;border-radius:0;border-color:#222b31;color:#222b31;font-size:8.5px}
+  #runtimeActions button:hover{background:#eef1f3}#traceLoadState{font-size:7.5px}
+  #decisionWrap{grid-area:decision;align-self:start;min-width:0;padding:7px 9px;border:1px solid #bfc7cd;background:#fff}
+  #decisionWrap .dHead{font-size:8px}#decisionWrap .dHead b{font-size:10px}
+  #decisionWrap .selectionSummary{margin-top:4px;padding:4px 6px;font-size:8px}#decisionWrap .selectionSummary strong{font-size:9px}
+  #decisionWrap .proofLead{margin-top:4px;padding:4px 6px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #decisionWrap .routeSignals{display:flex;gap:4px;margin-top:4px;color:#5e6a73;font:7.5px/1.2 Consolas,monospace}
+  #decisionWrap .routeSignals span{padding:3px 5px;background:#eef2f5;white-space:nowrap}
+  #decisionWrap .weightBlock{margin-top:4px}#decisionWrap .weightHead{font-size:7px}
+  #decisionWrap .weightGrid{gap:3px;margin-top:3px}#decisionWrap .weightGrid .metricHelp{padding:3px 2px}
+  #decisionWrap .weightGrid .metricHelp b{font-size:8px}#decisionWrap .weightGrid .metricHelp small{font-size:6px}
+  #decisionWrap .weightNote{margin-top:4px;padding:4px 5px;font-size:7.5px}
+  #slotMapWrap{grid-area:map;align-self:stretch;min-width:0;min-height:0;padding:8px 9px 7px;border:1px solid #bfc7cd;background:#fff;overflow:hidden}
+  #slotMapWrap .mapHead b{font-size:10px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:16px}
+  #slotMapWrap .mapRule{margin-top:5px;padding:4px 6px;font-size:7.5px}#slotMap{min-height:110px;margin-top:5px}
+  #slotMapWrap .mapKey{gap:6px;margin-top:4px;font-size:7px;line-height:1.15}
+  #insightStack{grid-area:insight;min-width:0;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:6px;align-content:stretch;overflow:visible}
+  #railFacts{order:1;margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:6px 4px}#railFacts b{font-size:10px}#railFacts span{font-size:6.5px}
+  #queueCard{order:2;min-width:0;padding:6px 7px}#queueCard .qHead{font-size:7px}#queueCard .qHead b{font-size:8px}
+  #queueStrip{min-height:18px;margin-top:4px;gap:3px}#queueStrip span{min-width:34px;padding:4px 2px;font-size:7px}#queueStrip em{font-size:7px}
+  #traceStats{order:3;min-width:0;min-height:0;padding:6px 7px;overflow:visible;display:flex;flex-direction:column}
+  #traceStats .statsHead{margin-bottom:5px}#traceStats .statsHead b{font-size:8px}#traceStats .statsHead span{font-size:6.5px}
+  #traceStats .statsGrid{flex:1;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:4px}
+  .metricHelp{padding:5px 4px;display:flex;flex-direction:column;justify-content:center}.metricHelp b{font-size:10px}.metricHelp small{font-size:6.5px}
+  #phaseRail{grid-area:phase;position:static;width:100%;padding:6px 8px;border:1px solid #bfc7cd;background:#fff}
+  #phaseRail .phaseTitle{font-size:8px;margin-bottom:4px}#phaseSegments{height:23px;grid-template-columns:repeat(7,1fr)!important;gap:2px}
+  .phaseSeg{font:800 8px/1 Consolas,monospace}.phaseName{display:none}#phaseCursor{display:block}
+
+  /* 低信息量轴位/速度从左台移入三维观察区，成为可隐藏遮挡区中的紧凑遥测。 */
+  #sceneTelemetry{position:absolute;z-index:6;left:calc(var(--rail-w) + 18px);top:24px;width:276px;height:108px;padding:8px 9px;
+    display:grid;grid-template-columns:1.02fr .98fr;gap:9px;background:#161f28e8;border-top:3px solid #4a88a8;color:#fff;box-shadow:0 8px 24px #17202b30;pointer-events:none}
+  #sceneTelemetry .telemetryTitle{position:absolute;left:10px;top:-20px;padding:4px 7px;background:#fff;color:#26343e;border:1px solid #aeb8bf;
+    font:700 7.5px/1 Consolas,"Microsoft YaHei",monospace;letter-spacing:.5px}
+  #axisHud{grid-area:auto;width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8px}
+  #axisHud b{font-size:8px;letter-spacing:1px;margin-bottom:5px;color:#dce5eb}#axisHud .axis{grid-template-columns:13px 1fr 44px;gap:5px;margin:5px 0}
+  #axisHud .axis i{height:4px;background:#56636d}#axisHud .axis span:last-child{font-size:8px;text-align:right;color:#fff}
+  #liveChartWrap{width:auto;min-width:0;min-height:0;padding:0;background:transparent;border:0;display:grid;grid-template-rows:auto minmax(0,1fr)}
+  #liveChartWrap .cap{font-size:7px;color:#aebbc4}#liveChartWrap .cap b{color:#dce5eb}#speed{height:78px;min-height:0;margin-top:2px}
+  #sceneTools{position:absolute;z-index:9;right:18px;bottom:18px;width:292px;padding:9px 10px 8px;background:#fffffff2;border:1px solid #aeb8bf;border-top:3px solid var(--abb-red);
+    box-shadow:0 7px 22px #17202b24;pointer-events:auto;color:#26343e}
+  #sceneTools .toolHead{display:flex;align-items:center;justify-content:space-between;gap:8px;font:700 8px/1.2 Consolas,"Microsoft YaHei",monospace}
+  #sceneTools .toolHead span{color:#68747d;font-weight:500}#sceneTools .toolRow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-top:7px}
+  #sceneTools button{height:25px;padding:0 8px;border:1px solid #1d2b34;border-radius:0;background:#fff;color:#1d2b34;font-size:8.5px;cursor:pointer}
+  #sceneTools input[type="range"]{width:100%;min-height:24px;accent-color:#ff000f}#playbackValue{min-width:38px;text-align:right;font:800 9px/1 Consolas,monospace}
+  #sceneTools .scaleEnds{display:flex;justify-content:space-between;margin:3px 44px 0 70px;color:#7a858d;font:7px/1 Consolas,"Microsoft YaHei",monospace}
+  #sceneTools .toolNote{margin-top:5px;color:#65717a;font-size:7px;line-height:1.25}
+  #labelLeaders{position:absolute;z-index:6;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+  #labelLeaders line,#labelLeaders polyline{fill:none;stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter;vector-effect:non-scaling-stroke}
+  #targetLeader{stroke:#8a6d00}
+  #targetBeacon{transform:none;max-width:184px;pointer-events:none}
+  #targetBeacon:before{content:none!important}
+  #targetBeacon{min-width:148px;padding:9px 11px 8px 12px}
+  #faultStateBanner{position:absolute;z-index:8;right:18px;top:82px;min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
+    background:#fff5f4f2;box-shadow:0 5px 18px #6d17172b;color:#6f1717;pointer-events:none}
+  #faultStateBanner[hidden]{display:none}#faultStateBanner b{display:block;font:900 10px/1.1 "Microsoft YaHei",sans-serif}
+  #faultStateBanner span{display:block;margin-top:4px;font:8.5px/1.3 Consolas,"Microsoft YaHei",monospace;color:#7d3430}
+  #sceneCaption{left:calc(var(--rail-w) + 18px);bottom:18px;max-width:520px;padding:6px 9px;font-size:8px}
+  #reserveRuleBadge{right:18px;top:18px}
+
+  @media(max-width:1380px){
+    html[data-style="A"]{--rail-w:440px}#workHud{padding:9px 10px 8px;gap:6px 7px;grid-template-columns:minmax(0,1.16fr) minmax(150px,.84fr)}
+    #railHead{min-height:36px;padding-bottom:6px}#railHead .abbWord{font-size:20px}#railHead h1{font-size:16px}
+    #taskline{padding:6px 7px}#stepPurpose{margin-top:3px;padding:3px 5px}#runtimeControls{padding:5px 6px}#runtimeControls select{height:22px}
+    #decisionWrap{padding:5px 6px}#decisionWrap .proofLead{display:none}#slotMapWrap{padding:6px 7px 5px}#insightStack{gap:4px}
+    #sceneTelemetry{width:250px;height:98px;padding:7px 8px}#speed{height:62px}#sceneTools{width:270px}
+  }
+  @media(max-height:780px){
+    #workHud{padding-top:7px;gap:4px 7px}#railHead{min-height:32px;padding-bottom:4px}#railHead .abbWord{font-size:19px}#railHead h1{font-size:15px}
+    #taskline{padding:5px 7px}#taskline .primary{font-size:10.5px}#stepPurpose{font-size:8px}#taskline .metaRow{margin-top:3px}
+    #runtimeControls{padding:4px 6px}#runtimeControls select{height:21px}#runtimeActions button{height:21px}
+    #decisionWrap{padding:4px 6px}#decisionWrap .weightNote{display:none}#slotMapWrap{padding:5px 6px 4px}#slotMap{min-height:82px}
+    #queueCard,#traceStats{padding:4px 5px}.metricHelp{padding:3px 2px}#phaseRail{padding:4px 6px}#phaseSegments{height:18px}
+    #sceneTelemetry{top:21px;width:238px;height:90px;padding:6px 7px}#speed{height:54px}#sceneCaption{bottom:13px}#sceneTools{bottom:13px}
+  }
+
+  /* 0715 6h · Task3：信息层级优先。一级状态常显，路由细节按需展开；不再用 6~8px 微缩字换取表面密度。 */
+  html[data-style="A"]{--rail-w:32.5vw}
+  #gl{left:var(--rail-w)}
+  #workHud{width:var(--rail-w);padding:10px 12px 9px;gap:6px 8px;
+    grid-template-columns:minmax(0,1.28fr) minmax(150px,.72fr);
+    grid-template-rows:auto auto auto auto minmax(0,1fr) auto}
+  #railHead{min-height:38px;padding-bottom:6px}
+  #railHead .abbWord{font-size:22px}#railHead .eyebrow{font-size:9px}#railHead h1{font-size:17px}#railHead .matrix{font-size:9.5px}
+  #taskline{padding:7px 8px}#taskline .kicker{font-size:8.5px}#taskline .primary{font-size:12px}
+  #actionBadge{min-height:24px;padding:5px 7px;font-size:9.5px}
+  #stepPurpose{margin-top:4px;padding:4px 6px;font-size:9.5px;line-height:1.35}#stepPurpose b{font-size:9px}
+  #taskline .metaRow{margin-top:4px;font-size:9px}
+  #runtimeControls{padding:6px 7px;gap:5px 7px}
+  #runtimeControls label{gap:3px;font-size:9px}#runtimeControls select{height:28px;padding:0 6px;font-size:10.5px}
+  #runtimeActions{gap:6px}#runtimeActions button{min-height:28px;height:28px;padding:0 9px;font-size:9.5px}
+  #traceLoadState{font-size:8.5px}
+  #decisionWrap{position:relative;z-index:11;padding:6px 8px;overflow:visible}
+  #decisionWrap .dHead{font-size:9px}#decisionWrap .dHead b{font-size:10.5px}
+  #decisionWrap .selectionSummary{margin-top:4px;padding:5px 6px;font-size:9px}
+  #decisionWrap .selectionSummary strong{font-size:10px}
+  #decisionWrap .proofLead{display:block;margin-top:4px;padding:4px 6px;font-size:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #decisionWrap .decisionAdvanced{position:relative;margin-top:5px}
+  #decisionWrap .decisionAdvanced>summary{min-height:27px;display:flex;align-items:center;justify-content:space-between;padding:0 7px;
+    border:1px solid #aeb8bf;background:#f7f8f9;color:#26343e;cursor:pointer;list-style:none;font:700 9px/1.2 "Microsoft YaHei",sans-serif}
+  #decisionWrap .decisionAdvanced>summary::-webkit-details-marker{display:none}
+  #decisionWrap .decisionAdvanced>summary:after{content:"+";font:800 14px/1 Consolas,monospace;color:#17365d}
+  #decisionWrap .decisionAdvanced[open]>summary:after{content:"−"}
+  #decisionWrap .decisionAdvanced>summary:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+  #decisionWrap .advancedBody{position:absolute;z-index:36;left:0;right:0;top:calc(100% + 4px);padding:8px;
+    border:1px solid #9ba8b1;background:#fff;box-shadow:0 10px 28px #17202b35}
+  #decisionWrap .routeSignals{gap:5px;margin-top:0;font-size:8.5px;flex-wrap:wrap}
+  #decisionWrap .routeSignals span{padding:4px 6px}
+  #decisionWrap .weightBlock{margin-top:7px}#decisionWrap .weightHead{font-size:8.5px}
+  #decisionWrap .weightGrid{gap:5px;margin-top:5px}
+  #decisionWrap .weightGrid .metricHelp{min-height:36px;padding:5px 3px}
+  #decisionWrap .weightGrid .metricHelp b{font-size:10px}#decisionWrap .weightGrid .metricHelp small{font-size:8px}
+  #decisionWrap .weightNote{margin-top:6px;padding:5px 6px;font-size:8.5px;line-height:1.35}
+  #slotMapWrap{padding:8px 9px 7px}#slotMapWrap .mapHead b{font-size:11px}#slotMapWrap .mapHead span{font-size:8.5px}
+  #slotMapWrap .mapHead strong{font-size:17px}#slotMapWrap .mapRule{margin-top:5px;padding:5px 6px;font-size:9px}
+  #slotMap{min-height:110px;margin-top:5px}#slotMapWrap .mapKey{gap:7px;margin-top:5px;font-size:9px;line-height:1.25}
+  #insightStack{gap:5px}
+  #railFacts div{padding:6px 4px}#railFacts b{font-size:11px}#railFacts span{font-size:9px}
+  #queueCard{padding:6px 7px}#queueCard .qHead{font-size:9px}#queueCard .qHead b{font-size:9.5px}
+  #queueStrip{min-height:22px;margin-top:4px;gap:4px}#queueStrip span{min-width:44px;padding:5px 4px;font-size:9px}#queueStrip em{font-size:9px}
+  #traceStats{padding:6px 7px}#traceStats .statsHead{margin-bottom:5px}#traceStats .statsHead b{font-size:9.5px}
+  #traceStats .statsHead span{font-size:9px}#traceStats .statsGrid{gap:4px}
+  .metricHelp{min-height:34px;padding:5px 4px}.metricHelp b{font-size:11px}.metricHelp small{font-size:9px}
+  .tipBubble{width:230px;padding:8px 9px;font-size:9.5px;line-height:1.5}
+  #phaseRail{padding:6px 8px}#phaseRail .phaseTitle{font-size:9px;margin-bottom:5px}#phaseSegments{height:24px}
+  .phaseSeg{font-size:9px}
+  #sceneTelemetry{width:292px;height:112px;padding:9px 10px;grid-template-columns:1fr 1fr}
+  #sceneTelemetry .telemetryTitle{font-size:9px}#axisHud{font-size:9px}#axisHud b{font-size:9px}
+  #axisHud .axis{grid-template-columns:15px 1fr 48px;gap:6px;margin:6px 0}#axisHud .axis span:last-child{font-size:9px}
+  #liveChartWrap .cap{font-size:8.5px}#speed{height:76px}
+  #sceneTools{width:306px;padding:10px 11px 9px}#sceneTools .toolHead{font-size:9.5px}
+  #sceneTools button{height:28px;padding:0 9px;font-size:10px}#playbackValue{font-size:10px}
+  #sceneTools .scaleEnds{margin-top:4px;color:#66727b;font-size:9px}#sceneTools .toolNote{margin-top:6px;font-size:9px;line-height:1.35}
+  #sceneCaption{font-size:9.5px;line-height:1.35}
+  #targetBeacon b{font-size:15px}
+
+  @media(max-width:1380px){
+    html[data-style="A"]{--rail-w:32.5vw}
+    #workHud{padding:8px 9px 8px;gap:5px 7px;grid-template-columns:minmax(0,1.24fr) minmax(146px,.76fr)}
+    #railHead{min-height:36px}#railHead .abbWord{font-size:21px}#railHead h1{font-size:16px}
+    #taskline{padding:6px 7px}#runtimeControls{padding:5px 6px}#decisionWrap{padding:5px 6px}
+    #slotMapWrap{padding:6px 7px 5px}#insightStack{gap:4px}
+    #sceneTelemetry{width:278px;height:108px}#sceneTools{width:296px}
+  }
+  @media(max-height:780px){
+    #workHud{padding-top:6px;gap:4px 7px}#railHead{min-height:34px;padding-bottom:4px}
+    #taskline{padding:5px 7px}#stepPurpose{margin-top:3px;padding:3px 5px}
+    #runtimeControls{padding:4px 6px}#runtimeControls select{height:26px}#runtimeActions button{height:26px;min-height:26px}
+    #decisionWrap{padding:4px 6px}#decisionWrap .proofLead{margin-top:3px;padding:3px 5px}
+    #decisionWrap .decisionAdvanced{margin-top:3px}#decisionWrap .decisionAdvanced>summary{min-height:25px}
+    #slotMapWrap{padding:5px 6px 4px}#slotMap{min-height:82px}
+    #queueCard,#traceStats{padding:4px 5px}.metricHelp{min-height:31px;padding:3px 2px}
+    #phaseRail{padding:4px 6px}#phaseSegments{height:21px}
+    #sceneTelemetry{top:22px;width:268px;height:104px}#speed{height:68px}
+    #sceneCaption{bottom:13px}#sceneTools{bottom:13px}
+  }
+
+  /* 0715 6h · Task7：S1 受控矩阵与 S3 代表性回放并列、隔离。常驻迷你对照不制造第二数据页。 */
+  #insightStack{grid-template-rows:auto auto auto minmax(0,1fr)}
+  #comparisonMini{order:3;min-width:0;padding:6px 7px;border:1px solid #bfc7cd;background:#fff}
+  #traceStats{order:4}
+  .comparisonMiniHead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 4px;align-items:center}
+  .comparisonMiniHead>div{display:contents}.comparisonMiniHead b{grid-column:1;display:block;font-size:9.5px;line-height:1.15;white-space:nowrap}
+  .comparisonMiniHead span{grid-column:1/3;grid-row:2;display:block;color:#69757e;font:8.5px/1.25 Consolas,"Microsoft YaHei",monospace;white-space:normal}
+  .comparisonMiniHead button{grid-column:2;grid-row:1;min-width:42px;min-height:25px;padding:0 5px;border:1px solid #17365d;background:#fff;color:#17365d;font:700 9px/1 "Microsoft YaHei",sans-serif;cursor:pointer;white-space:nowrap}
+  #comparisonMiniBars{display:grid;gap:3px;margin-top:5px}#comparisonMiniBars em{color:#6b7780;font-size:9px}
+  .miniCompareRow{display:grid;grid-template-columns:43px minmax(0,1fr) 49px;gap:4px;align-items:center;min-height:13px;font:8.5px/1 Consolas,monospace}
+  .miniCompareRow>span:first-child{font-weight:800;color:#26343e}.miniCompareRow>span:last-child{text-align:right;color:#4d5b65}
+  .miniCompareTrack{height:6px;background:#e4e9ec;overflow:hidden}.miniCompareTrack i{display:block;height:100%;background:#2e6c9a}
+  .miniCompareRow[data-current="true"]>span:first-child{color:#d6000c}.miniCompareRow[data-current="true"] .miniCompareTrack i{background:#ff000f}
+
+  /* Task10：高窗不再把 6 个统计按钮拉成空白海报；剩余高度用于同一 trace 的三段证据链。 */
+  #judgePath{order:5;display:none;min-width:0;min-height:0;padding:7px 8px;border:1px solid #bfc7cd;border-top:3px solid #17365d;
+    background:#fff;color:#18232c;overflow:hidden}
+  .judgePathHead{display:flex;justify-content:space-between;gap:6px;align-items:baseline;padding-bottom:6px;border-bottom:1px solid #d5dbe0}
+  .judgePathHead b{font:800 9.5px/1.1 "Microsoft YaHei",sans-serif}.judgePathHead span{color:#68747d;font:8px/1 Consolas,monospace}
+  .judgePathSteps{min-height:0;display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:5px;margin-top:6px}
+  .judgeStep{position:relative;min-height:0;padding:6px 6px 6px 24px;background:#f1f4f6;border-left:3px solid #aeb8bf;overflow:hidden}
+  .judgeStep:before{content:attr(data-step);position:absolute;left:5px;top:7px;color:#17365d;font:900 8px/1 Consolas,monospace}
+  .judgeStep[data-tone="route"]{border-left-color:#17365d}.judgeStep[data-tone="motion"]{border-left-color:#4a88a8}.judgeStep[data-tone="proof"]{border-left-color:#2e7d32}
+  .judgeStep b{display:block;font:800 9px/1.2 "Microsoft YaHei",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .judgeStep span{display:block;margin-top:4px;color:#5f6b74;font:8px/1.3 "Microsoft YaHei",sans-serif}
+  @media(min-width:1600px) and (min-height:900px){
+    #insightStack{grid-template-rows:auto auto auto auto minmax(0,1fr);align-content:stretch}
+    #traceStats{display:block;min-height:auto}#traceStats .statsGrid{display:grid;grid-template-rows:repeat(3,minmax(38px,auto));flex:none}
+    #judgePath{display:flex;flex-direction:column}.judgePathSteps{flex:1}
+  }
+
+  #comparisonLab{position:absolute;z-index:70;inset:0;background:#17202b52;padding:0;pointer-events:auto}
+  #comparisonLab[hidden]{display:none}
+  .comparisonPanel{width:100%;height:100%;padding:15px 16px 12px;border-top:4px solid var(--abb-red);background:#f6f7f8;
+    display:grid;grid-template-rows:auto auto auto auto minmax(0,1fr) auto;gap:9px;box-shadow:16px 0 34px #17202b38;color:#18232c}
+  .comparisonPanel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:9px;border-bottom:1px solid #b9c2c9}
+  .comparisonPanel>header span{color:#5f6b74;font:800 9px/1 Consolas,monospace;letter-spacing:.8px}
+  .comparisonPanel h2{margin:5px 0 0;font:800 19px/1.08 "Microsoft YaHei",sans-serif}
+  #closeComparisonLab{width:32px;height:32px;border:1px solid #18232c;background:#fff;color:#18232c;font:500 23px/1 Arial,sans-serif;cursor:pointer}
+  .comparisonTabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid #18232c}
+  .comparisonTabs button{min-height:34px;border:0;border-right:1px solid #b9c2c9;background:#e8ecef;color:#4d5962;font:700 10px/1 "Microsoft YaHei",sans-serif;cursor:pointer}
+  .comparisonTabs button:last-child{border-right:0}.comparisonTabs button[aria-selected="true"]{background:#18232c;color:#fff}
+  #comparisonToolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:end;padding:8px 9px;border:1px solid #bfc7cd;background:#fff}
+  #comparisonToolbar label{display:grid;gap:4px;color:#57636c;font-size:9px}#comparisonToolbar select{height:31px;border:1px solid #8f9ca5;border-radius:0;background:#fff;color:#18232c;font-size:10.5px}
+  #comparisonToolbar .matrixScope{text-align:right;color:#5d6972;font:9px/1.35 Consolas,"Microsoft YaHei",monospace}
+  #comparisonAutoSummary{min-height:46px;padding:7px 9px;border-left:4px solid #e7b800;background:#fff8cf;color:#26343e;font-size:9px;line-height:1.42}
+  #comparisonAutoSummary:empty{display:none}#comparisonAutoSummary b{font-size:10px}#comparisonAutoSummary span{display:block;margin-top:2px;color:#59656e}
+  #comparisonTable{min-height:0;overflow:auto;border:1px solid #aeb8bf;background:#fff}
+  .comparisonRow{display:grid;grid-template-columns:minmax(105px,1.35fr) minmax(74px,.9fr) 56px 64px minmax(82px,1fr);align-items:stretch;border-bottom:1px solid #d9dee2}
+  .comparisonRow:last-child{border-bottom:0}.comparisonRow>div{min-width:0;padding:7px 6px;border-right:1px solid #e1e5e8;font-size:9px;line-height:1.25}
+  .comparisonRow>div:last-child{border-right:0}.comparisonHeader{position:sticky;z-index:2;top:0;background:#18232c;color:#fff}
+  .comparisonHeader>div{display:flex;align-items:center;padding-top:6px;padding-bottom:6px;font-size:9px;font-weight:700}
+  .comparisonHeader button{min-width:24px;min-height:24px;display:flex;align-items:center;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:help}
+  .comparisonBodyRow:nth-child(odd){background:#f7f9fa}.comparisonBodyRow[data-auto="true"]{background:#fff8cf}
+  .comparisonBodyRow[data-extended="true"]{border-left:4px solid #8a5b00}.comparisonBodyRow strong{display:block;font-size:9.5px}
+  .comparisonBodyRow small{display:block;margin-top:2px;color:#5f6b74;font-size:9px;line-height:1.25;white-space:normal}
+  .comparisonBodyRow .guardOk{color:#176b38;font-weight:800}.comparisonBodyRow .guardBad{color:#9b211f;font-weight:800}
+  #comparisonFoot{padding-top:8px;border-top:1px solid #b9c2c9;color:#53616b;font-size:9px;line-height:1.45}
+  #comparisonFoot b{color:#18232c}#comparisonFoot code{font:9px/1 Consolas,monospace}
+  #comparisonLab button:focus-visible,#comparisonLab select:focus-visible,#openComparisonLab:focus-visible,#openComparisonLabMini:focus-visible{outline:3px solid #e7b800;outline-offset:2px}
+  @media(max-width:1380px), (max-height:780px){
+    #comparisonMini{padding:4px 5px}.comparisonMiniHead span{font-size:8px}.comparisonMiniHead button{min-height:24px}
+    #comparisonMiniBars{gap:2px;margin-top:4px}.miniCompareRow{min-height:11px;font-size:8px}
+    .comparisonPanel{padding:10px 11px 9px;gap:6px}.comparisonPanel h2{font-size:17px}.comparisonTabs button{min-height:31px}
+    #comparisonToolbar{padding:6px 7px}.comparisonRow{grid-template-columns:minmax(94px,1.25fr) minmax(70px,.9fr) 51px 58px minmax(76px,1fr)}
+    .comparisonRow>div{padding:6px 5px;font-size:9px}
+  }
+
+  /* 0715 Task16：场景只保留一个目标信标；货物/工位/演示口径全部归并到底部证据坞。 */
+  #viewport{--scene-dock-h:76px;--scene-dock-bottom:10px;--scene-dock-gap:8px}
+  #gl{bottom:calc(var(--scene-dock-h) + var(--scene-dock-bottom) + var(--scene-dock-gap))}
+  #sceneDock{position:absolute;z-index:9;left:calc(var(--rail-w) + 14px);right:14px;bottom:var(--scene-dock-bottom);height:var(--scene-dock-h);
+    display:grid;grid-template-columns:minmax(260px,1.38fr) minmax(220px,1fr) minmax(180px,.82fr);align-items:stretch;
+    overflow:hidden;background:#f9fafbeF;border:1px solid #9ea9b1;border-top:3px solid var(--abb-red);box-shadow:0 8px 24px #17202b2b;color:#1c2932}
+  #sceneDock>*{min-width:0;min-height:0;height:100%;overflow:hidden;border:0;border-left:1px solid #c7cfd5;border-radius:0;box-shadow:none}
+  #sceneDock>*:first-child{border-left:0}
+  #sceneCaption{position:static;max-width:none;padding:6px 10px;display:grid;grid-template-columns:auto 1fr;grid-template-areas:"label meta" "action action" "cargo legend";
+    align-content:center;gap:4px 8px;background:#fff;color:#1b2831;pointer-events:none;font-family:"Microsoft YaHei",sans-serif}
+  #sceneCaption .dockLabel{grid-area:label;color:#5d6972;font-size:9px;font-weight:700}
+  #sceneCaption #sceneActionMeta{grid-area:meta;justify-self:end;color:#5d6972;font:8.5px/1.1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
+  #sceneCaption #sceneActionText{grid-area:action;display:block;overflow:hidden;color:#17365d;font-size:11px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis}
+  #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;font:8px/1.15 Consolas,"Microsoft YaHei",monospace;white-space:nowrap;text-overflow:ellipsis}
+  #sceneTelemetry{position:static;width:auto;padding:6px 8px;display:grid;grid-template-columns:1.12fr .88fr;gap:8px;
+    background:#17212a;color:#fff;pointer-events:none}
+  #sceneTelemetry .telemetryTitle{display:none}
+  #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
+  #axisHud b{margin:0 0 2px;color:#dce5eb;font-size:8.5px;letter-spacing:0}
+  #axisHud .axis{grid-template-columns:12px 1fr 43px;gap:5px;margin:2px 0}
+  #axisHud .axis i{height:4px;background:#56636d}#axisHud .axis span:last-child{color:#fff;font-size:8.5px;text-align:right}
+  #liveChartWrap{width:auto;min-width:0;min-height:0;padding:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:transparent;border:0}
+  #liveChartWrap .cap{font-size:7.5px;color:#b8c3cb}#liveChartWrap .cap b{color:#dce5eb}#speed{height:42px;min-height:0;margin-top:1px}
+  #reserveRuleBadge{grid-area:legend;position:static;padding:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+    background:transparent;color:#53616b;pointer-events:none;font:700 7px/1 "Microsoft YaHei",sans-serif}
+  #reserveRuleBadge span{min-width:0;display:flex;align-items:center;gap:4px;white-space:nowrap}
+  #reserveRuleBadge i{display:block;width:14px;height:4px;flex:none;background:#17365d}
+  #reserveRuleBadge .empty i{background:#7d8790}#reserveRuleBadge .out i{background:#4a88a8}
+  #reserveRuleBadge .blocked i{height:9px;background:repeating-linear-gradient(135deg,#65727d 0 3px,#c7d0d6 3px 6px)}
+  #sceneTools{position:static;width:auto;padding:6px 8px;display:grid;grid-template-rows:auto 1fr auto;background:#fff;color:#26343e;pointer-events:auto}
+  #sceneTools .toolHead{font:700 9px/1.15 "Microsoft YaHei",sans-serif}#sceneTools .toolHead span{display:block;color:#68747d;font-size:7px;font-weight:500}
+  #sceneTools .toolRow{grid-template-columns:auto minmax(66px,1fr) 38px;gap:7px;margin-top:3px}
+  #sceneTools button{height:26px;padding:0 8px;font-size:9px}#sceneTools input[type="range"]{min-height:24px}#playbackValue{font-size:9px}
+  #sceneTools .scaleEnds{display:none}#sceneTools .toolNote{display:block;margin:1px 0 0;color:#65717a;font-size:7px;line-height:1.05;white-space:nowrap}
+  @media(max-width:1380px){
+    #sceneDock{left:calc(var(--rail-w) + 10px);right:10px;grid-template-columns:minmax(240px,1.32fr) minmax(205px,1fr) minmax(170px,.8fr)}
+    #sceneCaption{padding:7px 9px}#sceneCaption #sceneActionText{font-size:10px}#sceneTelemetry{padding:6px 7px;gap:7px}
+    #sceneTools{padding:6px 7px}#sceneTools .toolRow{gap:5px}#sceneTools button{padding:0 6px}
+  }
+  @media(max-width:1180px){#sceneDock{grid-template-columns:minmax(220px,1.2fr) minmax(190px,1fr) minmax(160px,.8fr)}
+    #reserveRuleBadge{gap:4px}#reserveRuleBadge i{width:11px}#reserveRuleBadge span{font-size:6.5px}}
+  @media(max-height:780px){#viewport{--scene-dock-h:70px;--scene-dock-bottom:8px}#sceneCaption{padding-top:4px;padding-bottom:4px}#speed{height:36px}}
+
+  /* 0715 Task17：方形货位图不再被拉成长卡；释放出的高度用于真实 SIM 时长标尺。 */
+  #workHud{grid-template-columns:minmax(0,1.24fr) minmax(160px,.76fr);
+    grid-template-rows:auto auto auto auto auto minmax(72px,1fr);
+    grid-template-areas:"head head" "task task" "controls controls" "decision decision" "map insight" "phase insight"}
+  #slotMapWrap{align-self:start;container-type:inline-size}
+  #slotMap{flex:none!important;width:100%;height:auto!important;min-height:0!important;aspect-ratio:1/1}
+  #insightStack{grid-area:insight;grid-row:5/7}
+  #phaseRail{grid-area:phase;align-self:stretch;min-height:72px;padding:7px 8px;display:grid;
+    grid-template-rows:auto 10px minmax(34px,1fr);gap:5px;overflow:hidden}
+  #phaseRail .phaseTitle{margin:0;align-items:center;font-size:9px;line-height:1.15}
+  #phaseClock{font-size:8px;text-align:right;white-space:nowrap}
+  #phaseTimeScale{position:relative;display:flex;width:100%;height:10px;background:#e1e6e9;overflow:visible}
+  .phaseTimePart{display:block;height:100%;min-width:0;border-right:1px solid #fff;box-sizing:border-box}
+  .phaseTimePart.presentationOnly{width:0!important;border-right:0;border-left:2px dashed #68747d}
+  .phaseTimePart.active{filter:brightness(.76);box-shadow:inset 0 0 0 1px #17202b}
+  .phaseTone1,.phaseTone3{background:#e7b800}.phaseTone2,.phaseTone6{background:#17365d}.phaseTone4{background:#8c969e}
+  .phaseTone5{background:#7a4aa8}.phaseTone7{background:#0084a8}
+  #phaseTimeCursor{position:absolute;z-index:2;top:-2px;bottom:-2px;width:3px;background:#ff000f;box-shadow:0 0 0 1px #fff;transform:translateX(-1px)}
+  #phaseSegments{position:static;display:grid;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:3px;height:auto;min-height:34px}
+  .phaseSeg{min-width:0;padding:4px 2px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:1px 3px;
+    align-content:center;justify-content:center;background:#edf1f3;color:#4c5963;font:800 9px/1 Consolas,monospace;text-align:center}
+  .phaseSeg .phaseName{display:block;overflow:hidden;color:#26343e;font:700 8px/1.1 "Microsoft YaHei",sans-serif;white-space:nowrap;text-overflow:ellipsis}
+  .phaseSeg .phaseDuration{grid-column:1/3;display:block;color:#66727b;font:700 8px/1 Consolas,monospace;white-space:nowrap}
+  .phaseSeg.active{background:#17202b!important;color:#fff;box-shadow:inset 0 0 0 2px #ff6a00}
+  .phaseSeg.active .phaseName,.phaseSeg.active .phaseDuration{color:#fff}
+  #phaseCursor{display:none!important}
+  @media(max-width:1380px), (max-height:780px){
+    #workHud{grid-template-columns:minmax(0,1.22fr) minmax(148px,.78fr);grid-template-rows:auto auto auto auto auto minmax(62px,1fr)}
+    #phaseRail{min-height:62px;padding:5px 6px;grid-template-rows:auto 8px minmax(30px,1fr);gap:3px}
+    #phaseTimeScale{height:8px}.phaseSeg{padding:3px 1px;font-size:9px}.phaseSeg .phaseName{font-size:8px}.phaseSeg .phaseDuration{font-size:8.5px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    #taskPrimary,#actionBadge,#cycleReset,.tipBubble{transition:none!important}
+  }
+
+  /* 0716 恢复门 R02：顶部 taskline 与底部 sceneDock 曾重复显示同一作业。
+     保留 taskline DOM 仅供既有 runtime 写入/回归，不再占用可见布局或无障碍树。 */
+  #taskline{display:none!important}
+  #workHud{grid-template-rows:auto auto auto auto minmax(72px,1fr);
+    grid-template-areas:"head head" "controls controls" "decision decision" "map insight" "phase insight"}
+  #insightStack{grid-row:4/6}
+  @media(max-width:1380px), (max-height:780px){
+    #workHud{grid-template-rows:auto auto auto auto minmax(62px,1fr)}
+  }
+
+  /* 0716 fill-only candidate: one visible job source, capacity bookmarks and Chinese-first evidence. */
+  html[data-s3-mode="fill-only-candidate"] #comparisonMini,
+  html[data-s3-mode="fill-only-candidate"] #faultStateBanner,
+  html[data-s3-mode="fill-only-candidate"] #cycleReset{display:none!important}
+  html[data-s3-mode="fill-only-candidate"] #workHud{grid-template-rows:auto auto auto auto minmax(0,1fr) auto;
+    grid-template-areas:"head head" "controls controls" "decision decision" "bookmark bookmark" "map insight" "phase insight"}
+  html[data-s3-mode="fill-only-candidate"] #insightStack{grid-row:5/7}
+  html[data-s3-mode="fill-only-candidate"] #phaseRail{align-self:start}
+  html[data-s3-mode="fill-only-candidate"] #phaseSegments{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+  #fillBookmarks{grid-area:bookmark;border:1px solid #b9c3ca;border-left:4px solid #ff000f;background:#fff;padding:7px 8px}
+  #fillBookmarks .fillHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+  #fillBookmarks .fillHead b{font-size:11px;color:#17202b}#fillBookmarks .fillHead span{font:8px/1.2 Consolas,monospace;color:#65717c}
+  #fillBookmarkButtons{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}
+  #fillBookmarkButtons button{min-width:0;border:1px solid #bcc5cc;background:#edf1f3;padding:5px 2px;color:#24313a;font:800 9px/1.15 Consolas,"Microsoft YaHei",sans-serif;cursor:pointer}
+  #fillBookmarkButtons button small{display:block;margin-top:2px;color:#66717a;font-size:7.5px}
+  #fillBookmarkButtons button[aria-current="true"]{border-color:#ff000f;background:#fff4f2;box-shadow:inset 0 -3px #ff000f;color:#111}
+  #fillEvidence{margin-top:6px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #d6dde2}
+  #fillEvidence span{padding:5px 4px;border-right:1px solid #d6dde2;color:#65717c;font-size:8px}#fillEvidence span:last-child{border-right:0}
+  #fillEvidence b{display:block;color:#17202b;font:800 10px/1.2 Consolas,monospace}
+  #decisionWrap .decisionLine{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #e1e6e9;font-size:9px}
+  #decisionWrap .decisionLine:last-child{border-bottom:0}#decisionWrap .decisionLine b{color:#17365d}
+  #decisionWrap .cand{grid-template-columns:40px 58px minmax(82px,1fr) 30px;font-family:Consolas,"Microsoft YaHei",sans-serif}
+  #decisionWrap .cand>span:nth-child(3){text-align:right;color:#17365d;font-weight:700;white-space:nowrap}
+  #decisionWrap .candidateTop{margin-top:5px;padding:5px 6px;background:#edf3f6;font:8px/1.35 Consolas,"Microsoft YaHei",sans-serif}
+  #processGuide{padding:6px 7px;border:1px solid #bfc7cd;background:#fff;min-height:0}
+  .processGuideHead{display:flex;justify-content:space-between;gap:5px;align-items:baseline;padding-bottom:5px;border-bottom:1px solid #d6dde2}
+  .processGuideHead b{font-size:9.5px}.processGuideHead span{color:#69757e;font-size:7px;white-space:nowrap}
+  #processGuideRows{display:grid;gap:3px;margin-top:5px}.processGuideRow{display:grid;grid-template-columns:18px minmax(0,1fr);gap:2px 5px;padding:4px 5px;border-left:3px solid #aeb8bf;background:#f1f4f6}
+  .processGuideRow i{grid-row:1/3;align-self:center;width:17px;height:17px;border-radius:50%;background:#6d7b85;color:#fff;font:800 8px/17px Consolas,monospace;text-align:center;font-style:normal}
+  .processGuideRow b{font-size:8.5px;line-height:1.15}.processGuideRow span{overflow:hidden;color:#5f6b74;font-size:7px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis}
+  .processGuideRow.active{border-left-color:#ff000f;background:#fff3ef}.processGuideRow.active i{background:#ff000f}.processGuideRow.active b{color:#b4000b}
+  @media(max-height:780px){#processGuide{display:none}}
+  #sceneDock #reserveRuleBadge .out{display:none}
+  #releaseBadge{position:absolute;z-index:8;right:14px;top:12px;padding:6px 8px;border:1px solid #b8c2ca;background:#fffffff2;color:#33414b;font:8px/1.35 Consolas,monospace;box-shadow:0 2px 10px #32414e18}
+  #releaseBadge b{display:block;color:#17365d;font-size:9px}
+  @media(max-height:780px){
+    html[data-s3-mode="fill-only-candidate"] #decisionWrap .candidateTop{display:none}
+    html[data-s3-mode="fill-only-candidate"] #decisionWrap .scoreFactorNote{padding:3px 4px;font-size:6.8px;line-height:1.25}
+    html[data-s3-mode="fill-only-candidate"] #slotMapWrap{align-self:stretch!important;height:100%;max-height:100%;min-height:0!important;
+      display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;box-sizing:border-box;overflow:hidden}
+    html[data-s3-mode="fill-only-candidate"] #slotMap{width:auto!important;height:100%!important;min-height:0!important;max-width:100%;max-height:100%;
+      aspect-ratio:1/1;justify-self:center;align-self:center}
+  }
+
+</style>
+</head>
+<body>
+<main id="main">
+  <section id="sceneView" class="view active" aria-label="三维作业视图" aria-hidden="false">
+    <section id="viewport">
+      <div id="workHud">
+        <div id="taskline"><div class="kicker">已校验 · 同源 SIM 轨迹载入中</div><div class="primary"><span id="taskPrimary">正在加载同源作业轨迹</span><span id="actionBadge">等待轨迹</span></div><div id="stepPurpose"><b id="stepIndex">步骤 -- / 7</b><span id="stepPurposeText">载入后按事件流显示动作目的</span></div><div class="metaRow"><span id="ownerState">货物：--</span><span>单巷道 · 单机</span></div></div>
+        <section id="runtimeControls" aria-label="仿真回放选择" aria-busy="false">
+          <label>算法<select id="strategySelect"><optgroup label="在线逐件决策"><option value="seq">顺序放置（SEQ）</option><option value="near">就近放置（NEAR）</option><option value="score">多目标评分（SCORE）</option><option value="AUTO" selected>智能路由（AUTO）</option></optgroup><optgroup label="离线批量参照 · 非同信息集"><option value="awra">批量优化参照（AWRA-LS）</option></optgroup></select></label>
+          <label>拟真档<select id="tierSelect"><option value="1">档 1 · 数据模型</option><option value="2">档 2 · 加减速设计</option><option value="3" selected>档 3 · 综合情景</option></select></label>
+          <label>货物画像<select id="profileSelect"><option value="uniform">均匀</option><option value="skew" selected>偏斜</option><option value="heavy">重货</option></select></label>
+          <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
+          <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
+        </section>
+        <div id="axisHud" aria-label="实时轴位；数值随演示连续变化" aria-live="off"><b>实时轴位</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span></div></div>
+      </div>
+      <div id="gl" role="img" aria-label="三维仓储 sim 轨迹回放；仓位、货物和设备状态由已验证 trace 同源驱动"></div>
+      <div id="phaseRail"><div class="phaseTitle"><span id="phaseNow">等待 trace</span><span id="phaseClock">--</span></div><div id="phaseTimeScale" aria-label="本周期四阶段 trace 按几何与货叉阈值拆分的七步 SIM 时长比例"><i id="phaseTimeCursor" aria-hidden="true"></i></div><div id="phaseSegments"><span class="phaseSeg">1</span><span class="phaseSeg">2</span><span class="phaseSeg">3</span><span class="phaseSeg">4</span><span class="phaseSeg">5</span><span class="phaseSeg">6</span><span class="phaseSeg">7</span></div></div>
+      <div id="legend">
+        <span class="sw"><i style="background:#3e7bd6"></i>去程</span>
+        <span class="sw"><i style="background:#8fb3e8"></i>回程</span>
+        <span class="sw"><i style="height:7px;background:#e7b800"></i>I/O / 目标</span>
+        <span class="sw"><i class="multi"></i>货物分级</span>
+        <span class="sw"><i style="height:7px;background:#64717c"></i>预占封板</span>
+      </div>
+      <div id="cycleReset" aria-hidden="true"><div class="resetCard"><b>演示循环重置</b><span>对象归位只发生在遮罩内，不计入运行 KPI</span></div></div>
+    </section>
+  </section>
+</main>
+
+<script src="./lib/three.min.js"></script>
+<script src="./lib/OrbitControls.js"></script>
+<script>
+const STYLE='A';
+const VISUAL={
+  /* 仍沿 tools/anim3d_formal.py 的右前上方位；只按当前可见实体校准，不用潜在队列包络虚增主体占比。 */
+  A:{name:'工业操作台',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
+}[STYLE];
+document.documentElement.dataset.style='A';
+document.title=`智储优控 · S3 连续填满恢复候选 · ${VISUAL.name}`;
+document.documentElement.dataset.s3Mode='fill-only-candidate';
+
+/* 信息架构：把同源动态数据移回左侧；三维画面始终留在右侧，不再切页。 */
+const rail=document.getElementById('workHud'),viewportEl=document.getElementById('viewport');
+const railHead=document.createElement('div');railHead.id='railHead';railHead.innerHTML=`<div class="brandLock"><span class="abbWord">ABB</span><div><div class="eyebrow">${VISUAL.sub}</div><h1>${VISUAL.name}</h1></div></div><div class="matrix">20 × 20<br>SIM / T3</div>`;rail.prepend(railHead);
+const speedCanvas=document.createElement('canvas'),liveChartWrap=document.createElement('section');speedCanvas.id='speed';liveChartWrap.id='liveChartWrap';
+liveChartWrap.innerHTML='<div class="cap"><b>双轴速度</b><span>X / Z · m/s</span></div>';liveChartWrap.append(speedCanvas);
+const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><div class="mapRule"><i class="hatch"></i><span>(列 + 层) mod 3 = 0 → 预占禁用</span></div><canvas id="slotMap"></canvas><div class="mapKey"><span><i class="free"></i>可用空位</span><span><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
+const railFacts=document.createElement('section');railFacts.id='railFacts';railFacts.innerHTML='<div><b id="factCycle">-- / 100</b><span>混合周期</span></div><div><b id="factQueue">--</b><span>等待队列</span></div><div><b id="factAlarm">--</b><span>活动故障</span></div>';
+const traceStats=document.createElement('section');traceStats.id='traceStats';traceStats.setAttribute('aria-label','当前单 seed trace 统计');
+const insightStack=document.createElement('section');insightStack.id='insightStack';insightStack.append(railFacts,traceStats);
+rail.append(slotMapWrap,insightStack,document.getElementById('phaseRail'),document.getElementById('legend'));
+const sceneDock=document.createElement('section');sceneDock.id='sceneDock';sceneDock.setAttribute('aria-label','三维作业证据与画面控制');viewportEl.append(sceneDock);
+const sceneCaption=document.createElement('div');sceneCaption.id='sceneCaption';sceneCaption.innerHTML='<span class="dockLabel">当前作业</span><span id="sceneActionMeta">步骤 --/7 · 缩时演示 · SIM</span><b id="sceneActionText">等待同源轨迹</b><span id="sceneCargoMeta">货物与时间口径载入中</span>';sceneDock.append(sceneCaption);
+const reserveRuleBadge=document.createElement('div');reserveRuleBadge.id='reserveRuleBadge';reserveRuleBadge.setAttribute('aria-label','三维轨迹与预占图例');
+reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="empty"><i></i>空载</span><span class="out"><i></i>出库</span><span class="blocked"><i></i>预占</span>';sceneCaption.append(reserveRuleBadge);
+const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
+sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
+const sceneTools=document.createElement('section');sceneTools.id='sceneTools';sceneTools.setAttribute('aria-label','三维镜头与回放速度');
+sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><button id="resetCamera" type="button">总览</button><input id="playbackSpeed" type="range" min="0.25" max="2" step="0.25" value="1" aria-label="演示速度倍率"><output id="playbackValue" for="playbackSpeed">1.00×</output></div><div class="toolNote">0.25× 慢放 · 2.00× 快放</div>';
+sceneDock.append(sceneTools);
+const labelLeaders=document.createElementNS('http://www.w3.org/2000/svg','svg');labelLeaders.id='labelLeaders';labelLeaders.setAttribute('aria-hidden','true');
+['targetLeader'].forEach(id=>{const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.id=id;line.hidden=true;line.style.display='none';labelLeaders.append(line);});viewportEl.append(labelLeaders);
+const targetBeacon=document.createElement('div');targetBeacon.id='targetBeacon';targetBeacon.innerHTML='<b>目标货位 -- / --</b><span>等待轨迹</span>';targetBeacon.hidden=true;viewportEl.append(targetBeacon);
+const faultStateBanner=document.createElement('div');faultStateBanner.id='faultStateBanner';faultStateBanner.hidden=true;faultStateBanner.setAttribute('role','status');faultStateBanner.setAttribute('aria-live','polite');faultStateBanner.innerHTML='<b>SIM 故障恢复</b><span>模型故障 · 设备保持</span>';viewportEl.append(faultStateBanner);
+
+/* 黄金参照常量：tools/anim3d_formal.py:44-60,64-125,194-237,418-428 */
+const N=20, Z0=-0.5;
+const VX=2.0,VZ=0.5,AX=0.5,AZ=0.3,T_LOAD=4.0,T_DWELL=4.0;
+/* canonical 仍只有一个逻辑 I/O=(0,0)。两条物理链仅在展示层映射该锚点，不进入 sim/KPI。 */
+const IO={x:0.5,y:-0.75,z:0.5};
+/* 同侧并行双链：两条链沿 y 轴垂直货架，横向 T 形转接台只做互锁交接。 */
+const INFEED=Object.freeze({x:-0.45,entryY:-5.55,loadY:-1.55,z:.55,width:1.02,direction:'toward-rack'});
+const OUTFEED=Object.freeze({x:1.45,startY:-1.55,scanY:-2.75,maskY:-3.95,endY:-5.55,z:.55,width:1.02,direction:'away-from-rack'});
+const CROSSBAR=Object.freeze({xMin:INFEED.x,xMax:OUTFEED.x,y:INFEED.loadY,z:.55});
+const TRANSFER_ANCHOR=Object.freeze({x:IO.x,y:IO.y,z:.55});
+const CONVEYOR_ENVELOPES=Object.freeze({
+  infeed:Object.freeze({xMin:INFEED.x-.59,xMax:INFEED.x+.59,yMin:INFEED.entryY-.05,yMax:INFEED.loadY+.05}),
+  outfeed:Object.freeze({xMin:OUTFEED.x-.59,xMax:OUTFEED.x+.59,yMin:OUTFEED.endY-.05,yMax:OUTFEED.startY+.05})
+});
+const TRANSFER_TOPOLOGY=Object.freeze({logicalOrigin:[0,0],visualOnly:true,singleAisle:true,singleRackFace:true,
+  parallel:true,parallelAxis:'y',sharedBelt:false,sameSide:true,tJunction:true,rackFrontY:0});
+/* 纵深严格回源 tools/anim3d_formal.py:201-213：单深位 0.95 m，不增加第二存储面。 */
+const RACK=Object.freeze({frontY:0,backY:.95,backPanelY:1.005,depth:.95,loadY:.50,baseY:.40});
+const C={bg:0xe7ecef,floor:0xcbd3d9,seam:0x8f9da7,pad:0xc1cbd1,body:0x526471,
+  inner:0x3f4f5b,edge:0xc8d2d8,plinth:0x465761,cap:0x75848f,digit:'#4d5962',
+  /* 仍是正式脚本的蓝色分级角色，但扩大明度/饱和度间隔，避免货物与货架、桅杆混成一片。 */
+  heavy:0x102a43,mid:0x006bb6,light:0x42c7e6,lid:0x0b1f33,alarm:0xb71c1c,
+  amber:0xe7b800,path:0xff6a00,returnPath:0x0084a8,rail:0x64717c,mast:0x123b62,carriage:0x376e9b,
+  infeed:0x214e78,outfeed:0x0084a8};
+
+function axisT(d,vmax,acc){
+  if(d<=0)return 0;
+  return d>=vmax*vmax/acc ? d/vmax+vmax/acc : 2*Math.sqrt(d/acc);
+}
+function axisPos(t,d,vmax,acc){
+  if(d<=0)return 0;
+  const T=axisT(d,vmax,acc);t=Math.min(Math.max(t,0),T);
+  if(d>=vmax*vmax/acc){
+    const ta=vmax/acc;
+    if(t<ta)return .5*acc*t*t;
+    if(t<=T-ta)return .5*acc*ta*ta+vmax*(t-ta);
+    return d-.5*acc*(T-t)*(T-t);
+  }
+  const ta=Math.sqrt(d/acc);
+  return t<ta ? .5*acc*t*t : d-.5*acc*(T-t)*(T-t);
+}
+function axisV(t,d,vmax,acc){
+  if(d<=0)return 0;
+  const T=axisT(d,vmax,acc);if(t<0||t>T)return 0;
+  const vpk=d>=vmax*vmax/acc?vmax:acc*Math.sqrt(d/acc),ta=vpk/acc;
+  if(t<ta)return acc*t;if(t<=T-ta)return vpk;return acc*(T-t);
+}
+const mount=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.78;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.setClearColor(VISUAL.bg);mount.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(VISUAL.bg);
+const camera=new THREE.PerspectiveCamera(32,1,.1,180);camera.up.set(0,0,1);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.055;
+controls.target.set(N/2,.5,8);
+/* 总览预设是统一起点；允许受限 Orbit/Pan/Zoom 供评委检查，不允许钻入模型或落到地面下。 */
+controls.enablePan=true;controls.screenSpacePanning=true;controls.minDistance=15;controls.maxDistance=56;
+controls.minPolarAngle=THREE.MathUtils.degToRad(34);controls.maxPolarAngle=THREE.MathUtils.degToRad(86);
+
+/* 不增加灯数量：按部件调节同色 emissive，拉开层板/阴影/前缘的明度角色。 */
+const mat=(color,rough=.72,metal=.08,glow=.055)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal,
+  emissive:new THREE.Color(color).multiplyScalar(glow)});
+const M={floor:mat(C.floor,.9,0,.018),pad:mat(C.pad,.82,.02,.025),body:mat(C.body,.68,.24,.03),inner:mat(C.inner,.88,.04,.01),
+  edge:mat(C.edge,.55,.18,.08),major:mat(0x536572,.54,.32,.05),plinth:mat(C.plinth,.58,.34,.025),cap:mat(C.cap,.62,.26,.035),
+  heavy:mat(C.heavy,.7,.06,.045),mid:mat(C.mid,.73,.05,.055),light:mat(C.light,.76,.04,.065),lid:mat(C.lid,.58,.16,.045),
+  amber:mat(C.amber,.56,.04,.12),rail:mat(C.rail,.5,.5,.035),mast:mat(C.mast,.42,.5,.045),carriage:mat(C.carriage,.5,.35,.055)};
+M.alarm=mat(C.alarm,.46,.05,.16);
+M.floorRack=mat(0xb6c2ca,.91,0,.018);M.floorAisle=mat(0xa6b4bd,.92,0,.016);
+M.floorIO=new THREE.MeshStandardMaterial({color:C.amber,roughness:.92,metalness:0,transparent:true,opacity:.14,depthWrite:false});
+M.floorStripe=mat(0xf3f5f6,.88,0,.04);
+M.deck=mat(0x6f7c87,.70,.24,.028);M.cavity=mat(0x35424e,.94,.02,.008);
+M.rubber=mat(0x202830,.82,.08,.015);M.wood=mat(0x9b6a3c,.82,.02,.035);M.sensor=mat(0x26333e,.54,.28,.045);
+M.rackBack=mat(0x33434f,.86,.10,.018);M.rackBrace=mat(0x667781,.60,.28,.035);M.foot=mat(0x53636e,.58,.30,.028);
+M.scanFrame=mat(0x1f6f96,.48,.22,.095);
+M.infeedRail=mat(C.infeed,.54,.30,.065);M.outfeedRail=mat(C.outfeed,.50,.26,.085);
+M.scanBeam=new THREE.MeshBasicMaterial({color:0x41b6e6,transparent:true,opacity:.78,depthWrite:false});
+M.exitCurtain=new THREE.MeshBasicMaterial({color:0x9fc7d8,transparent:true,opacity:.20,depthWrite:false,side:THREE.DoubleSide});
+const reservedCanvas=document.createElement('canvas');reservedCanvas.width=128;reservedCanvas.height=128;const reserved2d=reservedCanvas.getContext('2d');
+reserved2d.fillStyle='#65727d';reserved2d.fillRect(0,0,128,128);reserved2d.strokeStyle='#aeb8bf';reserved2d.lineWidth=8;
+for(let i=-128;i<256;i+=28){reserved2d.beginPath();reserved2d.moveTo(i,128);reserved2d.lineTo(i+128,0);reserved2d.stroke();}
+reserved2d.strokeStyle='#46535e';reserved2d.lineWidth=7;reserved2d.strokeRect(4,4,120,120);
+const reservedTexture=new THREE.CanvasTexture(reservedCanvas);reservedTexture.anisotropy=renderer.capabilities.getMaxAnisotropy();
+M.reserved=new THREE.MeshStandardMaterial({map:reservedTexture,color:0xffffff,roughness:.78,metalness:.04,emissive:new THREE.Color(0x182028).multiplyScalar(.05)});M.reservedMark=mat(0xcbd2d7,.62,.18,.07);
+M.activeCargo=mat(0x42a5f5,.48,.10,.13);
+function addBox(sx,sy,sz,x,y,z,material,cast=true,receive=true){
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);mesh.position.set(x,y,z);
+  mesh.castShadow=cast;mesh.receiveShadow=receive;scene.add(mesh);return mesh;
+}
+function addInstances(sx,sy,sz,positions,material,cast=true,receive=true){
+  const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(sx,sy,sz),material,positions.length),dummy=new THREE.Object3D();
+  positions.forEach((p,i)=>{dummy.position.set(p[0],p[1],p[2]);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
+  mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=cast;mesh.receiveShadow=receive;scene.add(mesh);return mesh;
+}
+const INSTANCE_BOUNDS_EPS=1e-7;
+function deriveInstanceBounds(mesh,expectedMinY,expectedMaxY){
+  mesh.geometry.computeBoundingBox();const local=mesh.geometry.boundingBox.clone(),matrix=new THREE.Matrix4(),box=new THREE.Box3(),bounds=new THREE.Box3().makeEmpty();
+  const depths=[],failedIndices=[];let maxFrontError=0,maxBackError=0;
+  for(let index=0;index<mesh.count;index++){
+    mesh.getMatrixAt(index,matrix);box.copy(local).applyMatrix4(matrix);bounds.union(box);
+    const depth=box.max.y-box.min.y,frontError=Math.abs(box.min.y-expectedMinY),backError=Math.abs(box.max.y-expectedMaxY);
+    depths.push(depth);maxFrontError=Math.max(maxFrontError,frontError);maxBackError=Math.max(maxBackError,backError);
+    if(frontError>INSTANCE_BOUNDS_EPS||backError>INSTANCE_BOUNDS_EPS||Math.abs(depth-(expectedMaxY-expectedMinY))>INSTANCE_BOUNDS_EPS)failedIndices.push(index);
+  }
+  const perInstance=Object.freeze({count:depths.length,minDepth:Math.min(...depths),maxDepth:Math.max(...depths),
+    maxFrontError,maxBackError,failedIndices:Object.freeze(failedIndices),scannedFromInstanceMatrices:true});
+  return Object.freeze({min:Object.freeze(bounds.min.toArray()),max:Object.freeze(bounds.max.toArray()),
+    size:Object.freeze(bounds.getSize(new THREE.Vector3()).toArray()),count:mesh.count,perInstance,derivedFromInstanceMatrices:true});
+}
+function addSegmentInstances(segments,r,material){
+  const mesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(r,r,1,8),material,segments.length),dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0);
+  segments.forEach(([a,b],i)=>{const d=b.clone().sub(a),len=d.length();dummy.position.copy(a).add(b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(up,d.normalize());dummy.scale.set(1,len,1);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
+  mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);return mesh;
+}
+function partBox(parent,sx,sy,sz,x,y,z,material,cast=true,receive=true){
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);mesh.position.set(x,y,z);
+  mesh.castShadow=cast;mesh.receiveShadow=receive;parent.add(mesh);return mesh;
+}
+function partCylinder(parent,r,depth,x,y,z,material,segments=16){
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,depth,segments),material);mesh.position.set(x,y,z);
+  mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
+}
+function partFaceLabel(parent,text,x,y,z,w=.30,h=.12){
+  const cv=document.createElement('canvas');cv.width=256;cv.height=96;const g=cv.getContext('2d');
+  g.fillStyle='#edf1f4';g.fillRect(0,0,256,96);g.strokeStyle='#17365d';g.lineWidth=8;g.strokeRect(4,4,248,88);
+  g.fillStyle='#17365d';g.font='700 46px "Microsoft YaHei", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(text,128,50);
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:false}));
+  mesh.rotation.x=Math.PI/2;mesh.position.set(x,y,z);parent.add(mesh);return mesh;
+}
+function addFloorFlowLabel(text,x,y,color='#17365d'){
+  const cv=document.createElement('canvas');cv.width=512;cv.height=128;const g=cv.getContext('2d');
+  g.clearRect(0,0,512,128);g.fillStyle='rgba(247,249,250,.88)';g.fillRect(0,12,512,104);
+  g.strokeStyle=color;g.lineWidth=7;g.strokeRect(4,16,504,96);g.fillStyle=color;
+  g.font='800 54px "Microsoft YaHei", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(text,256,65);
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(2.20,.55),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));
+  mesh.position.set(x,y,Z0+.026);mesh.renderOrder=2;scene.add(mesh);return mesh;
+}
+
+/* T3 空间基底：x 围绕货架中心 10、y 围绕单巷道中心 IO.y=-.75 对称展开。 */
+const FLOOR={x0:-7.5,x1:N+3,y0:-8.65,y1:7.15};
+addBox(FLOOR.x1-FLOOR.x0,FLOOR.y1-FLOOR.y0,.08,(FLOOR.x0+FLOOR.x1)/2,(FLOOR.y0+FLOOR.y1)/2,Z0-.04,M.floor,false,true);
+/* 货架基础区 / 设备轨道区 / I/O 交接区，均稍离地避免 Z-fighting。 */
+addBox(N+1.4,1.9,.012,N/2,.50,Z0+.006,M.floorRack,false,true);
+addBox(N+1.4,1.45,.014,N/2,IO.y-.01,Z0+.007,M.floorAisle,false,true);
+/* 同侧并行双链各自有独立设备基底；T 形横向交接台与逻辑 I/O 另设连续净空区。 */
+addBox(1.55,Math.abs(INFEED.loadY-INFEED.entryY)+.55,.016,INFEED.x,(INFEED.entryY+INFEED.loadY)/2,Z0+.009,M.floorIO,false,true);
+addBox(1.55,Math.abs(OUTFEED.startY-OUTFEED.endY)+.55,.016,OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,Z0+.009,M.floorIO,false,true);
+addBox(Math.abs(CROSSBAR.xMax-CROSSBAR.xMin)+1.20,1.40,.017,IO.x,CROSSBAR.y,Z0+.010,M.floorIO,false,true);
+addBox(1.20,Math.abs(CROSSBAR.y-IO.y)+.70,.017,IO.x,(CROSSBAR.y+IO.y)/2,Z0+.011,M.floorIO,false,true);
+const seams=new THREE.Group();
+function seamLine(a,b){const g=new THREE.BufferGeometry().setFromPoints([a,b]);seams.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:C.seam})));}
+for(let x=FLOOR.x0+1;x<FLOOR.x1;x+=2)seamLine(new THREE.Vector3(x,FLOOR.y0,Z0+.022),new THREE.Vector3(x,FLOOR.y1,Z0+.022));
+for(let y=IO.y-6;y<=IO.y+6;y+=2)seamLine(new THREE.Vector3(FLOOR.x0,y,Z0+.022),new THREE.Vector3(FLOOR.x1,y,Z0+.022));
+const floorOutline=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(FLOOR.x0,FLOOR.y0,Z0+.024),new THREE.Vector3(FLOOR.x1,FLOOR.y0,Z0+.024),
+  new THREE.Vector3(FLOOR.x1,FLOOR.y1,Z0+.024),new THREE.Vector3(FLOOR.x0,FLOOR.y1,Z0+.024)
+]),new THREE.LineBasicMaterial({color:0x7d8992}));scene.add(floorOutline);
+scene.add(seams);
+/* 轨道安全边界与端部停止线；中性白线不消费报警红或目标琥珀语义。 */
+[IO.y-.79,IO.y+.79].forEach(y=>addBox(N+1.4,.035,.018,N/2,y,Z0+.022,M.floorStripe,false,false));
+[-.70,N+.70].forEach(x=>addBox(.035,1.61,.018,x,IO.y,Z0+.022,M.floorStripe,false,false));
+
+/* I/O 站与单深位货架：恢复正式脚本的 0.95 m 纵深；同材质重复件继续实例化。 */
+addBox(1.4,1.7,.02,IO.x,IO.y-1.00,Z0+.01,M.pad,false,true);
+/* 正式参照：底座 y=-.30..1.10；后背 y=.95..1.06；层板/立柱贯穿 y=0..95。 */
+addBox(N+.6,1.40,.50,N/2,RACK.baseY,Z0+.25,M.plinth,true,true);
+addBox(N,.11,N,N/2,RACK.backPanelY,N/2,M.rackBack,true,true);
+  const CELL_FACE=.94,CELL_BACK_FRONT=.925,availableCellBacks=[],reservedCellVolumes=[];
+  for(let x=0;x<N;x++)for(let z=0;z<N;z++){
+    const reserved=(x+z)%3===0;
+    (reserved?reservedCellVolumes:availableCellBacks).push([x+.5,reserved?RACK.depth/2:.9375,z+.5]);
+  }
+  if(reservedCellVolumes.length!==133)throw new Error(`预占格数量异常 ${reservedCellVolumes.length}`);
+  /* 可用格仍是后腔；预占格改为 0..0.95 m 的完整封闭体。0.94 m 正好贴合 0.06 m 梁内缘，
+     133 个封闭体前表面统一齐平 RACK.frontY，后表面统一齐平 RACK.backY，不是贴在格底/格后的薄片。 */
+  addInstances(CELL_FACE,.025,CELL_FACE,availableCellBacks,M.inner,false,true);
+  const reservedVolumeMesh=addInstances(CELL_FACE,RACK.depth,CELL_FACE,reservedCellVolumes,M.reserved,false,true),
+    reservedBounds=deriveInstanceBounds(reservedVolumeMesh,RACK.frontY,RACK.backY);
+  const reservedMinY=reservedBounds.min[1],reservedMaxY=reservedBounds.max[1],beamInnerInset=(1-CELL_FACE)/2;
+  window.__S3_GEOMETRY_AUDIT=Object.freeze({rackDepth:RACK.depth,rackLoadY:RACK.loadY,beamWidth:.06,cellFace:CELL_FACE,
+    availableFrontY:CELL_BACK_FRONT,reservedMinY,reservedMaxY,reservedDepth:reservedMaxY-reservedMinY,
+    reservedCount:reservedVolumeMesh.count,availableCount:availableCellBacks.length,reservedBounds,reservedInstanceAudit:reservedBounds.perInstance,
+    frontFlushError:Math.abs(reservedMinY-RACK.frontY),backFlushError:Math.abs(reservedMaxY-RACK.backY),
+    beamInnerInset,beamInnerFitError:Math.abs(beamInnerInset-.03),actualBoundsDerived:reservedBounds.derivedFromInstanceMatrices});
+addInstances(N,RACK.depth,.06,Array.from({length:N+1},(_,z)=>[N/2,RACK.depth/2,z]),M.body,true,true);
+addInstances(.06,RACK.depth,N,Array.from({length:N+1},(_,x)=>[x,RACK.depth/2,N/2]),M.body,true,true);
+/* 前缘保持浅色以读清 20×20，后框/腔体更暗，纵深由真实几何和阴影产生。 */
+addInstances(N,.064,.072,Array.from({length:N+1},(_,z)=>[N/2,.01,z]),M.edge,true,true);
+addInstances(.072,.064,N,Array.from({length:N+1},(_,x)=>[x,.01,N/2]),M.edge,true,true);
+addInstances(N,.052,.052,Array.from({length:N+1},(_,z)=>[N/2,.93,z]),M.rackBrace,true,true);
+const majorXs=Array.from({length:6},(_,index)=>index*4),majorPosts=[];
+majorXs.forEach(x=>{majorPosts.push([x,.04,N/2],[x,.91,N/2]);});
+addInstances(.10,.10,N+.16,majorPosts,M.major,true,true);
+const depthTies=[];majorXs.forEach(x=>{for(let z=0;z<=N;z+=4)depthTies.push([x,RACK.depth/2,z]);});
+addInstances(.10,RACK.depth,.10,depthTies,M.rackBrace,true,true);
+const braceSegments=[];[0,N].forEach(x=>{for(let z=0;z<N;z+=4){const top=Math.min(N,z+4);
+  braceSegments.push([new THREE.Vector3(x,.08,z+.14),new THREE.Vector3(x,.87,top-.14)]);
+  braceSegments.push([new THREE.Vector3(x,.87,z+.14),new THREE.Vector3(x,.08,top-.14)]);
+}});addSegmentInstances(braceSegments,.026,M.rackBrace);
+const feet=[];majorXs.forEach(x=>{feet.push([x,.03,Z0+.025],[x,.92,Z0+.025]);});
+addInstances(.30,.28,.05,feet,M.foot,true,true);
+addBox(N+.6,1.28,.16,N/2,.46,N+.08,M.cap,true,true);
+
+function makeLabel(text,x,z,scale=.9){
+  const cv=document.createElement('canvas');cv.width=128;cv.height=64;const g=cv.getContext('2d');
+  g.clearRect(0,0,128,64);g.font='700 36px Arial';g.textAlign='center';g.textBaseline='middle';g.fillStyle=C.digit;g.fillText(text,64,32);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:true}));
+  sp.scale.set(scale,scale*.5,1);sp.position.set(x,-.34,z);scene.add(sp);
+}
+/* 数字坐标不再贴在三维背景上；目标坐标由清晰 DOM 信标承担。 */
+
+/* 官方 sum 规则预占封板已作为背板单元嵌入货架，不再在货架前表面叠放灰片。 */
+/* 单巷道轨道 + 同侧并行双链。两条链与货架垂直，在 T 形互锁台映射到唯一逻辑 I/O。 */
+addBox(N+1,.14,.08,N/2,IO.y,Z0+.04,M.rail,true,true);
+addBox(2.36,.88,.16,IO.x,CROSSBAR.y,Z0+.10,M.major,true,true);
+addBox(.92,.84,.16,IO.x,(CROSSBAR.y+IO.y)/2,Z0+.10,M.amber,true,true);
+
+function addTransferBridge(from,to,material,width=.62){
+  const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy),bridge=new THREE.Mesh(new THREE.BoxGeometry(len,width,.13),material);
+  bridge.position.set((from.x+to.x)/2,(from.y+to.y)/2,.095);bridge.rotation.z=Math.atan2(dy,dx);bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
+}
+/* 结构件统一为 Factory I/O 式中性钢灰；方向只由地贴、工位与动态路径编码。 */
+M.infeedRail=M.outfeedRail=mat(0x6f7c87,.56,.34,.035);
+function addConveyorRollerY(x,y){const r=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.92,12),M.edge);r.rotation.z=Math.PI/2;r.position.set(x,y,.15);r.castShadow=true;scene.add(r);}
+function addConveyorLaneY(lane,nearY,farY,laneMaterial){
+  const center=(nearY+farY)/2,len=Math.abs(nearY-farY),direction=Math.sign(farY-nearY)||1;
+  [-.54,.54].forEach(dx=>addBox(.10,len+.10,.18,lane.x+dx,center,.08,laneMaterial,true,true));
+  [nearY,center,farY].forEach(y=>[-.54,.54].forEach(dx=>addBox(.12,.12,.58,lane.x+dx,y,Z0+.29,laneMaterial,true,true)));
+  for(let y=nearY;direction>0?y<=farY:y>=farY;y+=direction*.28)addConveyorRollerY(lane.x,y);addConveyorRollerY(lane.x,farY);
+}
+addConveyorLaneY(INFEED,INFEED.entryY,INFEED.loadY,M.infeedRail);
+addConveyorLaneY(OUTFEED,OUTFEED.startY,OUTFEED.endY,M.outfeedRail);
+addTransferBridge({x:CROSSBAR.xMin,y:CROSSBAR.y},{x:CROSSBAR.xMax,y:CROSSBAR.y},M.major,.70);
+addTransferBridge({x:IO.x,y:CROSSBAR.y},TRANSFER_ANCHOR,M.amber,.70);
+addFloorFlowLabel('入库  ↑',INFEED.x,(INFEED.entryY+INFEED.loadY)/2,'#214e78');
+addFloorFlowLabel('出库  ↓',OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,'#0084a8');
+
+/* 入→装 与 卸→扫→出工位沿 y 轴布置；工位横梁跨 x，避免与货物流向混淆。 */
+const stationCollisionSolids=[];
+function stationSolid(mesh,label){mesh.userData.collisionLabel=label;stationCollisionSolids.push(mesh);return mesh;}
+const entryGate=new THREE.Group();entryGate.name='entryGate';scene.add(entryGate);
+[-.62,.62].forEach((dx,index)=>stationSolid(partBox(entryGate,.08,.08,.74,INFEED.x+dx,INFEED.entryY,.24,M.sensor),`ENTRY_POST_${index}`));
+stationSolid(partBox(entryGate,1.30,.08,.10,INFEED.x,INFEED.entryY,1.04,M.body),'ENTRY_BEAM');partFaceLabel(entryGate,'入',INFEED.x,INFEED.entryY-.045,1.14,.34,.20);
+const loadSign=new THREE.Group();loadSign.name='loadStation';scene.add(loadSign);partFaceLabel(loadSign,'装',INFEED.x,INFEED.loadY-.04,.245,.34,.16);
+const unloadSign=new THREE.Group();unloadSign.name='unloadStation';scene.add(unloadSign);partFaceLabel(unloadSign,'卸',OUTFEED.x,OUTFEED.startY-.04,.245,.34,.16);
+
+const scannerGate=new THREE.Group();scannerGate.name='scannerGate';scene.add(scannerGate);
+[-.64,.64].forEach((dx,index)=>stationSolid(partBox(scannerGate,.09,.09,1.58,OUTFEED.x+dx,OUTFEED.scanY,.29,M.scanFrame),`SCAN_POST_${index}`));
+stationSolid(partBox(scannerGate,1.37,.10,.12,OUTFEED.x,OUTFEED.scanY,1.04,M.scanFrame),'SCAN_BEAM');
+[-.57,.57].forEach((dx,index)=>stationSolid(partBox(scannerGate,.13,.13,.13,OUTFEED.x+dx,OUTFEED.scanY-.055,.55,M.scanBeam,false,false),`SCAN_HEAD_${index}`));
+partBox(scannerGate,1.05,.018,.026,OUTFEED.x,OUTFEED.scanY,.55,M.scanBeam,false,false);
+addBox(1.35,.055,.016,OUTFEED.x,OUTFEED.scanY,Z0+.030,M.scanBeam,false,false);
+partFaceLabel(scannerGate,'扫',OUTFEED.x,OUTFEED.scanY-.045,1.14,.34,.20);
+const exitCurtain=new THREE.Group();exitCurtain.name='exitCurtain';scene.add(exitCurtain);
+[-.64,.64].forEach((dx,index)=>stationSolid(partBox(exitCurtain,.09,.09,1.58,OUTFEED.x+dx,OUTFEED.maskY,.29,M.body),`EXIT_POST_${index}`));
+stationSolid(partBox(exitCurtain,1.37,.10,.12,OUTFEED.x,OUTFEED.maskY,1.04,M.body),'EXIT_BEAM');
+for(let dx=-.48;dx<=.481;dx+=.16)partBox(exitCurtain,.055,.018,1.00,OUTFEED.x+dx,OUTFEED.maskY,.50,M.exitCurtain,false,false);
+partFaceLabel(exitCurtain,'出',OUTFEED.x,OUTFEED.maskY-.045,1.14,.34,.20);
+
+/* 传感器与防撞柱只放在两条链的外缘；T 形横向交接区保持净空。 */
+[[INFEED.x,INFEED.loadY,0],[OUTFEED.x,OUTFEED.startY,1]].forEach(([x,y,index])=>[-.62,.62].forEach(dx=>{
+  stationSolid(addBox(.07,.07,.64,x+dx,y,Z0+.32,M.sensor,true,true),`STATION_SENSOR_${index}_${dx}`);
+  stationSolid(addBox(.12,.12,.10,x+dx,y,Z0+.64,M.amber,true,true),`STATION_CAP_${index}_${dx}`);
+}));
+[{x:INFEED.x-.78,y:INFEED.loadY-.24},{x:OUTFEED.x+.78,y:OUTFEED.startY-.24}].forEach((point,index)=>{
+  stationSolid(addBox(.14,.14,.88,point.x,point.y,Z0+.44,M.amber,true,true),`BOLLARD_${index}`);
+  stationSolid(addBox(.19,.19,.08,point.x,point.y,Z0+.04,M.rubber,true,true),`BOLLARD_BASE_${index}`);
+});
+
+/* 运行时只根据当前 event 的 from/to 生成轨迹；分段线性 curve 保留物理拐折，不做样条平滑。 */
+class PiecewiseLinearCurve extends THREE.Curve{
+  constructor(points){super();this.points=points;}
+  getPoint(t,target=new THREE.Vector3()){const f=Math.min(1,Math.max(0,t))*(this.points.length-1),i=Math.min(this.points.length-2,Math.floor(f));
+    return target.copy(this.points[i]).lerp(this.points[i+1],f-i);}
+}
+function addPath(points,options={}){const group=new THREE.Group(),material=new THREE.MeshBasicMaterial({
+    color:options.color??C.path,transparent:true,opacity:options.opacity??.2,depthWrite:false,depthTest:true}),
+    haloMaterial=new THREE.MeshBasicMaterial({color:0xf7fbff,transparent:true,opacity:0,depthWrite:false,depthTest:false});
+  const clean=points.filter((point,index)=>index===0||point.distanceTo(points[index-1])>1e-6);
+  if(clean.length===1){const halo=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),haloMaterial),marker=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),material);
+    halo.position.copy(clean[0]);marker.position.copy(clean[0]);group.add(halo,marker);}
+  else{const curve=new PiecewiseLinearCurve(clean),segments=Math.max(12,clean.length-1);
+    const halo=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.haloRadius??.25,8,false),haloMaterial),
+      mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.radius??.16,8,false),material);group.add(halo,mesh);
+    const arrowCount=Math.max(1,Math.min(3,options.arrowCount??2));
+    Array.from({length:arrowCount},(_,index)=>(index+1)/(arrowCount+1)).forEach(fr=>{const p=curve.getPoint(fr),p2=curve.getPoint(Math.min(1,fr+.02)),dir=p2.clone().sub(p);
+      if(dir.lengthSq()<1e-8)return;dir.normalize();const arrow=new THREE.Mesh(new THREE.ConeGeometry(.15,.36,10),material);
+      arrow.position.copy(p);arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);group.add(arrow);});}
+  group.userData={operationKey:options.operationKey||null,kind:options.kind||null};scene.add(group);return {group,material,haloMaterial};}
+/* 目标位线框。 */
+const targetMat=new THREE.LineBasicMaterial({color:C.amber,transparent:true,opacity:.9});
+const targetBox=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.92,.92,.92)),targetMat);
+targetBox.visible=false;scene.add(targetBox);
+const targetPadMat=new THREE.MeshStandardMaterial({color:C.amber,roughness:.72,metalness:.02,emissive:new THREE.Color(C.amber).multiplyScalar(.18),transparent:true,opacity:.52,depthWrite:false});
+const targetPad=addBox(.82,.76,.028,0,0,0,targetPadMat,false,false);targetPad.visible=false;
+/* 堆垛机：黄金单桅杆不变；功能细节随同一个 world X 组移动。 */
+const mast=addBox(.24,.24,N+.5,IO.x,IO.y,(N+Z0)/2,M.mast,true,false);
+const machineParts=[
+  addBox(1.05,.86,.22,IO.x,IO.y,Z0+.17,M.carriage,true,true),
+  addBox(.82,.48,.18,IO.x,IO.y,N-.02,M.mast,true,true),
+  addBox(.46,.44,.42,IO.x,IO.y-.30,Z0+.44,M.lid,true,true)
+];
+const baseDetails=new THREE.Group();baseDetails.position.set(IO.x,IO.y,0);scene.add(baseDetails);machineParts.push(baseDetails);
+[-.36,.36].forEach(x=>partCylinder(baseDetails,.15,.18,x,0,Z0+.15,M.rubber,20));
+[-.58,.58].forEach(x=>partBox(baseDetails,.16,.48,.24,x,0,Z0+.24,M.rubber));
+/* 驱动柜置于桅杆右侧、载货台包络之外；门缝、状态条与铭牌只增强功能识别，不进入碰撞体。 */
+partBox(baseDetails,.26,.36,.58,.60,0,Z0+.48,M.lid);
+partBox(baseDetails,.19,.010,.43,.60,-.185,Z0+.48,M.body,false,false);
+partBox(baseDetails,.16,.012,.045,.60,-.192,Z0+.62,M.alarm,false,false);
+partFaceLabel(baseDetails,'ABB',.60,-.194,Z0+.43,.15,.055);
+const topDetails=new THREE.Group();topDetails.position.set(IO.x,IO.y,0);scene.add(topDetails);machineParts.push(topDetails);
+partCylinder(topDetails,.20,.22,0,0,N-.04,M.rubber,24);partBox(topDetails,.78,.38,.12,0,0,N+.12,M.mast);
+const beltGroup=new THREE.Group();beltGroup.position.set(IO.x,IO.y,0);scene.add(beltGroup);machineParts.push(beltGroup);
+const liftBelts=[-.16,.16].map(x=>partBox(beltGroup,.035,.045,1,x,.02,N/2,M.lid,false,false));
+/* 桅杆导轨、线缆链和维护横档：全部随 mast X 同步，仅补足设备尺度与功能细节。 */
+const mastDetails=new THREE.Group();mastDetails.position.set(IO.x,IO.y,0);scene.add(mastDetails);machineParts.push(mastDetails);
+[-.13,.13].forEach(x=>partBox(mastDetails,.035,.045,N+.10,x,-.13,(N+Z0)/2,M.edge,true,false));
+partBox(mastDetails,.045,.052,N-.30,.19,.07,(N+Z0)/2,M.lid,false,false);
+for(let z=.6;z<N;z+=2)partBox(mastDetails,.29,.038,.035,0,-.13,z,M.carriage,false,false);
+const carrier=new THREE.Group();scene.add(carrier);
+/* 载货台采用开式 U 型承载架；旧实心块会与木托盘/双叉占据同一体积，已删除。 */
+const carriage=new THREE.Group();carrier.add(carriage);
+[-.32,.32].forEach(x=>partBox(carriage,.08,.10,.78,x,-.38,.02,M.carriage));
+partBox(carriage,.72,.10,.08,0,-.38,-.34,M.carriage);partBox(carriage,.72,.10,.08,0,-.38,.40,M.carriage);
+[-.36,.36].forEach(x=>partBox(carrier,.08,.84,.07,x,.02,-.34,M.major));
+[-.36,.36].forEach(x=>[-.31,.31].forEach(y=>partBox(carrier,.08,.10,.34,x,y,-.05,M.edge)));
+/* 载货台护栏、提升导向与可动伸缩货叉。 */
+[-.39,.39].forEach(x=>{partBox(carrier,.055,.055,.72,x,-.34,.08,M.edge);partBox(carrier,.055,.055,.72,x,.34,.08,M.edge);});
+partBox(carrier,.84,.055,.055,0,-.34,.42,M.edge);[-.39,.39].forEach(x=>partBox(carrier,.055,.68,.055,x,0,.42,M.edge));
+const forkGroup=new THREE.Group();carrier.add(forkGroup);const forks=[];
+[-.18,.18].forEach(x=>forks.push(partBox(forkGroup,.12,1.10,.075,x,.30,-.28,M.lid)));
+[-.18,.18].forEach(x=>partBox(forkGroup,.13,.055,.09,x,.83,-.28,M.amber,false,false));
+/* 两个后置叉驱动座位于叉道外侧，既可见又不与叉体相交。 */
+[-.35,.35].forEach(x=>partBox(carrier,.06,.14,.08,x,-.29,-.27,M.sensor));
+const cargo=new THREE.Mesh(new THREE.BoxGeometry(.56,.54,.58),M.activeCargo);cargo.position.set(0,0,.05);cargo.castShadow=true;carrier.add(cargo);
+const cargoOutline=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.575,.555,.595)),new THREE.LineBasicMaterial({color:C.amber,transparent:true,opacity:1}));cargoOutline.name='activeCargoAmberOutline';cargo.add(cargoOutline);
+let forkExtension=0,forkDrop=0;
+/* 货叉最大伸出 .80 m：叉尖距 y=.95 的货架背板前表面保留 50 mm，同时完整承托深 .60 m 的木托盘。 */
+const FORK_MAX=.80,CARGO_REACH=RACK.loadY-TRANSFER_ANCHOR.y,CARGO_Z_OFFSET=.05,CARGO_DROP=.055,DROP_END=.55,TRANSFER_SPLIT=2.0,RETRACT_END=3.4;
+if(Math.abs(TRANSFER_ANCHOR.y+CARGO_REACH-RACK.loadY)>1e-9)throw new Error('货物入架纵深锚点不连续');
+cargo.visible=false;
+
+/* 候选版多位置打光：环境填充 + 前上主光 + 背侧轮廓光 + 低强度相机补光。 */
+const hemi=new THREE.HemisphereLight(0xf7fbff,0x8e9ba5,.48);scene.add(hemi);
+const sun=new THREE.DirectionalLight(VISUAL.key,1.02);sun.position.set(12,-18,24);sun.target.position.set(10,0,10);scene.add(sun.target);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.00035;sun.shadow.normalBias=.018;sun.shadow.radius=4;
+Object.assign(sun.shadow.camera,{left:-34,right:34,top:30,bottom:-16,near:1,far:120});sun.shadow.camera.updateProjectionMatrix();scene.add(sun);
+const rim=new THREE.DirectionalLight(VISUAL.rim,.36);rim.position.set(24,8,17);rim.target.position.set(10,.5,10);scene.add(rim.target);scene.add(rim);
+const headlight=new THREE.DirectionalLight(0xffffff,.08);headlight.target.position.copy(controls.target);scene.add(headlight.target);scene.add(headlight);
+
+const FOCAL=new THREE.Vector3(...VISUAL.look);
+/* 允许检查纵深，但禁止 90° 侧视把 20×20 信息压成一条线。 */
+controls.minAzimuthAngle=THREE.MathUtils.degToRad(-65);controls.maxAzimuthAngle=THREE.MathUtils.degToRad(65);
+const CAMERA_LIMITS=Object.freeze({x:[-1.5,N+1.5],y:[FLOOR.y0+.6,RACK.backY-.12],z:[.8,N-.8]});
+let cameraGuard=false;
+function cameraSnapshot(){
+  const dx=camera.position.x-controls.target.x,dy=camera.position.y-controls.target.y,planar=Math.max(.0001,Math.hypot(dx,dy));
+  return {position:camera.position.toArray(),target:controls.target.toArray(),fov:camera.fov,zoom:camera.zoom,
+    azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),frontality:-dy/planar,
+    azimuthLimit:[controls.minAzimuthAngle,controls.maxAzimuthAngle]};
+}
+function constrainCamera(){
+  if(cameraGuard)return;cameraGuard=true;
+  controls.target.x=THREE.MathUtils.clamp(controls.target.x,...CAMERA_LIMITS.x);
+  controls.target.y=THREE.MathUtils.clamp(controls.target.y,...CAMERA_LIMITS.y);
+  controls.target.z=THREE.MathUtils.clamp(controls.target.z,...CAMERA_LIMITS.z);
+  camera.position.z=Math.max(camera.position.z,Z0+.8);
+  headlight.position.copy(camera.position);headlight.target.position.copy(controls.target);headlight.target.updateMatrixWorld();cameraGuard=false;
+}
+function setCamera(){
+  /* OrbitControls 的阻尼会保留上一帧旋转/平移增量；复位前以无阻尼 update 清空残量，
+     否则按钮写入预设后，下一 RAF 仍会把镜头从预设位置继续推走。 */
+  const damping=controls.enableDamping;controls.enableDamping=false;controls.update();
+  camera.position.set(...VISUAL.pos);controls.target.copy(FOCAL);camera.fov=VISUAL.fov;camera.zoom=1;
+  camera.updateProjectionMatrix();camera.lookAt(FOCAL);controls.update();controls.enableDamping=damping;
+  constrainCamera();return cameraSnapshot();}
+controls.addEventListener('change',constrainCamera);
+setCamera();controls.enabled=true;controls.saveState();
+
+function resizeScene(){const r=mount.getBoundingClientRect();if(r.width>0&&r.height>0){renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}}
+resizeScene();
+
+</script>
+<script src="./s3_fill_store.js"></script>
+<script src="./s3_fill_candidate_runtime.js"></script>
+</body>
+</html>

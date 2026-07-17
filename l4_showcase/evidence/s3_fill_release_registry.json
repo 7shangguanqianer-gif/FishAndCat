@@ -1,0 +1,75 @@
+{
+  "schema_version": "s3-fill-release-registry-v1",
+  "active_release_id": "d75a06b085f9b1aef9ed",
+  "trust_boundary": "Local detached registry checked independently from generated release artifacts. It is not a cryptographic signature and does not defend against an attacker who can rewrite both source and registry.",
+  "entries": [
+    {
+      "release_id": "5ccf4d3c7a7ef495df49",
+      "manifest_payload_sha256": "5ccf4d3c7a7ef495df496f024c4f7c20ae846b6325e9651a7bb66f2a76eba463",
+      "manifest_file_sha256": "c38f07792cbde7fa7de7f15ec5732fd276c36b10d77b1ed0ffd64d4084a35110",
+      "pointer_sha256": "d8a820735e71c5defcaf2bbf262f74746568a254792e140c9a6b4fef2a85195f",
+      "trust_level": "local_detached_registry_not_signature",
+      "status": "superseded_after_independent_no_go_review",
+      "evidence_boundary": "single-seed SIM capacity and replay gate; not headline KPI, PLC evidence, field throughput, or continuous full-warehouse operation proof",
+      "source_sha256": {
+        "sim/fill_only.py": "3c49ac9c8f30688c9a0d6abd48b9eb61322fd4d2e44e625d197606ad4389d8c3",
+        "sim/warehouse_sim.py": "4faf9b513024fe98f548d52d7bb662f98ac86c70931e2a15e9aba7a8001db788",
+        "sim/lap_optimal.py": "bcfb7a7d248e99a64d68409c73a37211249ac01068f085fc3cb60aee3e9e5c04",
+        "l4_showcase/tools/generate_s3_fill_trace.py": "83e07f00d0ced3b96de0809e003459697869651400c1b2322767216afaeaa350",
+        "l4_showcase/tools/validate_s3_fill_trace.py": "9a34b0c405b12c3478b4d9f2ae03bdd912fa8fc1ff5c2c6cd044f3f1b04607c8",
+        "l4_showcase/evidence/s3_fill_requirements.lock": "392cdf392e509b159b54c5dfdb2c802aabeb781c3f1452a30e3b58b3b1c1df64"
+      }
+    },
+    {
+      "release_id": "08a7b166031f0856fc77",
+      "manifest_payload_sha256": "08a7b166031f0856fc77cf34f6858a265377945097773e83080832842a568832",
+      "manifest_file_sha256": "874f647a69ee02ee43ff83a2b5dd808dfafec62fc86895690b86e67d7d838517",
+      "pointer_sha256": "e5c8447d804de3c54a1502f08adcdf7d2565d46e041a609724c9faa0ae4bdcf9",
+      "trust_level": "local_detached_registry_not_signature",
+      "status": "superseded_after_frontend_lifecycle_gate_fix",
+      "evidence_boundary": "single-seed SIM capacity and replay gate; not headline KPI, PLC evidence, field throughput, or continuous full-warehouse operation proof",
+      "source_sha256": {
+        "sim/fill_only.py": "43c548f254e8daf8c4870c603ca0b444803b57c6f3e1d697341c284178b4225e",
+        "sim/warehouse_sim.py": "4faf9b513024fe98f548d52d7bb662f98ac86c70931e2a15e9aba7a8001db788",
+        "sim/lap_optimal.py": "d579155c6b5c180c70ad87eff7dee49b0e15a1c90f2186a8186c196b3a37c0cf",
+        "l4_showcase/tools/generate_s3_fill_trace.py": "bff0ce83d28fa9e4d75fd12afafb8fab569251ee17fe033f865d99ee91ffe9b6",
+        "l4_showcase/tools/validate_s3_fill_trace.py": "4b7c82bddeb3ccc1abe8cc24f09aedf3594204b43fbcc392cdd42032fc6cedab",
+        "l4_showcase/evidence/s3_fill_requirements.lock": "392cdf392e509b159b54c5dfdb2c802aabeb781c3f1452a30e3b58b3b1c1df64"
+      }
+    },
+    {
+      "release_id": "d75a06b085f9b1aef9ed",
+      "manifest_payload_sha256": "d75a06b085f9b1aef9ed85879f20b78f5e7edd9b72a8cb6324957d3c19dadba7",
+      "manifest_file_sha256": "255e81d98f982dcca96c489bb62bb97ba6b830df4b068dfc9fa013c18a576b86",
+      "pointer_sha256": "aa58b434476e28c7f438e93e101a7d735554033e5f3450402c800d69e2f572bd",
+      "trust_level": "local_detached_registry_not_signature",
+      "status": "approved_for_frontend_binding",
+      "evidence_boundary": "single-seed SIM capacity and replay gate; not headline KPI, PLC evidence, field throughput, or continuous full-warehouse operation proof",
+      "frontend_binding_approval": {
+        "schema_version": "s3-fill-frontend-binding-approval-v1",
+        "bundle_schema_version": "s3-fill-frontend-bundle-v1",
+        "release_id": "d75a06b085f9b1aef9ed",
+        "approved_at_utc": "2026-07-16T12:10:30Z",
+        "loader_source_sha256": {
+          "l4_showcase/tools/build_s3_fill_frontend_bundle.py": "2dc8092e07f2b3ddfdc9584fdd697c818c7e7afb67de1cc911a5572bded06e0a",
+          "l4_showcase/tools/test_s3_fill_frontend_bundle.py": "49ae779e5ad46c43a5cda1b1b344fcce7f731960951658f6292ec9ce79552649"
+        },
+        "test_result": {
+          "passed": 10,
+          "failed": 0,
+          "command": "python -B l4_showcase/tools/test_s3_fill_frontend_bundle.py"
+        },
+        "scope": "file:// S3 fill-only candidate loader plus audited per-event Top-3 projection for the active immutable release",
+        "evidence_boundary": "SIM single-seed fill trace and frontend replay only; not PLC, field throughput, continuous plant operation, or headline KPI evidence"
+      },
+      "source_sha256": {
+        "sim/fill_only.py": "43c548f254e8daf8c4870c603ca0b444803b57c6f3e1d697341c284178b4225e",
+        "sim/warehouse_sim.py": "4faf9b513024fe98f548d52d7bb662f98ac86c70931e2a15e9aba7a8001db788",
+        "sim/lap_optimal.py": "d579155c6b5c180c70ad87eff7dee49b0e15a1c90f2186a8186c196b3a37c0cf",
+        "l4_showcase/tools/generate_s3_fill_trace.py": "bff0ce83d28fa9e4d75fd12afafb8fab569251ee17fe033f865d99ee91ffe9b6",
+        "l4_showcase/tools/validate_s3_fill_trace.py": "a477c0c730ffeaaf42f60124b1540a03c77fbda2ffee03d433fd32f52338a69b",
+        "l4_showcase/evidence/s3_fill_requirements.lock": "392cdf392e509b159b54c5dfdb2c802aabeb781c3f1452a30e3b58b3b1c1df64"
+      }
+    }
+  ]
+}
