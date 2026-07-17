@@ -1,8 +1,8 @@
 # Overnight 断点文件(滚动更新;心跳 cron 与任何续跑会话以本文件为唯一真相源)
 
 status: RUNNING
-heartbeat: 2026-07-18 00:20 (+0800)
-current: M1a 已 commit(6b82f07),正在做 M1b 差异热力图常驻左栏
+heartbeat: 2026-07-18 01:55 (+0800)
+current: M1b 已 commit(8ec2228),四套 QA 全绿;M1 verifier 后台已派,并行推进 M2(#27 结论文档)
 
 ## 续跑指令(给心跳 cron / 冷启动会话 / compact 后续跑)
 
@@ -15,7 +15,8 @@ current: M1a 已 commit(6b82f07),正在做 M1b 差异热力图常驻左栏
 
 - [DONE] M0 出发单+断点+心跳 cron(4f971dc)
 - [DONE] M1a 绿框①顶栏工具就地风格化(6b82f07,QA 46/46;顶栏截图自检通过:蓝描边按钮/蓝滑块/蓝数值同轴行色系)
-- [进行中] **M1b 绿框②差异热力图常驻左栏**(见下「M1b 精确续做说明」);做完 M1 整体派 verifier
+- [DONE] M1b 绿框②差异热力图常驻左栏(8ec2228,四套 QA 全绿 46/20/8/task12;堆叠 rect 核对无重叠;diff 方阵 79px+图例两项)。**M1 整体 verifier 后台已派,待评分**;<4 返工,≥4 转下。
+  - 已知欠账(留 M3):task12 determinism 门 flaky——changedPixels 阈值 64 现成绑定约束(实测偶发 66,maxChannelDelta 5、stateStable true=纯 GPU AA 抖动非逻辑差异);M3 拟提阈值至 96 并注释。
 - [ ] M2 #27 结论文档(负结果;不改生产)——数字已在 §三 of plan,直接写 docs/S3评分修订what-if结论_0718.md
 - [ ] M3 技术欠账:sim 测试回归(pytest 或 rtk test)+design_reviews/archive_0716 等未跟踪文件点名归档;**AB 日志 runtest_result.txt/sync_result.txt 不碰(夜间 AB 红线)**
 - [ ] M4 #16 mixed:02_入出闭环.html+交互+新 QA+双命令调度设计稿(文档+sim 离线原型 30seed 配对vs顺序空驶节省%)
