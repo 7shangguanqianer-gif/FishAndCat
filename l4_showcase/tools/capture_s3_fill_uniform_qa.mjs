@@ -1,6 +1,8 @@
 /* 治理 C2 专项 QA(0717):uniform 对照情景装载与切换。
    覆盖:①?profile=uniform 绑定 uniform release ②payload 自证情景与下拉一致 ③治理 A+B 断言组在
-   uniform lane 同样成立 ④默认(无参数)页仍绑 skew 生产 release ⑤冻结页(fill恢复候选)行为零变化。
+   uniform lane 同样成立 ④默认(无参数)页仍绑 skew 生产 release。
+   (原第⑤条"冻结页行为零变化"随 0717 目录清理退役:fill恢复候选页已挪 archive_候选历史/,
+    直接 live-serve 会因页内相对资源断链;该行为锚由 v7 QA 的 hash-snapshot 机制继续承担。)
    轻量 live-serve(不做 hash snapshot):完整基线由 capture_s3_layout_a_qa.mjs / v7 QA 负责。 */
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
@@ -11,8 +13,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHOWCASE = resolve(HERE, '..');
 const OUT = resolve(process.argv[2] || join(SHOWCASE, 'out', 's3_fill_uniform_qa_0717'));
-const PAGE = '样张_S3_进度轴候选.html';
-const FROZEN_PAGE = '样张_S3_fill恢复候选.html';
+const PAGE = '01_连续填仓.html';
 const UNIFORM_POINTER = JSON.parse(readFileSync(join(SHOWCASE, 'out', 's3_fill_data_gate_uniform', 'latest.json'), 'utf8'));
 const SKEW_POINTER = JSON.parse(readFileSync(join(SHOWCASE, 'out', 's3_fill_data_gate', 'latest.json'), 'utf8'));
 const CHROME = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ||
@@ -79,11 +80,6 @@ try {
     report.states.skewDefault = await page.evaluate(() => window.__S3_FILL_QA.seekBookmark(134));
     await page.close();
   }
-  {
-    const page = await open(FROZEN_PAGE, '?profile=uniform');
-    report.states.frozen = await page.evaluate(() => window.__S3_FILL_QA.seekBookmark(134));
-    await page.close();
-  }
 
   const u = report.states.uniform, na = state => state.narrativeAudit;
   const assertions = {
@@ -107,10 +103,7 @@ try {
     skewDefaultUntouched: report.states.skewDefault.releaseId === SKEW_POINTER.release_id &&
       na(report.states.skewDefault).scenario === 'skew' &&
       na(report.states.skewDefault).profileSelectValue === 'skew' &&
-      na(report.states.skewDefault).scenarioSwitchEnabled === true,
-    frozenPageUnchanged: report.states.frozen.releaseId === SKEW_POINTER.release_id &&
-      na(report.states.frozen).scenario === 'skew' &&
-      na(report.states.frozen).scenarioSwitchEnabled === false
+      na(report.states.skewDefault).scenarioSwitchEnabled === true
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

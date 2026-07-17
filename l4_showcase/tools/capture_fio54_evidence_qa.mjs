@@ -7,7 +7,7 @@ import { extname, join, resolve, sep } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 
 const ROOT = 'F:/abb_wh_work';
-const PAGE = 'l4_showcase/src/01_FIO_54格物理证据_Claude候选.html';
+const PAGE = 'l4_showcase/src/03_FIO物理证据.html';
 const OUT = join(ROOT, 'l4_showcase', 'out', 'fio54_evidence_qa_0717');
 const CHROME = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ||
   'C:/Users/86177/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe';

@@ -10,7 +10,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSyn
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHOWCASE = resolve(HERE, '..');
-const PAGE_NAME = '样张_S3_进度轴候选.html';
+const PAGE_NAME = '01_连续填仓.html';
 const SOURCE = join(SHOWCASE, 'src', PAGE_NAME);
 const RUNTIME = join(SHOWCASE, 'src', 's3_fill_candidate_runtime.js');
 const STORE = join(SHOWCASE, 'src', 's3_fill_store.js');

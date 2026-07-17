@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "l4_showcase" / "src" / "样张_S3_三方向候选.html"
-OUTPUT = ROOT / "l4_showcase" / "src" / "样张_S3_fill恢复候选.html"
+SOURCE = ROOT / "l4_showcase" / "src" / "archive_候选历史" / "样张_S3_三方向候选.html"
+OUTPUT = ROOT / "l4_showcase" / "src" / "archive_候选历史" / "样张_S3_fill恢复候选.html"
 MANIFEST = ROOT / "l4_showcase" / "design_reviews" / "0716_S3_fill恢复候选_manifest.json"
 
 

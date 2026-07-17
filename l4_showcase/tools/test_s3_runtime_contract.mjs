@@ -10,7 +10,7 @@ import {fileURLToPath} from "node:url";
 const require = createRequire(import.meta.url);
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const runtimePath = path.join(projectRoot, "l4_showcase", "src", "s3_ac_runtime.js");
-const htmlPath = path.join(projectRoot, "l4_showcase", "src", "样张_S3_三方向候选.html");
+const htmlPath = path.join(projectRoot, "l4_showcase", "src", "archive_候选历史", "样张_S3_三方向候选.html");
 const traceRoot = path.join(projectRoot, "l4_showcase", "out", "s3_traces");
 const comparisonEvidencePath = path.join(projectRoot, "l4_showcase", "out", "s1_comparison_evidence.js");
 const comparisonCanonicalPath = path.join(projectRoot, "l4_showcase", "out", "s1_comparison_evidence.canonical.json");

@@ -7,7 +7,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSyn
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHOWCASE = resolve(HERE, '..');
-const SOURCE = resolve(process.argv[3] || join(SHOWCASE, 'src', '样张_S3_fill恢复候选.html'));
+const SOURCE = resolve(process.argv[3] || join(SHOWCASE, 'src', 'archive_候选历史', '样张_S3_fill恢复候选.html'));
 const RUNTIME = join(SHOWCASE, 'src', 's3_fill_candidate_runtime.js');
 const STORE = join(SHOWCASE, 'src', 's3_fill_store.js');
 const DATA_GATE = join(SHOWCASE, 'out', 's3_fill_data_gate');
