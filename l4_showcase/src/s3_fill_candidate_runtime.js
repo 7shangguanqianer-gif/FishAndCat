@@ -213,6 +213,9 @@
   }
 
   const payload = validatePayload(payloadFromVerifiedQueue());
+  /* 治理 C2:情景以 payload 自证字段为准(不信 URL),skew=生产偏斜货流,uniform=对照情景。 */
+  const SCENARIO = payload.shared_input_provenance && payload.shared_input_provenance.profile &&
+    payload.shared_input_provenance.profile.case === "uniform" ? "uniform" : "skew";
   const topologyAudit = validateTopology();
   const catalog = new Map(payload.cargo_catalog.map(item => [item.gid, item]));
   const evidenceByAlgorithm = new Map(payload.decision_evidence.lanes.map(item => [item.algorithm, item]));
@@ -512,7 +515,23 @@
     document.head.append(governanceStyle);
     byId("strategySelect").innerHTML = '<option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option>';
     byId("tierSelect").innerHTML = '<option value="fill" selected>连续填满 · SIM 数据门</option>'; byId("tierSelect").disabled = true;
-    byId("profileSelect").innerHTML = '<option value="skew" selected>偏斜货流 · 可复现样本</option>'; byId("profileSelect").disabled = true;
+    /* 治理 C2:支持情景切换的页面(html[data-s3-scenario-switch],由页面 store 选择器声明)启用
+       skew/uniform 双情景下拉,切换=改 URL 参数整页重载(每情景仍是单 payload 队列,验证契约不变);
+       冻结页(fill恢复候选/三份版式候选)无标记,保持单 option disabled,行为零变化。 */
+    if (document.documentElement.dataset.s3ScenarioSwitch === "1") {
+      byId("profileSelect").innerHTML = '<option value="skew">偏斜货流 · 帕累托样本</option><option value="uniform">均匀货流 · 对照情景</option>';
+      byId("profileSelect").value = SCENARIO; byId("profileSelect").disabled = false;
+      byId("profileSelect").addEventListener("change", event => {
+        const search = new URLSearchParams(location.search);
+        if (event.target.value === "uniform") search.set("profile", "uniform"); else search.delete("profile");
+        location.search = search.toString() ? `?${search.toString()}` : "";
+      });
+    } else {
+      byId("profileSelect").innerHTML = SCENARIO === "uniform" ?
+        '<option value="uniform" selected>均匀货流 · 对照情景</option>' :
+        '<option value="skew" selected>偏斜货流 · 可复现样本</option>';
+      byId("profileSelect").disabled = true;
+    }
     byId("traceLoadState").textContent = "数据链已验证";
     byId("railHead").querySelector(".matrix").innerHTML = "20 × 20<br>SIM / 填满";
     const mapHead = byId("slotMapWrap").querySelector(".mapHead"); mapHead.querySelector("b").textContent = "20 × 20 容量联动图";
@@ -604,7 +623,9 @@
       `<button class="metricHelp" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益(30 种子跑批方向一致)。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
       `<button class="metricHelp" title="最重 20% 货物的平均层位，越低越稳(降低重心；30 种子跑批方向一致)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
       `<button class="metricHelp" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值(30 种子跑批方向一致)"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
-      `<button class="metricHelp" title="全部 267 件的频次加权期望取货时间。本页为单种子(2026)可复现样本，该种子恰 SEQ 占优；30 种子稳健性跑批(2026–2055)中 SCORE 均值最优(20.57 vs SEQ 21.70 s)，四项指标全部领先——证据 evidence/s3_fill_seed_sweep_skew_2026_2055.json"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small>${deltaBadge(metrics.expected_retrieval_s, seqMetrics.expected_retrieval_s)}</button>` +
+      `<button class="metricHelp" title="${SCENARIO === "uniform" ?
+        "全部 267 件的频次加权期望取货时间。本页为均匀货流对照情景(单种子 2026)：热门不突出，分层红利天然小，三算法趋同本身就是适用条件的诚实披露；30 种子稳健性跑批中 SCORE 均值仍最优(21.34 vs SEQ 21.69 s)但幅度小于偏斜情景——证据 evidence/s3_fill_seed_sweep_uniform_2026_2055.json" :
+        "全部 267 件的频次加权期望取货时间。本页为单种子(2026)可复现样本，该种子恰 SEQ 占优；30 种子稳健性跑批(2026–2055)中 SCORE 均值最优(20.57 vs SEQ 21.70 s)，四项指标全部领先——证据 evidence/s3_fill_seed_sweep_skew_2026_2055.json"}"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small>${deltaBadge(metrics.expected_retrieval_s, seqMetrics.expected_retrieval_s)}</button>` +
       `<button class="metricHelp" title="本连续入库数据门的硬约束违规"><b>${metrics.violations}</b><small>约束违规 ⓘ</small></button>` +
       `<button class="metricHelp conservedCell" title="守恒量：填满口径下三种算法终态占据同一批 267 个货位，完工时长与总行程只取决于货位集合与同批货物，数学上必然三算法相等——能区分算法的是取货侧与分布侧指标"><b>${Math.round(metrics.makespan_s)} s · ${Math.round(metrics.round_trip_path_m)} m</b><small>完工/行程 · 三算法恒等 ⓘ</small></button></div>`;
   }
@@ -759,6 +780,9 @@
         disclosureVisible: state.laneId !== "score" || Boolean(document.querySelector(".scoreFactorNote")?.textContent.includes("共用“载重×层高”原始因子"))},
       runtimeErrors, duplicateAudit: visibleTextDuplicateAudit(),
       narrativeAudit: {
+        scenario: SCENARIO,
+        scenarioSwitchEnabled: !byId("profileSelect").disabled,
+        profileSelectValue: byId("profileSelect").value,
         strategyOptionAutoText: byId("strategySelect").querySelector('option[value="AUTO"]').textContent,
         smartRoutingTermHits: (document.body.textContent.match(/智能路由/g) || []).length,
         statsSmallOrder: Array.from(document.querySelectorAll("#traceStats .metricHelp small")).map(el => el.textContent.trim()),

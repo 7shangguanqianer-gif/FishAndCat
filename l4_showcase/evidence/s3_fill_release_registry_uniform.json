@@ -1,0 +1,41 @@
+{
+ "schema_version": "s3-fill-release-registry-v1",
+ "active_release_id": "683e25d125a7057df472",
+ "trust_boundary": "Local detached registry for the contrast-scenario release, checked independently from generated artifacts. It is not a cryptographic signature and does not defend against an attacker who can rewrite both source and registry.",
+ "entries": [
+  {
+   "release_id": "683e25d125a7057df472",
+   "manifest_payload_sha256": "683e25d125a7057df472d673b049015db3ae0802407d50c52bfc3f0eeda9dd74",
+   "manifest_file_sha256": "854a6949bd84843d62682b99325116a700d4d234b6f41190667f023c67a8a860",
+   "pointer_sha256": "52fce9505cff7462beb1ecc778bbd25a353824d085e0eaae7c2f7e2314e20871",
+   "trust_level": "local_detached_registry_not_signature",
+   "status": "approved_for_frontend_binding",
+   "evidence_boundary": "single-seed SIM uniform traffic contrast scenario (governance C2, approved under 0716 user blanket approval of packages A/B/C1/C2/D); not headline KPI, PLC evidence, field throughput, or continuous operation proof",
+   "frontend_binding_approval": {
+    "schema_version": "s3-fill-frontend-binding-approval-v1",
+    "bundle_schema_version": "s3-fill-frontend-bundle-v1",
+    "release_id": "683e25d125a7057df472",
+    "approved_at_utc": "2026-07-17T05:38:50Z",
+    "loader_source_sha256": {
+     "l4_showcase/tools/build_s3_fill_frontend_bundle.py": "2dc8092e07f2b3ddfdc9584fdd697c818c7e7afb67de1cc911a5572bded06e0a",
+     "l4_showcase/tools/test_s3_fill_frontend_bundle.py": "49ae779e5ad46c43a5cda1b1b344fcce7f731960951658f6292ec9ce79552649"
+    },
+    "test_result": {
+     "passed": 10,
+     "failed": 0,
+     "command": "python -B l4_showcase/tools/test_s3_fill_frontend_bundle.py"
+    },
+    "scope": "file:// S3 fill-only candidate loader for the uniform contrast release; same loader sources as the production skew binding",
+    "evidence_boundary": "SIM single-seed uniform fill trace and frontend replay only; contrast scenario beside the production skew release"
+   },
+   "source_sha256": {
+    "sim/fill_only.py": "43c548f254e8daf8c4870c603ca0b444803b57c6f3e1d697341c284178b4225e",
+    "sim/warehouse_sim.py": "4faf9b513024fe98f548d52d7bb662f98ac86c70931e2a15e9aba7a8001db788",
+    "sim/lap_optimal.py": "d579155c6b5c180c70ad87eff7dee49b0e15a1c90f2186a8186c196b3a37c0cf",
+    "l4_showcase/tools/generate_s3_fill_trace.py": "bff0ce83d28fa9e4d75fd12afafb8fab569251ee17fe033f865d99ee91ffe9b6",
+    "l4_showcase/tools/validate_s3_fill_trace.py": "a477c0c730ffeaaf42f60124b1540a03c77fbda2ffee03d433fd32f52338a69b",
+    "l4_showcase/evidence/s3_fill_requirements.lock": "392cdf392e509b159b54c5dfdb2c802aabeb781c3f1452a30e3b58b3b1c1df64"
+   }
+  }
+ ]
+}

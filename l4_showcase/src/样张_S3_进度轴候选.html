@@ -1290,7 +1290,16 @@ function resizeScene(){const r=mount.getBoundingClientRect();if(r.width>0&&r.hei
 resizeScene();
 
 </script>
-<script src="./s3_fill_store.js"></script>
+<script>
+/* 治理 C2(0716 深审获批):URL 参数选择货流情景 store——默认 skew(生产 release 不动),
+   ?profile=uniform 加载对照情景;两 store 均出自独立重放 validator 闸门。
+   data-s3-scenario-switch 标记向 runtime 声明本页支持情景切换(冻结页无此标记,行为不变)。 */
+(function () {
+  document.documentElement.dataset.s3ScenarioSwitch = "1";
+  var uniform = new URLSearchParams(location.search).get("profile") === "uniform";
+  document.write('<script src="./s3_fill_store' + (uniform ? "_uniform" : "") + '.js"><' + '/script>');
+})();
+</script>
 <script src="./s3_fill_candidate_runtime.js"></script>
 <script src="./s3_layout_a_interactions.js"></script>
 </body>
