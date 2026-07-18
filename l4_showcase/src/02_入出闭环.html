@@ -790,10 +790,10 @@
 const STYLE='A';
 const VISUAL={
   /* 仍沿 tools/anim3d_formal.py 的右前上方位；只按当前可见实体校准，不用潜在队列包络虚增主体占比。 */
-  A:{name:'工业操作台',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
+  A:{name:'工业操作台 · 存取运营',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
 }[STYLE];
 document.documentElement.dataset.style='A';
-document.title=`智储优控 · S3 A重做 · ${VISUAL.name}`;
+document.title='智储优控 · 入出闭环 · 存取运营 · S3';
 
 /* 信息架构：把同源动态数据移回左侧；三维画面始终留在右侧，不再切页。 */
 const rail=document.getElementById('workHud'),viewportEl=document.getElementById('viewport');
