@@ -1,7 +1,7 @@
 # Overnight 交接报告 · 2026-07-18 清晨
 
 > 8h 无人值守收尾。出发单 `docs/overnight-plan_0718.md`,滚动断点 `docs/overnight-resume.md`。
-> 主循环 compact 后无缝续跑;13 commit / 29 文件 / +8081 行;**四套 QA 全绿终验通过**。
+> 主循环 compact 后无缝续跑;M0 起 18+ commit(全带 Co-Authored-By)/ 五套 QA 全绿终验通过。
 > 红线全程遵守:未碰 1_/2_ 用户文档、未碰 AB(runtest/sync_result.txt)、生产评分/数据门/ST/冻结物零改动。
 
 ## 一、完成 / 未完 / 挂起(逐条对出发单)
@@ -22,7 +22,7 @@
 
 **净产出**:8 项完成(M0-M3/M4a/M7素材包/M8/M9)+ 2 项去风险计划(M4b/M6 待用户输入)+ 2 项半阻记录(M5/三课)。
 
-## 二、diff 摘要(13 commit)
+## 二、diff 摘要(18+ commit)
 
 - **生产页/QA**:01_连续填仓.html(+38 行,layout-A 差异图常驻+顶栏已在 M1a)、s3_layout_a_interactions.js(zoomHint 文案)、capture_s3_layout_a_qa.mjs(+27,fx26DiffMap rail 判据+堆叠诊断)、capture_s3_task12_qa.mjs(+9,flaky 阈值)。
 - **sim(生产零改)**:sim/mixed_dispatch_sweep.py(新,复用 mixed_ops)、evidence/s3_mixed_dispatch_2026_2055.json、evidence/s3_score_whatif_*(M0 已落)。
