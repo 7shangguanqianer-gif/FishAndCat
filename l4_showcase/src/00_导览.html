@@ -127,8 +127,8 @@ td .num{font:600 12px Consolas,monospace;color:var(--navy)}
     <span class="tip" role="tooltip"><b>频次加权期望取货时间的相对降幅(sim)</b>AWRA-LS 相对顺序放置基线,同批 30 seeds。<code>03_建模与仿真\out\final_test_30seed.csv</code></span>
   </div>
   <div class="metric" tabindex="0">
-    <span class="value">75 / 0</span><span class="label">控制器在线自测</span>
-    <span class="tip" role="tooltip"><b>Automation Builder PC 仿真,编译+在线回读级</b>75 项断言通过、0 失败,覆盖初始化、分配、策略、边界与状态机;不外推为实体 PLC 现场闭环。<code>02_PLC代码\plc_evidence.csv</code></span>
+    <span class="value">77 / 0</span><span class="label">控制器在线自测</span>
+    <span class="tip" role="tooltip"><b>Automation Builder PC 仿真,编译+在线回读级</b>77 项断言通过、0 失败,覆盖初始化、分配、策略、边界与状态机;不外推为实体 PLC 现场闭环。<code>02_PLC代码\plc_evidence.csv</code></span>
   </div>
   <div class="metric" tabindex="0">
     <span class="value">98.5% / 99.19%</span><span class="label">算法选择达成率 · 双口径</span>
@@ -201,10 +201,10 @@ td .num{font:600 12px Consolas,monospace;color:var(--navy)}
       <tr><th style="width:230px">文件</th><th>说明</th><th style="width:270px">关键内容</th></tr>
       <tr><td class="f">*.project<small>Automation Builder 工程</small></td><td>完整工程(Automation Builder 2.9);含程序组织单元、HMI 三页与符号配置</td><td>编译 <span class="num">0 errors</span></td></tr>
       <tr><td class="f">ST源码导出\<small>04_FB_Warehouse.st 等</small></td><td>全部 ST 源码的纯文本导出,便于不装 AB 时审阅</td><td>核心算法功能块化;边界判断与状态机注释完整</td></tr>
-      <tr><td class="f">06_PRG_Test.st<small>在线测试程序</small></td><td>在 AB PC 仿真中运行的自测程序,断言覆盖初始化、分配、策略、边界与状态机</td><td>在线自测 <span class="num">75 / 0</span>(通过/失败)</td></tr>
+      <tr><td class="f">06_PRG_Test.st<small>在线测试程序</small></td><td>在 AB PC 仿真中运行的自测程序,断言覆盖初始化、分配、策略、边界与状态机</td><td>在线自测 <span class="num">77 / 0</span>(通过/失败)</td></tr>
       <tr><td class="f">黄金向量与等价性\<small>plc_evidence.csv 等</small></td><td>ST 与 Python 参考实现的同源对拍证据</td><td>放置分支差分 <span class="num">420/420</span> 一致;导出向量 20/20 逐位同源</td></tr>
     </table>
-    <div class="note"><b>证据级别注</b> 75/0 为 Automation Builder PC 仿真的编译+在线回读级证据,验证 ST 逻辑与断言在该环境成立,不外推为实体 PLC 现场闭环。</div>
+    <div class="note"><b>证据级别注</b> 77/0 为 Automation Builder PC 仿真的编译+在线回读级证据,验证 ST 逻辑与断言在该环境成立,不外推为实体 PLC 现场闭环。</div>
   </div></section>
 
   <section class="chapter" role="tabpanel" id="panel-c3" aria-labelledby="tab-c3" hidden><div class="chapter-inner">
