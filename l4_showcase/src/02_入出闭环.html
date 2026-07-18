@@ -653,12 +653,98 @@
   @media(max-width:1380px), (max-height:780px){
     #workHud{grid-template-rows:auto auto auto auto minmax(62px,1fr)}
   }
+
+  /* ================================================================
+     0718 R2 步骤1 · 02 入出闭环页补 A 壳骨架(顶栏 + 入出周期轴 + 左栏 rail)
+     作用域 html[data-s3-layout="A"] 由 s3_mixed_layout_a_interactions.js 设置。
+     加法式叠加:与旧 data-style="A" 皮肤同为 html[attr] 特异性、靠后覆盖;
+     runtime / 场景脚本零改动,仅 CSS 重塑 + DOM 搬运。变量对齐 01_连续填仓。
+     步骤1 只求「A 壳能起来、不白屏」;差异标记/取货实测块留步骤2/3。
+     ================================================================ */
+  html[data-s3-layout="A"]{--rail-w:clamp(296px,23vw,352px);--topbar-h:46px;--axis-h:56px}
+
+  /* -- 顶栏:railHead + runtimeControls 由交互层搬入 -- */
+  html[data-s3-layout="A"] #topbarA{position:absolute;z-index:12;top:0;left:0;right:0;height:var(--topbar-h);
+    display:flex;align-items:center;gap:14px;padding:0 14px;background:#fff;border-bottom:3px solid var(--abb-red,#ff000f);box-shadow:0 2px 8px #17202b14}
+  html[data-s3-layout="A"] #topbarA #railHead{border:0;padding:0;min-height:0;display:flex;align-items:center;gap:10px;flex:none}
+  html[data-s3-layout="A"] #topbarA #railHead .brandLock{gap:9px}
+  html[data-s3-layout="A"] #topbarA #railHead .abbWord{font-size:20px}
+  html[data-s3-layout="A"] #topbarA #railHead h1{font-size:15px;white-space:nowrap}
+  html[data-s3-layout="A"] #topbarA #railHead .eyebrow{font-size:7px}
+  html[data-s3-layout="A"] #topbarA #railHead .matrix{display:none}
+  html[data-s3-layout="A"] #topbarA #runtimeControls{display:flex;align-items:center;gap:9px;flex:1;min-width:0;border:0;padding:0;background:transparent}
+  html[data-s3-layout="A"] #topbarA #runtimeControls label{display:flex;align-items:center;gap:4px;font-size:8.5px;white-space:nowrap;color:#59656e}
+  html[data-s3-layout="A"] #topbarA #runtimeControls select{width:auto;min-width:118px;height:27px}
+  html[data-s3-layout="A"] #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:6px;grid-column:auto}
+  html[data-s3-layout="A"] #topbarA #runtimeActions button{height:27px;min-height:27px}
+  html[data-s3-layout="A"] #topbarA #traceLoadState{margin-left:4px;color:#17365d}
+  html[data-s3-layout="A"] #topbarA #traceErrorHost{position:absolute;top:100%;left:0;right:0;z-index:30}
+
+  /* -- 左栏 rail:决策卡 → insight 统计 → 2D 货位图 → 七步条(axisHud/liveChart 在 dock,不占 rail) -- */
+  html[data-s3-layout="A"] #workHud{inset:var(--topbar-h) auto 0 0;width:var(--rail-w);
+    display:flex;flex-direction:column;gap:7px;padding:8px 9px;overflow:hidden;border-top:0;border-right:1px solid #b9c2c9;background:#f6f7f8;
+    grid-template-columns:none;grid-template-rows:none;grid-template-areas:none}
+  html[data-s3-layout="A"] #taskline{display:none!important}
+  html[data-s3-layout="A"] #decisionWrap{grid-area:auto;order:1;flex:none;align-self:stretch}
+  html[data-s3-layout="A"] #insightStack{grid-area:auto;grid-row:auto;order:2;flex:none;display:block}
+  html[data-s3-layout="A"] #slotMapWrap{grid-area:auto;order:3;flex:1 1 auto;min-height:150px;align-self:stretch;width:auto}
+  html[data-s3-layout="A"] #phaseRail{grid-area:auto;order:4;flex:none;position:static;width:auto}
+
+  /* -- 入出周期轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进) -- */
+  html[data-s3-layout="A"] #progressAxisHost{position:absolute;z-index:8;top:var(--topbar-h);left:var(--rail-w);right:0;height:var(--axis-h);
+    background:#fff;border-bottom:1px solid #b9c3ca;box-shadow:0 2px 8px #17202b0d}
+  html[data-s3-layout="A"] #cycleAxis{position:relative;height:100%;display:flex;align-items:center;gap:16px;padding:0 16px}
+  html[data-s3-layout="A"] #cycleAxis .cycleHead{flex:none}
+  html[data-s3-layout="A"] #cycleAxis .cycleHead b{display:block;font-size:11.5px;white-space:nowrap;color:#16191d}
+  html[data-s3-layout="A"] #cycleAxis .cycleHead span{display:block;margin-top:2px;font-size:7.5px;white-space:nowrap;color:#65717c}
+  html[data-s3-layout="A"] #cycleAxisTrack{flex:1 1 auto;position:relative;height:34px;min-width:220px}
+  html[data-s3-layout="A"] #cycleAxisTrack::before{content:"";position:absolute;left:0;right:0;top:16px;height:3px;background:#d9dde1}
+  html[data-s3-layout="A"] #cycleAxisTrack .cycleFill{position:absolute;left:0;top:16px;height:3px;background:#17365d;width:var(--cycle-fill,0%);transition:width .2s linear}
+  html[data-s3-layout="A"] #cycleAxisTrack button{position:absolute;top:7px;width:21px;height:21px;margin-left:-11px;padding:0;
+    border:2px solid #17365d;border-radius:50%;background:#fff;color:transparent;font-size:0;line-height:0;cursor:pointer;box-shadow:none}
+  html[data-s3-layout="A"] #cycleAxisTrack button.axisDone{background:#17365d}
+  html[data-s3-layout="A"] #cycleAxisTrack button[aria-current="true"]{border-color:#ff000f;background:#ff000f;box-shadow:0 0 0 4px #ff000f2b}
+  html[data-s3-layout="A"] #cycleAxisTrack button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+  html[data-s3-layout="A"] #cycleAxisTrack button::after{content:attr(data-axis-label);position:absolute;top:24px;left:50%;
+    transform:translateX(-50%);color:#75828c;font:8.5px/1 Consolas,monospace;white-space:nowrap}
+  html[data-s3-layout="A"] #cycleAxisRight{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px;color:#5d6a74;font:7.5px/1.2 Consolas,monospace}
+  html[data-s3-layout="A"] #cycleAxisRight b{font-size:11px;color:#16191d}
+
+  /* -- 3D 区:让位给顶栏 + 周期轴(bottom 仍由 sceneDock 规则承担) -- */
+  html[data-s3-layout="A"] #gl{left:var(--rail-w);top:calc(var(--topbar-h) + var(--axis-h))}
+  html[data-s3-layout="A"] #cycleReset{left:var(--rail-w);top:calc(var(--topbar-h) + var(--axis-h))}
+
+  /* -- 共享浮层(节点快照) + 2D 放大层 -- */
+  html[data-s3-layout="A"] .s3aPop{position:absolute;z-index:80;width:250px;background:#fff;border:1px solid #c9ced3;border-top:3px solid var(--abb-red,#ff000f);
+    box-shadow:0 8px 26px #17202b36;padding:10px 12px;font:10px/1.5 "Microsoft YaHei",sans-serif;color:#1c2932;display:none}
+  html[data-s3-layout="A"] .s3aPop.show{display:block}
+  html[data-s3-layout="A"] .s3aPop h4{margin:0 0 5px;font-size:11px;line-height:1.3}
+  html[data-s3-layout="A"] .s3aPop table{width:100%;border-collapse:collapse}
+  html[data-s3-layout="A"] .s3aPop td{padding:2px 0;font-size:10px}
+  html[data-s3-layout="A"] .s3aPop td:last-child{text-align:right;font-weight:700;font-family:Consolas,monospace}
+  html[data-s3-layout="A"] .s3aPop .note{margin-top:5px;color:#8a9096;font-size:8.5px;line-height:1.4}
+  #s3MapOverlay{position:absolute;z-index:60;inset:0;display:none;align-items:center;justify-content:center;background:#17202b66}
+  #s3MapOverlay.open{display:flex}
+  #s3MapOverlay .mapDock{width:min(78vh,720px);max-width:88%;background:#fff;border-top:4px solid var(--abb-red,#ff000f);
+    padding:12px 46px 10px 14px;box-shadow:0 18px 50px #0f171e59;position:relative}
+  #s3MapOverlay .mapDockClose{position:absolute;right:8px;top:6px;width:26px;height:26px;border:1px solid #18232c;background:#fff;
+    color:#18232c;font:500 17px/1 Arial,sans-serif;cursor:pointer}
+  html[data-s3-layout="A"] #s3MapOverlay #slotMapWrap{flex:none;order:0;min-height:0;cursor:default;border:0;padding:0;overflow:visible;width:auto!important}
+  html[data-s3-layout="A"] #s3MapOverlay #slotMap{min-height:0!important;margin:8px auto 0;max-height:none}
+
+  /* -- 大屏:顶栏/轴条略高 -- */
+  @media(min-width:1600px) and (min-height:860px){
+    html[data-s3-layout="A"]{--topbar-h:50px;--axis-h:62px}
+    html[data-s3-layout="A"] #topbarA #railHead h1{font-size:17px}
+    html[data-s3-layout="A"] #cycleAxis .cycleHead b{font-size:13px}
+  }
 </style>
 </head>
 <body>
 <main id="main">
   <section id="sceneView" class="view active" aria-label="三维作业视图" aria-hidden="false">
     <section id="viewport">
+      <div id="topbarA"></div>
       <div id="workHud">
         <div id="taskline"><div class="kicker">已校验 · 同源 SIM 轨迹载入中</div><div class="primary"><span id="taskPrimary">正在加载同源作业轨迹</span><span id="actionBadge">等待轨迹</span></div><div id="stepPurpose"><b id="stepIndex">步骤 -- / 7</b><span id="stepPurposeText">载入后按事件流显示动作目的</span></div><div class="metaRow"><span id="ownerState">货物：--</span><span>单巷道 · 单机</span></div></div>
         <section id="runtimeControls" aria-label="仿真回放选择" aria-busy="false">
@@ -669,6 +755,20 @@
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
         <div id="axisHud" aria-label="实时轴位；数值随演示连续变化" aria-live="off"><b>实时轴位</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span></div></div>
+      </div>
+      <div id="progressAxisHost" aria-label="入出周期里程碑轴">
+        <div id="cycleAxis">
+          <div class="cycleHead"><b>入出周期 · 里程碑</b><span>点击节点暂停到已验证快照 · SIM</span></div>
+          <div id="cycleAxisTrack">
+            <i class="cycleFill" aria-hidden="true"></i>
+            <button type="button" data-cycle="0" data-axis-label="0 · 0%" aria-label="跳转到周期 0 / 100（0%）并暂停到已验证快照" style="left:0%">0</button>
+            <button type="button" data-cycle="25" data-axis-label="25 · 25%" aria-label="跳转到周期 25 / 100（25%）并暂停到已验证快照" style="left:25%">25</button>
+            <button type="button" data-cycle="50" data-axis-label="50 · 50%" aria-label="跳转到周期 50 / 100（50%）并暂停到已验证快照" style="left:50%">50</button>
+            <button type="button" data-cycle="75" data-axis-label="75 · 75%" aria-label="跳转到周期 75 / 100（75%）并暂停到已验证快照" style="left:75%">75</button>
+            <button type="button" data-cycle="100" data-axis-label="100 · 100%" aria-label="跳转到周期 100 / 100（100%）并暂停到已验证快照" style="left:100%">100</button>
+          </div>
+          <div id="cycleAxisRight"><span>混合周期</span><b id="cycleAxisCount">-- / 100</b></div>
+        </div>
       </div>
       <div id="gl" role="img" aria-label="三维仓储 sim 轨迹回放；仓位、货物和设备状态由已验证 trace 同源驱动"></div>
       <div id="phaseRail"><div class="phaseTitle"><span id="phaseNow">等待 trace</span><span id="phaseClock">--</span></div><div id="phaseTimeScale" aria-label="本周期七步 SIM 真实时长比例"><i id="phaseTimeCursor" aria-hidden="true"></i></div><div id="phaseSegments"><span class="phaseSeg">1</span><span class="phaseSeg">2</span><span class="phaseSeg">3</span><span class="phaseSeg">4</span><span class="phaseSeg">5</span><span class="phaseSeg">6</span><span class="phaseSeg">7</span></div></div>
@@ -1104,5 +1204,6 @@ resizeScene();
 <script src="../out/s1_comparison_evidence.js"></script>
 <script src="./s3_trace_store.js"></script>
 <script src="./s3_ac_runtime.js"></script>
+<script src="./s3_mixed_layout_a_interactions.js"></script>
 </body>
 </html>
