@@ -1376,12 +1376,7 @@
     }
 
     function renderOpsEvidence(trace) {
-      /* 版面 variant 由 URL ?s3b=dock|rail|axis 声明(三版供用户选择;选定后收敛为单版) */
-      if (!doc.documentElement.dataset.s3B) {
-        let pick = "dock";
-        try { pick = new root.URLSearchParams(root.location.search).get("s3b") || "dock"; } catch (error) {}
-        doc.documentElement.dataset.s3B = ["dock", "rail", "axis"].includes(pick) ? pick : "dock";
-      }
+      /* 0719 收敛:三版(dock/rail/axis)经用户选甲定型为 dock 底带,?s3b 机制退役 */
       const data = buildOpsEvidence(trace);
       const fmt = value => value.toFixed(1);
       const storeShare = Math.round(100 * data.storeAvg / Math.max(1e-9, data.storeAvg + data.retrAvg));
@@ -1397,8 +1392,7 @@
         `<div><b>${fmt(data.linkAvg)} s</b><span>交织腿均时 · 存→取直达</span></div>` +
         `<div><b>${(data.savedTotal / 60).toFixed(1)} min</b><span>省一趟合计 / ${data.n} 周期</span></div></div>` +
         `<div class="oeNote">腿时长 = 七步 SIM 时刻差；省一趟 = 同一运动学（${data.motion === "constant_speed" ? "匀速" : "加减速"}）折算「回 I/O 再出发 − 直达」</div>`;
-      const variant = doc.documentElement.dataset.s3B;
-      const target = variant === "rail" ? byId("workHud") : variant === "axis" ? byId("viewport") : byId("sceneDock");
+      const target = byId("sceneDock");
       if (target && host.parentElement !== target) target.append(host);
     }
 
