@@ -1382,6 +1382,11 @@
         try { pick = new root.URLSearchParams(root.location.search).get("s3b") || "dock"; } catch (error) {}
         doc.documentElement.dataset.s3B = ["dock", "rail", "axis"].includes(pick) ? pick : "dock";
       }
+      if (!doc.documentElement.dataset.s3C) {
+        let mapPick = "0";
+        try { mapPick = new root.URLSearchParams(root.location.search).get("s3c") || "0"; } catch (error) {}
+        if (["1", "2", "3"].includes(mapPick)) doc.documentElement.dataset.s3C = mapPick;
+      }
       const data = buildOpsEvidence(trace);
       const fmt = value => value.toFixed(1);
       const storeShare = Math.round(100 * data.storeAvg / Math.max(1e-9, data.storeAvg + data.retrAvg));
@@ -1442,14 +1447,37 @@
         }
         g.strokeStyle = "#c8d0d6"; g.strokeRect(x, y, cell, cell);
       }
+      /* 2D 热力层:平面图无透视遮挡,可整格铺热度底 → 总览尺度一眼读热度,补 3D 总览短板。
+         0719 审美迭代:配色策略参数化 ?s3c=1|2|3(三版供选,选定后收敛单版;b 变体同先例):
+           c0 现状=热度底+等级块+白描边(三层同格,用户判「花」);
+           c1 热度纯净=heat 开时只讲热度一件事,等级让位给 heat-off 视图;
+           c2 单色相=热度改单蓝阶(明度轴),等级缩为小圆点,色相冲突最小;
+           c3 灰度强调=ISA-101 灰底哲学,等级=灰阶,热度只强调 top20% 热门(橙框),不铺连续色。 */
+      const mapStyle = doc.documentElement.dataset.s3C || "0";
+      const heatBlue = t => { const lo = [238, 244, 248], hi = [11, 62, 111];
+        return `rgb(${lo.map((v, i) => Math.round(v + (hi[i] - v) * t)).join(",")})`; };
+      const GRADE_GREY = { heavy: "#4a555e", mid: "#79848d", light: "#a6b0b7" };
       frame.inventoryRows.forEach(row => {
         const item = good(row.gid), x = x0 + row.col * cell, y = y0 + (19 - row.tier) * cell;
-        /* 2D 热力层:平面图无透视遮挡,可整格铺热度底 → 总览尺度也能一眼读出热度分布,
-           正好补上 3D 在总览尺度失效(400 格时每格约 25px、单格标识必然消失)的短板。
-           开热度时货物框缩小居中,让热度底露出足够宽的边;等级色不被牺牲。 */
-        if (heat2DOn) {
-          g.fillStyle = "#" + heatColor(freqRank.has(row.gid) ? freqRank.get(row.gid) : .5).getHexString();
+        const rank = freqRank.has(row.gid) ? freqRank.get(row.gid) : .5;
+        if (mapStyle === "3") {
+          g.fillStyle = GRADE_GREY[item.grade] || GRADE_GREY.mid;
           g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
+          if (heat2DOn && rank >= .8) {
+            g.strokeStyle = "#e07b00"; g.lineWidth = Math.max(1.2, cell * .14);
+            g.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
+          }
+          return;
+        }
+        if (heat2DOn) {
+          g.fillStyle = mapStyle === "2" ? heatBlue(rank) : "#" + heatColor(rank).getHexString();
+          g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
+          if (mapStyle === "1") return;               /* c1:热度视图不画等级块 */
+          if (mapStyle === "2") {                      /* c2:等级=小圆点,无白描边 */
+            g.beginPath(); g.arc(x + cell / 2, y + cell / 2, Math.max(1.4, cell * .15), 0, Math.PI * 2);
+            g.fillStyle = gradeCssColor(item.grade); g.fill();
+            return;
+          }
         }
         const bx = heat2DOn ? cell * .26 : cell * .12, bw = heat2DOn ? cell * .48 : cell * .76;
         const by = heat2DOn ? cell * .28 : cell * .15, bh = heat2DOn ? cell * .44 : cell * .70;
