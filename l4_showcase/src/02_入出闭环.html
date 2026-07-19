@@ -82,10 +82,9 @@
 
   /* 0714-R3 A 重做：左侧同源数据与 20×20 规则地图，右侧完整 3D 与阶段性动作特写。 */
   html,body{min-width:1280px;min-height:720px;background:#e7ebef}
-  #brand,#kpis,#modebar,#bar,#foot{display:none!important}
+  /* P2a:#brand/#kpis/#modebar/#bar/#foot/#dataView 化石强制规则已删(元素 0 个存在)。 */
   #main{height:100vh!important;padding:0!important}
   #sceneView,#viewport{height:100%;border:0;border-radius:0}
-  #dataView{display:none!important}
   #gl{left:var(--rail-w,32%);background:var(--scene-bg,#edf1f3)}
   #workHud{position:absolute;z-index:5;inset:0 auto 0 0;width:var(--rail-w,32%);padding:24px 22px 18px;
     display:flex;flex-direction:column;justify-content:flex-start;gap:13px;pointer-events:auto;background:var(--rail-bg,#f7f8fa);
@@ -94,11 +93,8 @@
   #railHead .eyebrow{font:700 10px/1.2 Consolas,monospace;letter-spacing:1.5px;color:var(--accent,#17365d)}
   #railHead h1{margin-top:5px;font-size:22px;line-height:1.12;letter-spacing:-.4px}
   #railHead .matrix{font:700 11px/1.35 Consolas,monospace;text-align:right;color:var(--rail-muted,#65717c)}
-  #taskline{padding:12px 13px;border:1px solid var(--rail-line,#c6ced5);border-left:4px solid var(--accent,#17365d);
-    background:var(--card,#fff);box-shadow:none;line-height:1.3}
-  #taskline .kicker{color:var(--rail-muted,#65717c)}#taskline .primary{display:block;margin-top:5px;font-size:14px}
-  #taskPrimary{display:block;white-space:normal;line-height:1.35}#actionBadge{display:inline-flex;margin:10px 0 0;padding:6px 9px;font-size:11px}
-  #taskline .metaRow{margin-top:8px;justify-content:space-between;color:var(--rail-muted,#65717c)}
+  /* P2a:#taskline 装饰样式已删——A 壳 display:none!important 永久隐藏(0716 R02 与 sceneDock 去重),
+     样式永不渲染;DOM 与 runtime 写入(s3_ac_runtime:1647)保留不动。 */
   #axisHud{order:3;width:100%;padding:12px 13px;background:var(--axis-bg,#17202b);border:0;border-radius:0;box-shadow:none;font-size:11px}
   #axisHud b{font-size:10px;letter-spacing:1.2px;color:#c7d2dc;margin-bottom:8px}
   #axisHud .axis{grid-template-columns:20px 1fr 62px;gap:8px;margin:7px 0}#axisHud .axis i{height:5px;border-radius:0}
@@ -120,18 +116,17 @@
   #slotMapWrap .mapHead strong{font:800 18px/1 Consolas,monospace;color:var(--rail-ink,#17202b)}
   #slotMapWrap .mapRule{display:flex;align-items:center;gap:7px;margin-top:7px;padding:5px 7px;background:#eef1f3;color:#35414a;font:700 9px/1.2 Consolas,"Microsoft YaHei",monospace}
   #slotMapWrap .hatch{width:18px;height:10px;flex:none;background:repeating-linear-gradient(135deg,#65727d 0 3px,#a8b1b8 3px 5px)}
-  #slotMap{display:block;flex:1 1 auto;width:100%;min-height:120px;margin-top:6px}
+  /* P2a:#slotMap 的 gen1 弹性布局(flex:1 1 auto;min-height:120px)已删——正是 A 壳规则被迫用
+     !important 反制的对手;保留非布局部分。 */
+  #slotMap{display:block;width:100%;margin-top:6px}
   #slotMapWrap .mapKey{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:5px;color:var(--rail-muted,#65717c);font-size:8.5px}
   #slotMapWrap .mapKey i{display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:-1px;border:1px solid #71808b}
   #slotMapWrap .mapKey .free{background:#e9edef}.mapKey .target{background:#f3c900}.mapKey .moving{background:#ff6a00;border-color:#7a2f00;border-radius:50%}
   #slotMapWrap .mapKey .gradeChips{display:inline-flex;align-items:center;gap:2px;margin-right:3px;vertical-align:-2px}
   #slotMapWrap .mapKey .gradeChips i{width:8px;height:10px;margin:0;border:0}.mapKey .gradeChips .heavy{background:#102a43}.mapKey .gradeChips .mid{background:#006bb6}.mapKey .gradeChips .light{background:#42c7e6}
-  #targetBeacon{position:absolute;z-index:7;min-width:160px;transform:translate(14px,-50%);pointer-events:none;
-    padding:9px 11px 8px 14px;background:#f3c900;color:#101820;border-left:5px solid #101820;box-shadow:0 4px 16px #10182038}
-  #targetBeacon:before{content:"";position:absolute;left:-19px;top:50%;width:18px;height:2px;background:#101820}
-  #targetBeacon b{display:block;font:800 14px/1.05 "Microsoft YaHei",sans-serif;white-space:nowrap}
-  #targetBeacon span{display:block;margin-top:5px;font:700 9px/1 Consolas,monospace;letter-spacing:.6px}
-  /* 0718 #28 黄牌废止:targetBeacon(入库目标/出库源位方框)与其引线整体退役,参照 01。 */
+  /* 0718 #28 黄牌废止:targetBeacon(入库目标/出库源位方框)与其引线整体退役,参照 01。
+     P2a:其装饰样式(黄底/引线/字体)已删,永不渲染;**下面这条隐藏保护令与 DOM 必须保留**——
+     runtime setTarget 每帧写 beacon 文本,删 DOM 会 null crash;黄牌永不再引入(记忆 abb-yellow-beacon-retired)。 */
   #targetBeacon,#labelLeaders{display:none!important}
   /* 0718 #26-2 货位热度色阶 + 近 I/O 热区图例。 */
   #heatLegend{position:absolute;z-index:6;right:18px;top:126px;width:188px;padding:9px 11px;background:#ffffffed;border:1px solid #aeb8bf;
