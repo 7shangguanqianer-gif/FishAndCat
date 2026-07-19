@@ -842,10 +842,15 @@
       const mesh = new THREE.InstancedMesh(stockBodyGeometry, material, stockCapacity);
       mesh.count = 0; mesh.castShadow = false; mesh.receiveShadow = false; stockGroup.add(mesh); return [grade, mesh];
     }));
-    /* 货位热度背板:薄板贴在货箱正后方(比箱体宽),正面看=围绕货箱的一圈色环 → 热度可读且不遮挡等级色。
-       只给**在库货位**上色:空位无存储活动、自然无热度(诚实呈现,不编造)。 */
+    /* 0719 改版(用户反馈「3D 基本看不到热力」,原背板贴箱后只露 1-2px 色环):
+       热度改为**半透明前罩**贴货格前脸——热度一眼可见,等级色透过罩体仍可辨(两约束同满足)。
+       three.js 透明陷阱规避(issue 27170/Mugen87 惯例,fetch 一手):depthWrite:false 防黑块;
+       本场景全部前罩共面同深、实例互不重叠 → InstancedMesh 无内建实例排序的已知限制不适用。
+       只给**在库货位**上罩:空位无存储活动、自然无热度(诚实呈现,不编造)。 */
     const cellHeatGeometry = new THREE.BoxGeometry(.96, .02, .96);
-    const cellHeatMesh = new THREE.InstancedMesh(cellHeatGeometry, new THREE.MeshBasicMaterial({color: 0xffffff}), stockCapacity);
+    const cellHeatMesh = new THREE.InstancedMesh(cellHeatGeometry,
+      new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: .78, depthWrite: false}), stockCapacity);
+    /* opacity .78:实测 .45 时黄罩×蓝箱混成绿色、热度色阶失真;.78 热度主导保真,与 2D「热度纯净」双视图哲学一致(heat 关=等级完整视图) */
     cellHeatMesh.count = 0; cellHeatMesh.castShadow = false; cellHeatMesh.receiveShadow = false;
     cellHeatMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(stockCapacity * 3).fill(1), 3);
     stockGroup.add(cellHeatMesh);
@@ -937,8 +942,8 @@
       let lidCount = 0;
       inventory.forEach(wrapper => {
         const row = wrapper.row, item = good(row.gid), grade = stockGradeMeshes[item.grade] ? item.grade : "mid";
-        /* 货位热度背板(位置着色):贴在货箱正后方,正面看是一圈色环,不遮挡箱体等级色 */
-        stockDummy.position.set(row.col + .5, RACK.loadY + .38, row.tier + .5); stockDummy.updateMatrix();
+        /* 货位热度前罩(位置着色):半透明贴货格前脸,热度可见且等级色透出 */
+        stockDummy.position.set(row.col + .5, RACK.loadY - .40, row.tier + .5); stockDummy.updateMatrix(); /* -.40:盖过 lid 前脸(-.38),否则每格上沿露深色条 */
         cellHeatMesh.setMatrixAt(lidCount, stockDummy.matrix);
         cellHeatMesh.setColorAt(lidCount, heatColor(freqRank.has(row.gid) ? freqRank.get(row.gid) : .5));
         /* 货箱本体=等级色(重/中/轻),保持原样不被热度覆盖 */
