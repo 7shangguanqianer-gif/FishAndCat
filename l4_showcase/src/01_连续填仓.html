@@ -1193,9 +1193,17 @@ addBox(N+1,.14,.08,N/2,IO.y,Z0+.04,M.rail,true,true);
 addBox(2.36,.88,.16,IO.x,CROSSBAR.y,Z0+.10,M.major,true,true);
 addBox(.92,.84,.16,IO.x,(CROSSBAR.y+IO.y)/2,Z0+.10,M.amber,true,true);
 
-function addTransferBridge(from,to,material,width=.62){
-  const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy),bridge=new THREE.Mesh(new THREE.BoxGeometry(len,width,.13),material);
-  bridge.position.set((from.x+to.x)/2,(from.y+to.y)/2,.095);bridge.rotation.z=Math.atan2(dy,dx);bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
+/* 0719 几何审计修复(docs/3D几何穿模审计_0718.md,与 02 同源问题但形态不同:01 是轴对齐 T 形交叉)。
+   实测 01 = 155 对相交,其中桥板系 4 类:①×STATION_CAP(frac .70 ×2)②×轨道(.486)③横杆×支线(.438)。
+   修法:①台面整体下沉到滚筒/柱帽平面以下(滚筒 z 自 .105 起、柱帽自 .09 起 → 台面收在 .00~.09);
+        ②收窄宽度;③支线用 trimFrom 从横杆外缘起算,不再与横杆全厚度互穿。
+   不照搬 02 的「两端各回缩半宽」——01 的支线本身只有 .8 长,回缩会把它截断成断头。 */
+function addTransferBridge(from,to,material,width=.62,trimFrom=0,thickness=.09,zTop=.09){
+  const dx=to.x-from.x,dy=to.y-from.y,full=Math.hypot(dx,dy),angle=Math.atan2(dy,dx);
+  const len=Math.max(.10,full-trimFrom),ux=Math.cos(angle),uy=Math.sin(angle);
+  const bridge=new THREE.Mesh(new THREE.BoxGeometry(len,width,thickness),material);
+  bridge.position.set(from.x+ux*(trimFrom+len/2),from.y+uy*(trimFrom+len/2),zTop-thickness/2);
+  bridge.rotation.z=angle;bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
 }
 /* 结构件统一为 Factory I/O 式中性钢灰；方向只由地贴、工位与动态路径编码。 */
 M.infeedRail=M.outfeedRail=mat(0x6f7c87,.56,.34,.035);
@@ -1208,8 +1216,9 @@ function addConveyorLaneY(lane,nearY,farY,laneMaterial){
 }
 addConveyorLaneY(INFEED,INFEED.entryY,INFEED.loadY,M.infeedRail);
 addConveyorLaneY(OUTFEED,OUTFEED.startY,OUTFEED.endY,M.outfeedRail);
-addTransferBridge({x:CROSSBAR.xMin,y:CROSSBAR.y},{x:CROSSBAR.xMax,y:CROSSBAR.y},M.major,.70);
-addTransferBridge({x:IO.x,y:CROSSBAR.y},TRANSFER_ANCHOR,M.amber,.70);
+addTransferBridge({x:CROSSBAR.xMin,y:CROSSBAR.y},{x:CROSSBAR.xMax,y:CROSSBAR.y},M.major,.56);
+/* 支线 trimFrom .30 = 横杆半宽(.28)+ 余量,自横杆外缘起算,消除 T 形接头处的全厚度互穿。 */
+addTransferBridge({x:IO.x,y:CROSSBAR.y},TRANSFER_ANCHOR,M.amber,.44,.30);
 addFloorFlowLabel('入库  ↑',INFEED.x,(INFEED.entryY+INFEED.loadY)/2,'#214e78');
 addFloorFlowLabel('出库  ↓',OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,'#0084a8');
 
