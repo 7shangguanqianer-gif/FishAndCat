@@ -246,7 +246,7 @@
   #liveChartWrap .cap{font-size:7.5px}#speed{height:100%;min-height:0;margin-top:2px}
   #phaseRail{position:static;width:100%;min-width:0;padding:5px 6px;background:#fff}
   #phaseRail .phaseTitle{font-size:7.5px;margin-bottom:3px;gap:4px}#phaseNow{font-weight:700;color:#17365d;white-space:nowrap}
-  #phaseSegments{height:18px;grid-template-columns:repeat(7,1fr)!important;gap:2px}.phaseSeg{font:800 7.5px/1 Consolas,monospace}
+  #phaseSegments{height:18px;gap:2px}.phaseSeg{font:800 7.5px/1 Consolas,monospace} /* P3:columns!important 死分量删(594 压制) */
   .phaseName{display:none}
   #railFacts{margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:4px 3px}#railFacts b{font-size:9px}#railFacts span{margin-top:2px;font-size:6.5px}
   #traceStats{position:relative;min-width:0;padding:5px 6px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff);overflow:visible}
@@ -298,7 +298,7 @@
     #queueCard{padding:7px 8px}#queueCard .qHead{font-size:8px}#queueCard .qHead b{font-size:9px}#queueStrip{min-height:20px;margin-top:5px}
     #liveChartWrap{padding:7px 8px 5px}#liveChartWrap .cap{font-size:9px}
     #phaseRail{padding:8px 9px}#phaseRail .phaseTitle{font-size:9px;margin-bottom:6px}
-    #phaseSegments{height:auto;grid-template-columns:1fr!important;gap:3px}.phaseSeg{justify-content:flex-start;gap:8px;min-height:17px;padding:3px 7px;font-size:8px}
+    #phaseSegments{height:auto;gap:3px}.phaseSeg{justify-content:flex-start;gap:8px;min-height:17px;padding:3px 7px;font-size:8px} /* P3:单列意图已被 594 压死,删死分量 */
     .phaseName{display:inline;font:700 8.5px/1 "Microsoft YaHei",sans-serif}#phaseCursor{display:none}
     #traceStats{padding:7px 8px}#traceStats .statsHead{margin-bottom:6px}#traceStats .statsHead b{font-size:9px}#traceStats .statsHead span{font-size:7px}
     #traceStats .statsGrid{gap:4px}.metricHelp{padding:5px 4px}.metricHelp b{font-size:11px}.metricHelp small{font-size:7px}
@@ -315,7 +315,7 @@
     #axisHud{padding:7px 8px}#axisHud b{margin-bottom:4px}#axisHud .axis{margin:5px 0}
     #slotMapWrap{padding:8px 9px 6px}#slotMapWrap .mapRule{margin-top:5px;padding:4px 6px}#slotMap{margin-top:5px}
     #insightStack{grid-template-rows:auto 130px auto auto auto}
-    #phaseSegments{height:23px;grid-template-columns:repeat(7,1fr)!important;gap:2px}
+    #phaseSegments{height:23px;gap:2px} /* P3:columns 死分量删 */
     .phaseSeg{justify-content:center;min-height:0;padding:0;font-size:8px}
     .phaseName{display:none}#phaseCursor{display:block}
   }
@@ -324,24 +324,19 @@
   /* P2a-gen3:--rail-w 一代死值→422 覆盖;#gl 侧向→shell v2 接管 */
   html[data-style="A"]{--abb-red:#ff000f;--abb-black:#16191d;--abb-gray:#eef1f3}
   /* P2a-gen3:inset/border-right→shell v2;width/padding/gap→Task3(424);columns/rows/areas→Task17(614-616)。存活=grid 宿主+装饰 */
-  #workHud{overflow:hidden;display:grid;align-content:stretch;background:#f6f7f8;border-top:4px solid var(--abb-red);
-    box-shadow:12px 0 30px #17202b12;color:#18232c}
-  #railHead{grid-area:head;padding:0 0 8px;border-bottom:1px solid #bfc7cd;align-items:center} /* gen3:min-height→427 */
+  #workHud{box-shadow:12px 0 30px #17202b12;color:#18232c} /* P2b:display:grid/align-content/border-top/background/overflow→A 壳 flex 段同键或中和 */
+  #railHead{padding:0 0 8px;border-bottom:1px solid #bfc7cd;align-items:center} /* P2b:grid-area 死(railHead 已居 topbar) */
   #railHead .brandLock{display:flex;align-items:center;gap:11px;min-width:0}
   #railHead .abbWord{font:900 24px/1 Arial,sans-serif;letter-spacing:-1.2px;color:var(--abb-red)}
   #railHead .eyebrow{font-size:8px;letter-spacing:1.45px;color:#5d6871}
   #railHead h1{margin-top:2px;font-size:18px;line-height:1;color:#16191d;white-space:nowrap}
   #railHead .matrix{font-size:9px;color:#4e5a63}
-  #taskline{grid-area:task;align-self:start;padding:8px 10px;border:1px solid #bfc7cd;border-left:4px solid #17365d;background:#fff}
-  #taskline .kicker{font-size:7.5px;color:#66727b}#taskline .primary{display:flex;align-items:center;margin-top:3px;gap:8px;font-size:11.5px}
-  #taskPrimary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#actionBadge{flex:none;margin:0;padding:4px 7px;font-size:9px;border-radius:0}
-  #stepPurpose{margin-top:5px;padding:5px 6px;font-size:9px;line-height:1.28;background:#edf2f5}#stepPurpose b{font-size:8px}
-  #taskline .metaRow{margin-top:5px;font-size:8.5px}
-  #runtimeControls{grid-area:controls;align-self:start;padding:7px 8px;gap:5px 7px;border:1px solid #bfc7cd;background:#fff}
+  /* P2b:taskline 全家样式死(容器 display:none 保护令;runtime 仅写 textContent 不移动;DOM 铁律保留) */
+  #runtimeControls{align-self:start;padding:7px 8px;gap:5px 7px;border:1px solid #bfc7cd;background:#fff} /* P2b:grid-area 死(已居 topbar) */
   #runtimeControls label{font-size:7.5px;color:#59656e}#runtimeControls select{height:25px;border-radius:0;border-color:#9ca8b1;font-size:9.5px}
   #runtimeActions{gap:5px}#runtimeActions button{height:24px;padding:0 8px;border-radius:0;border-color:#222b31;color:#222b31;font-size:8.5px}
   #runtimeActions button:hover{background:#eef1f3}#traceLoadState{font-size:7.5px}
-  #decisionWrap{grid-area:decision;align-self:start;min-width:0;padding:7px 9px;border:1px solid #bfc7cd;background:#fff}
+  #decisionWrap{min-width:0;padding:7px 9px;border:1px solid #bfc7cd;background:#fff} /* P2b:grid-area/align-self→A 壳 flex 段 */
   #decisionWrap .dHead{font-size:8px}#decisionWrap .dHead b{font-size:10px}
   #decisionWrap .selectionSummary{margin-top:4px;padding:4px 6px;font-size:8px}#decisionWrap .selectionSummary strong{font-size:9px}
   #decisionWrap .proofLead{margin-top:4px;padding:4px 6px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -351,11 +346,11 @@
   #decisionWrap .weightGrid{gap:3px;margin-top:3px}#decisionWrap .weightGrid .metricHelp{padding:3px 2px}
   #decisionWrap .weightGrid .metricHelp b{font-size:8px}#decisionWrap .weightGrid .metricHelp small{font-size:6px}
   #decisionWrap .weightNote{margin-top:4px;padding:4px 5px;font-size:7.5px}
-  #slotMapWrap{grid-area:map;min-width:0;min-height:0;padding:8px 9px 7px;border:1px solid #bfc7cd;background:#fff;overflow:hidden} /* gen3:align-self→617 */
+  #slotMapWrap{min-width:0;padding:8px 9px 7px;border:1px solid #bfc7cd;background:#fff;overflow:hidden} /* P2b:grid-area/min-height→A 壳 order 段 */
   #slotMapWrap .mapHead b{font-size:10px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:16px}
   #slotMapWrap .mapRule{margin-top:5px;padding:4px 6px;font-size:7.5px}#slotMap{min-height:110px;margin-top:5px}
   #slotMapWrap .mapKey{gap:6px;margin-top:4px;font-size:7px;line-height:1.15}
-  #insightStack{min-width:0;min-height:0;display:grid;gap:6px;align-content:stretch;overflow:visible} /* gen3:grid-area→619;rows→503 */
+  #insightStack{min-width:0;min-height:0;overflow:visible} /* P2b:display:grid/gap/align-content→A 壳 block 化 */
   #railFacts{order:1;margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:6px 4px}#railFacts b{font-size:10px}#railFacts span{font-size:6.5px}
   #queueCard{order:2;min-width:0;padding:6px 7px}#queueCard .qHead{font-size:7px}#queueCard .qHead b{font-size:8px}
   #queueStrip{min-height:18px;margin-top:4px;gap:3px}#queueStrip span{min-width:34px;padding:4px 2px;font-size:7px}#queueStrip em{font-size:7px}
@@ -363,7 +358,7 @@
   #traceStats .statsHead{margin-bottom:5px}#traceStats .statsHead b{font-size:8px}#traceStats .statsHead span{font-size:6.5px}
   #traceStats .statsGrid{flex:1;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:4px}
   .metricHelp{padding:5px 4px;display:flex;flex-direction:column;justify-content:center}.metricHelp b{font-size:10px}.metricHelp small{font-size:6.5px}
-  #phaseRail{position:static;width:100%;padding:6px 8px;border:1px solid #bfc7cd;background:#fff} /* gen3:grid-area→620 */
+  #phaseRail{padding:6px 8px;border:1px solid #bfc7cd;background:#fff} /* P2b:position/width→A 壳 order 段 */
   #phaseRail .phaseTitle{font-size:8px;margin-bottom:4px}#phaseSegments{height:23px;gap:2px} /* gen3:columns!important→631 */
   .phaseSeg{font:800 8px/1 Consolas,monospace}.phaseName{display:none}#phaseCursor{display:block}
 
@@ -393,14 +388,10 @@
   }
 
   /* 0715 6h · Task3：信息层级优先。一级状态常显，路由细节按需展开；不再用 6~8px 微缩字换取表面密度。 */
-  /* P2a-gen3:#gl 侧向→shell v2;columns/rows 二代→Task17(614-615)。width=rail 唯一宽度源,保 */
-  #workHud{width:var(--rail-w);padding:10px 12px 9px;gap:6px 8px}
+  /* P2b:#workHud 二代(width/padding/gap)整行死→A 壳同键覆盖;#gl 侧向→shell v2 */
   #railHead{min-height:38px;padding-bottom:6px}
   #railHead .abbWord{font-size:22px}#railHead .eyebrow{font-size:9px}#railHead h1{font-size:17px}#railHead .matrix{font-size:9.5px}
-  #taskline{padding:7px 8px}#taskline .kicker{font-size:8.5px}#taskline .primary{font-size:12px}
-  #actionBadge{min-height:24px;padding:5px 7px;font-size:9.5px}
-  #stepPurpose{margin-top:4px;padding:4px 6px;font-size:9.5px;line-height:1.35}#stepPurpose b{font-size:9px}
-  #taskline .metaRow{margin-top:4px;font-size:9px}
+  /* P2b:taskline 二代样式死(同上,容器永久隐藏) */
   #runtimeControls{padding:6px 7px;gap:5px 7px}
   #runtimeControls label{gap:3px;font-size:9px}#runtimeControls select{height:28px;padding:0 6px;font-size:10.5px}
   #runtimeActions{gap:6px}#runtimeActions button{min-height:28px;height:28px;padding:0 9px;font-size:9.5px}
@@ -463,9 +454,8 @@
   }
 
   /* 0715 6h · Task7：S1 受控矩阵与 S3 代表性回放并列、隔离。常驻迷你对照不制造第二数据页。 */
-  #insightStack{grid-template-rows:auto auto auto minmax(0,1fr)}
-  #comparisonMini{order:3;min-width:0;padding:6px 7px;border:1px solid #bfc7cd;background:#fff}
-  #traceStats{order:4}
+  /* P2b:insightStack rows 与 order 链死(block 化;comparisonMini/judgePath 已居叠层) */
+  #comparisonMini{min-width:0;padding:6px 7px;border:1px solid #bfc7cd;background:#fff}
   .comparisonMiniHead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 4px;align-items:center}
   .comparisonMiniHead>div{display:contents}.comparisonMiniHead b{grid-column:1;display:block;font-size:9.5px;line-height:1.15;white-space:nowrap}
   .comparisonMiniHead span{grid-column:1/3;grid-row:2;display:block;color:#69757e;font:8.5px/1.25 Consolas,"Microsoft YaHei",monospace;white-space:normal}
@@ -574,9 +564,7 @@
   @media(max-height:780px){#viewport{--scene-dock-h:70px;--scene-dock-bottom:8px}#sceneCaption{padding-top:4px;padding-bottom:4px}#speed{height:36px}}
 
   /* 0715 Task17：方形货位图不再被拉成长卡；释放出的高度用于真实 SIM 时长标尺。 */
-  #workHud{grid-template-columns:minmax(0,1.24fr) minmax(160px,.76fr);
-    grid-template-rows:auto auto auto auto auto minmax(72px,1fr);
-    grid-template-areas:"head head" "task task" "controls controls" "decision decision" "map insight" "phase insight"}
+  /* P2b:Task17 grid 三行死——rail 已被 A 壳 flex 化(中和器对手) */
   #slotMapWrap{align-self:start;container-type:inline-size}
   /* P2a-gen3:#slotMap 旧 !important 组已删(A 壳 704 反制群全键压制)——P3 可试摘 704 对应 !important */
   #insightStack{grid-area:insight;grid-row:5/7}
@@ -591,12 +579,12 @@
   .phaseTone1,.phaseTone3{background:#e7b800}.phaseTone2,.phaseTone6{background:#17365d}.phaseTone4{background:#8c969e}
   .phaseTone5{background:#7a4aa8}.phaseTone7{background:#0084a8}
   #phaseTimeCursor{position:absolute;z-index:2;top:-2px;bottom:-2px;width:3px;background:#ff000f;box-shadow:0 0 0 1px #fff;transform:translateX(-1px)}
-  #phaseSegments{position:static;display:grid;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:3px;height:auto;min-height:34px}
+  #phaseSegments{position:static;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;height:auto;min-height:34px} /* P3:对手全删,important 摘除 */
   .phaseSeg{min-width:0;padding:4px 2px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:1px 3px;
     align-content:center;justify-content:center;background:#edf1f3;color:#4c5963;font:800 9px/1 Consolas,monospace;text-align:center}
   .phaseSeg .phaseName{display:block;overflow:hidden;color:#26343e;font:700 8px/1.1 "Microsoft YaHei",sans-serif;white-space:nowrap;text-overflow:ellipsis}
   .phaseSeg .phaseDuration{grid-column:1/3;display:block;color:#66727b;font:700 8px/1 Consolas,monospace;white-space:nowrap}
-  .phaseSeg.active{background:#17202b!important;color:#fff;box-shadow:inset 0 0 0 2px #ff6a00}
+  .phaseSeg.active{background:#17202b;color:#fff;box-shadow:inset 0 0 0 2px #ff6a00} /* P3:双类 specificity 本就胜 phaseTone 单类,important 冗余摘 */
   .phaseSeg.active .phaseName,.phaseSeg.active .phaseDuration{color:#fff}
   #phaseCursor{display:none!important}
   @media(max-width:1380px), (max-height:780px){
@@ -610,10 +598,7 @@
 
   /* 0716 恢复门 R02：顶部 taskline 与底部 sceneDock 曾重复显示同一作业。
      保留 taskline DOM 仅供既有 runtime 写入/回归，不再占用可见布局或无障碍树。 */
-  #taskline{display:none!important}
-  #workHud{grid-template-rows:auto auto auto auto minmax(72px,1fr);
-    grid-template-areas:"head head" "controls controls" "decision decision" "map insight" "phase insight"}
-  #insightStack{grid-row:4/6}
+  /* P2b:R02 隐藏令与 A 壳段重复删(唯一令随 A 壳);grid rows/areas/grid-row 死→flex 化 */
   @media(max-width:1380px), (max-height:780px){
     #workHud{grid-template-rows:auto auto auto auto minmax(62px,1fr)}
   }
@@ -645,17 +630,17 @@
   #topbarA #traceErrorHost{position:absolute;top:100%;left:0;right:0;z-index:30}
 
   /* -- 左栏 rail:决策卡 → insight 统计 → 2D 货位图 → 七步条(axisHud/liveChart 在 dock,不占 rail) -- */
+  /* P2b:三 none 中和器与 border-top:0/grid-area:auto 反制已删(前代 grid 对手全清) */
   #workHud{inset:var(--topbar-h) auto 0 0;width:var(--rail-w);
-    display:flex;flex-direction:column;gap:7px;padding:8px 9px;overflow:hidden;border-top:0;border-right:1px solid #b9c2c9;background:#f6f7f8;
-    grid-template-columns:none;grid-template-rows:none;grid-template-areas:none}
+    display:flex;flex-direction:column;gap:7px;padding:8px 9px;overflow:hidden;border-right:1px solid #b9c2c9;background:#f6f7f8}
   #taskline{display:none!important}
-  #decisionWrap{grid-area:auto;order:1;flex:none;align-self:stretch}
-  #insightStack{grid-area:auto;grid-row:auto;order:2;flex:none;display:block}
+  #decisionWrap{order:1;flex:none;align-self:stretch}
+  #insightStack{order:2;flex:none;display:block}
   /* 0719 R2步骤2 左栏信息架构重排(取代 0718 的可滚动兜底 —— 兜底实测不合格:
      railOverflow[914,850]、canvasBottomVsViewport[917,900],2D 货位图底部越过视口需滚动才看全)。
      依据 ISA-101.01-2015 四级信息分层:S1 受控对照与本屏证据链降级为顶栏 chip「本屏证据」→ 叠层。
      内容零删减,只改可达路径;腾出的高度全部给 2D 货位图。详见 docs/左栏信息架构研究与合流方案_0718.md。 */
-  #slotMapWrap{grid-area:auto;order:3;flex:1 1 auto;min-height:240px;align-self:stretch;width:auto}
+  #slotMapWrap{order:3;flex:1 1 auto;min-height:240px;align-self:stretch;width:auto}
   /* 0719 修(三次实测才定位,前两次改动都无效):
      ① CSS 上不该有 aspect-ratio —— 它在列向 flex 里从宽度推高度,使画布无视容器剩余空间。
         1366×720 实测 slotMap 底部 725 > wrap 底部 635,溢出被 overflow:hidden 裁掉,
@@ -664,9 +649,9 @@
      ② 640 行旧规则带 flex:none!important / height:auto!important / aspect-ratio:1/1,
         会压掉本处 A 壳规则(实测计算样式一直是 flex:0 0 auto、aspectRatio:1/1),故须同以 !important 覆盖。
      ③ 上一版这段注释写成了两个 /* 块,第二段变成裸文本把规则一起吞掉——CSS 静默失效,只有读计算样式才发现。 */
-  #slotMap{width:100%;height:auto!important;max-width:100%;aspect-ratio:auto!important;
-    min-height:0!important;flex:1 1 0!important;margin:4px 0 0;align-self:stretch}
-  #phaseRail{grid-area:auto;order:4;flex:none;position:static;width:auto}
+  #slotMap{width:100%;height:auto;max-width:100%;aspect-ratio:auto;
+    min-height:0;flex:1 1 0;margin:4px 0 0;align-self:stretch} /* P3:对手(旧 !important 组)gen3 已删,4 个 important 全摘 */
+  #phaseRail{order:4;flex:none;position:static;width:auto}
 
   /* -- 入出周期轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进) -- */
   #progressAxisHost{position:absolute;z-index:8;top:var(--topbar-h);left:var(--rail-w);right:0;height:var(--axis-h);
@@ -707,8 +692,8 @@
     padding:12px 46px 10px 14px;box-shadow:0 18px 50px #0f171e59;position:relative}
   #s3MapOverlay .mapDockClose{position:absolute;right:8px;top:6px;width:26px;height:26px;border:1px solid #18232c;background:#fff;
     color:#18232c;font:500 17px/1 Arial,sans-serif;cursor:pointer}
-  #s3MapOverlay #slotMapWrap{flex:none;order:0;min-height:0;cursor:default;border:0;padding:0;overflow:visible;width:auto!important}
-  #s3MapOverlay #slotMap{min-height:0!important;margin:8px auto 0;max-height:none}
+  #s3MapOverlay #slotMapWrap{flex:none;order:0;min-height:0;cursor:default;border:0;padding:0;overflow:visible;width:auto} /* P3:specificity 本就胜出,important 冗余摘 */
+  #s3MapOverlay #slotMap{min-height:0;margin:8px auto 0;max-height:none} /* P3:与 667 同值,important 冗余摘 */
 
   /* -- 0719 本屏证据叠层:承接从左栏降级下来的「本屏证据链」+「S1 受控对照」(ISA-101 L2-L3 按需层) -- */
   #evidenceDock{position:fixed;z-index:64;inset:0;display:flex;align-items:center;justify-content:center;background:#17202b73}
