@@ -734,6 +734,8 @@
     const phaseU = segment.phaseName === "FAULT_RECOVERY" ? segment.u0 :
       segment.u0 + (segment.u1 - segment.u0) * found.progress;
     const machine = motionPoint(trace, segment.from, segment.to, phaseU);
+    /* 0719 修:FAULT_RECOVERY=保持位,机器物理静止——冻结点 u0 的瞬时速度须清零,否则速度显示/曲线在停机段非零误导 */
+    if (segment.phaseName === "FAULT_RECOVERY") { machine.vx = 0; machine.vz = 0; }
     const op = segment.operationKey;
     const targetSlot = ["LOAD_IN", "INBOUND_TRAVEL", "STORE_HANDLE"].includes(op) ? asSlot(event.store_slot, "store target") :
       ["LINK_TRAVEL", "RETRIEVE_HANDLE"].includes(op) ? asSlot(event.retrieve_slot, "retrieve source") : null;
@@ -1269,7 +1271,8 @@
       const p95 = Number(trace.stats.response_p95_s);
       host.innerHTML = `<div class="sparkHead"><b>响应时间趋势 · ${trace.events.length} 周期</b><span>虚线 = P95 ${p95.toFixed(1)}s(同批口径)· 红点 = 故障周期</span></div>`;
       const canvas = doc.createElement("canvas"); host.append(canvas);
-      const width = Math.max(60, host.clientWidth - 18), height = 26, dpr = 2;
+      /* 固定虚拟宽 720:CSS 100% 拉伸适配任意 rail 宽,免 resize 重绘(跨闭包 resize 钩子曾致 not defined 页错) */
+      const width = 720, height = 26, dpr = 2;
       canvas.style.width = "100%"; canvas.style.height = `${height}px`;
       canvas.width = Math.round(width * dpr); canvas.height = height * dpr;
       const ctx = canvas.getContext("2d"); ctx.scale(dpr, dpr);
@@ -1451,12 +1454,13 @@
           g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
           return;
         }
-        const bx = cell * .12, bw = cell * .76, by = cell * .15, bh = cell * .70;
+        /* 0719 修:等级块放大到近整格(足迹与热度视图一致,消除切换时「图变小」错觉) */
+        const bx = cell * .05, bw = cell * .90, by = cell * .07, bh = cell * .86;
         g.fillStyle = gradeCssColor(item.grade);
         g.fillRect(x + bx, y + by, bw, bh);
         g.strokeStyle = "#ffffff"; g.lineWidth = Math.max(.65, cell * .07);
         g.strokeRect(x + bx, y + by, bw, bh);
-        g.fillStyle = "rgba(255,255,255,.38)"; g.fillRect(x + cell * .17, y + cell * .20, cell * .66, Math.max(1, cell * .10));
+        g.fillStyle = "rgba(255,255,255,.38)"; g.fillRect(x + cell * .12, y + cell * .16, cell * .76, Math.max(1, cell * .10));
       });
       if (frame.targetSlot) {
         const x = x0 + frame.targetSlot[0] * cell, y = y0 + (19 - frame.targetSlot[1]) * cell;
@@ -1706,14 +1710,22 @@
         const owner = cargoGood ? (OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner) : "空载台";
         judgeActionMeta.textContent = cargoGood ? `${cargoGood.name} · ${owner}` : `${owner} · ${STEP_PURPOSE[frame.operationKey]}`;
       }
+      /* 0719 修:故障周期的宿主步把停机时长从作业时长中拆开显示(609.7s → 9.7+600s),避免「入库几百秒」误读 */
+      const faultPhaseRec = frame.event.phases && frame.event.phases.find(p => p.name === "FAULT_RECOVERY");
+      const mttrS = trace.meta.tier3_params ? Number(trace.meta.tier3_params.fault_mttr_s) : 0;
       const phases = Array.from(byId("phaseSegments").querySelectorAll(".phaseSeg"));
       phases.forEach((element, index) => {
         const item = frame.cycleTiming[index], active = index === STEP_INDEX[frame.operationKey];
         element.classList.toggle("active", active);
         const firstHasQueue = item.operationKey === "LOAD_IN" && item.simDurationS > EPS;
+        const isFaultStep = faultPhaseRec && item.operationKey === faultPhaseRec.operation_phase && mttrS > 0 && item.simDurationS > mttrS;
+        element.classList.toggle("faultStep", !!isFaultStep);
         element.querySelector(".phaseName").textContent = firstHasQueue ? "排队" : STEP_SHORT_LABEL[item.operationKey];
-        element.querySelector(".phaseDuration").textContent = item.simDurationS > EPS ? `${item.simDurationS.toFixed(1)}s` : "展示";
-        element.title = item.operationKey === "LOAD_IN" ? (firstHasQueue ?
+        element.querySelector(".phaseDuration").textContent = isFaultStep ? `${(item.simDurationS - mttrS).toFixed(1)}+${mttrS.toFixed(0)}s`
+          : item.simDurationS > EPS ? `${item.simDurationS.toFixed(1)}s` : "展示";
+        element.title = isFaultStep ?
+          `${index + 1}. ${STEP_LABEL[item.operationKey]} · 作业 SIM ${(item.simDurationS - mttrS).toFixed(1)} s + 故障停机 ${mttrS.toFixed(0)} s(MTTR 模型)` :
+          item.operationKey === "LOAD_IN" ? (firstHasQueue ?
           `1. 入场前排队 · SIM ${item.simDurationS.toFixed(1)} s；随后入口交接为展示补段，不计 SIM/KPI` :
           "1. 入口交接 · 展示补段，不计 SIM/KPI") :
           `${index + 1}. ${STEP_LABEL[item.operationKey]} · ${item.simDurationS > EPS ? `SIM ${item.simDurationS.toFixed(1)} s` : "展示补段，不计 SIM/KPI"}`;
@@ -1737,7 +1749,8 @@
         `无排队 · 交接展示 ${wallSeconds.toFixed(1)} s · 不计 KPI`) : timing.simDurationS > EPS ?
         `SIM ${timing.simDurationS.toFixed(1)} s → 1×演示 ${wallSeconds.toFixed(1)} s` :
         `1×展示补段 ${wallSeconds.toFixed(1)} s · 不计 KPI`;
-      byId("sceneActionText").textContent = `${visibleStepLabel} · ${cargoGood ? `${cargoGood.name} · ${ownerText}` : ownerText}`;
+      /* 0719 修:去掉与步骤名语义重复的 owner 后缀(货物位置详情已在 sceneCargoMeta) */
+      byId("sceneActionText").textContent = cargoGood ? `${visibleStepLabel} · ${cargoGood.name}` : `${visibleStepLabel} · ${ownerText}`;
       byId("sceneCargoMeta").textContent = `${cargoSummary} · ${timingText}`;
       byId("sceneActionMeta").textContent = `${frame.faulted ? "故障保持" : `步骤 ${STEP_INDEX[frame.operationKey] + 1}/7`} · 缩时演示 · SIM`;
       byId("sceneCaption").setAttribute("aria-label", `当前动作：${byId("sceneActionText").textContent}`);
@@ -2192,9 +2205,23 @@
       return latest.select(Object.assign({}, query), checkpoint, options);
     }
 
+    /* 0719 修:seek/seekFault 暂停后仅按钮小字变「继续」,用户易把静止画面误读为演示故障——加显眼暂停贴条 */
+    function syncPauseHint() {
+      let hint = byId("pausedHint");
+      if (!hint) {
+        hint = doc.createElement("div"); hint.id = "pausedHint";
+        const viewportEl = byId("viewport"); if (!viewportEl) return; viewportEl.append(hint);
+      }
+      if (state.paused) {
+        const count = byId("cycleAxisCount");
+        hint.textContent = `⏸ 已暂停 · ${count ? `第 ${String(count.textContent).split("/")[0].trim()} 周期` : ""}快照检视 · 点「继续」恢复播放`;
+        hint.hidden = false;
+      } else hint.hidden = true;
+    }
     function togglePause() {
       state.paused = !state.paused;
       const button = byId("pauseMotion"); button.textContent = state.paused ? "继续" : "暂停"; button.setAttribute("aria-pressed", String(state.paused));
+      syncPauseHint();
     }
 
     function replay() { if (state.timeline) { state.elapsed = 0; state.lastNow = null; } }
@@ -2239,7 +2266,7 @@
       else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus(); }
     });
     listen(controls, "change", () => { rendererBridge.refreshProjection(); });
-    listen(root, "resize", () => { resizeScene(); if (state.trace) renderRespSpark(state.trace); });
+    listen(root, "resize", () => { resizeScene(); });
 
     const schedule = callback => root.requestAnimationFrame(callback);
     function frame(now) {
@@ -2299,6 +2326,7 @@
         state.elapsed = group.d0 + (group.d1 - group.d0) * progress; state.lastNow = null; state.paused = true;
         byId("pauseMotion").textContent = "继续"; byId("pauseMotion").setAttribute("aria-pressed", "true");
         rendererBridge.renderFrame(state.trace, deriveFrame(state.trace, state.timeline, state.elapsed));
+        syncPauseHint();
         return root.__S3_QA.snapshot();
       },
       seekFault(faultIndex = 0) {
@@ -2308,6 +2336,7 @@
         const segment = faults[faultIndex]; state.elapsed = (segment.d0 + segment.d1) / 2; state.lastNow = null; state.paused = true;
         byId("pauseMotion").textContent = "继续"; byId("pauseMotion").setAttribute("aria-pressed", "true");
         rendererBridge.renderFrame(state.trace, deriveFrame(state.trace, state.timeline, state.elapsed));
+        syncPauseHint();
         return root.__S3_QA.snapshot();
       },
       destroy

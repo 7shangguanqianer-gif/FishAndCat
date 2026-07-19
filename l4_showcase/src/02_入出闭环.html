@@ -719,6 +719,14 @@
   #openEvidenceDock[aria-haspopup="dialog"]{white-space:nowrap}
 
   /* ===== 0719 功能批次(甲·地图王):sparkline / 故障红点 / 口径小字 / 复现指纹 / PLC 徽章 / 叠层扩容 ===== */
+  /* 暂停贴条:seek/seekFault 后的显眼状态反馈(交互可见性) */
+  #pausedHint{position:absolute;z-index:12;top:calc(var(--topbar-h) + var(--axis-h) + 12px);left:50%;transform:translateX(-50%);
+    padding:6px 14px;background:#17365df0;color:#fff;font:700 11px/1.3 "Microsoft YaHei",sans-serif;
+    box-shadow:0 4px 14px #17202b33;pointer-events:none;white-space:nowrap}
+  #pausedHint[hidden]{display:none}
+  /* 七步条故障宿主步:红顶边+红时长(时长显示「作业+停机」拆分,见 renderFrame) */
+  .phaseSeg.faultStep{box-shadow:inset 0 3px 0 #c62828}
+  .phaseSeg.faultStep .phaseDuration{color:#c62828;font-weight:800}
   /* 2D 图例双态(选定①热度纯净):heat 开显 heatKey,关显 gradeKey(runtime drawSlotMap 幂等切换) */
   #slotMapWrap .heatRamp{display:inline-block;width:34px;height:8px;flex:none;
     background:linear-gradient(90deg,#aeb8c0,#e7b800,#c0392b)}
