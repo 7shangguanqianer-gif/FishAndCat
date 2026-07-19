@@ -815,6 +815,10 @@
   function createBrowserRenderer(root) {
     const doc = root.document;
     const byId = id => doc.getElementById(id);
+    /* 0717 #28:目标格发光壳+格口箭头实体由 02 页母版创建并挂 __S3_TARGET_FX;判空跳过。
+       存取双向分两态:入库=金色收敛(同 01),出库源位=淡出转灰(下面 targetFxGrey)。 */
+    const targetFx = root.__S3_TARGET_FX || null;
+    const targetFxGrey = targetFx ? new THREE.Color(0x707a85) : null;
     const topologyAudit = validateVisualTopology(Object.assign({io: IO, transfer: TRANSFER_ANCHOR, infeed: INFEED, outfeed: OUTFEED,
       infeedEnvelope: CONVEYOR_ENVELOPES.infeed, outfeedEnvelope: CONVEYOR_ENVELOPES.outfeed}, TRANSFER_TOPOLOGY));
     const stockGroup = new THREE.Group(), queueGroup = new THREE.Group();
@@ -829,12 +833,57 @@
     const stockCapacity = N * N, stockDummy = new THREE.Object3D();
     const stockBodyGeometry = new THREE.BoxGeometry(.70, .72, .58);
     const stockLidGeometry = new THREE.BoxGeometry(.74, .76, .10);
+    /* 0718 再修(用户指正,正确):热度色**不涂在货箱上**——货箱本体保留等级(重/中/轻)色,
+       可读性不被牺牲(等级是稳定性/能耗评分维度)。热度改由「货位背板」承载(见下 cellHeatMesh)。
+       行业惯例(Slot3D/WarehouseBlueprint)亦是「按库位的拣选活跃度给库位着色」——热度属于**位置**,不是画在货物身上。 */
     const stockGradeMeshes = Object.fromEntries(Object.entries(gradeMaterial).map(([grade, material]) => {
       const mesh = new THREE.InstancedMesh(stockBodyGeometry, material, stockCapacity);
       mesh.count = 0; mesh.castShadow = false; mesh.receiveShadow = false; stockGroup.add(mesh); return [grade, mesh];
     }));
-    const stockLidMesh = new THREE.InstancedMesh(stockLidGeometry, M.lid, stockCapacity);
+    /* 货位热度背板:薄板贴在货箱正后方(比箱体宽),正面看=围绕货箱的一圈色环 → 热度可读且不遮挡等级色。
+       只给**在库货位**上色:空位无存储活动、自然无热度(诚实呈现,不编造)。 */
+    const cellHeatGeometry = new THREE.BoxGeometry(.88, .02, .88);
+    const cellHeatMesh = new THREE.InstancedMesh(cellHeatGeometry, new THREE.MeshBasicMaterial({color: 0xffffff}), stockCapacity);
+    cellHeatMesh.count = 0; cellHeatMesh.castShadow = false; cellHeatMesh.receiveShadow = false;
+    cellHeatMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(stockCapacity * 3).fill(1), 3);
+    stockGroup.add(cellHeatMesh);
+    /* 0718 #26-2 改版:弃逐箱金顶,顶盖改「货位色阶热力图」——每箱盖按 freq_true 归一化连续上色(冷蓝→琥珀→热红),
+       用 InstancedMesh.instanceColor(setColorAt)零额外几何。材质基色设白,让 instanceColor 就是真实热度色;仍保持 4 次绘制。 */
+    /* 顶盖用 MeshBasicMaterial(平涂不受光)让 instanceColor 满饱和呈现,热度色如实可读;基色白=最终色即热度色。 */
+    const stockLidMaterial = M.lid;
+    const stockLidMesh = new THREE.InstancedMesh(stockLidGeometry, stockLidMaterial, stockCapacity);
     stockLidMesh.count = 0; stockLidMesh.castShadow = false; stockLidMesh.receiveShadow = false; stockGroup.add(stockLidMesh);
+    /* 注:instanceColor 必须按容量预分配。three.js 的 setColorAt 首调时按当时 count 分配,若 count 还是 0
+       会分配成 Float32Array(0),后续 setColorAt 全部写入虚空(本轮实测踩过:colorArrayLen=0、色阶恒不显现)。
+       见上 cellHeatMesh 的预分配。 */
+    /* 色阶:三段插值 冷蓝(#2b6cbc)→琥珀(#e7b800)→热红(#c0392b);t 由 freq_true 的 min-max 归一化。 */
+    const HEAT_COLD = new THREE.Color(0x2b6cbc), HEAT_MID = new THREE.Color(0xe7b800), HEAT_HOT = new THREE.Color(0xc0392b);
+    const heatScratch = new THREE.Color(), gradeScratch = new THREE.Color();
+    function heatColor(t) {
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      return t < .5 ? heatScratch.copy(HEAT_COLD).lerp(HEAT_MID, t * 2)
+                    : heatScratch.copy(HEAT_MID).lerp(HEAT_HOT, (t - .5) * 2);
+    }
+    let freqRank = new Map();
+    /* 0718 #26-2 B层·近 I/O 热区包络:热门货(freq_true 前 20%)实际所在格子的包围盒,半透明琥珀块 + 亮描边;随 setTrace 重算。 */
+    const hotZoneMat = new THREE.MeshBasicMaterial({color: 0xe7b800, transparent: true, opacity: .10, depthWrite: false, side: THREE.DoubleSide});
+    const hotZoneMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), hotZoneMat);
+    hotZoneMesh.visible = false; hotZoneMesh.renderOrder = 2; scene.add(hotZoneMesh);
+    const hotZoneEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
+      new THREE.LineBasicMaterial({color: 0xffb100, transparent: true, opacity: .95}));
+    hotZoneEdges.visible = false; hotZoneEdges.renderOrder = 6; scene.add(hotZoneEdges);
+    function updateHotZone(trace) {
+      const rows = Array.isArray(trace.initial_inventory) ? trace.initial_inventory.filter(r => hotGids.has(r.gid)) : [];
+      if (!rows.length) { hotZoneMesh.visible = hotZoneEdges.visible = false; return; }
+      let minCol = Infinity, maxCol = -Infinity, minTier = Infinity, maxTier = -Infinity;
+      rows.forEach(r => { minCol = Math.min(minCol, r.col); maxCol = Math.max(maxCol, r.col);
+        minTier = Math.min(minTier, r.tier); maxTier = Math.max(maxTier, r.tier); });
+      const cx = (minCol + maxCol + 1) / 2, cz = (minTier + maxTier + 1) / 2;
+      const sx = (maxCol - minCol + 1) + .14, sz = (maxTier - minTier + 1) + .14, sy = RACK.depth + .12;
+      hotZoneMesh.position.set(cx, RACK.loadY, cz); hotZoneMesh.scale.set(sx, sy, sz);
+      hotZoneEdges.position.copy(hotZoneMesh.position); hotZoneEdges.scale.copy(hotZoneMesh.scale);
+      hotZoneMesh.visible = hotZoneEdges.visible = true;
+    }
     const queueBaseGeometry = new THREE.BoxGeometry(.76, .72, .10);
     const queueBoxGeometry = new THREE.BoxGeometry(.69, .66, .58);
     const queueEdgeGeometry = new THREE.EdgesGeometry(queueBoxGeometry);
@@ -847,6 +896,8 @@
     const inventory = new Map(), stockPool = [], queuePool = [], livePaths = [];
     let catalog = new Map(), currentTrace = null, stockSignature = "", pathSignature = "", tooltipSerial = 0, lastFrame = null, lastQueueGids = [], lastOverlayLayout = null, lastStationLayout = null;
     let lastStockGradeCounts = {heavy: 0, mid: 0, light: 0};
+    /* 0717 #26-2 热门集合:cargo_catalog[].freq_true 降序前 1/5,随每条 trace 在 setTrace 内重算。 */
+    let hotGids = new Set();
 
     function good(gid) {
       const value = catalog.get(gid);
@@ -871,14 +922,23 @@
       let lidCount = 0;
       inventory.forEach(wrapper => {
         const row = wrapper.row, item = good(row.gid), grade = stockGradeMeshes[item.grade] ? item.grade : "mid";
+        /* 货位热度背板(位置着色):贴在货箱正后方,正面看是一圈色环,不遮挡箱体等级色 */
+        stockDummy.position.set(row.col + .5, RACK.loadY + .38, row.tier + .5); stockDummy.updateMatrix();
+        cellHeatMesh.setMatrixAt(lidCount, stockDummy.matrix);
+        cellHeatMesh.setColorAt(lidCount, heatColor(freqRank.has(row.gid) ? freqRank.get(row.gid) : .5));
+        /* 货箱本体=等级色(重/中/轻),保持原样不被热度覆盖 */
         stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .43); stockDummy.updateMatrix();
         stockGradeMeshes[grade].setMatrixAt(gradeCounts[grade]++, stockDummy.matrix);
         stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .77); stockDummy.updateMatrix();
-        stockLidMesh.setMatrixAt(lidCount++, stockDummy.matrix);
+        stockLidMesh.setMatrixAt(lidCount, stockDummy.matrix);
+        lidCount += 1;
       });
       stockLidMesh.count = lidCount; stockLidMesh.instanceMatrix.needsUpdate = true;
+      cellHeatMesh.count = lidCount; cellHeatMesh.instanceMatrix.needsUpdate = true;
+      if (cellHeatMesh.instanceColor) cellHeatMesh.instanceColor.needsUpdate = true;
       Object.entries(stockGradeMeshes).forEach(([grade, mesh]) => {
         mesh.count = gradeCounts[grade]; mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       });
       lastStockGradeCounts = gradeCounts;
     }
@@ -949,7 +1009,7 @@
         cargoZOffset: CARGO_Z_OFFSET, cargoDrop: CARGO_DROP, cargoReach: CARGO_REACH};
       operationPathPlan(trace, event, geometry).forEach(plan => {
         const points = plan.points.map(point => new THREE.Vector3(point.x, point.y, point.z));
-        const path = addPath(points, {color: colors[plan.kind], opacity: .10, arrowCount: plan.arrowCount, operationKey: plan.operationKey, kind: plan.kind});
+        const path = addPath(points, {color: colors[plan.kind], opacity: .28, radius: .065, haloRadius: .12, arrowCount: plan.arrowCount, operationKey: plan.operationKey, kind: plan.kind});
         path.operationKey = plan.operationKey; path.kind = plan.kind; path.baseColor = colors[plan.kind];
         path.auditPoints = plan.points.map(point => ({x: point.x, y: point.y, z: point.z}));
         livePaths.push(path);
@@ -961,7 +1021,7 @@
       livePaths.forEach(path => {
         const index = STEP_INDEX[path.operationKey];
         path.material.color.setHex(index === current ? 0xff6a00 : path.baseColor);
-        path.material.opacity = index === current ? .96 : index < current ? .32 : .09;
+        path.material.opacity = index === current ? .96 : index < current ? .42 : .24;
         path.material.depthTest = index !== current;
         if (path.haloMaterial) path.haloMaterial.opacity = index === current ? .84 : index < current ? .10 : 0;
         path.group.traverse(object => { if (object.isMesh) object.renderOrder = index === current ? (object.material === path.material ? 6 : 5) : 1; });
@@ -1007,6 +1067,7 @@
     function setTarget(frame) {
       const visible = Array.isArray(frame.targetSlot);
       targetBox.visible = targetPad.visible = visible;
+      if (targetFx && !visible) { targetFx.glow.visible = targetFx.face.visible = targetFx.arrow.visible = false; }
       if (!visible) return;
       const [col, tier] = frame.targetSlot;
       targetBox.position.set(col + .5, RACK.loadY, tier + .5);
@@ -1016,6 +1077,33 @@
       beacon.querySelector("b").textContent = `${inbound ? "入库目标" : "出库源位"} ${String(col).padStart(2, "0")} / ${String(tier).padStart(2, "0")}`;
       beacon.querySelector("span").textContent = `第 ${String(col).padStart(2, "0")} 列 · 第 ${String(tier).padStart(2, "0")} 层`;
       beacon.setAttribute("aria-label", `${inbound ? "入库目标货位" : "出库源货位"}，列 ${col}，层 ${tier}`);
+      /* 0717 #28 用户拍板:目标格强高亮。存取双向分两态——
+         入库(LOAD_IN/INBOUND_TRAVEL/STORE_HANDLE):金色发光壳+竖直箭头,STORE_HANDLE 收尾判定完成→金色收敛(稳定亮金、箭头收起);
+         出库源位(LINK_TRAVEL/RETRIEVE_HANDLE):淡出转灰,RETRIEVE_HANDLE 随取货推进整体淡出、箭头收起。
+         呼吸/淡出的每帧透明度在 renderFrame 里按 glow.userData.mode 驱动(相位取 frame.simTime,seek 可复现)。 */
+      if (targetFx) {
+        /* 0718 #28 修穿模:目标 FX(glow/face/arrow)只在「行进接近目标」段显示;进入 handle 段
+           (STORE_HANDLE/RETRIEVE_HANDLE)整体隐藏——此时货叉/mast/货物占据目标格,FX 会与之穿插。
+           配色分支(入库金 / 出库淡灰)仅在 travel 段生效。 */
+        const handling = ["STORE_HANDLE", "RETRIEVE_HANDLE"].includes(frame.operationKey);
+        if (handling) {
+          targetFx.glow.visible = targetFx.face.visible = targetFx.arrow.visible = false;
+        } else {
+          targetFx.glow.visible = true; targetFx.glow.position.set(col + .5, RACK.loadY, tier + .5);
+          targetFx.face.visible = true; targetFx.face.position.set(col + .5, RACK.frontY - .012, tier + .5);
+          targetFx.arrow.visible = true;
+          targetFx.arrow.position.set(col + .5, targetFx.arrowY, tier + targetFx.arrowZGap);
+          targetFx.arrow.userData.baseZ = tier + targetFx.arrowZGap;
+          const ud = targetFx.glow.userData;
+          if (inbound) {
+            targetFx.glowMat.color.copy(targetFx.amber); targetFx.faceMat.color.copy(targetFx.amber);
+            ud.mode = "inbound"; ud.fade = 1;
+          } else {
+            targetFx.glowMat.color.copy(targetFxGrey); targetFx.faceMat.color.copy(targetFxGrey);
+            ud.mode = "outbound"; ud.fade = 1;
+          }
+        }
+      }
     }
 
     function metricChip(label, value, description) {
@@ -1341,6 +1429,15 @@
     }
 
     function layoutProjectedLabels(frame) {
+      /* 0718 #28 黄牌(targetBeacon)废止:01 已退役,02 跟进。beacon 不再投影/防重叠,也不再显示;
+         目标信息交给下方 dock 与 3D 目标格高亮承担。以下原投影实现整体短路,保留供回滚与契约留痕。 */
+      const retiredBeacon = byId("targetBeacon");
+      if (retiredBeacon) { retiredBeacon.hidden = true; retiredBeacon.style.display = "none"; }
+      hideLeader("targetLeader");
+      lastOverlayLayout = {visible: 0, overlapArea: 0, outOfBounds: false,
+        leaderObstacleHits: 0, leaderCrossings: 0, maxLeaderLength: 0, leaders: [], labels: []};
+      return;
+      /* eslint-disable */
       const viewportRect = viewportEl.getBoundingClientRect(), mountRect = mount.getBoundingClientRect();
       const targetElement = byId("targetBeacon");
       const definitions = [];
@@ -1450,6 +1547,16 @@
     function setTrace(trace) {
       currentTrace = trace; catalog = new Map(trace.cargo_catalog.map(item => [item.gid, item])); stockSignature = "";
       invariant(catalog.size === trace.cargo_catalog.length, "cargo_catalog 重复 gid");
+      /* #26-2:热门集合随 trace 重算(45 条 trace 各 catalog 不同);freq_true 用真值不用带噪 freq_est。
+         同行 stockSignature="" 会触发下帧 rebuildStockInstances() 重画,金顶随之生效,无需额外失效。 */
+      const order = trace.cargo_catalog.map((item, index) => ({gid: item.gid, freq: item.freq_true, index}));
+      order.sort((a, b) => b.freq - a.freq || a.index - b.index);
+      hotGids = new Set(order.slice(0, Math.max(1, Math.floor(order.length / 5))).map(e => e.gid));
+      /* #26-2 A层色阶归一化:用 freq_true 的秩(rank)映射,冷→热连续铺满,规避 skew 分布下线性 min-max 全挤冷端;
+         order 已按 freq 降序,index 0=最热→t=1,末位=最冷→t=0。B层近 I/O 热区随之重算。 */
+      const denom = order.length > 1 ? order.length - 1 : 1;
+      freqRank = new Map(order.map((e, index) => [e.gid, order.length > 1 ? 1 - index / denom : .5]));
+      updateHotZone(trace);
       trace.events.forEach(event => { good(event.inbound_gid); good(event.outbound_gid); });
       pathSignature = ""; clearPaths(); renderDecision(trace); renderTraceStats(trace);
       byId("taskline").querySelector(".kicker").textContent = "已校验 · 同源 SIM 轨迹";
@@ -1477,6 +1584,20 @@
       updateText(trace, frame); drawSpeed(frame); drawSlotMap(frame);
       const loopMask = byId("cycleReset"), maskVisible = frame.loop > 0 && frame.elapsedLocal < LOOP_RESET_MASK_S;
       loopMask.classList.toggle("is-visible", maskVisible); loopMask.setAttribute("aria-hidden", String(!maskVisible));
+      /* #28 目标格发光壳呼吸 + 箭头竖直浮动:相位取演示时钟 frame.simTime(seek 后固定,截图可复现)。
+         入库=金色呼吸/完成收敛;出库=淡出转灰(整体乘 fade,随取货推进衰减)。 */
+      if (targetFx && targetFx.glow.visible) {
+        const pulse = (Math.sin(frame.simTime * 2.4) + 1) / 2, live = targetFx.arrow.visible;
+        const ud = targetFx.glow.userData, fade = ud.fade == null ? 1 : ud.fade;
+        if (ud.mode === "outbound") {
+          targetFx.glowMat.opacity = (live ? .28 + .18 * pulse : .30) * fade;
+          targetFx.faceMat.opacity = (live ? .66 + .22 * pulse : .55) * fade;
+        } else {
+          targetFx.glowMat.opacity = live ? .30 + .22 * pulse : .48;
+          targetFx.faceMat.opacity = live ? .72 + .26 * pulse : .95;
+        }
+        if (live) targetFx.arrow.position.z = targetFx.arrow.userData.baseZ - targetFx.floatAmp * pulse;
+      }
       renderer.render(scene, camera);
       layoutStationTags(frame);
       layoutProjectedLabels(frame);
