@@ -792,6 +792,20 @@
   /* 0719 C2 组件公约落地:镜头与演示倍率移入进度轴行(样式见 s3_shell_v2.css),
      #sceneDock 三列改两列;第三列位预留给任务 b「取货实测块」。 */
   html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(300px,1.35fr) minmax(250px,1fr)}
+  /* 0719 窄高视口:左栏 L1 块紧缩,把省下的高度全部让给 2D 货位图
+     (1366×720 实测每格 7.8px,不可读;只动 padding/字号,不动结构与列数)。 */
+  @media(max-height:780px){
+    html[data-s3-layout="A"] #workHud{gap:5px}
+    html[data-s3-layout="A"] #railFacts div{padding:4px 5px}
+    html[data-s3-layout="A"] #railFacts b{font-size:11px}
+    html[data-s3-layout="A"] #traceStats .metricHelp{padding:3px 4px}
+    html[data-s3-layout="A"] #traceStats .metricHelp b{font-size:9.5px}
+    html[data-s3-layout="A"] #traceStats .metricHelp small{margin-top:1px;font-size:6px}
+    html[data-s3-layout="A"] #traceStats .statsHead{margin-bottom:2px}
+    html[data-s3-layout="A"] #decisionWrap .dHead{margin-bottom:2px}
+    html[data-s3-layout="A"] #phaseRail{padding:4px 6px 5px}
+    html[data-s3-layout="A"] #slotMapWrap{min-height:200px}
+  }
 </style>
 <link rel="stylesheet" href="./s3_shell_v2.css">
 </head>
