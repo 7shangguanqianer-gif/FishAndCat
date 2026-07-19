@@ -1072,9 +1072,15 @@ function makeLabel(text,x,z,scale=.9){
 addBox(N+1,.14,.08,N/2,IO.y,Z0+.04,M.rail,true,true);
 addBox(1.05,.76,.16,IO.x,IO.y-.38,Z0+.10,M.amber,true,true);
 
-function addTransferBridge(from,to,material){
-  const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy),bridge=new THREE.Mesh(new THREE.BoxGeometry(len,.62,.13),material);
-  bridge.position.set((from.x+to.x)/2,(from.y+to.y)/2,.095);bridge.rotation.z=Math.atan2(dy,dx);bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
+/* 转运台必须与货物真实转运路径同向：runtime 在 loadX ↔ TRANSFER_ANCHOR 间线性插值（s3_ac_runtime.js:138），
+   故台面保持斜向，不得改 L 形（改路径会动 validateVisualTopology 不变量链）。
+   0718 几何审计修复三项：①宽度 .62→.40；②台面整体下沉到滚筒平面以下（z .00~.09，滚筒自 .105 起）；
+   ③两端各回缩半宽，使两段台面在 TRANSFER_ANCHOR 处不再互穿、且让开输送带端头滚筒。 */
+function addTransferBridge(from,to,material,width=.40,thickness=.09,zTop=.09){
+  const dx=to.x-from.x,dy=to.y-from.y,full=Math.hypot(dx,dy),len=Math.max(.10,full-width);
+  const bridge=new THREE.Mesh(new THREE.BoxGeometry(len,width,thickness),material);
+  bridge.position.set((from.x+to.x)/2,(from.y+to.y)/2,zTop-thickness/2);
+  bridge.rotation.z=Math.atan2(dy,dx);bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
 }
 function addConveyorRoller(x,y){const r=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.92,12),M.edge);r.position.set(x,y,.15);r.castShadow=true;scene.add(r);}
 function addConveyorLane(lane,nearX,farX,laneMaterial){

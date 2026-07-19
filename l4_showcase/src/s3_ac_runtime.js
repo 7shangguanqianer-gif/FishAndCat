@@ -1099,12 +1099,17 @@
            (STORE_HANDLE/RETRIEVE_HANDLE)整体隐藏——此时货叉/mast/货物占据目标格,FX 会与之穿插。
            配色分支(入库金 / 出库淡灰)仅在 travel 段生效。 */
         const handling = ["STORE_HANDLE", "RETRIEVE_HANDLE"].includes(frame.operationKey);
+        /* 0718 追加门:只按 operationKey 分段仍漏「行进段末尾已到位」——实测 INBOUND_TRAVEL p=.95 与
+           LINK_TRAVEL p=.95 的 |machine.x - col| = 0.00 / 0.02,此时竖直箭头正落在堆垛机机身里被吞掉
+           (工装 scratchpad/fxsweep.mjs 可复现)。故再按几何距离关一道:近于机身半宽(载货台 1.05 宽)即收起箭头。
+           发光壳与格口面留着——它们贴在货位上,不与机身争位,仍需指示目标。 */
+        const arrived = frame.machine ? Math.abs(frame.machine.x - col) < .60 : false;
         if (handling) {
           targetFx.glow.visible = targetFx.face.visible = targetFx.arrow.visible = false;
         } else {
           targetFx.glow.visible = true; targetFx.glow.position.set(col + .5, RACK.loadY, tier + .5);
           targetFx.face.visible = true; targetFx.face.position.set(col + .5, RACK.frontY - .012, tier + .5);
-          targetFx.arrow.visible = true;
+          targetFx.arrow.visible = !arrived;
           targetFx.arrow.position.set(col + .5, targetFx.arrowY, tier + targetFx.arrowZGap);
           targetFx.arrow.userData.baseZ = tier + targetFx.arrowZGap;
           const ud = targetFx.glow.userData;
