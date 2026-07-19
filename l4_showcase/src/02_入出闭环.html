@@ -146,6 +146,16 @@
   #heatLegend .hlZone{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:6px;border-top:1px solid #d5dbe0}
   #heatLegend .hlZone i{flex:0 0 auto;width:22px;height:14px;background:#e7b8001f;border:1.5px solid #ffb100}
   #heatLegend .hlZone span{font-size:8.5px;line-height:1.25}
+  /* 0718 热度开关(3D/2D):挂在图例面板内,不动左栏栅格(左栏每加内容都会触发一轮断点适配战)。
+     面板本身需可交互(3D 浮层多为 pointer-events:none),故显式放开。 */
+  #heatLegend{pointer-events:auto}
+  #heatLegend .hlToggles{display:flex;gap:10px;margin-top:7px;padding-top:6px;border-top:1px solid #d5dbe0}
+  #heatLegend .hlToggles label{display:flex;align-items:center;gap:4px;font-size:8.5px;color:#3d4a54;cursor:pointer;white-space:nowrap}
+  #heatLegend .hlToggles input{width:12px;height:12px;margin:0;accent-color:#e7b800;cursor:pointer;flex:none}
+  #heatLegend .hlToggles input:focus-visible{outline:2px solid #e7b800;outline-offset:1px}
+  /* 窄高视口:面板上移+压缩,避免与下方 dock/证据带抢空间 */
+  @media(max-height:780px){#heatLegend{top:104px;padding:7px 9px}
+    #heatLegend .hlToggles{margin-top:5px;padding-top:4px}#heatLegend .hlZone{margin-top:5px;padding-top:4px}}
   #sceneCaption{position:absolute;z-index:6;left:calc(var(--rail-w,32%) + 20px);bottom:17px;padding:8px 11px;background:#17202bdc;color:#fff;
     font:10px/1.35 Consolas,"Microsoft YaHei",monospace;pointer-events:none}
   #reserveRuleBadge{position:absolute;z-index:6;right:18px;top:18px;display:flex;align-items:center;gap:9px;padding:8px 10px;
@@ -700,7 +710,18 @@
   html[data-s3-layout="A"] #taskline{display:none!important}
   html[data-s3-layout="A"] #decisionWrap{grid-area:auto;order:1;flex:none;align-self:stretch}
   html[data-s3-layout="A"] #insightStack{grid-area:auto;grid-row:auto;order:2;flex:none;display:block}
+  /* 0718:实测左栏内容 914px > 可用 850px(insightStack 独占 537px),原先货位图被视口切底、
+     2D 热力图看不全。先给左栏可滚动兜底——**不藏任何内容**;左栏信息密度的正经重排属 R2 步骤2。 */
+  html[data-s3-layout="A"] #workHud{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+  html[data-s3-layout="A"] #workHud::-webkit-scrollbar{width:7px}
+  html[data-s3-layout="A"] #workHud::-webkit-scrollbar-thumb{background:#c2ccd4;border-radius:4px}
+  html[data-s3-layout="A"] #workHud::-webkit-scrollbar-track{background:transparent}
   html[data-s3-layout="A"] #slotMapWrap{grid-area:auto;order:3;flex:1 1 auto;min-height:150px;align-self:stretch;width:auto}
+  /* 0718 修:画布必须**适配容器高度**。原先画布是 313px 正方而容器仅 150px 且 overflow:hidden,
+     方阵被垂直裁掉一半多——货物集中在下层(地图下半),于是左栏货位图看起来"一个货物都没有",
+     2D 热力图也一并被切没。加 aspect-ratio + max-height 后全 20×20 必定完整可见。 */
+  html[data-s3-layout="A"] #slotMap{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:1/1;
+    min-height:0;flex:1 1 auto;margin:4px auto 0;align-self:center}
   html[data-s3-layout="A"] #phaseRail{grid-area:auto;order:4;flex:none;position:static;width:auto}
 
   /* -- 入出周期轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进) -- */
@@ -824,7 +845,7 @@ const reserveRuleBadge=document.createElement('div');reserveRuleBadge.id='reserv
 reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="empty"><i></i>空载</span><span class="out"><i></i>出库</span><span class="blocked"><i></i>预占</span>';sceneCaption.append(reserveRuleBadge);
 /* 0718 #26-2 货位热度色阶图例 + 近 I/O 热区说明(替代逐箱金顶)。 */
 const heatLegend=document.createElement('div');heatLegend.id='heatLegend';heatLegend.setAttribute('aria-label','货位热度色阶与近 I/O 热区图例');
-heatLegend.innerHTML='<div class="hlRow"><b>货位热度</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlZone"><i></i><span>热门货聚集区 · 近 I/O（好放置兑现）</span></div>';
+heatLegend.innerHTML='<div class="hlRow"><b>货位热度</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlToggles"><label><input type="checkbox" id="heat3dToggle" checked><span>3D 货位</span></label><label><input type="checkbox" id="heat2dToggle" checked><span>2D 图</span></label></div><div class="hlZone"><i></i><span>热门货聚集区 · 近 I/O（好放置兑现）</span></div>';
 viewportEl.append(heatLegend);
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);

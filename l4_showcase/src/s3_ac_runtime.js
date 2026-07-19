@@ -876,7 +876,7 @@
     hotZoneEdges.visible = false; hotZoneEdges.renderOrder = 6; scene.add(hotZoneEdges);
     function updateHotZone(trace) {
       const rows = Array.isArray(trace.initial_inventory) ? trace.initial_inventory.filter(r => hotGids.has(r.gid)) : [];
-      if (!rows.length) { hotZoneMesh.visible = hotZoneEdges.visible = false; return; }
+      if (!rows.length) { hotZoneReady = false; applyHeat3D(); return; }
       let minCol = Infinity, maxCol = -Infinity, minTier = Infinity, maxTier = -Infinity;
       rows.forEach(r => { minCol = Math.min(minCol, r.col); maxCol = Math.max(maxCol, r.col);
         minTier = Math.min(minTier, r.tier); maxTier = Math.max(maxTier, r.tier); });
@@ -884,8 +884,19 @@
       const sx = (maxCol - minCol + 1) + .14, sz = (maxTier - minTier + 1) + .14, sy = RACK.depth + .12;
       hotZoneMesh.position.set(cx, RACK.loadY, cz); hotZoneMesh.scale.set(sx, sy, sz);
       hotZoneEdges.position.copy(hotZoneMesh.position); hotZoneEdges.scale.copy(hotZoneMesh.scale);
-      hotZoneMesh.visible = hotZoneEdges.visible = true;
+      hotZoneReady = true; applyHeat3D();
     }
+    /* 0718 热度开关:3D(货位色框 + 热区包络)与 2D(左栏货位图热力)各一个。
+       开关 DOM 挂在已有的「货位热度」图例面板内——**不动左栏栅格**(该处每加内容都会触发一轮 @media 断点
+       适配战,是本页最脆的地方),既保排版协调又保各视口适配性。 */
+    let heat3DOn = true, heat2DOn = true, hotZoneReady = false;
+    function applyHeat3D() {
+      cellHeatMesh.visible = heat3DOn;
+      hotZoneMesh.visible = hotZoneEdges.visible = heat3DOn && hotZoneReady;
+    }
+    const heat3DBox = document.getElementById("heat3dToggle"), heat2DBox = document.getElementById("heat2dToggle");
+    if (heat3DBox) { heat3DBox.checked = heat3DOn; heat3DBox.addEventListener("change", () => { heat3DOn = !!heat3DBox.checked; applyHeat3D(); }); }
+    if (heat2DBox) { heat2DBox.checked = heat2DOn; heat2DBox.addEventListener("change", () => { heat2DOn = !!heat2DBox.checked; }); }
     const queueBaseGeometry = new THREE.BoxGeometry(.76, .72, .10);
     const queueBoxGeometry = new THREE.BoxGeometry(.69, .66, .58);
     const queueEdgeGeometry = new THREE.EdgesGeometry(queueBoxGeometry);
@@ -1255,11 +1266,20 @@
       }
       frame.inventoryRows.forEach(row => {
         const item = good(row.gid), x = x0 + row.col * cell, y = y0 + (19 - row.tier) * cell;
+        /* 2D 热力层:平面图无透视遮挡,可整格铺热度底 → 总览尺度也能一眼读出热度分布,
+           正好补上 3D 在总览尺度失效(400 格时每格约 25px、单格标识必然消失)的短板。
+           开热度时货物框缩小居中,让热度底露出足够宽的边;等级色不被牺牲。 */
+        if (heat2DOn) {
+          g.fillStyle = "#" + heatColor(freqRank.has(row.gid) ? freqRank.get(row.gid) : .5).getHexString();
+          g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
+        }
+        const bx = heat2DOn ? cell * .26 : cell * .12, bw = heat2DOn ? cell * .48 : cell * .76;
+        const by = heat2DOn ? cell * .28 : cell * .15, bh = heat2DOn ? cell * .44 : cell * .70;
         g.fillStyle = gradeCssColor(item.grade);
-        g.fillRect(x + cell * .12, y + cell * .15, cell * .76, cell * .70);
+        g.fillRect(x + bx, y + by, bw, bh);
         g.strokeStyle = "#ffffff"; g.lineWidth = Math.max(.65, cell * .07);
-        g.strokeRect(x + cell * .12, y + cell * .15, cell * .76, cell * .70);
-        g.fillStyle = "rgba(255,255,255,.38)"; g.fillRect(x + cell * .17, y + cell * .20, cell * .66, Math.max(1, cell * .10));
+        g.strokeRect(x + bx, y + by, bw, bh);
+        if (!heat2DOn) { g.fillStyle = "rgba(255,255,255,.38)"; g.fillRect(x + cell * .17, y + cell * .20, cell * .66, Math.max(1, cell * .10)); }
       });
       if (frame.targetSlot) {
         const x = x0 + frame.targetSlot[0] * cell, y = y0 + (19 - frame.targetSlot[1]) * cell;
