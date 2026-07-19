@@ -90,11 +90,15 @@
     try { root.__S3_QA.seek(cycleIndex, "LOAD_IN", 0.5); } catch (error) { /* seek 尚未就绪 */ }
   }
 
+  let nodePopTimer = null;
   nodeButtons.forEach(button => {
     button.addEventListener("click", () => {
       nodeButtons.forEach(other => other.setAttribute("aria-current", other === button ? "true" : "false"));
       seekToCycle(Number(button.dataset.cycle));
       renderNodePop(button);
+      /* 0719 修:点击后浮层 2.2s 自动收——原来无关闭触发(鼠标不动就一直挡视野,内容还会过时) */
+      if (nodePopTimer) clearTimeout(nodePopTimer);
+      nodePopTimer = setTimeout(() => nodePop.classList.remove("show"), 2200);
     });
     button.addEventListener("mouseenter", () => renderNodePop(button));
     button.addEventListener("focus", () => renderNodePop(button));

@@ -1308,6 +1308,8 @@
         const tag = doc.createElement("i"); tag.textContent = `⚠ ${ev.cycle_number}`; dot.append(tag);
         dot.addEventListener("click", event => {
           event.stopPropagation();
+          /* 清掉里程碑节点的旧「当前」红标,避免与故障红点双红并存(跳转目标已变) */
+          track.querySelectorAll("button[data-cycle]").forEach(node => node.setAttribute("aria-current", "false"));
           try { root.__S3_QA.seekFault(orderNow); } catch (error) {}
         });
         track.append(dot);
@@ -1740,6 +1742,7 @@
       scaleParts.forEach((element, index) => {
         const item = frame.cycleTiming[index], ratio = totalCycleSim > EPS ? item.simDurationS / totalCycleSim : 0;
         element.style.width = `${ratio * 100}%`; element.classList.toggle("active", index === STEP_INDEX[frame.operationKey]);
+        element.classList.toggle("faultPart", !!(faultPhaseRec && item.operationKey === faultPhaseRec.operation_phase && mttrS > 0 && item.simDurationS > mttrS));
         element.classList.toggle("presentationOnly", item.simDurationS <= EPS);
         if (index < STEP_INDEX[frame.operationKey]) completedSim += item.simDurationS;
       });
