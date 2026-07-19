@@ -1753,7 +1753,23 @@
     const comparisonLab = doc.createElement("section"); comparisonLab.id = "comparisonLab"; comparisonLab.hidden = true;
     comparisonLab.setAttribute("role", "dialog"); comparisonLab.setAttribute("aria-modal", "true"); comparisonLab.setAttribute("aria-labelledby", "comparisonTitle"); comparisonLab.setAttribute("aria-describedby", "comparisonFoot");
     comparisonLab.innerHTML = '<div class="comparisonPanel"><header><div><span>S1 受控对照 · SIM</span><h2 id="comparisonTitle">算法与货物情景对照</h2></div><button id="closeComparisonLab" type="button" aria-label="关闭对照证据">×</button></header><div class="comparisonTabs" role="tablist" aria-label="对照方向"><button id="comparisonScenarioTab" type="button" role="tab" aria-selected="true" aria-controls="comparisonTable" tabindex="0">同情景 · 八模式</button><button id="comparisonModeTab" type="button" role="tab" aria-selected="false" aria-controls="comparisonTable" tabindex="-1">同算法 · 十八情景</button></div><div id="comparisonToolbar"></div><div id="comparisonAutoSummary"></div><div id="comparisonTable" role="region" aria-live="polite" aria-label="S1 对照数据" tabindex="0"></div><footer id="comparisonFoot"></footer></div>';
-    rail.append(decision, comparisonLab); insight.prepend(queue); insight.append(comparisonMini, judgePath);
+    /* 0719 左栏信息架构重排(依据 ISA-101.01-2015 四级信息分层,见 docs/左栏信息架构研究与合流方案_0718.md):
+       L1 常驻左栏 = 等待队列 / 本批统计 / 当前相位 / 2D 货位图;
+       「S1 受控对照」与「本屏证据链」属 L2-L3,降级为顶栏 chip → 叠层按需展开。
+       实测左栏内容 914px > 可用 850px(insightStack 独占 537px),此举腾出约 300px 给 2D 货位图放大
+       (每格 6.6px → 约 14px,逐格色阶方可读)。**内容一条不删,只改可达路径。** */
+    const evidenceDock = doc.createElement("section"); evidenceDock.id = "evidenceDock"; evidenceDock.hidden = true;
+    evidenceDock.setAttribute("role", "dialog"); evidenceDock.setAttribute("aria-modal", "true");
+    evidenceDock.setAttribute("aria-labelledby", "evidenceDockTitle");
+    const evidencePanel = doc.createElement("div"); evidencePanel.className = "evidencePanel";
+    const evidenceHead = doc.createElement("header");
+    evidenceHead.innerHTML = '<div><span>同一轨迹 · SIM</span><h2 id="evidenceDockTitle">本屏证据链 · S1 受控对照</h2></div><button id="closeEvidenceDock" type="button" aria-label="关闭本屏证据">×</button>';
+    evidencePanel.append(evidenceHead, judgePath, comparisonMini);
+    evidenceDock.append(evidencePanel);
+    const evidenceButton = doc.createElement("button"); evidenceButton.id = "openEvidenceDock"; evidenceButton.type = "button";
+    evidenceButton.textContent = "本屏证据"; evidenceButton.setAttribute("aria-haspopup", "dialog");
+    actionHost.insertBefore(evidenceButton, compareButton);
+    rail.append(decision, comparisonLab, evidenceDock); insight.prepend(queue);
   }
 
   function bootstrap(root) {
@@ -1928,6 +1944,21 @@
       state.comparison.trigger = null;
     }
 
+    /* 0719 本屏证据叠层:结构与 comparisonLab 一致(hidden 属性开合 + 触发器焦点回归),
+       但不设 inert——它只是把左栏降级下来的两块按需展开,不阻断背景观察。 */
+    let evidenceTrigger = null;
+    function openEvidenceDock(trigger) {
+      evidenceTrigger = trigger || null;
+      byId("evidenceDock").hidden = false; byId("closeEvidenceDock").focus();
+    }
+    function closeEvidenceDock() {
+      const dock = byId("evidenceDock");
+      if (dock.hidden) return;
+      dock.hidden = true;
+      if (evidenceTrigger && typeof evidenceTrigger.focus === "function") evidenceTrigger.focus();
+      evidenceTrigger = null;
+    }
+
     function comparisonSnapshot() {
       return {valid: state.comparison.valid, error: state.comparison.error && state.comparison.error.message,
         open: state.comparison.open, axis: state.comparison.axis, scenario: state.comparison.scenario, mode: state.comparison.mode,
@@ -2014,6 +2045,11 @@
     listen(byId("playbackSpeed"), "input", event => { setPlaybackMultiplier(event.target.value); });
     ["openComparisonLab", "openComparisonLabMini"].forEach(id => listen(byId(id), "click", event => openComparisonLab(event.currentTarget)));
     listen(byId("closeComparisonLab"), "click", closeComparisonLab);
+    /* 0719 本屏证据叠层开合(顶栏 chip / 关闭钮 / 点遮罩 / Esc) */
+    listen(byId("openEvidenceDock"), "click", event => openEvidenceDock(event.currentTarget));
+    listen(byId("closeEvidenceDock"), "click", closeEvidenceDock);
+    listen(byId("evidenceDock"), "click", event => { if (event.target === byId("evidenceDock")) closeEvidenceDock(); });
+    listen(byId("evidenceDock"), "keydown", event => { if (event.key === "Escape") { event.preventDefault(); closeEvidenceDock(); } });
     listen(byId("comparisonScenarioTab"), "click", () => { state.comparison.axis = "scenario"; renderComparisonLab(); });
     listen(byId("comparisonModeTab"), "click", () => { state.comparison.axis = "mode"; renderComparisonLab(); });
     listen(byId("comparisonLab"), "click", event => { if (event.target === byId("comparisonLab")) closeComparisonLab(); });

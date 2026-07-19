@@ -710,18 +710,21 @@
   html[data-s3-layout="A"] #taskline{display:none!important}
   html[data-s3-layout="A"] #decisionWrap{grid-area:auto;order:1;flex:none;align-self:stretch}
   html[data-s3-layout="A"] #insightStack{grid-area:auto;grid-row:auto;order:2;flex:none;display:block}
-  /* 0718:实测左栏内容 914px > 可用 850px(insightStack 独占 537px),原先货位图被视口切底、
-     2D 热力图看不全。先给左栏可滚动兜底——**不藏任何内容**;左栏信息密度的正经重排属 R2 步骤2。 */
-  html[data-s3-layout="A"] #workHud{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
-  html[data-s3-layout="A"] #workHud::-webkit-scrollbar{width:7px}
-  html[data-s3-layout="A"] #workHud::-webkit-scrollbar-thumb{background:#c2ccd4;border-radius:4px}
-  html[data-s3-layout="A"] #workHud::-webkit-scrollbar-track{background:transparent}
-  html[data-s3-layout="A"] #slotMapWrap{grid-area:auto;order:3;flex:1 1 auto;min-height:150px;align-self:stretch;width:auto}
-  /* 0718 修:画布必须**适配容器高度**。原先画布是 313px 正方而容器仅 150px 且 overflow:hidden,
-     方阵被垂直裁掉一半多——货物集中在下层(地图下半),于是左栏货位图看起来"一个货物都没有",
-     2D 热力图也一并被切没。加 aspect-ratio + max-height 后全 20×20 必定完整可见。 */
-  html[data-s3-layout="A"] #slotMap{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:1/1;
-    min-height:0;flex:1 1 auto;margin:4px auto 0;align-self:center}
+  /* 0719 R2步骤2 左栏信息架构重排(取代 0718 的可滚动兜底 —— 兜底实测不合格:
+     railOverflow[914,850]、canvasBottomVsViewport[917,900],2D 货位图底部越过视口需滚动才看全)。
+     依据 ISA-101.01-2015 四级信息分层:S1 受控对照与本屏证据链降级为顶栏 chip「本屏证据」→ 叠层。
+     内容零删减,只改可达路径;腾出的高度全部给 2D 货位图。详见 docs/左栏信息架构研究与合流方案_0718.md。 */
+  html[data-s3-layout="A"] #slotMapWrap{grid-area:auto;order:3;flex:1 1 auto;min-height:240px;align-self:stretch;width:auto}
+  /* 0719 修(三次实测才定位,前两次改动都无效):
+     ① CSS 上不该有 aspect-ratio —— 它在列向 flex 里从宽度推高度,使画布无视容器剩余空间。
+        1366×720 实测 slotMap 底部 725 > wrap 底部 635,溢出被 overflow:hidden 裁掉,
+        mapKey 整行(bottom 742)全没。而 drawSlotMap 本就自带方阵自适应并居中
+        (size = Math.min(width-24, height-12),s3_ac_runtime.js:1258),让画布填满 flex 分到的框即可。
+     ② 640 行旧规则带 flex:none!important / height:auto!important / aspect-ratio:1/1,
+        会压掉本处 A 壳规则(实测计算样式一直是 flex:0 0 auto、aspectRatio:1/1),故须同以 !important 覆盖。
+     ③ 上一版这段注释写成了两个 /* 块,第二段变成裸文本把规则一起吞掉——CSS 静默失效,只有读计算样式才发现。 */
+  html[data-s3-layout="A"] #slotMap{width:100%;height:auto!important;max-width:100%;aspect-ratio:auto!important;
+    min-height:0!important;flex:1 1 0!important;margin:4px 0 0;align-self:stretch}
   html[data-s3-layout="A"] #phaseRail{grid-area:auto;order:4;flex:none;position:static;width:auto}
 
   /* -- 入出周期轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进) -- */
@@ -765,6 +768,20 @@
     color:#18232c;font:500 17px/1 Arial,sans-serif;cursor:pointer}
   html[data-s3-layout="A"] #s3MapOverlay #slotMapWrap{flex:none;order:0;min-height:0;cursor:default;border:0;padding:0;overflow:visible;width:auto!important}
   html[data-s3-layout="A"] #s3MapOverlay #slotMap{min-height:0!important;margin:8px auto 0;max-height:none}
+
+  /* -- 0719 本屏证据叠层:承接从左栏降级下来的「本屏证据链」+「S1 受控对照」(ISA-101 L2-L3 按需层) -- */
+  #evidenceDock{position:fixed;z-index:64;inset:0;display:flex;align-items:center;justify-content:center;background:#17202b73}
+  #evidenceDock[hidden]{display:none}
+  #evidenceDock .evidencePanel{width:min(560px,90vw);max-height:86vh;overflow-y:auto;background:#fff;
+    border-top:4px solid var(--abb-red,#ff000f);box-shadow:0 18px 50px #0f171e59;padding:0 16px 16px}
+  #evidenceDock header{position:sticky;top:0;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;
+    gap:12px;padding:13px 0 10px;background:#fff;border-bottom:1px solid #e2e6ea}
+  #evidenceDock header span{display:block;font:700 8.5px/1 Consolas,monospace;letter-spacing:.7px;color:#6d7780}
+  #evidenceDock header h2{margin:5px 0 0;font-size:14.5px;line-height:1.25;color:#16191d}
+  #evidenceDock #closeEvidenceDock{flex:none;width:26px;height:26px;border:1px solid #18232c;background:#fff;
+    color:#18232c;font:500 17px/1 Arial,sans-serif;cursor:pointer}
+  #evidenceDock #judgePath,#evidenceDock #comparisonMini{margin-top:12px}
+  html[data-s3-layout="A"] #openEvidenceDock[aria-haspopup="dialog"]{white-space:nowrap}
 
   /* -- 大屏:顶栏/轴条略高 -- */
   @media(min-width:1600px) and (min-height:860px){
