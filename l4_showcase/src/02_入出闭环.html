@@ -543,15 +543,16 @@
   #sceneCaption #sceneActionMeta{grid-area:meta;justify-self:end;color:#5d6972;font:8.5px/1.1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
   #sceneCaption #sceneActionText{grid-area:action;display:block;overflow:hidden;color:#17365d;font-size:11px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis}
   #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;font:8px/1.15 Consolas,"Microsoft YaHei",monospace;white-space:nowrap;text-overflow:ellipsis}
+  /* 0719 白化:深色遥测块与 dock 白底顶撞(用户指正「统一成白色」);drawSpeed 画布用色本就浅底友好,只改壳 */
   #sceneTelemetry{position:static;width:auto;padding:6px 8px;display:grid;grid-template-columns:1.12fr .88fr;gap:8px;
-    background:#17212a;color:#fff;pointer-events:none}
+    background:#fff;color:#26343e;pointer-events:none}
   #sceneTelemetry .telemetryTitle{display:none}
   #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
-  #axisHud b{margin:0 0 2px;color:#dce5eb;font-size:8.5px;letter-spacing:0}
+  #axisHud b{margin:0 0 2px;color:#16191d;font-size:8.5px;letter-spacing:0}
   #axisHud .axis{grid-template-columns:12px 1fr 43px;gap:5px;margin:2px 0}
-  #axisHud .axis i{height:4px;background:#56636d}#axisHud .axis span:last-child{color:#fff;font-size:8.5px;text-align:right}
+  #axisHud .axis i{height:4px;background:#e0e5e9}#axisHud .axis span:last-child{color:#17202b;font-size:8.5px;text-align:right}
   #liveChartWrap{width:auto;min-width:0;min-height:0;padding:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:transparent;border:0}
-  #liveChartWrap .cap{font-size:7.5px;color:#b8c3cb}#liveChartWrap .cap b{color:#dce5eb}#speed{height:42px;min-height:0;margin-top:1px}
+  #liveChartWrap .cap{font-size:7.5px;color:#66727b}#liveChartWrap .cap b{color:#16191d}#speed{height:42px;min-height:0;margin-top:1px}
   #reserveRuleBadge{grid-area:legend;position:static;padding:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;
     background:transparent;color:#53616b;pointer-events:none;font:700 7px/1 "Microsoft YaHei",sans-serif}
   #reserveRuleBadge span{min-width:0;display:flex;align-items:center;gap:4px;white-space:nowrap}
