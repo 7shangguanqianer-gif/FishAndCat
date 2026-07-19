@@ -218,21 +218,11 @@
 
   /* 0715 Task10：固定两列指挥台。上层回答“现在做什么/为何选”，下层回答“发生了什么”。 */
   html[data-style="A"]{--rail-w:clamp(410px,31vw,470px)}
-  #gl{left:var(--rail-w)}
-  #workHud{inset:0 auto 0 0;width:var(--rail-w);padding:11px 12px 10px;gap:7px 8px;overflow:visible;
-    display:grid;grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);grid-template-rows:auto auto auto auto minmax(0,1fr);
-    grid-template-areas:"head head" "controls controls" "task task" "decision axis" "map insight";align-content:stretch}
-  #railHead{grid-area:head;min-height:39px;padding:0 0 7px;align-items:center}
-  #railHead h1{margin-top:2px;font-size:18px}#railHead .eyebrow{font-size:8px;letter-spacing:1.35px}#railHead .matrix{font-size:9px}
-  #runtimeControls{grid-area:controls;align-self:start;padding:6px 7px;gap:4px 5px}
-  #runtimeControls label{font-size:7.5px}#runtimeControls select{height:24px;font-size:9.5px;border-color:#aeb8bf}
-  #runtimeActions{gap:4px}#runtimeActions button{height:23px;padding:0 7px;font-size:8.5px}
+  /* P2a-gen2:已删——#gl 重复定位、#workHud 两列 grid 指挥台(A 壳 flex 全面接管并被迫写
+     grid-template:none 中和器)、#railHead/#runtimeControls 的 grid-area 绑定与字号(二者已被
+     交互层搬入 #topbarA,A 壳规则全覆盖)、#taskline 五行(永久隐藏)。保留:#traceLoadState 字号
+     (A 壳未覆盖 font-size,仍在垫底)。 */
   #traceLoadState{font-size:7.5px;white-space:nowrap}#traceErrorHost{z-index:20}
-  #taskline{grid-area:task;align-self:start;padding:8px 9px;border-left-width:3px}
-  #taskline .kicker{font-size:7.5px}#taskline .primary{display:flex;align-items:center;margin-top:3px;gap:7px;font-size:11.5px}
-  #taskPrimary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#actionBadge{flex:none;margin:0;padding:4px 6px;font-size:9px}
-  #stepPurpose{margin-top:5px;padding:5px 6px;gap:6px;font-size:9px;line-height:1.28}#stepPurpose b{font-size:8px}
-  #taskline .metaRow{margin-top:5px;font-size:8.5px}
   #decisionWrap{grid-area:decision;align-self:stretch;min-width:0;padding:7px 8px;overflow:visible}
   #decisionWrap .dHead{font-size:8px}#decisionWrap .dHead b{font-size:9.5px}
   #decisionWrap .selectionSummary{margin-top:4px;padding:4px 5px;font-size:7.5px}#decisionWrap .selectionSummary strong{font-size:8.5px}
@@ -245,7 +235,7 @@
   #slotMapWrap{grid-area:map;min-width:0;min-height:0;padding:7px 8px 6px;overflow:hidden}
   #slotMapWrap .mapHead b{font-size:9.5px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:15px}
   #slotMapWrap .mapRule{margin-top:4px;padding:3px 5px;font-size:7.5px}#slotMapWrap .hatch{width:15px;height:8px}
-  #slotMap{min-height:72px;margin-top:4px}#slotMapWrap .mapKey{gap:5px;margin-top:3px;font-size:7px;line-height:1.15}
+  #slotMap{margin-top:4px}#slotMapWrap .mapKey{gap:5px;margin-top:3px;font-size:7px;line-height:1.15} /* P2a:min-height:72px 已删(A壳!important 对手) */
   #slotMapWrap .mapKey i{width:8px;height:8px;margin-right:2px}.mapKey .gradeChips i{width:6px;height:8px}
   #insightStack{grid-area:insight;min-width:0;min-height:0;display:grid;gap:5px;align-content:stretch;
     grid-template-rows:auto minmax(48px,.72fr) auto auto auto;overflow:visible}
