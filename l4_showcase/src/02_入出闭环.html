@@ -1099,6 +1099,11 @@ function addTransferBridge(from,to,material,width=.40,thickness=.09,zTop=.09){
   bridge.position.set((from.x+to.x)/2,(from.y+to.y)/2,zTop-thickness/2);
   bridge.rotation.z=Math.atan2(dy,dx);bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
 }
+/* 0719 C1 壳体一致性:补上 01:1209 的中性钢灰覆盖(01 做过该决定并写了理由,02 一直没跟进,
+   两页并排像两套美术风格)。原则同 01——「结构件统一为 Factory I/O 式中性钢灰;方向只由地贴、
+   工位与动态路径编码」。02 是双向页,原本靠蓝/青区分入出;方向语义改由已有的两重编码承担:
+   地贴 addFloorFlowLabel('入库 →')/('→ 出库') + 动态路径配色(C.path 橙 / C.returnPath 青)。 */
+M.infeedRail=M.outfeedRail=mat(0x6f7c87,.56,.34,.035);
 function addConveyorRoller(x,y){const r=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.92,12),M.edge);r.position.set(x,y,.15);r.castShadow=true;scene.add(r);}
 function addConveyorLane(lane,nearX,farX,laneMaterial){
   const center=(nearX+farX)/2,len=Math.abs(nearX-farX),direction=Math.sign(farX-nearX)||1;
