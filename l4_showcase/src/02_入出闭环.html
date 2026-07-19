@@ -72,10 +72,8 @@
   button{font:12px/1 "Microsoft YaHei",sans-serif}
   button:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
   .toolBtn{padding:8px 13px;background:#fff;border:1px solid var(--navy);border-radius:3px;color:var(--navy);cursor:pointer;white-space:nowrap}.toolBtn:hover{background:#eef3f9}
-  #immersiveExit{display:none;position:absolute;z-index:9;top:99px;right:10px;padding:8px 12px;background:#17202be8;color:#fff;border:1px solid #ffffff55;border-radius:3px;cursor:pointer}
-  body.immersive #brand,body.immersive #kpis,body.immersive #modebar,body.immersive #bar,body.immersive #foot{display:none}
-  body.immersive #main{height:100vh;padding:0}body.immersive #viewport{border:0;border-radius:0}body.immersive #immersiveExit{display:block}
-  body.data-mode #bar{display:none}body.data-mode #main{height:calc(100vh - 54px - 72px - 44px - 26px)}
+  /* P1(0719 层积根治):immersive/data-mode 化石已删——引用的 #brand/#kpis/#modebar/#bar/#foot/#immersiveExit
+     在本页 0 个存在,且无任何 JS 设置这两个 body class(祖先页面遗物,见 docs/CSS层积病根治计划_0719.md)。 */
   #foot{height:26px;background:#e5e7ea;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 14px;
     color:#747b83;font:9.5px/1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
   @media(max-width:1100px){#brand .meta span{display:none}.kpi{padding-left:7px;padding-right:7px}.kpi .v{font-size:15px}.modeFact{display:none}}
@@ -165,14 +163,9 @@
   #cycleReset{left:var(--rail-w,32%)}
 
   html[data-style="A"]{--rail-w:30%;--rail-bg:#f7f8fa;--scene-bg:#e9eef1;--card:#fff;--rail-ink:#17202b;--rail-muted:#65717c;--rail-line:#cbd2d8;--accent:#17365d;--axis-bg:#17202b}
-  html[data-style="B"]{--rail-w:32%;--rail-bg:#eef4f8;--scene-bg:#eaf1f5;--card:#f8fbfd;--rail-ink:#173650;--rail-muted:#557085;--rail-line:#9fb4c3;--accent:#245b78;--axis-bg:#20475e}
-  html[data-style="B"] #workHud{background-color:#eef4f8;background-image:linear-gradient(#66879b18 1px,transparent 1px),linear-gradient(90deg,#66879b18 1px,transparent 1px);background-size:20px 20px}
-  html[data-style="B"] #taskline,html[data-style="B"] #liveChartWrap,html[data-style="B"] #phaseRail{box-shadow:4px 4px 0 #9fb4c32b}
-  html[data-style="B"] #targetBeacon{background:#fff;border:2px solid #e3b900;border-left:6px solid #e3b900;color:#173650;box-shadow:none}
-  html[data-style="C"]{--rail-w:28%;--rail-bg:#10161d;--scene-bg:#202830;--card:#17212b;--rail-ink:#f1f4f6;--rail-muted:#93a0ab;--rail-line:#33414d;--accent:#3d9dda;--axis-bg:#0b1015}
-  html[data-style="C"] #workHud{box-shadow:16px 0 38px #0007}html[data-style="C"] #railHead .eyebrow{color:#ff3b30}
-  html[data-style="C"] #targetBeacon{background:#f3c900;color:#111820;border-left-color:#ff3b30;box-shadow:0 7px 24px #0008}
-  html[data-style="C"] #sceneCaption{background:#0c1116e8;border-left:3px solid #ff3b30}
+  /* P1(0719 层积根治):data-style B/C 两代死块已删——dataset.style 唯一赋值点硬编码 'A'(本页 script),
+     B/C 永不可达;其中还藏着废止黄牌 #targetBeacon 的两条装饰样式(0717 #28 已废止),一并清除。
+     git 历史可找回;风格重启用请走 tokens 层,勿复活多代并存。 */
   @media(max-width:1200px){#workHud{padding:18px 16px 14px;gap:9px}#railHead h1{font-size:18px}#liveChartWrap{min-height:116px}#speed{height:80px}#railFacts div{padding:7px 6px}}
   @media(max-height:800px){#workHud{padding:12px 14px 10px;gap:7px}#railHead{padding-bottom:7px}#railHead h1{font-size:18px;margin-top:2px}
     #taskline{padding:8px 9px}#taskline .primary{margin-top:3px;font-size:12px}#actionBadge{margin-top:6px;padding:4px 7px}#taskline .metaRow{margin-top:5px}
@@ -792,6 +785,52 @@
   /* 0719 C2 组件公约落地:镜头与演示倍率移入进度轴行(样式见 s3_shell_v2.css),
      #sceneDock 三列改两列;第三列位预留给任务 b「取货实测块」。 */
   html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(300px,1.35fr) minmax(250px,1fr)}
+
+  /* ===== 0719 任务b「存取对置 · 取货实测」块 + 三版版面(?s3b=dock|rail|axis,选定后收敛单版) ===== */
+  #opsEvidence .oeHead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  #opsEvidence .oeHead b{font-size:9.5px;color:#16191d;white-space:nowrap}
+  #opsEvidence .oeHead span{font:700 6.5px/1 Consolas,monospace;color:#69747d;letter-spacing:.5px;white-space:nowrap}
+  #opsEvidence .oePair{display:grid;gap:4px;margin-top:5px}
+  #opsEvidence .oeLeg{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:baseline}
+  #opsEvidence .oeLeg label{font-size:7.5px;color:#59656e;white-space:nowrap}
+  #opsEvidence .oeLeg b{font:800 11px/1 Consolas,monospace;color:#17202b}
+  #opsEvidence .oeLeg i{grid-column:1/-1;display:block;height:5px;background:#17365d}
+  #opsEvidence .oeStore i{width:var(--store)}
+  #opsEvidence .oeRetr i{width:calc(100% - var(--store));background:#0084a8}
+  #opsEvidence .oeGrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:6px}
+  #opsEvidence .oeGrid>div{padding:4px 6px;background:#eef1f3;min-width:0}
+  #opsEvidence .oeGrid b{display:block;font:800 11px/1 Consolas,monospace;color:#17202b}
+  #opsEvidence .oeGrid span{display:block;margin-top:2px;font-size:6.5px;color:#5d6972;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #opsEvidence .oeHot{background:#fdf3d5;box-shadow:inset 0 0 0 1px #e7b800}
+  #opsEvidence .oeNote{margin-top:4px;font-size:6.5px;line-height:1.45;color:#8a949c}
+
+  /* 甲 dock:底带第三列回归,块横向紧凑;dock 高度加高到 96px(#gl 底边自动让开) */
+  html[data-s3-b="dock"] #viewport{--scene-dock-h:96px}
+  html[data-s3-b="dock"] #sceneDock{grid-template-columns:minmax(270px,1.25fr) minmax(215px,.95fr) minmax(265px,1.05fr)}
+  html[data-s3-b="dock"] #sceneDock #opsEvidence{padding:5px 10px}
+  html[data-s3-b="dock"] #opsEvidence .oePair{grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+  html[data-s3-b="dock"] #opsEvidence .oeLeg i{height:3px}
+  html[data-s3-b="dock"] #opsEvidence .oeGrid{grid-template-columns:repeat(4,1fr);gap:2px;margin-top:3px}
+  html[data-s3-b="dock"] #opsEvidence .oeGrid>div{padding:3px 4px}
+  html[data-s3-b="dock"] #opsEvidence .oeGrid b{font-size:9px}
+  html[data-s3-b="dock"] #opsEvidence .oeGrid span{font-size:5.5px}
+  html[data-s3-b="dock"] #opsEvidence .oeNote{margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* 乙 rail:右栏卡片(insightStack 之后、货位图之前);取舍=2D 图高度让出约 130px */
+  html[data-s3-b="rail"] #workHud #opsEvidence{order:3;flex:none;background:#fff;border:1px solid #cbd2d8;padding:7px 9px}
+  html[data-s3-b="rail"] #slotMapWrap{order:4}
+  html[data-s3-b="rail"] #phaseRail{order:5}
+
+  /* 丙 axis:进度轴正下方横条带(浮于 3D 场景上缘,scene-first 的「作业指标带」) */
+  html[data-s3-b="axis"] #opsEvidence{position:absolute;z-index:8;top:calc(var(--topbar-h) + var(--axis-h) + 10px);
+    left:14px;width:auto;max-width:680px;display:flex;align-items:stretch;gap:12px;padding:6px 12px 7px;
+    background:#ffffffe8;border:1px solid #aeb8bf;border-top:3px solid var(--abb-red);box-shadow:0 6px 18px #17202b1f}
+  html[data-s3-b="axis"] #opsEvidence .oeHead{flex:none;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px}
+  html[data-s3-b="axis"] #opsEvidence .oePair{flex:none;grid-template-columns:110px 110px;gap:8px;margin-top:0;align-content:center}
+  html[data-s3-b="axis"] #opsEvidence .oeLeg i{height:3px}
+  html[data-s3-b="axis"] #opsEvidence .oeGrid{flex:1;grid-template-columns:repeat(4,minmax(78px,1fr));gap:3px;margin-top:0}
+  html[data-s3-b="axis"] #opsEvidence .oeNote{display:none}
+
   /* 0719 窄高视口:左栏 L1 块紧缩,把省下的高度全部让给 2D 货位图
      (1366×720 实测每格 7.8px,不可读;只动 padding/字号,不动结构与列数)。 */
   @media(max-height:780px){
