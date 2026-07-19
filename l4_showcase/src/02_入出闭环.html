@@ -106,15 +106,15 @@
   #phaseRail .phaseTitle{font-size:9.5px;color:var(--rail-muted,#65717c)}#phaseSegments{height:25px}
   .phaseSeg{font-size:9px}.phaseSeg.active{box-shadow:inset 0 0 0 2px #0f2740}.phaseSeg:nth-child(2).active{background:var(--accent,#17365d)}
   #legend{display:none!important}
-  #railFacts{order:7;margin-top:0;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rail-line,#c6ced5);border:1px solid var(--rail-line,#c6ced5)}
-  #railFacts div{padding:9px 8px;background:var(--card,#fff)}#railFacts b{display:block;font:700 14px/1 Consolas,monospace;color:var(--rail-ink,#15202b)}
-  #railFacts span{display:block;margin-top:5px;font-size:8.5px;color:var(--rail-muted,#65717c)}
+  
+  
+  
   #slotMapWrap{order:4;flex:1 1 240px;min-height:220px;display:flex;flex-direction:column;overflow:hidden;
     padding:10px 11px 9px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
   #slotMapWrap .mapHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   #slotMapWrap .mapHead b{display:block;font-size:11px;line-height:1.2}#slotMapWrap .mapHead span{display:block;margin-top:3px;color:var(--rail-muted,#65717c);font:8.5px/1.25 Consolas,monospace}
   #slotMapWrap .mapHead strong{font:800 18px/1 Consolas,monospace;color:var(--rail-ink,#17202b)}
-  #slotMapWrap .mapRule{display:flex;align-items:center;gap:7px;margin-top:7px;padding:5px 7px;background:#eef1f3;color:#35414a;font:700 9px/1.2 Consolas,"Microsoft YaHei",monospace}
+  
   #slotMapWrap .hatch{width:18px;height:10px;flex:none;background:repeating-linear-gradient(135deg,#65727d 0 3px,#a8b1b8 3px 5px)}
   /* P2a:#slotMap 的 gen1 弹性布局(flex:1 1 auto;min-height:120px)已删——正是 A 壳规则被迫用
      !important 反制的对手;保留非布局部分。 */
@@ -162,13 +162,13 @@
   /* P1(0719 层积根治):data-style B/C 两代死块已删——dataset.style 唯一赋值点硬编码 'A'(本页 script),
      B/C 永不可达;其中还藏着废止黄牌 #targetBeacon 的两条装饰样式(0717 #28 已废止),一并清除。
      git 历史可找回;风格重启用请走 tokens 层,勿复活多代并存。 */
-  @media(max-width:1200px){#workHud{padding:18px 16px 14px;gap:9px}#railHead h1{font-size:18px}#liveChartWrap{min-height:116px}#speed{height:80px}#railFacts div{padding:7px 6px}}
+  @media(max-width:1200px){#workHud{padding:18px 16px 14px;gap:9px}#railHead h1{font-size:18px}#liveChartWrap{min-height:116px}#speed{height:80px}}
   @media(max-height:800px){#workHud{padding:12px 14px 10px;gap:7px}#railHead{padding-bottom:7px}#railHead h1{font-size:18px;margin-top:2px}
     #taskline{padding:8px 9px}#taskline .primary{margin-top:3px;font-size:12px}#actionBadge{margin-top:6px;padding:4px 7px}#taskline .metaRow{margin-top:5px}
     #axisHud{padding:7px 9px}#axisHud b{margin-bottom:3px}#axisHud .axis{margin:4px 0}#axisHud .axis span:last-child{font-size:10px}
-    #slotMapWrap{min-height:145px;padding:7px 8px 6px}#slotMapWrap .mapRule{margin-top:4px;padding:3px 6px}#slotMapWrap .mapKey{margin-top:2px}
+    #slotMapWrap{min-height:145px;padding:7px 8px 6px}#slotMapWrap .mapKey{margin-top:2px}
     #liveChartWrap{min-height:94px;padding:6px 8px 4px}#speed{height:66px;margin-top:2px}#phaseRail{padding:6px 8px}#phaseSegments{height:21px}
-    #railFacts div{padding:5px 6px}#railFacts b{font-size:12px}#railFacts span{margin-top:3px}#sceneCaption{bottom:10px}}
+    #sceneCaption{bottom:10px}}
 
   /* A+C：算法证据与档3事件流共用左栏；无独立数据页、无第二摄像头。 */
   #workHud{gap:8px;padding:16px 16px 12px}
@@ -209,7 +209,7 @@
   #slotMapWrap{order:6;flex:1 1 180px;min-height:155px;padding:8px 9px 6px}
   #liveChartWrap{order:7;min-height:82px;padding:6px 8px 4px}#speed{height:58px;margin-top:2px}
   #phaseRail{order:8;padding:6px 8px}#phaseSegments{height:22px}.phaseSeg{font-size:8px}
-  #railFacts{order:9}#railFacts div{padding:6px}#railFacts b{font-size:12px}
+  
   #targetBeacon{min-width:132px;max-width:170px;padding:9px 11px;font-size:11px;box-shadow:0 4px 14px #17202b2b}
   #targetBeacon b{font-size:12px}
   #sceneCaption{font-size:9px;letter-spacing:.1px}
@@ -234,7 +234,7 @@
   #axisHud .axis span:last-child{font-size:9px}#axisHud .axis i{height:4px}
   #slotMapWrap{grid-area:map;min-width:0;min-height:0;padding:7px 8px 6px;overflow:hidden}
   #slotMapWrap .mapHead b{font-size:9.5px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:15px}
-  #slotMapWrap .mapRule{margin-top:4px;padding:3px 5px;font-size:7.5px}#slotMapWrap .hatch{width:15px;height:8px}
+  #slotMapWrap .hatch{width:15px;height:8px}
   #slotMap{margin-top:4px}#slotMapWrap .mapKey{gap:5px;margin-top:3px;font-size:7px;line-height:1.15} /* P2a:min-height:72px 已删(A壳!important 对手) */
   #slotMapWrap .mapKey i{width:8px;height:8px;margin-right:2px}.mapKey .gradeChips i{width:6px;height:8px}
   #insightStack{grid-area:insight;min-width:0;min-height:0;display:grid;gap:5px;align-content:stretch;
@@ -248,7 +248,7 @@
   #phaseRail .phaseTitle{font-size:7.5px;margin-bottom:3px;gap:4px}#phaseNow{font-weight:700;color:#17365d;white-space:nowrap}
   #phaseSegments{height:18px;gap:2px}.phaseSeg{font:800 7.5px/1 Consolas,monospace} /* P3:columns!important 死分量删(594 压制) */
   .phaseName{display:none}
-  #railFacts{margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:4px 3px}#railFacts b{font-size:9px}#railFacts span{margin-top:2px;font-size:6.5px}
+  
   #traceStats{position:relative;min-width:0;padding:5px 6px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff);overflow:visible}
   #traceStats .statsHead{display:flex;justify-content:space-between;gap:4px;align-items:center;margin-bottom:4px}
   #traceStats .statsHead b{font-size:8px}#traceStats .statsHead span{color:#69747d;font:6.5px/1 Consolas,monospace;white-space:nowrap}
@@ -274,7 +274,7 @@
     #decisionWrap{padding:5px 6px}#decisionWrap .proofLead{display:none}#axisHud{padding:5px 6px}#axisHud .axis{margin:3px 0}
     #slotMapWrap{padding:5px 6px 4px}#insightStack{gap:3px;grid-template-rows:auto minmax(36px,.6fr) auto auto auto}
     #queueCard,#traceStats{padding:4px 5px}#liveChartWrap{padding:4px 5px 2px}#phaseRail{padding:4px 5px}#phaseSegments{height:15px}
-    #traceStats .statsGrid{gap:2px}.metricHelp{padding:3px 2px}#railFacts div{padding:3px 2px}
+    #traceStats .statsGrid{gap:2px}.metricHelp{padding:3px 2px}
   }
   @media(min-width:1600px) and (min-height:900px){
     #workHud{padding:16px 18px 14px;gap:10px 12px;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}
@@ -292,7 +292,7 @@
     #axisHud{padding:10px 11px;font-size:10px}#axisHud b{font-size:9px;margin-bottom:7px}#axisHud .axis{grid-template-columns:18px 1fr 54px;gap:7px;margin:8px 0}
     #axisHud .axis span:last-child{font-size:10px}#axisHud .axis i{height:5px}
     #slotMapWrap{align-self:start;padding:11px 12px 9px}#slotMapWrap .mapHead b{font-size:11px}#slotMapWrap .mapHead span{font-size:8.5px}
-    #slotMapWrap .mapHead strong{font-size:18px}#slotMapWrap .mapRule{margin-top:7px;padding:5px 7px;font-size:8.5px}
+    #slotMapWrap .mapHead strong{font-size:18px}
     #slotMap{flex:none;height:auto;min-height:0;aspect-ratio:1/1;margin-top:7px}#slotMapWrap .mapKey{gap:8px;margin-top:6px;font-size:8px;line-height:1.25}
     #insightStack{gap:8px;grid-template-rows:auto 130px 170px auto auto;align-content:start}
     #queueCard{padding:7px 8px}#queueCard .qHead{font-size:8px}#queueCard .qHead b{font-size:9px}#queueStrip{min-height:20px;margin-top:5px}
@@ -302,7 +302,7 @@
     .phaseName{display:inline;font:700 8.5px/1 "Microsoft YaHei",sans-serif}#phaseCursor{display:none}
     #traceStats{padding:7px 8px}#traceStats .statsHead{margin-bottom:6px}#traceStats .statsHead b{font-size:9px}#traceStats .statsHead span{font-size:7px}
     #traceStats .statsGrid{gap:4px}.metricHelp{padding:5px 4px}.metricHelp b{font-size:11px}.metricHelp small{font-size:7px}
-    #railFacts div{padding:6px 4px}#railFacts b{font-size:11px}#railFacts span{font-size:7px}
+    
   }
   /* 1600×900 仍保留宽栏与较大字号，但高度不足以容纳七步纵列；恢复横条可避免 132 px 真实溢出。 */
   @media(min-width:1600px) and (min-height:900px) and (max-height:999px){
@@ -313,7 +313,7 @@
     #decisionWrap{padding:7px 8px}#decisionWrap .selectionSummary{margin-top:4px;padding:4px 5px}
     #decisionWrap .proofLead{margin-top:4px;padding:4px 5px}#decisionWrap .routeSignals{margin-top:4px}
     #axisHud{padding:7px 8px}#axisHud b{margin-bottom:4px}#axisHud .axis{margin:5px 0}
-    #slotMapWrap{padding:8px 9px 6px}#slotMapWrap .mapRule{margin-top:5px;padding:4px 6px}#slotMap{margin-top:5px}
+    #slotMapWrap{padding:8px 9px 6px}#slotMap{margin-top:5px}
     #insightStack{grid-template-rows:auto 130px auto auto auto}
     #phaseSegments{height:23px;gap:2px} /* P3:columns 死分量删 */
     .phaseSeg{justify-content:center;min-height:0;padding:0;font-size:8px}
@@ -348,10 +348,10 @@
   #decisionWrap .weightNote{margin-top:4px;padding:4px 5px;font-size:7.5px}
   #slotMapWrap{min-width:0;padding:8px 9px 7px;border:1px solid #bfc7cd;background:#fff;overflow:hidden} /* P2b:grid-area/min-height→A 壳 order 段 */
   #slotMapWrap .mapHead b{font-size:10px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:16px}
-  #slotMapWrap .mapRule{margin-top:5px;padding:4px 6px;font-size:7.5px}#slotMap{min-height:110px;margin-top:5px}
+  #slotMap{min-height:110px;margin-top:5px}
   #slotMapWrap .mapKey{gap:6px;margin-top:4px;font-size:7px;line-height:1.15}
   #insightStack{min-width:0;min-height:0;overflow:visible} /* P2b:display:grid/gap/align-content→A 壳 block 化 */
-  #railFacts{order:1;margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:6px 4px}#railFacts b{font-size:10px}#railFacts span{font-size:6.5px}
+  
   #queueCard{order:2;min-width:0;padding:6px 7px}#queueCard .qHead{font-size:7px}#queueCard .qHead b{font-size:8px}
   #queueStrip{min-height:18px;margin-top:4px;gap:3px}#queueStrip span{min-width:34px;padding:4px 2px;font-size:7px}#queueStrip em{font-size:7px}
   #traceStats{order:3;min-width:0;min-height:0;padding:6px 7px;overflow:visible;display:flex;flex-direction:column}
@@ -418,10 +418,10 @@
   #decisionWrap .weightGrid .metricHelp b{font-size:10px}#decisionWrap .weightGrid .metricHelp small{font-size:8px}
   #decisionWrap .weightNote{margin-top:6px;padding:5px 6px;font-size:8.5px;line-height:1.35}
   #slotMapWrap{padding:8px 9px 7px}#slotMapWrap .mapHead b{font-size:11px}#slotMapWrap .mapHead span{font-size:8.5px}
-  #slotMapWrap .mapHead strong{font-size:17px}#slotMapWrap .mapRule{margin-top:5px;padding:5px 6px;font-size:9px}
+  #slotMapWrap .mapHead strong{font-size:17px}
   #slotMap{min-height:110px;margin-top:5px}#slotMapWrap .mapKey{gap:7px;margin-top:5px;font-size:9px;line-height:1.25}
   #insightStack{gap:5px}
-  #railFacts div{padding:6px 4px}#railFacts b{font-size:11px}#railFacts span{font-size:9px}
+  
   #queueCard{padding:6px 7px}#queueCard .qHead{font-size:9px}#queueCard .qHead b{font-size:9.5px}
   #queueStrip{min-height:22px;margin-top:4px;gap:4px}#queueStrip span{min-width:44px;padding:5px 4px;font-size:9px}#queueStrip em{font-size:9px}
   #traceStats{padding:6px 7px}#traceStats .statsHead{margin-bottom:5px}#traceStats .statsHead b{font-size:9.5px}
@@ -709,6 +709,39 @@
   #evidenceDock #judgePath,#evidenceDock #comparisonMini{margin-top:12px}
   #openEvidenceDock[aria-haspopup="dialog"]{white-space:nowrap}
 
+  /* ===== 0719 功能批次(甲·地图王):sparkline / 故障红点 / 口径小字 / 复现指纹 / PLC 徽章 / 叠层扩容 ===== */
+  #respSpark{margin-top:6px;background:#fff;border:1px solid #cbd2d8;padding:6px 9px 5px}
+  #respSpark .sparkHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  #respSpark .sparkHead b{font-size:9.5px;color:#16191d}
+  #respSpark .sparkHead span{font:7px/1 Consolas,"Microsoft YaHei",monospace;color:#65717c}
+  #respSpark canvas{display:block;width:100%;height:26px}
+  #cycleAxisTrack .axisFaultDot{position:absolute;top:10px;width:15px;height:15px;margin-left:-7.5px;padding:0;
+    border:2px solid #fff;border-radius:50%;background:#c62828;box-shadow:0 0 0 2px #c62828;cursor:pointer}
+  #cycleAxisTrack .axisFaultDot:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+  #cycleAxisTrack .axisFaultDot i{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+    font:900 8px/1 Consolas,monospace;color:#c62828;font-style:normal;white-space:nowrap}
+  .metricHelp .statCaliber{display:block;margin-top:2px;font:400 6.5px/1.2 "Microsoft YaHei",sans-serif;color:#8a6d00;font-style:normal}
+  .statFinger{margin-top:4px;font:7px/1.3 Consolas,monospace;color:#65717c}
+  .metricHelp.statJump{cursor:pointer;box-shadow:inset 0 0 0 1px #c6282833}
+  #plcFeasBadge{margin-left:8px;padding:3px 8px;border:1px dashed #8a96a1;font-size:9px;color:#5a6771;background:#f2f4f6;white-space:nowrap;align-self:center;flex:none}
+  #evFaultCard{margin-top:12px;background:#fff7f5;border:1px solid #e2b8b0;border-left:3px solid #c62828;padding:8px 10px;font-size:9px;color:#3a2b28}
+  #evFaultCard[hidden]{display:none}
+  #evFaultCard b{display:block;font-size:10px;color:#8e1f14;margin-bottom:3px}
+  #evFaultCard span{display:block;line-height:1.45}
+  #evFaultCard button{margin-top:6px;height:24px;padding:0 10px;border:1px solid #8e1f14;background:#fff;color:#8e1f14;font:700 9px/1 "Microsoft YaHei",sans-serif;cursor:pointer}
+  #evCiPanel{margin-top:12px;background:#fff;border:1px solid #cbd2d8;padding:8px 10px;font-size:9px}
+  #evCiPanel>b{display:block;font-size:10px;color:#16191d;margin-bottom:4px}
+  #evCiPanel .ciRow{display:flex;align-items:center;gap:6px;margin-top:4px}
+  #evCiPanel .ciRow>span:first-child{width:44px;font-weight:700;color:#15202b}
+  #evCiPanel .ciTrack{flex:1;position:relative;height:10px;background:#eef1f4}
+  #evCiPanel .ciTrack i{position:absolute;top:3px;height:4px}
+  #evCiPanel .ciTrack .ciMean{top:0;width:2px;height:10px}
+  #evCiPanel .ciRow code{width:78px;font:700 8.5px/1 Consolas,monospace;color:#26343e;text-align:right}
+  #evCiPanel .ciDelta{margin-top:5px;font:800 9.5px/1 Consolas,monospace;color:#0b5c2e}
+  #evCiPanel .ciNote{margin-top:3px;font-size:6.5px;line-height:1.4;color:#65717c}
+  #evidenceDock .decisionAdvanced{margin-top:12px}
+  #evidenceDock .decisionAdvanced .advancedBody{position:static;box-shadow:none;border:1px solid #d7dce0;margin-top:4px}
+
   /* -- 大屏:顶栏/轴条略高 -- */
   @media(min-width:1600px) and (min-height:860px){
     html{--topbar-h:50px;--axis-h:62px}
@@ -768,8 +801,8 @@
      (1366×720 实测每格 7.8px,不可读;只动 padding/字号,不动结构与列数)。 */
   @media(max-height:780px){
     #workHud{gap:5px}
-    #railFacts div{padding:4px 5px}
-    #railFacts b{font-size:11px}
+    
+    
     #traceStats .metricHelp{padding:3px 4px}
     #traceStats .metricHelp b{font-size:9.5px}
     #traceStats .metricHelp small{margin-top:1px;font-size:6px}
@@ -844,10 +877,10 @@ const rail=document.getElementById('workHud'),viewportEl=document.getElementById
 const railHead=document.createElement('div');railHead.id='railHead';railHead.innerHTML=`<div class="brandLock"><span class="abbWord">ABB</span><div><div class="eyebrow">${VISUAL.sub}</div><h1>${VISUAL.name}</h1></div></div><div class="matrix">20 × 20<br>SIM / T3</div>`;rail.prepend(railHead);
 const speedCanvas=document.createElement('canvas'),liveChartWrap=document.createElement('section');speedCanvas.id='speed';liveChartWrap.id='liveChartWrap';
 liveChartWrap.innerHTML='<div class="cap"><b>双轴速度</b><span>X / Z · m/s</span></div>';liveChartWrap.append(speedCanvas);
-const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><div class="mapRule"><i class="hatch"></i><span>(列 + 层) mod 3 = 0 → 预占禁用</span></div><canvas id="slotMap"></canvas><div class="mapKey"><span><i class="free"></i>可用空位</span><span><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
-const railFacts=document.createElement('section');railFacts.id='railFacts';railFacts.innerHTML='<div><b id="factCycle">-- / 100</b><span>混合周期</span></div><div><b id="factQueue">--</b><span>等待队列</span></div><div><b id="factAlarm">--</b><span>活动故障</span></div>';
+const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><canvas id="slotMap"></canvas><div class="mapKey"><span title="(列 + 层) mod 3 = 0 的货位预留为运维通道,启动即封板,不参与分配"><i class="hatch"></i>预占封板</span><span><i class="free"></i>可用空位</span><span><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
+/* 0719 功能批次:railFacts 三格删——周期计数由 runtime 直写 #cycleAxisCount,等待/故障与统计块重复(docs/02功能零基审计_0719.md 1b) */
 const traceStats=document.createElement('section');traceStats.id='traceStats';traceStats.setAttribute('aria-label','当前单 seed trace 统计');
-const insightStack=document.createElement('section');insightStack.id='insightStack';insightStack.append(railFacts,traceStats);
+const insightStack=document.createElement('section');insightStack.id='insightStack';insightStack.append(traceStats);
 rail.append(slotMapWrap,insightStack,document.getElementById('phaseRail'),document.getElementById('legend'));
 const sceneDock=document.createElement('section');sceneDock.id='sceneDock';sceneDock.setAttribute('aria-label','三维作业证据与画面控制');viewportEl.append(sceneDock);
 const sceneCaption=document.createElement('div');sceneCaption.id='sceneCaption';sceneCaption.innerHTML='<span class="dockLabel">当前作业</span><span id="sceneActionMeta">步骤 --/7 · 缩时演示 · SIM</span><b id="sceneActionText">等待同源轨迹</b><span id="sceneCargoMeta">货物与时间口径载入中</span>';sceneDock.append(sceneCaption);
@@ -1289,6 +1322,7 @@ resizeScene();
 </script>
 <script src="../out/s3_trace_manifest.js"></script>
 <script src="../out/s1_comparison_evidence.js"></script>
+<script src="../out/s3_mixed_dispatch_sweep.js"></script>
 <script src="./s3_trace_store.js"></script>
 <script src="./s3_ac_runtime.js"></script>
 <script src="./s3_mixed_layout_a_interactions.js"></script>

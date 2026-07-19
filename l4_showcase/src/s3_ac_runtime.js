@@ -1124,7 +1124,7 @@
       }
     }
 
-    function metricChip(label, value, description) {
+    function metricChip(label, value, description, sub) {
       const button = doc.createElement("button"), number = doc.createElement("b");
       const caption = doc.createElement("small"), tip = doc.createElement("span");
       const tipId = `s3-tip-${++tooltipSerial}`;
@@ -1132,6 +1132,7 @@
       button.setAttribute("aria-label", `${label} ${value}；按 Enter 或空格查看定义`);
       button.setAttribute("aria-describedby", tipId); button.setAttribute("aria-expanded", "false");
       number.textContent = value; caption.textContent = label;
+      if (sub) { const caliber = doc.createElement("i"); caliber.className = "statCaliber"; caliber.textContent = sub; caption.append(caliber); }
       tip.id = tipId; tip.className = "tipBubble"; tip.setAttribute("role", "tooltip"); tip.textContent = description;
       button.append(number, caption, tip);
       const setOpen = open => {
@@ -1179,7 +1180,13 @@
         if (event.key !== "Escape" || !advanced.open) return;
         event.preventDefault(); advanced.removeAttribute("open"); advancedSummary.focus();
       });
-      host.append(head, selection, reason, advanced);
+      /* 0719 功能批次 D4:AUTO 参数展开器移入证据叠层(ISA-101 L3 细节层);常驻卡只留策略行 */
+      host.append(head, selection, reason);
+      const evPanel = doc.querySelector("#evidenceDock .evidencePanel");
+      if (evPanel) {
+        const oldAdvanced = evPanel.querySelector(".decisionAdvanced"); if (oldAdvanced) oldAdvanced.remove();
+        evPanel.append(advanced);
+      } else host.append(advanced);
 
       if (router.online_strategy === "score") {
         const weights = trace.meta.score_weights && trace.meta.score_weights.online;
@@ -1214,19 +1221,185 @@
       scope.title = "当前 trace；不与 S1 多 seed 聚合合并"; head.append(title, scope);
       const grid = doc.createElement("div"); grid.className = "statsGrid";
       const tierBoundary = trace.meta.tier === 3 ? "Tier 3 响应包含等待、装卸与故障恢复。" : `Tier ${trace.meta.tier} 不包含 Tier 3 的等待、装卸与故障恢复。`;
+      /* N1 行程格:闭环曼哈顿长度(I/O(0,0)→存→取→I/O),格间距 1 m,口径 C2 与 AB 侧 FC_CalcPathLen 同源 */
+      const manhTotal = trace.events.reduce((sum, ev) => sum
+        + ev.store_slot.col + ev.store_slot.tier
+        + Math.abs(ev.retrieve_slot.col - ev.store_slot.col) + Math.abs(ev.retrieve_slot.tier - ev.store_slot.tier)
+        + ev.retrieve_slot.col + ev.retrieve_slot.tier, 0);
       const metrics = [
         ["响应 P50", `${Number(stats.response_p50_s).toFixed(1)} s`, `当前 100 周期单 seed 响应时间的中位数。${tierBoundary}`],
-        ["响应 P95", `${Number(stats.response_p95_s).toFixed(1)} s`, `当前 100 周期单 seed 响应时间的 95 分位数。${tierBoundary}`],
+        ["响应 P95", `${Number(stats.response_p95_s).toFixed(1)} s`, `当前 100 周期单 seed 响应时间的 95 分位数。${tierBoundary}`,
+          trace.meta.tier === 3 ? "口径:含队列等待·装卸·故障恢复" : null],
         ["设备利用率", `${(Number(stats.utilization) * 100).toFixed(1)}%`, "当前 trace 的 productive busy time / performance finish time；busy 为双轴作业忙时，不含故障停机。"],
         ["峰值等待", String(stats.queue_peak_waiting), "当前 trace 全程的最大等待队列长度，只计 waiting，不含正在作业的货物。"],
-        ["模型故障", String(stats.faults), "当前 trace 中由 sim 故障流建模出的故障次数，不代表现场 PLC 故障实测。"],
-        ["约束违规", String(stats.violations), "当前 trace 的硬约束违规计数；验收要求为 0。"]
+        ["模型故障", String(stats.faults), `当前 trace 中由 sim 故障流建模出的故障次数，不代表现场 PLC 故障实测。${Number(stats.faults) > 0 ? "点击跳到故障回放。" : ""}`],
+        ["约束违规", String(stats.violations), "当前 trace 的硬约束违规计数；验收要求为 0。"],
+        ["周期均行程", `${(manhTotal / Math.max(1, trace.events.length)).toFixed(1)} m`,
+          `闭环行程(入库+交织+出库)的曼哈顿长度周期均值，格间距 1 m。口径 C2：与 AB 画面 FB_Stats.PathLength 同源，与时间指标并列呈现不混用。百周期总行程 ${manhTotal} m。`]
       ];
-      metrics.forEach(([label, value, description]) => grid.append(metricChip(label, value, description)));
-      host.append(head, grid);
+      metrics.forEach(([label, value, description, sub]) => {
+        const chip = metricChip(label, value, description, sub);
+        if (label === "模型故障" && Number(stats.faults) > 0) {
+          chip.classList.add("statJump");
+          chip.addEventListener("click", () => { try { root.__S3_QA.seekFault(0); } catch (error) {} });
+        }
+        grid.append(chip);
+      });
+      /* N3 复现指纹:seed + trace_id + 口径批。sim_only 由 trace 断言保证 */
+      const finger = doc.createElement("div"); finger.className = "statFinger";
+      finger.textContent = `复现:seed ${trace.meta.seed} · ${trace.meta.trace_id || "trace"} · sim_only · 统计口径同批 ${trace.meta.cycles} 周期`;
+      host.append(head, grid, finger);
       const judgeEvidence = byId("judgeEvidence"), judgeEvidenceMeta = byId("judgeEvidenceMeta");
       if (judgeEvidence) judgeEvidence.textContent = `P95 ${Number(stats.response_p95_s).toFixed(1)}s · 违规 ${stats.violations}`;
       if (judgeEvidenceMeta) judgeEvidenceMeta.textContent = `S3 单 seed · 故障 ${stats.faults}；S1 10 seeds 对照另列`;
+      renderOpsEvidence(trace);
+      renderRespSpark(trace);
+      renderFaultMarks(trace);
+      renderEvidenceExtras(trace);
+    }
+
+    /* M2 响应趋势 sparkline:数据=trace.events[].response(与批统计同源),P95 参考线=stats.response_p95_s(同口径,不另算分位)。 */
+    function renderRespSpark(trace) {
+      let host = byId("respSpark");
+      if (!host) {
+        const statsHost = byId("traceStats");
+        if (!statsHost || !statsHost.parentElement) return;
+        host = doc.createElement("section"); host.id = "respSpark"; statsHost.after(host);
+      }
+      const p95 = Number(trace.stats.response_p95_s);
+      host.innerHTML = `<div class="sparkHead"><b>响应时间趋势 · ${trace.events.length} 周期</b><span>虚线 = P95 ${p95.toFixed(1)}s(同批口径)· 红点 = 故障周期</span></div>`;
+      const canvas = doc.createElement("canvas"); host.append(canvas);
+      const width = Math.max(60, host.clientWidth - 18), height = 26, dpr = 2;
+      canvas.style.width = "100%"; canvas.style.height = `${height}px`;
+      canvas.width = Math.round(width * dpr); canvas.height = height * dpr;
+      const ctx = canvas.getContext("2d"); ctx.scale(dpr, dpr);
+      const values = trace.events.map(ev => Number(ev.response));
+      const max = Math.max(p95, ...values), pad = 2, n = values.length;
+      const X = i => pad + (n > 1 ? i / (n - 1) : 0) * (width - pad * 2);
+      const Y = v => height - pad - (max > 0 ? v / max : 0) * (height - pad * 2);
+      ctx.strokeStyle = "#c9a227"; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(pad, Y(p95)); ctx.lineTo(width - pad, Y(p95)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = "#17365d"; ctx.lineWidth = 1.1; ctx.beginPath();
+      values.forEach((v, i) => { if (i) ctx.lineTo(X(i), Y(v)); else ctx.moveTo(X(0), Y(v)); }); ctx.stroke();
+      ctx.fillStyle = "#c62828";
+      trace.events.forEach((ev, i) => { if (ev.faulted) { ctx.beginPath(); ctx.arc(X(i), Y(values[i]), 2.4, 0, 7); ctx.fill(); } });
+    }
+
+    /* M1 故障周期标记:轴行红点(按周期号百分比定位),点击经公开 API seekFault 跳到该故障回放。幂等:每次重渲清旧点。 */
+    function renderFaultMarks(trace) {
+      const track = byId("cycleAxisTrack"); if (!track) return;
+      track.querySelectorAll(".axisFaultDot").forEach(el => el.remove());
+      let faultOrder = -1;
+      trace.events.forEach(ev => {
+        if (!ev.faulted) return;
+        faultOrder += 1; const orderNow = faultOrder;
+        const dot = doc.createElement("button"); dot.type = "button"; dot.className = "axisFaultDot";
+        dot.style.left = `${(ev.cycle_number / trace.meta.cycles * 100).toFixed(2)}%`;
+        dot.title = `故障周期 #${ev.cycle_number} · 点击跳到故障回放`;
+        dot.setAttribute("aria-label", dot.title);
+        const tag = doc.createElement("i"); tag.textContent = `⚠ ${ev.cycle_number}`; dot.append(tag);
+        dot.addEventListener("click", event => {
+          event.stopPropagation();
+          try { root.__S3_QA.seekFault(orderNow); } catch (error) {}
+        });
+        track.append(dot);
+      });
+    }
+
+    /* N4 故障卡 + N2 差值 CI(叠层,甲版收纳)。CI 数据源=out/s3_mixed_dispatch_sweep.js(30 seed 调度 sweep,
+       独立于 S1 矩阵与当前 trace——manifest 红线 do_not_compare_or_merge,故只在叠层独立面板呈现并标注口径)。 */
+    function renderEvidenceExtras(trace) {
+      const panel = doc.querySelector("#evidenceDock .evidencePanel"); if (!panel) return;
+      let fault = byId("evFaultCard");
+      if (!fault) { fault = doc.createElement("section"); fault.id = "evFaultCard"; panel.append(fault); }
+      const faultEv = trace.events.find(item => item.faulted);
+      if (faultEv) {
+        const mttr = trace.meta.tier3_params ? Number(trace.meta.tier3_params.fault_mttr_s) : null;
+        fault.hidden = false;
+        fault.innerHTML = `<b>故障演示 · 第 ${faultEv.cycle_number} 周期</b><span>${mttr ? `停机 ${mttr}s(MTTR 模型)· ` : ""}该周期响应 ${Number(faultEv.response).toFixed(0)}s;可跳到故障回放复验「停机 → 队列积压 → 恢复消化」全过程。</span><button type="button" id="evFaultJump">跳到故障回放</button>`;
+        fault.querySelector("#evFaultJump").addEventListener("click", () => {
+          try { root.__S3_QA.seekFault(0); const close = byId("closeEvidenceDock"); if (close) close.click(); } catch (error) {}
+        });
+      } else { fault.hidden = true; fault.innerHTML = ""; }
+      let ci = byId("evCiPanel");
+      if (!ci) { ci = doc.createElement("section"); ci.id = "evCiPanel"; panel.append(ci); }
+      const sweep = root.S3_MIXED_DISPATCH_SWEEP;
+      if (!sweep || !Array.isArray(sweep.rows) || !sweep.rows.length) {
+        ci.innerHTML = '<b>多 seed 稳健性</b><div class="ciNote">sweep 证据未加载(out/s3_mixed_dispatch_sweep.js)。</div>'; return;
+      }
+      const rows = sweep.rows;
+      if (rows.length !== 30) { ci.innerHTML = `<b>多 seed 稳健性</b><div class="ciNote">seed 数 ${rows.length} ≠ 30,t 临界值须更新后才能出 CI(拒绝近似)。</div>`; return; }
+      const T_CRIT = 2.045; /* t(0.975, df=29) */
+      const st = arr => { const n = arr.length, m = arr.reduce((a, b) => a + b, 0) / n;
+        const sd = Math.sqrt(arr.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1)); return { n, m, sd, half: T_CRIT * sd / Math.sqrt(n) }; };
+      const diff = st(rows.map(r => r.lanes.seq.avg_retr_s - r.lanes.score.avg_retr_s));
+      const seq = st(rows.map(r => r.lanes.seq.avg_retr_s)), sco = st(rows.map(r => r.lanes.score.avg_retr_s));
+      let fails = 0, viol = 0; rows.forEach(r => Object.values(r.lanes).forEach(lane => { fails += lane.fails; viol += lane.viol; }));
+      const span = 24;
+      const pct = v => Math.max(0, Math.min(100, v / span * 100)).toFixed(1);
+      const bar = (label, s, color) =>
+        `<div class="ciRow"><span>${label}</span><span class="ciTrack"><i style="left:${pct(s.m - s.sd)}%;width:${(pct(s.m + s.sd) - pct(s.m - s.sd)).toFixed(1)}%;background:${color}55"></i><i class="ciMean" style="left:${pct(s.m)}%;background:${color}"></i></span><code>${s.m.toFixed(1)}±${s.sd.toFixed(1)}s</code></div>`;
+      ci.innerHTML = `<b>多 seed 稳健性 · ${rows.length} seed × ${sweep.cycles} 周期</b>`
+        + bar("SEQ", seq, "#8a96a1") + bar("SCORE", sco, "#0057b8")
+        + `<div class="ciDelta">Δ=${diff.m.toFixed(2)}s,95%CI [${(diff.m - diff.half).toFixed(2)}, ${(diff.m + diff.half).toFixed(2)}](配对 t,df=29)</div>`
+        + `<div class="ciNote">口径:调度 sweep 单趟平均取货响应(${sweep.schema});独立数据源,不与 S1 对照或本页批统计直接比较。全体 fails=${fails}、violations=${viol}。横条 = 均值±1sd,量程 0-${span}s。</div>`;
+    }
+
+    /* 0719 任务b · 存取对置 + 取货实测(零改数据,全部由已加载 trace 现算,可复现):
+       - 腿时长 = 七步 process_steps 的 SIM 时刻差(t1-t0),与 trace.stats 同源;
+         入库腿 = INBOUND_TRAVEL+STORE_HANDLE;取货腿 = LINK_TRAVEL+RETRIEVE_HANDLE+OUTBOUND_TRAVEL。
+       - 热门集合 = cargo_catalog.freq_true 降序前 20%(与 3D 热区 hotGids 同定义,独立重算避免闭包耦合);
+         热门/非热门取货均时按 event.outbound_gid 分组 —— 「热门放得近 → 取得快」的直接证据。
+       - 省一趟 = 逐周期「store→I/O→retrieve 两段」−「store→retrieve 直达(交织)」,
+         用运行时自己的 axisTime(VX/AX/VZ/AZ,双轴同动取 max)按 trace.meta.motion 口径折算 —— 复用官方运动学,非自建模型。 */
+    function buildOpsEvidence(trace) {
+      const catalog = Array.isArray(trace.cargo_catalog) ? trace.cargo_catalog : [];
+      const sorted = catalog.slice().sort((a, b) => Number(b.freq_true) - Number(a.freq_true));
+      const hot = new Set(sorted.slice(0, Math.max(1, Math.floor(sorted.length / 5))).map(row => row.gid));
+      const motion = trace.meta.motion;
+      const leg = (a, b) => Math.max(axisTime(Math.abs(b[0] - a[0]), VX, AX, motion), axisTime(Math.abs(b[1] - a[1]), VZ, AZ, motion));
+      let storeSum = 0, retrSum = 0, linkSum = 0, savedSum = 0, hotSum = 0, hotN = 0, coldSum = 0, coldN = 0;
+      trace.events.forEach(event => {
+        const bySteps = new Map(event.process_steps.map(step => [step.name, step]));
+        const span = key => { const step = bySteps.get(key); return step ? Number(step.t1) - Number(step.t0) : 0; };
+        const storeLeg = span("INBOUND_TRAVEL") + span("STORE_HANDLE");
+        const retrLeg = span("LINK_TRAVEL") + span("RETRIEVE_HANDLE") + span("OUTBOUND_TRAVEL");
+        storeSum += storeLeg; retrSum += retrLeg; linkSum += span("LINK_TRAVEL");
+        const s = [event.store_slot.col, event.store_slot.tier], r = [event.retrieve_slot.col, event.retrieve_slot.tier];
+        savedSum += Math.max(0, leg(s, [0, 0]) + leg([0, 0], r) - leg(s, r));
+        if (hot.has(event.outbound_gid)) { hotSum += retrLeg; hotN += 1; } else { coldSum += retrLeg; coldN += 1; }
+      });
+      const n = trace.events.length || 1;
+      return {n, hotN, coldN, motion,
+        storeAvg: storeSum / n, retrAvg: retrSum / n, linkAvg: linkSum / n,
+        hotAvg: hotN ? hotSum / hotN : 0, coldAvg: coldN ? coldSum / coldN : 0, savedTotal: savedSum};
+    }
+
+    function renderOpsEvidence(trace) {
+      /* 版面 variant 由 URL ?s3b=dock|rail|axis 声明(三版供用户选择;选定后收敛为单版) */
+      if (!doc.documentElement.dataset.s3B) {
+        let pick = "dock";
+        try { pick = new root.URLSearchParams(root.location.search).get("s3b") || "dock"; } catch (error) {}
+        doc.documentElement.dataset.s3B = ["dock", "rail", "axis"].includes(pick) ? pick : "dock";
+      }
+      const data = buildOpsEvidence(trace);
+      const fmt = value => value.toFixed(1);
+      const storeShare = Math.round(100 * data.storeAvg / Math.max(1e-9, data.storeAvg + data.retrAvg));
+      let host = byId("opsEvidence");
+      if (!host) { host = doc.createElement("section"); host.id = "opsEvidence"; host.setAttribute("aria-label", "存取对置与取货实测,SIM 同源"); }
+      host.innerHTML = `<div class="oeHead"><b>存取对置 · 取货实测</b><span>单 seed · SIM</span></div>` +
+        `<div class="oePair" style="--store:${storeShare}%">` +
+        `<div class="oeLeg oeStore"><label>入库腿均时</label><b>${fmt(data.storeAvg)} s</b><i></i></div>` +
+        `<div class="oeLeg oeRetr"><label>取货腿均时</label><b>${fmt(data.retrAvg)} s</b><i></i></div></div>` +
+        `<div class="oeGrid">` +
+        `<div class="oeHot"><b>${fmt(data.hotAvg)} s</b><span>热门件取货均时 · n=${data.hotN}</span></div>` +
+        `<div><b>${fmt(data.coldAvg)} s</b><span>非热门取货均时 · n=${data.coldN}</span></div>` +
+        `<div><b>${fmt(data.linkAvg)} s</b><span>交织腿均时 · 存→取直达</span></div>` +
+        `<div><b>${(data.savedTotal / 60).toFixed(1)} min</b><span>省一趟合计 / ${data.n} 周期</span></div></div>` +
+        `<div class="oeNote">腿时长 = 七步 SIM 时刻差；省一趟 = 同一运动学（${data.motion === "constant_speed" ? "匀速" : "加减速"}）折算「回 I/O 再出发 − 直达」</div>`;
+      const variant = doc.documentElement.dataset.s3B;
+      const target = variant === "rail" ? byId("workHud") : variant === "axis" ? byId("viewport") : byId("sceneDock");
+      if (target && host.parentElement !== target) target.append(host);
     }
 
     function canvasContext(id) {
@@ -1520,9 +1693,9 @@
       byId("phaseNow").textContent = `${frame.faulted ? "故障 · " : ""}步骤 ${STEP_INDEX[frame.operationKey] + 1} · ${visibleStepLabel}`;
       const totalCycleSim = frame.cycleTiming.reduce((sum, item) => sum + item.simDurationS, 0);
       byId("phaseClock").textContent = `SIM ${totalCycleSim.toFixed(1)} s · 1=排队/交接`;
-      byId("factCycle").textContent = `${frame.cycleNumber} / ${trace.meta.cycles}`;
-      byId("factQueue").textContent = String(frame.queueGids.length);
-      byId("factAlarm").textContent = frame.faulted ? "1" : "0"; byId("factAlarm").style.color = frame.faulted ? "#b71c1c" : "";
+      /* 0719 功能批次:railFacts 三格删——周期计数直写轴行;等待/故障与统计块重复。queueCard 事件浮现:等待>0 才显示。 */
+      byId("cycleAxisCount").textContent = `${frame.cycleNumber} / ${trace.meta.cycles}`;
+      byId("queueCard").hidden = frame.queueGids.length === 0;
       const faultBanner = byId("faultStateBanner"); faultBanner.hidden = !frame.faulted;
       if (frame.faulted) faultBanner.querySelector("span").textContent = `故障 ${String((frame.faultIndex ?? 0) + 1).padStart(2, "0")} · ${visibleStepLabel} 保持位`;
       byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
@@ -2067,7 +2240,7 @@
       else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus(); }
     });
     listen(controls, "change", () => { rendererBridge.refreshProjection(); });
-    listen(root, "resize", () => { resizeScene(); });
+    listen(root, "resize", () => { resizeScene(); if (state.trace) renderRespSpark(state.trace); });
 
     const schedule = callback => root.requestAnimationFrame(callback);
     function frame(now) {

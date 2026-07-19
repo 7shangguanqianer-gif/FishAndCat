@@ -9,7 +9,7 @@
      ⑥ QA 自检钩子 __S3_MIXED_LAYOUT_A.audit()
    边界:步骤1 只求「A 壳能起来、不白屏」;四差异标记 / 取货实测块留步骤2/3。
    时序:runtime 于脚本加载时同步 bootstrap(),故本脚本运行时 railHead/runtimeControls/
-        slotMapWrap/factCycle/__S3_QA 均已就绪;仍逐一存在性守护,保证 fail-open 不白屏。 */
+        slotMapWrap/cycleAxisCount/__S3_QA 均已就绪;仍逐一存在性守护,保证 fail-open 不白屏。 */
 (function (root) {
   "use strict";
   const doc = root.document;
@@ -30,6 +30,12 @@
   if (topbar) {
     if (railHead) topbar.append(railHead);            /* railHead 由场景脚本创建并 prepend 到 workHud */
     if (runtimeControls) topbar.append(runtimeControls); /* 含 runtimeActions / traceLoadState / traceErrorHost */
+    /* 0719 功能批次 M3:PLC 分片可行性占位徽章——赛题 AI+PLC,本页仅 SIM 口径;T1 完成前指路不虚构结论 */
+    const plcBadge = doc.createElement("span");
+    plcBadge.id = "plcFeasBadge";
+    plcBadge.textContent = "PLC 分片可行性 · 另页详述";
+    plcBadge.title = "AC500 分片下装可行性另页详述;本页为 SIM 演示口径,不虚构 PLC 实测结论。";
+    topbar.append(plcBadge);
   }
 
   /* 0719 C2 组件公约:镜头与演示倍率 → 进度轴行尾(01 已如此,02 从 sceneDock 第三列搬来;
@@ -96,23 +102,22 @@
     button.addEventListener("blur", () => nodePop.classList.remove("show"));
   });
 
-  /* 轴推进:监听 runtime 每帧写入的 #factCycle "N / 100" */
+  /* 轴推进:监听 runtime 每帧直写的 #cycleAxisCount "N / 100"(0719:railFacts 已删,信号线从 factCycle 迁此;
+     本层只读它更新 fill/axisDone,不回写,避免观察自触发)。 */
   const cycleCount = byId("cycleAxisCount");
-  const factCycle = byId("factCycle");
   let lastCycle = -1;
   function syncAxis() {
-    if (!factCycle) return;
-    const match = String(factCycle.textContent || "").match(/(\d+)\s*\/\s*(\d+)/);
+    if (!cycleCount) return;
+    const match = String(cycleCount.textContent || "").match(/(\d+)\s*\/\s*(\d+)/);
     if (!match) return;
     const done = Number(match[1]);
-    if (cycleCount) cycleCount.textContent = `${done} / ${match[2]}`;
     if (done === lastCycle) return;
     lastCycle = done;
     if (cycleFill) cycleFill.style.width = `${(done / CYCLES_TOTAL * 100).toFixed(2)}%`;
     nodeButtons.forEach(button => button.classList.toggle("axisDone", Number(button.dataset.cycle) <= done));
   }
-  if (factCycle) {
-    new MutationObserver(syncAxis).observe(factCycle, { childList: true, characterData: true, subtree: true });
+  if (cycleCount) {
+    new MutationObserver(syncAxis).observe(cycleCount, { childList: true, characterData: true, subtree: true });
   }
   syncAxis();
 
