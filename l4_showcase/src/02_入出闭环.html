@@ -710,6 +710,10 @@
   #openEvidenceDock[aria-haspopup="dialog"]{white-space:nowrap}
 
   /* ===== 0719 功能批次(甲·地图王):sparkline / 故障红点 / 口径小字 / 复现指纹 / PLC 徽章 / 叠层扩容 ===== */
+  /* 2D 图例双态(选定①热度纯净):heat 开显 heatKey,关显 gradeKey(runtime drawSlotMap 幂等切换) */
+  #slotMapWrap .heatRamp{display:inline-block;width:34px;height:8px;flex:none;
+    background:linear-gradient(90deg,#aeb8c0,#e7b800,#c0392b)}
+  #slotMapWrap .mapKey [hidden]{display:none}
   #respSpark{margin-top:6px;background:#fff;border:1px solid #cbd2d8;padding:6px 9px 5px}
   #respSpark .sparkHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
   #respSpark .sparkHead b{font-size:9.5px;color:#16191d}
@@ -877,7 +881,7 @@ const rail=document.getElementById('workHud'),viewportEl=document.getElementById
 const railHead=document.createElement('div');railHead.id='railHead';railHead.innerHTML=`<div class="brandLock"><span class="abbWord">ABB</span><div><div class="eyebrow">${VISUAL.sub}</div><h1>${VISUAL.name}</h1></div></div><div class="matrix">20 × 20<br>SIM / T3</div>`;rail.prepend(railHead);
 const speedCanvas=document.createElement('canvas'),liveChartWrap=document.createElement('section');speedCanvas.id='speed';liveChartWrap.id='liveChartWrap';
 liveChartWrap.innerHTML='<div class="cap"><b>双轴速度</b><span>X / Z · m/s</span></div>';liveChartWrap.append(speedCanvas);
-const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><canvas id="slotMap"></canvas><div class="mapKey"><span title="(列 + 层) mod 3 = 0 的货位预留为运维通道,启动即封板,不参与分配"><i class="hatch"></i>预占封板</span><span><i class="free"></i>可用空位</span><span><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
+const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><canvas id="slotMap"></canvas><div class="mapKey"><span title="(列 + 层) mod 3 = 0 的货位预留为运维通道,启动即封板,不参与分配"><i class="hatch"></i>预占封板</span><span><i class="free"></i>可用空位</span><span class="gradeKey" hidden><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span class="heatKey"><i class="heatRamp"></i>热度：低 → 高</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
 /* 0719 功能批次:railFacts 三格删——周期计数由 runtime 直写 #cycleAxisCount,等待/故障与统计块重复(docs/02功能零基审计_0719.md 1b) */
 const traceStats=document.createElement('section');traceStats.id='traceStats';traceStats.setAttribute('aria-label','当前单 seed trace 统计');
 const insightStack=document.createElement('section');insightStack.id='insightStack';insightStack.append(traceStats);
