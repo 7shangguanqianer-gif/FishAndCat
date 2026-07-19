@@ -842,7 +842,7 @@
     }));
     /* 货位热度背板:薄板贴在货箱正后方(比箱体宽),正面看=围绕货箱的一圈色环 → 热度可读且不遮挡等级色。
        只给**在库货位**上色:空位无存储活动、自然无热度(诚实呈现,不编造)。 */
-    const cellHeatGeometry = new THREE.BoxGeometry(.88, .02, .88);
+    const cellHeatGeometry = new THREE.BoxGeometry(.96, .02, .96);
     const cellHeatMesh = new THREE.InstancedMesh(cellHeatGeometry, new THREE.MeshBasicMaterial({color: 0xffffff}), stockCapacity);
     cellHeatMesh.count = 0; cellHeatMesh.castShadow = false; cellHeatMesh.receiveShadow = false;
     cellHeatMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(stockCapacity * 3).fill(1), 3);
@@ -856,8 +856,10 @@
     /* 注:instanceColor 必须按容量预分配。three.js 的 setColorAt 首调时按当时 count 分配,若 count 还是 0
        会分配成 Float32Array(0),后续 setColorAt 全部写入虚空(本轮实测踩过:colorArrayLen=0、色阶恒不显现)。
        见上 cellHeatMesh 的预分配。 */
-    /* 色阶:三段插值 冷蓝(#2b6cbc)→琥珀(#e7b800)→热红(#c0392b);t 由 freq_true 的 min-max 归一化。 */
-    const HEAT_COLD = new THREE.Color(0x2b6cbc), HEAT_MID = new THREE.Color(0xe7b800), HEAT_HOT = new THREE.Color(0xc0392b);
+    /* 色阶:三段插值 冷=中性浅灰(#aeb8c0)→琥珀(#e7b800)→热红(#c0392b);t 由 freq_true 的秩归一化。
+       冷端**不用蓝**:货箱等级色本身是蓝系(重/中/轻),冷蓝框会与蓝箱语义撞色糊成一片;
+       改中性灰后低频不抢注意力、暖/热才真正跳出来(注意力预算给热门)。 */
+    const HEAT_COLD = new THREE.Color(0xaeb8c0), HEAT_MID = new THREE.Color(0xe7b800), HEAT_HOT = new THREE.Color(0xc0392b);
     const heatScratch = new THREE.Color(), gradeScratch = new THREE.Color();
     function heatColor(t) {
       t = t < 0 ? 0 : t > 1 ? 1 : t;

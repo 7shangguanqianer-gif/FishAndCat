@@ -133,6 +133,19 @@
   #targetBeacon:before{content:"";position:absolute;left:-19px;top:50%;width:18px;height:2px;background:#101820}
   #targetBeacon b{display:block;font:800 14px/1.05 "Microsoft YaHei",sans-serif;white-space:nowrap}
   #targetBeacon span{display:block;margin-top:5px;font:700 9px/1 Consolas,monospace;letter-spacing:.6px}
+  /* 0718 #28 黄牌废止:targetBeacon(入库目标/出库源位方框)与其引线整体退役,参照 01。 */
+  #targetBeacon,#labelLeaders{display:none!important}
+  /* 0718 #26-2 货位热度色阶 + 近 I/O 热区图例。 */
+  #heatLegend{position:absolute;z-index:6;right:18px;top:126px;width:188px;padding:9px 11px;background:#ffffffed;border:1px solid #aeb8bf;
+    color:#26343e;box-shadow:0 4px 15px #17202b1f;pointer-events:none;font:9px/1.3 Consolas,"Microsoft YaHei",monospace}
+  #heatLegend .hlRow{display:flex;justify-content:space-between;align-items:baseline}
+  #heatLegend .hlRow b{font-size:10.5px}#heatLegend .hlRow span{color:#64717b;font-size:8px}
+  /* 冷端用中性灰(非蓝):货箱等级色是蓝系,冷蓝会与之撞色;与 s3_ac_runtime 的 HEAT_COLD 保持一致。 */
+  #heatLegend .hlBar{height:10px;margin:6px 0 3px;border:1px solid #aeb8bf;background:linear-gradient(90deg,#aeb8c0 0%,#e7b800 50%,#c0392b 100%)}
+  #heatLegend .hlScale{display:flex;justify-content:space-between;color:#64717b;font-size:8px}
+  #heatLegend .hlZone{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:6px;border-top:1px solid #d5dbe0}
+  #heatLegend .hlZone i{flex:0 0 auto;width:22px;height:14px;background:#e7b8001f;border:1.5px solid #ffb100}
+  #heatLegend .hlZone span{font-size:8.5px;line-height:1.25}
   #sceneCaption{position:absolute;z-index:6;left:calc(var(--rail-w,32%) + 20px);bottom:17px;padding:8px 11px;background:#17202bdc;color:#fff;
     font:10px/1.35 Consolas,"Microsoft YaHei",monospace;pointer-events:none}
   #reserveRuleBadge{position:absolute;z-index:6;right:18px;top:18px;display:flex;align-items:center;gap:9px;padding:8px 10px;
@@ -809,6 +822,10 @@ const sceneDock=document.createElement('section');sceneDock.id='sceneDock';scene
 const sceneCaption=document.createElement('div');sceneCaption.id='sceneCaption';sceneCaption.innerHTML='<span class="dockLabel">当前作业</span><span id="sceneActionMeta">步骤 --/7 · 缩时演示 · SIM</span><b id="sceneActionText">等待同源轨迹</b><span id="sceneCargoMeta">货物与时间口径载入中</span>';sceneDock.append(sceneCaption);
 const reserveRuleBadge=document.createElement('div');reserveRuleBadge.id='reserveRuleBadge';reserveRuleBadge.setAttribute('aria-label','三维轨迹与预占图例');
 reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="empty"><i></i>空载</span><span class="out"><i></i>出库</span><span class="blocked"><i></i>预占</span>';sceneCaption.append(reserveRuleBadge);
+/* 0718 #26-2 货位热度色阶图例 + 近 I/O 热区说明(替代逐箱金顶)。 */
+const heatLegend=document.createElement('div');heatLegend.id='heatLegend';heatLegend.setAttribute('aria-label','货位热度色阶与近 I/O 热区图例');
+heatLegend.innerHTML='<div class="hlRow"><b>货位热度</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlZone"><i></i><span>热门货聚集区 · 近 I/O（好放置兑现）</span></div>';
+viewportEl.append(heatLegend);
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
 const sceneTools=document.createElement('section');sceneTools.id='sceneTools';sceneTools.setAttribute('aria-label','三维镜头与回放速度');
@@ -1112,6 +1129,34 @@ const targetBox=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeom
 targetBox.visible=false;scene.add(targetBox);
 const targetPadMat=new THREE.MeshStandardMaterial({color:C.amber,roughness:.72,metalness:.02,emissive:new THREE.Color(C.amber).multiplyScalar(.18),transparent:true,opacity:.52,depthWrite:false});
 const targetPad=addBox(.82,.76,.028,0,0,0,targetPadMat,false,false);targetPad.visible=false;
+/* 0717 #28 用户拍板:目标格自身强高亮——发光壳 + 大头针式竖直箭头。实体归母版,
+   runtime 经 window.__S3_TARGET_FX 驱动(共享 runtime 的候选页无此全局,判空跳过)。
+   箭头必须沿 z(层高)竖直向下:镜头视线大致沿 +y,沿 y 的几何投影后近似一个点(首版教训)。 */
+const targetGlowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide});
+const targetGlow=new THREE.Mesh(new THREE.BoxGeometry(1.0,.96,1.0),targetGlowMat);
+targetGlow.visible=false;targetGlow.renderOrder=3;scene.add(targetGlow);
+/* 格口面框:贴货架前表面的方框(外 1.0 / 内 .72),不受格内体积遮挡,正对镜头最醒目。 */
+const targetFaceShape=new THREE.Shape();
+targetFaceShape.moveTo(-.5,-.5);targetFaceShape.lineTo(.5,-.5);targetFaceShape.lineTo(.5,.5);targetFaceShape.lineTo(-.5,.5);targetFaceShape.closePath();
+const targetFaceHole=new THREE.Path();
+targetFaceHole.moveTo(-.36,-.36);targetFaceHole.lineTo(.36,-.36);targetFaceHole.lineTo(.36,.36);targetFaceHole.lineTo(-.36,.36);targetFaceHole.closePath();
+targetFaceShape.holes.push(targetFaceHole);
+const targetFaceMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.92,depthWrite:false,side:THREE.DoubleSide});
+const targetFace=new THREE.Mesh(new THREE.ShapeGeometry(targetFaceShape),targetFaceMat);
+targetFace.rotation.x=Math.PI/2;/* shape xy 面 → 法线 -y(朝巷道),shape y → 世界 z(层高) */
+targetFace.visible=false;targetFace.renderOrder=5;scene.add(targetFace);
+const targetArrowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.96,depthWrite:false});
+const targetArrow=new THREE.Group();
+/* group 原点=箭头尖端;cone 默认尖朝 +y,rotateX(-90°) 后尖朝 -z(竖直向下)。 */
+const targetArrowHead=new THREE.Mesh(new THREE.ConeGeometry(.50,1.1,14),targetArrowMat);
+targetArrowHead.rotation.x=-Math.PI/2;targetArrowHead.position.z=.55;
+const targetArrowTail=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.66,10),targetArrowMat);
+targetArrowTail.rotation.x=-Math.PI/2;targetArrowTail.position.z=1.43;
+targetArrow.add(targetArrowHead,targetArrowTail);
+targetArrow.visible=false;targetArrow.renderOrder=4;scene.add(targetArrow);
+window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
+  arrow:targetArrow,arrowMat:targetArrowMat,
+  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f),arrowY:-.45,arrowZGap:1.34,floatAmp:.22});
 /* 堆垛机：黄金单桅杆不变；功能细节随同一个 world X 组移动。 */
 const mast=addBox(.24,.24,N+.5,IO.x,IO.y,(N+Z0)/2,M.mast,true,false);
 const machineParts=[
