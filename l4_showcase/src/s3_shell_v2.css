@@ -1,0 +1,55 @@
+/* ================================================================
+   s3_shell_v2.css · V2 壳体共享语法(2026-07-19,用户拍板「V2 区域重映射」)
+   ----------------------------------------------------------------
+   概念:两页共享同一套骨架语法(区域名 + 组件↔区域绑定 + 设计令牌),
+   每页只声明一个映射属性即可整体重排版面 —— 参照 MDN grid-template-areas
+   的「区域名不动、容器映射换」模式(一手依据,high;见
+   docs/壳体统一vs差异化研究_0719.md)。
+
+   区域名(两页同名同义):
+     topbar  顶栏(全宽:品牌 + 运行控制 + 证据入口)
+     axis    进度轴(贴 scene 上缘;01=容量节点 / 02=入出里程碑,语义各异、位置同构)
+     rail    信息栏(#workHud)
+     scene   3D 视口(#gl + 底带 #sceneDock + 浮层 legend)
+
+   映射(html[data-s3-rail] 声明,缺省 = "left"):
+     01 放货决策  → rail-left  (data-first:先读决策数据,再看执行)
+     02 存取运营  → rail-right (scene-first:先看作业现场,再读监控指标)
+   可辨识性动机 = change blindness 证据(细微差异漏检率 79-83% vs 显著差异 5-13%);
+   注意:该证据为感知层一手、应用到多页仪表盘属类比迁移,报告引用时须如实标注。
+   组件一致性 = NN/g consistency(管组件不管整页):同一控件绑定同一区域、
+   区域内位置两页一致(镜头/倍率 → axis 行尾;导出/证据 → topbar 尾;状态带 → scene 底)。
+
+   纪律:任何侧向(left/right 与 --rail-w 挂钩)的壳体规则,一律收敛到本文件,
+   不得散落回页内 —— C1/C2/C3 三处漂移的根因就是双页 inline 各自演进。
+   ================================================================ */
+
+/* ---- 映射:rail-right(02 存取运营)。7 处侧向绑定全部在此翻转。 ---- */
+html[data-s3-rail="right"][data-s3-layout="A"] #workHud{
+  inset:var(--topbar-h) 0 0 auto;border-right:0;border-left:1px solid #b9c2c9}
+html[data-s3-rail="right"][data-s3-layout="A"] #progressAxisHost{left:0;right:var(--rail-w)}
+html[data-s3-rail="right"][data-s3-layout="A"] #gl{left:0;right:var(--rail-w)}
+html[data-s3-rail="right"][data-s3-layout="A"] #cycleReset{left:0}
+html[data-s3-rail="right"][data-s3-layout="A"] #sceneDock{left:14px;right:calc(var(--rail-w) + 14px)}
+html[data-s3-rail="right"][data-s3-layout="A"] #heatLegend{right:calc(var(--rail-w) + 18px)}
+html[data-s3-rail="right"][data-s3-layout="A"] #topbarA #traceErrorHost{left:0;right:var(--rail-w)}
+
+/* ---- C2 组件位置公约:镜头与演示倍率 → 进度轴行尾(两页一致) ----
+   01 已如此(01 内联 #fillBookmarks #sceneTools,01:837-846;规则暂留 01 页内,
+   R5 收拢前不动稳定页)。02 由 s3_mixed_layout_a_interactions.js 把 #sceneTools
+   搬入 #cycleAxis,样式在此(选择器 #cycleAxis 为 02 专属,01 无此 id、零影响): */
+html[data-s3-layout="A"] #cycleAxis #sceneTools{position:static;flex:none;display:flex;align-items:center;
+  gap:8px;width:auto;padding:0 0 0 12px;background:transparent;border:0;border-left:1px solid #d4dade;box-shadow:none}
+html[data-s3-layout="A"] #cycleAxis #sceneTools .toolHead{font:700 8.5px/1.15 "Microsoft YaHei",sans-serif;color:#5d6972;white-space:nowrap}
+html[data-s3-layout="A"] #cycleAxis #sceneTools .toolHead span{display:block;color:#8a949c;font-size:6.5px;font-weight:500}
+html[data-s3-layout="A"] #cycleAxis #sceneTools .toolRow{display:flex;align-items:center;gap:7px;margin:0}
+html[data-s3-layout="A"] #cycleAxis #sceneTools button{height:22px;padding:0 10px;font-size:9px;font-weight:700;
+  border:1px solid #17365d;background:#fff;color:#17365d;cursor:pointer}
+html[data-s3-layout="A"] #cycleAxis #sceneTools button:hover{background:#17365d;color:#fff}
+html[data-s3-layout="A"] #cycleAxis #sceneTools input[type="range"]{width:104px;min-height:18px;accent-color:#17365d}
+html[data-s3-layout="A"] #cycleAxis #sceneTools #playbackValue{min-width:40px;font:800 9.5px/1 Consolas,monospace;color:#17365d}
+html[data-s3-layout="A"] #cycleAxis #sceneTools .toolNote{display:none}
+@media(max-width:1480px){
+  html[data-s3-layout="A"] #cycleAxis #sceneTools .toolHead span{display:none}
+  html[data-s3-layout="A"] #cycleAxis #sceneTools input[type="range"]{width:84px}
+}

@@ -39,11 +39,12 @@ catch (error) {
 }
 const { chromium } = playwright;
 
-const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8'};
+const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8'};
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 mkdirSync(OUT, {recursive: true});
 const liveFiles = {
   source: SOURCE, runtime: RUNTIME, store: STORE, interactions: INTERACTIONS,
+  shellCss: join(SHOWCASE, 'src', 's3_shell_v2.css'), /* 0719 V2 壳体共享语法 */
   three: join(SHOWCASE, 'src', 'lib', 'three.min.js'),
   orbit: join(SHOWCASE, 'src', 'lib', 'OrbitControls.js'),
   pointer: POINTER, registry: REGISTRY, manifest: MANIFEST,
@@ -59,6 +60,7 @@ const snapshotTargets = {
   runtime: join(SNAPSHOT, 'src', 's3_fill_candidate_runtime.js'),
   store: join(SNAPSHOT, 'src', 's3_fill_store.js'),
   interactions: join(SNAPSHOT, 'src', 's3_layout_a_interactions.js'),
+  shellCss: join(SNAPSHOT, 'src', 's3_shell_v2.css'),
   three: join(SNAPSHOT, 'src', 'lib', 'three.min.js'),
   orbit: join(SNAPSHOT, 'src', 'lib', 'OrbitControls.js'),
   pointer: join(SNAPSHOT, 'release_evidence', 'latest.json'),

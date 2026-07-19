@@ -32,6 +32,12 @@
     if (runtimeControls) topbar.append(runtimeControls); /* 含 runtimeActions / traceLoadState / traceErrorHost */
   }
 
+  /* 0719 C2 组件公约:镜头与演示倍率 → 进度轴行尾(01 已如此,02 从 sceneDock 第三列搬来;
+     样式在 s3_shell_v2.css 的 #cycleAxis #sceneTools 段,dock 腾出的列位留给取货实测块)。 */
+  const cycleAxisHost = byId("cycleAxis");
+  const sceneTools = byId("sceneTools");
+  if (cycleAxisHost && sceneTools) cycleAxisHost.append(sceneTools);
+
   /* ---------- 3. 共享浮层容器 ---------- */
   const nodePop = doc.createElement("div");
   nodePop.id = "cycleNodePop";
