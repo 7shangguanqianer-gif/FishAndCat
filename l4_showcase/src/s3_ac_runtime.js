@@ -43,6 +43,8 @@
     awra: "AWRA-LS", cb: "CB→SCORE", tob: "TOB→SCORE", AUTO: "AUTO"});
   const EVIDENCE_MODES = Object.freeze(["random", "seq", "near", "score", "awra", "cb", "tob", "AUTO"]);
   const PROFILE_SCENARIO = Object.freeze({uniform: "E01", skew: "E02", heavy: "E03"});
+  /* T5 · 三档机理词单一来源:分段按钮小字、#tierBadge 文案共用同一张表,防止两处各写一份后语言漂移。 */
+  const TIER_MECHANISM_LABEL = Object.freeze({1: "匀速运动学", 2: "梯形加减速", 3: "加减速+故障+潮汐"});
   const OWNER_LABEL = Object.freeze({
     QUEUE: "入口队列", CARRIER_IN: "载货台·入库", RACK: "货架库存",
     CARRIER_OUT: "载货台·出库", OUTFEED: "出口输送", SCANNED: "扫码确认",
@@ -863,6 +865,43 @@
     const stockLidMaterial = M.lid;
     const stockLidMesh = new THREE.InstancedMesh(stockLidGeometry, stockLidMaterial, stockCapacity);
     stockLidMesh.count = 0; stockLidMesh.castShadow = false; stockLidMesh.receiveShadow = false; stockGroup.add(stockLidMesh);
+
+    /* T5 · 三档 LOD(建模精度差异可视化,四件套之一):档1(数据模型 · 匀速运动学)隐藏装饰件+地面网格并
+       把货箱色降饱和 30%;档2/3 维持现状全量。entryGate/scannerGate/exitCurtain 已是具名 Group,与本
+       runtime 共享页面顶层词法作用域(母版 <script> 用 const 声明,同文档内后续 classic <script> 可直接
+       引用——文件既有的 scene/carrier/cargo/N/RACK 等裸引用都是这个机制,非本次新增)。传感柱黄帽/
+       防撞柱未成组,按 stationCollisionSolids 的 userData.collisionLabel 前缀筛出(STATION_SENSOR_/
+       STATION_CAP_/BOLLARD_;排除 ENTRY_/SCAN_/EXIT_ 前缀——那些已是上述三个 Group 的子节点,组隐藏即
+       随隐藏)。地面网格=seams(细线网格 Group,场景内唯一近似「地面网格」的对象,未见 GridHelper)。
+       货箱降饱和只动 gradeMaterial(=M.heavy/mid/light)——它是 stockGradeMeshes 与队列货箱共享的材质
+       引用,mutate 前 clone 记录原色,切回档2/3 时按原色 copy 回去(不重新 new,避免与共享方失去引用同一
+       性)。所有对象取用前 existence 守护,防崩。 */
+    const tierLodDecorGroups = [
+      typeof entryGate !== "undefined" ? entryGate : null,
+      typeof scannerGate !== "undefined" ? scannerGate : null,
+      typeof exitCurtain !== "undefined" ? exitCurtain : null
+    ].filter(Boolean);
+    const tierLodDecorMeshes = (typeof stationCollisionSolids !== "undefined" && Array.isArray(stationCollisionSolids) ? stationCollisionSolids : [])
+      .filter(mesh => mesh && mesh.userData && /^(STATION_(SENSOR|CAP)_|BOLLARD_)/.test(mesh.userData.collisionLabel || ""));
+    const tierLodGrid = typeof seams !== "undefined" ? seams : null;
+    const TIER_LOD_GRAY = new THREE.Color(0x8a8f94);
+    const tierLodGradeOriginal = {};
+    Object.entries(gradeMaterial).forEach(([grade, material]) => { if (material && material.color) tierLodGradeOriginal[grade] = material.color.clone(); });
+    let currentTierLod = null;
+    function applyTierLod(tier) {
+      tier = Number(tier);
+      if (!Number.isFinite(tier) || tier === currentTierLod) return;
+      currentTierLod = tier;
+      const showDecor = tier !== 1;
+      tierLodDecorGroups.forEach(group => { if (group) group.visible = showDecor; });
+      tierLodDecorMeshes.forEach(mesh => { if (mesh) mesh.visible = showDecor; });
+      if (tierLodGrid) tierLodGrid.visible = showDecor;
+      Object.entries(gradeMaterial).forEach(([grade, material]) => {
+        if (!material || !material.color || !tierLodGradeOriginal[grade]) return;
+        if (tier === 1) material.color.copy(tierLodGradeOriginal[grade]).lerp(TIER_LOD_GRAY, .30);
+        else material.color.copy(tierLodGradeOriginal[grade]);
+      });
+    }
     /* 注:instanceColor 必须按容量预分配。three.js 的 setColorAt 首调时按当时 count 分配,若 count 还是 0
        会分配成 Float32Array(0),后续 setColorAt 全部写入虚空(本轮实测踩过:colorArrayLen=0、色阶恒不显现)。
        见上 cellHeatMesh 的预分配。 */
@@ -1234,9 +1273,10 @@
         if (event.key !== "Escape" || !advanced.open) return;
         event.preventDefault(); advanced.removeAttribute("open"); advancedSummary.focus();
       });
-      /* 0719 功能批次 D4:AUTO 参数展开器移入证据叠层(ISA-101 L3 细节层);常驻卡只留策略行 */
+      /* 0719 功能批次 D4:AUTO 参数展开器移入证据叠层(ISA-101 L3 细节层);常驻卡只留策略行
+         T5:挂载点从旧 #evidenceDock .evidencePanel 改为 #evidenceCenterTab1(证据中心重构,内容随行) */
       host.append(head, selection, reason);
-      const evPanel = doc.querySelector("#evidenceDock .evidencePanel");
+      const evPanel = byId("evidenceCenterTab1");
       if (evPanel) {
         const oldAdvanced = evPanel.querySelector(".decisionAdvanced"); if (oldAdvanced) oldAdvanced.remove();
         evPanel.append(advanced);
@@ -1366,8 +1406,9 @@
 
     /* N4 故障卡 + N2 差值 CI(叠层,甲版收纳)。CI 数据源=out/s3_mixed_dispatch_sweep.js(30 seed 调度 sweep,
        独立于 S1 矩阵与当前 trace——manifest 红线 do_not_compare_or_merge,故只在叠层独立面板呈现并标注口径)。 */
+    /* T5:挂载点从旧 #evidenceDock .evidencePanel 改为 #evidenceCenterTab1(证据中心重构,内容随行) */
     function renderEvidenceExtras(trace) {
-      const panel = doc.querySelector("#evidenceDock .evidencePanel"); if (!panel) return;
+      const panel = byId("evidenceCenterTab1"); if (!panel) return;
       let fault = byId("evFaultCard");
       if (!fault) { fault = doc.createElement("section"); fault.id = "evFaultCard"; panel.append(fault); }
       const faultEv = trace.events.find(item => item.faulted);
@@ -1376,7 +1417,7 @@
         fault.hidden = false;
         fault.innerHTML = `<b>故障演示 · 第 ${faultEv.cycle_number} 周期</b><span>${mttr ? `停机 ${mttr}s(MTTR 模型)· ` : ""}该周期响应 ${Number(faultEv.response).toFixed(0)}s;可跳到故障回放复验「停机 → 队列积压 → 恢复消化」全过程。</span><button type="button" id="evFaultJump">跳到故障回放</button>`;
         fault.querySelector("#evFaultJump").addEventListener("click", () => {
-          try { root.__S3_QA.seekFault(0); const close = byId("closeEvidenceDock"); if (close) close.click(); } catch (error) {}
+          try { root.__S3_QA.seekFault(0); const close = byId("closeEvidenceCenter"); if (close) close.click(); } catch (error) {}
         });
       } else { fault.hidden = true; fault.innerHTML = ""; }
       let ci = byId("evCiPanel");
@@ -1848,6 +1889,14 @@
       updateHotZone(trace);
       trace.events.forEach(event => { good(event.inbound_gid); good(event.outbound_gid); });
       pathSignature = ""; clearPaths(); renderDecision(trace); renderTraceStats(trace);
+      applyTierLod(trace.meta.tier);
+      /* T5 · 档位徽章:读 tierSelect 映射(TIER_MECHANISM_LABEL,不编数);档1 加「简化呈现」后缀防评委误读 LOD */
+      const tierBadgeEl = byId("tierBadge");
+      if (tierBadgeEl) {
+        const tierNum = Number(byId("tierSelect").value);
+        const mech = TIER_MECHANISM_LABEL[tierNum] || "";
+        tierBadgeEl.textContent = `档${tierNum} · ${mech}${tierNum === 1 ? " · 简化呈现" : ""}`;
+      }
       byId("taskline").querySelector(".kicker").textContent = "已校验 · 同源 SIM 轨迹";
       byId("railHead").querySelector(".matrix").innerHTML = `20 × 20<br>SIM / T${trace.meta.tier}`;
       const phaseSegments = byId("phaseSegments"), phaseTimeScale = byId("phaseTimeScale");
@@ -1989,7 +2038,16 @@
         outfeed: {x: OUTFEED.x, startY: OUTFEED.startY, scanY: OUTFEED.scanY, maskY: OUTFEED.maskY, endY: OUTFEED.endY, z: OUTFEED.z},
         topology: topologyAudit, labels: lastOverlayLayout, stationLabels: lastStationLayout, collisions: collisionSnapshot(), composition: compositionSnapshot(),
         ownership: lastFrame ? ownershipSnapshot(lastFrame) : null,
-        camera: cameraSnapshot()
+        camera: cameraSnapshot(),
+        /* T5:三档 LOD 状态供 QA 核验(不必截图肉眼判断)——decorVisible=装饰件/地面网格是否可见,
+           gradeHex=当前货箱等级色(档1 应偏灰,档2/3 应等于原色)。 */
+        tierLod: {
+          tier: currentTierLod,
+          decorVisible: tierLodDecorGroups.length ? tierLodDecorGroups[0].visible : null,
+          gridVisible: tierLodGrid ? tierLodGrid.visible : null,
+          gradeHex: Object.fromEntries(Object.entries(gradeMaterial).map(([grade, material]) => [grade, material.color.getHexString()])),
+          gradeOriginalHex: Object.fromEntries(Object.entries(tierLodGradeOriginal).map(([grade, color]) => [grade, color.getHexString()]))
+        }
       };
     }
 
@@ -2003,7 +2061,7 @@
       queuePool.forEach(item => queueGroup.remove(item.unit));
     }
 
-    return {renderFrame, refreshProjection, collisionSnapshot, compositionSnapshot, metrics, dispose};
+    return {renderFrame, refreshProjection, collisionSnapshot, compositionSnapshot, metrics, dispose, applyTierLod};
   }
 
   function createRuntimeDom(root) {
@@ -2039,24 +2097,85 @@
     const evidenceButton = doc.createElement("button"); evidenceButton.id = "openEvidenceDock"; evidenceButton.type = "button";
     evidenceButton.textContent = "本屏证据"; evidenceButton.setAttribute("aria-haspopup", "dialog");
     actionHost.insertBefore(evidenceButton, compareButton);
-    /* 0720 版B 转正:证据两键(本屏证据/对照证据)→单键「证据中心」;旧两键 DOM 与监听原样保留(只 CSS 隐藏),
-       弹层彻底重构留待 T5,本键暂转发 openEvidenceDock 的点击行为 */
+    /* 0720 版B 转正:证据两键(本屏证据/对照证据)→单键「证据中心」;旧两键 DOM 与监听原样保留(只 CSS 隐藏)。
+       T5:弹层彻底重构完成——openEvidenceCenter 的真正 click 监听在 bootstrap() 里挂(open/close/tab 切换
+       需要 state 与 listen() 才能实现焦点陷阱与 inert),此处不再用转发占位。 */
     const evidenceCenterButton = doc.createElement("button"); evidenceCenterButton.id = "openEvidenceCenter"; evidenceCenterButton.type = "button";
     evidenceCenterButton.textContent = "证据中心"; evidenceCenterButton.setAttribute("aria-haspopup", "dialog");
-    evidenceCenterButton.addEventListener("click", () => { evidenceButton.click(); });
     actionHost.insertBefore(evidenceCenterButton, evidenceButton);
     rail.append(decision, comparisonLab, evidenceDock); insight.prepend(queue);
+
+    /* T5 · 三档分段按钮:替 #tierSelect 顶栏可见项;value 与 change 事件仍以 tierSelect 为真相源与重载入口,
+       分段按钮只是其视图 + 输入代理(点击=改 value+派发 change,复用既有 ["tierSelect",...].forEach 重载监听)。
+       aria-checked 初值按 tierSelect 当前 value 计算(冷启动即 T3),后续由 bootstrap() 的 syncTierSegs 保活。 */
+    const tierSelectEl = doc.getElementById("tierSelect");
+    if (tierSelectEl) {
+      const TIER_SEG_PRIMARY = {1: "档1 · 数据模型", 2: "档2 · 加减速", 3: "档3 · 综合情景"};
+      const TIER_SEG_INFO = [1, 2, 3].map(tier => ({tier: String(tier), primary: TIER_SEG_PRIMARY[tier], mech: TIER_MECHANISM_LABEL[tier]}));
+      const tierSegs = doc.createElement("div"); tierSegs.id = "tierSegs"; tierSegs.className = "tierSegs";
+      tierSegs.setAttribute("role", "radiogroup"); tierSegs.setAttribute("aria-label", "拟真档位");
+      TIER_SEG_INFO.forEach(info => {
+        const seg = doc.createElement("button"); seg.type = "button"; seg.className = "tierSeg";
+        seg.dataset.tier = info.tier; seg.setAttribute("role", "radio");
+        seg.setAttribute("aria-checked", String(tierSelectEl.value === info.tier));
+        const primary = doc.createElement("b"); primary.textContent = info.primary;
+        const mech = doc.createElement("small"); mech.textContent = info.mech;
+        seg.append(primary, mech); tierSegs.append(seg);
+      });
+      const tierLabel = tierSelectEl.closest("label");
+      (tierLabel || tierSelectEl).insertAdjacentElement("afterend", tierSegs);
+    }
+  }
+
+  /* T5 · 证据中心:单一弹层承接旧 evidenceDock(本页证据链)+ comparisonLab(S1 受控对照)两套内容,
+     以 tab 分区。B1/B4 根修:整个 #evidenceCenter 挂 document.body,不挂 workHud/rail —— workHud 是
+     position:absolute+z-index:5 的祖先层叠上下文,子级再高的 z-index 也只能困在该上下文内部排序,
+     会被同级 #topbarA(z:12)在重叠区域盖住(左上角死区)。B1 同理:comparisonLab 原用 position:absolute
+     +inset:0,以 workHud(rail,~23vw 宽)为最近定位祖先,inset:0 只铺满 rail 而非视口,故窄条化。
+     内容复用不重写:judgePath/comparisonMini/.comparisonPanel 整体节点搬入新容器(DOM 搬家,渲染函数与
+     监听全部保留,原样随行);旧壳体(evidenceDock/comparisonLab)搬空后永久 hidden,不删 DOM ——
+     两者仍各自持有一段监听(见 bootstrap 尾部旧入口改线),删 DOM 会让那些 listen(byId(...)) 在此之前
+     执行时 target 为 null 而抛错,永久 hidden 是更低风险的retirement 方式。 */
+  function createEvidenceCenter(root) {
+    const doc = root.document, byId = id => doc.getElementById(id);
+    const center = doc.createElement("div"); center.id = "evidenceCenter"; center.hidden = true;
+    const panel = doc.createElement("div"); panel.id = "evidenceCenterPanel";
+    panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-labelledby", "evidenceCenterTitle");
+    const head = doc.createElement("header");
+    head.innerHTML = '<div><span>同一轨迹 · SIM</span><h2 id="evidenceCenterTitle">证据中心</h2></div><button id="closeEvidenceCenter" type="button" aria-label="关闭证据中心">×</button>';
+    const tabs = doc.createElement("div"); tabs.id = "evidenceCenterTabs"; tabs.className = "evidenceCenterTabs";
+    tabs.setAttribute("role", "tablist"); tabs.setAttribute("aria-label", "证据类别");
+    tabs.innerHTML =
+      '<button id="evidenceCenterTab1Btn" type="button" role="tab" aria-selected="true" aria-controls="evidenceCenterTab1" tabindex="0">本页证据链</button>' +
+      '<button id="evidenceCenterTab2Btn" type="button" role="tab" aria-selected="false" aria-controls="evidenceCenterTab2" tabindex="-1">S1 受控对照</button>';
+    const tab1 = doc.createElement("div"); tab1.id = "evidenceCenterTab1";
+    tab1.setAttribute("role", "tabpanel"); tab1.setAttribute("aria-labelledby", "evidenceCenterTab1Btn");
+    const tab2 = doc.createElement("div"); tab2.id = "evidenceCenterTab2";
+    tab2.setAttribute("role", "tabpanel"); tab2.setAttribute("aria-labelledby", "evidenceCenterTab2Btn"); tab2.hidden = true;
+    panel.append(head, tabs, tab1, tab2); center.append(panel);
+    doc.body.append(center);
+
+    /* tab1 = 本页证据链:judgePath + comparisonMini(现已建好,原样搬入)+ evFaultCard/evCiPanel/
+       decisionAdvanced(renderDecision/renderEvidenceExtras 稍后动态 append,已改挂 #evidenceCenterTab1)。 */
+    const judgePathEl = byId("judgePath"); if (judgePathEl) tab1.append(judgePathEl);
+    const comparisonMiniEl = byId("comparisonMini"); if (comparisonMiniEl) tab1.append(comparisonMiniEl);
+    /* tab2 = S1 受控对照:comparisonLab 内的 .comparisonPanel 整体搬入(含 comparisonTabs/toolbar/
+       autoSummary/table/foot);其内层 header 由 CSS 隐藏(证据中心已有统一 header),DOM 不动。 */
+    const comparisonPanelEl = doc.querySelector("#comparisonLab .comparisonPanel");
+    if (comparisonPanelEl) tab2.append(comparisonPanelEl);
   }
 
   function bootstrap(root) {
     invariant(root && root.document && root.S3TraceStore && root.S3_TRACE_MANIFEST, "S3 trace store / manifest 未加载");
     createRuntimeDom(root);
+    createEvidenceCenter(root);
     const doc = root.document, byId = id => doc.getElementById(id), rendererBridge = createBrowserRenderer(root);
     const state = {
       trace: null, timeline: null, elapsed: 0, lastNow: null,
       paused: false, loading: false, playbackMultiplier: 1, playbackScale: effectivePlaybackScale(1),
       query: null, rafId: null, destroyed: false, runtimeErrors: 0,
-      comparison: {valid: false, error: null, open: false, axis: "scenario", scenario: "E02", mode: "AUTO", trigger: null}
+      comparison: {valid: false, error: null, open: false, axis: "scenario", scenario: "E02", mode: "AUTO", trigger: null},
+      evidenceCenter: {open: false, tab: "tab1", trigger: null}
     };
     const listeners = [];
     const listen = (target, type, handler) => { target.addEventListener(type, handler); listeners.push([target, type, handler]); };
@@ -2235,21 +2354,137 @@
       evidenceTrigger = null;
     }
 
+    /* T5 · 证据中心开合与焦点治理。inert/focusables 实现模式抄自上面 comparisonInertTargets/
+       setComparisonInert/comparisonFocusables(B5 要求),但作用域改为 document.body 直接子级
+       (B3 根修:打开即让整个背景——含顶栏——inert,不再允许切算法导致证据与状态脱节;原注释
+       「不阻断背景观察」是有意为之,但用户实测判定为 BUG,这里按 inert 改)。 */
+    function evidenceCenterInertTargets() {
+      const center = byId("evidenceCenter");
+      return Array.from(doc.body.children).filter(element => element !== center);
+    }
+
+    function setEvidenceCenterInert(open) {
+      evidenceCenterInertTargets().forEach(element => {
+        if (open) {
+          element.dataset.s3PreviousAriaHidden = element.hasAttribute("aria-hidden") ? element.getAttribute("aria-hidden") : "__ABSENT__";
+          element.inert = true; element.setAttribute("aria-hidden", "true");
+        } else if (element.dataset.s3PreviousAriaHidden !== undefined) {
+          element.inert = false;
+          const previous = element.dataset.s3PreviousAriaHidden;
+          if (previous === "__ABSENT__") element.removeAttribute("aria-hidden"); else element.setAttribute("aria-hidden", previous);
+          delete element.dataset.s3PreviousAriaHidden;
+        }
+      });
+    }
+
+    function evidenceCenterFocusables() {
+      return Array.from(byId("evidenceCenterPanel").querySelectorAll('button:not([disabled]),select:not([disabled]),[href],[tabindex]:not([tabindex="-1"])'))
+        .filter(element => !element.hidden && element.getClientRects().length > 0);
+    }
+
+    /* tab1=本页证据链 / tab2=S1 受控对照;切到 tab2 时复用 openComparisonLab 原有的情景同步语义
+       (按当前货物画像重定位 S1 对照情景)并重渲染,行为等价于旧「点开对照证据」。 */
+    function switchEvidenceCenterTab(tab) {
+      const isTab2 = tab === "tab2";
+      state.evidenceCenter.tab = isTab2 ? "tab2" : "tab1";
+      byId("evidenceCenterTab1Btn").setAttribute("aria-selected", String(!isTab2));
+      byId("evidenceCenterTab2Btn").setAttribute("aria-selected", String(isTab2));
+      byId("evidenceCenterTab1Btn").tabIndex = isTab2 ? -1 : 0;
+      byId("evidenceCenterTab2Btn").tabIndex = isTab2 ? 0 : -1;
+      byId("evidenceCenterTab1").hidden = isTab2;
+      byId("evidenceCenterTab2").hidden = !isTab2;
+      /* state.comparison.open 语义收窄为「tab2 当前可见」,供 commit 回调判断是否需要热刷新对照表 */
+      state.comparison.open = state.evidenceCenter.open && isTab2 && state.comparison.valid;
+      if (isTab2 && state.comparison.valid) {
+        state.comparison.scenario = PROFILE_SCENARIO[state.query ? state.query.profile : byId("profileSelect").value] || state.comparison.scenario;
+        renderComparisonLab();
+      }
+    }
+
+    /* B6 根修:Esc 绑 document 级而非弹层自身——焦点逃逸到背景控件后(B5 修复前的实测复现)按 Esc
+       原实现够不到弹层的 keydown 监听,对话框关不掉。只在弹层开着时挂、关闭时立即摘除。
+       同时承接 B5 焦点陷阱(Tab/Shift+Tab 循环)与外层 tab1/tab2、内层 comparisonTabs 两级方向键导航。 */
+    function evidenceCenterKeydown(event) {
+      if (event.key === "Escape") { event.preventDefault(); closeEvidenceCenter(); return; }
+      if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) && event.target.matches('#evidenceCenterTabs [role="tab"]')) {
+        event.preventDefault();
+        const nextTab = ["ArrowRight", "End"].includes(event.key) ? "tab2" : "tab1";
+        switchEvidenceCenterTab(nextTab);
+        byId(nextTab === "tab2" ? "evidenceCenterTab2Btn" : "evidenceCenterTab1Btn").focus();
+        return;
+      }
+      if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) && event.target.matches('.comparisonTabs [role="tab"]')) {
+        event.preventDefault();
+        state.comparison.axis = ["ArrowRight", "End"].includes(event.key) ? "mode" : "scenario";
+        renderComparisonLab();
+        byId(state.comparison.axis === "mode" ? "comparisonModeTab" : "comparisonScenarioTab").focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusables = evidenceCenterFocusables(); if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (event.shiftKey && (doc.activeElement === first || !byId("evidenceCenterPanel").contains(doc.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+
+    function openEvidenceCenter(trigger, tab) {
+      state.evidenceCenter.trigger = trigger || null;
+      state.evidenceCenter.open = true;
+      byId("evidenceCenter").hidden = false;
+      setEvidenceCenterInert(true);
+      doc.addEventListener("keydown", evidenceCenterKeydown);
+      switchEvidenceCenterTab(tab || state.evidenceCenter.tab || "tab1");
+      byId("closeEvidenceCenter").focus();
+    }
+
+    function closeEvidenceCenter() {
+      if (!state.evidenceCenter.open) return;
+      state.evidenceCenter.open = false; state.comparison.open = false;
+      byId("evidenceCenter").hidden = true;
+      setEvidenceCenterInert(false);
+      doc.removeEventListener("keydown", evidenceCenterKeydown);
+      /* 触发器可能是旧的隐藏入口(openEvidenceDock/openComparisonLab,CSS display:none,防 QA/其他代码
+         触发旧 id 的兼容改线)——隐藏元素无法真正接收焦点,.focus() 会静默失败、焦点掉进虚空。
+         offsetParent===null 是判定「未渲染」的常规写法;退化到恒可见的 openEvidenceCenter,不留死焦点。 */
+      const trigger = state.evidenceCenter.trigger;
+      const focusTarget = trigger && typeof trigger.focus === "function" && trigger.offsetParent !== null ? trigger : byId("openEvidenceCenter");
+      if (focusTarget && typeof focusTarget.focus === "function") focusTarget.focus();
+      state.evidenceCenter.trigger = null;
+    }
+
     function comparisonSnapshot() {
       return {valid: state.comparison.valid, error: state.comparison.error && state.comparison.error.message,
         open: state.comparison.open, axis: state.comparison.axis, scenario: state.comparison.scenario, mode: state.comparison.mode,
         miniRows: byId("comparisonMiniBars").querySelectorAll(".miniCompareRow").length,
         tableRows: Math.max(0, byId("comparisonTable").querySelectorAll(".comparisonBodyRow").length),
-        inertTargets: comparisonInertTargets().filter(element => element.inert).length,
+        /* T5:inert 现由证据中心统一施加(evidenceCenterInertTargets),旧 comparisonInertTargets 已不再
+           被 open/close 路径调用,继续读它会恒报 0——改读新机制,保持 QA 快照真实 */
+        inertTargets: evidenceCenterInertTargets().filter(element => element.inert).length,
         activeElement: doc.activeElement && doc.activeElement.id};
+    }
+
+    function evidenceCenterSnapshot() {
+      return {
+        open: state.evidenceCenter.open, tab: state.evidenceCenter.tab, hidden: byId("evidenceCenter").hidden,
+        inertTargets: evidenceCenterInertTargets().filter(element => element.inert).length,
+        activeElement: doc.activeElement && doc.activeElement.id
+      };
     }
 
     function sameQuery(left, right) {
       return left && right && left.tier === right.tier && left.profile === right.profile && left.strategy_mode === right.strategy_mode;
     }
 
+    /* T5:tierSegs 是 tierSelect 的纯视图,任何路径改了 tierSelect.value 后都要经这里保活选中态
+       (值本身仍以 tierSelect 为真相源,分段按钮只读不越权写)。 */
+    function syncTierSegs() {
+      const value = byId("tierSelect").value;
+      Array.from(doc.querySelectorAll(".tierSeg")).forEach(seg => { seg.setAttribute("aria-checked", String(seg.dataset.tier === value)); });
+    }
+
     function syncControls(query) {
       byId("tierSelect").value = String(query.tier); byId("profileSelect").value = query.profile; byId("strategySelect").value = query.strategy_mode;
+      syncTierSegs();
     }
 
     function setLoading(loading, query) {
@@ -2285,6 +2520,11 @@
         state.query = {tier: prepared.trace.meta.tier, profile: prepared.trace.meta.profile, strategy_mode: prepared.trace.meta.strategy_mode};
         syncControls(state.query); clearError(); rendererBridge.renderFrame(state.trace, prepared.frame); renderComparisonMini();
         if (state.comparison.open) renderComparisonLab();
+        /* T5 · 切档差异条:仅当挂起采样确实来自不同档位才显示(防同档重载/尚未点过 tierSelect 时误触发) */
+        if (pendingTierDiff && pendingTierDiff.tier !== Number(state.trace.meta.tier)) {
+          showTierDiffToast(pendingTierDiff, {tier: Number(state.trace.meta.tier), p95: Number(state.trace.stats.response_p95_s), faults: Number(state.trace.stats.faults)});
+        }
+        pendingTierDiff = null;
       },
       onLoading: setLoading,
       onError: showError
@@ -2333,15 +2573,48 @@
     listen(byId("pauseMotion"), "click", togglePause); listen(byId("replayTrace"), "click", replay);
     listen(byId("resetCamera"), "click", () => { setCamera(); }); listen(byId("exp"), "click", exportFrame);
     listen(byId("playbackSpeed"), "input", event => { setPlaybackMultiplier(event.target.value); });
-    ["openComparisonLab", "openComparisonLabMini"].forEach(id => listen(byId(id), "click", event => openComparisonLab(event.currentTarget)));
+
+    /* T5 · 三档分段按钮:点击=改 tierSelect.value+派发 change(复用上面的重载监听),不越权直接 selectQuery。 */
+    Array.from(doc.querySelectorAll(".tierSeg")).forEach(seg => {
+      listen(seg, "click", () => {
+        if (seg.dataset.tier === byId("tierSelect").value) return;
+        byId("tierSelect").value = seg.dataset.tier; syncTierSegs();
+        byId("tierSelect").dispatchEvent(new Event("change", {bubbles: true}));
+      });
+    });
+    /* T5 · 切档差异条:仅 tierSelect 的 change 采样(算法/画像切换不触发);重载前缓存旧档 {tier,p95,faults},
+       commit 就绪后与新档同口径数字比较显示,3.2s 自动收;再次切换会用最新采样覆盖,不串扰。 */
+    let pendingTierDiff = null, tierDiffTimer = null;
+    function showTierDiffToast(before, after) {
+      let toast = byId("tierDiffToast");
+      if (!toast) { toast = doc.createElement("div"); toast.id = "tierDiffToast"; byId("viewport").append(toast); }
+      toast.textContent = `档${before.tier}→档${after.tier}:P95 ${before.p95.toFixed(1)}→${after.p95.toFixed(1)} s · 故障 ${before.faults}→${after.faults}`;
+      toast.classList.add("show");
+      if (tierDiffTimer) clearTimeout(tierDiffTimer);
+      tierDiffTimer = setTimeout(() => { toast.classList.remove("show"); }, 3200);
+    }
+    listen(byId("tierSelect"), "change", () => {
+      if (state.trace) pendingTierDiff = {tier: Number(state.trace.meta.tier), p95: Number(state.trace.stats.response_p95_s), faults: Number(state.trace.stats.faults)};
+    });
+
+    /* T5 · 证据中心:旧两键(openEvidenceDock=本屏证据/openComparisonLab=对照证据)与 mini「查看完整对照」
+       改线到新证据中心并切到对应 tab(防 QA/其他代码触发旧 id 时行为缺失);closeComparisonLab/
+       closeEvidenceDock 两个旧关闭钮仍挂在各自已搬空并永久 hidden 的旧壳体内,监听原样保留(不可达,无害)。 */
+    listen(byId("openEvidenceCenter"), "click", event => openEvidenceCenter(event.currentTarget, "tab1"));
+    listen(byId("openEvidenceDock"), "click", event => openEvidenceCenter(event.currentTarget, "tab1"));
+    listen(byId("openComparisonLab"), "click", event => openEvidenceCenter(event.currentTarget, "tab2"));
+    listen(byId("openComparisonLabMini"), "click", () => switchEvidenceCenterTab("tab2"));
+    listen(byId("closeEvidenceCenter"), "click", closeEvidenceCenter);
+    listen(byId("evidenceCenter"), "click", event => { if (event.target === byId("evidenceCenter")) closeEvidenceCenter(); });
+    listen(byId("evidenceCenterTab1Btn"), "click", () => { switchEvidenceCenterTab("tab1"); byId("evidenceCenterTab1Btn").focus(); });
+    listen(byId("evidenceCenterTab2Btn"), "click", () => { switchEvidenceCenterTab("tab2"); byId("evidenceCenterTab2Btn").focus(); });
     listen(byId("closeComparisonLab"), "click", closeComparisonLab);
-    /* 0719 本屏证据叠层开合(顶栏 chip / 关闭钮 / 点遮罩 / Esc) */
-    listen(byId("openEvidenceDock"), "click", event => openEvidenceDock(event.currentTarget));
     listen(byId("closeEvidenceDock"), "click", closeEvidenceDock);
-    listen(byId("evidenceDock"), "click", event => { if (event.target === byId("evidenceDock")) closeEvidenceDock(); });
-    listen(byId("evidenceDock"), "keydown", event => { if (event.key === "Escape") { event.preventDefault(); closeEvidenceDock(); } });
+    /* comparisonScenarioTab/comparisonModeTab 现已随 .comparisonPanel 搬入证据中心 tab2,是活控件;
+       byId 查找与原逻辑不依赖 DOM 位置,原样保留即可 */
     listen(byId("comparisonScenarioTab"), "click", () => { state.comparison.axis = "scenario"; renderComparisonLab(); });
     listen(byId("comparisonModeTab"), "click", () => { state.comparison.axis = "mode"; renderComparisonLab(); });
+    /* 旧 comparisonLab 壳体已搬空并永久 hidden,不再可达;监听原样保留(无害死代码) */
     listen(byId("comparisonLab"), "click", event => { if (event.target === byId("comparisonLab")) closeComparisonLab(); });
     listen(byId("comparisonLab"), "keydown", event => {
       if (event.key === "Escape") { event.preventDefault(); closeComparisonLab(); return; }
@@ -2393,7 +2666,7 @@
           paused: state.paused, loading: state.loading, runtimeErrors: state.runtimeErrors,
           playback: {baseScale: DEFAULT_PLAYBACK_SCALE, multiplier: state.playbackMultiplier, effectiveScale: state.playbackScale},
           checkpoint: state.timeline ? checkpointAt(state.timeline, state.elapsed) : null,
-          loader: latest.snapshot(), comparison: comparisonSnapshot(), renderer: rendererBridge.metrics()
+          loader: latest.snapshot(), comparison: comparisonSnapshot(), evidenceCenter: evidenceCenterSnapshot(), renderer: rendererBridge.metrics()
         };
       },
       select(query) { return selectQuery(query); },
@@ -2432,6 +2705,9 @@
       },
       destroy
     });
+    /* T5 · 三档 LOD 公开 API(规格点名 window.__S3_TIER_LOD = {apply(tier)});setTrace 已在每次 trace
+       重载后自动调用同一实现,这里额外暴露给 QA/手动核验用,tier 非法或与当前档相同时内部直接 no-op。 */
+    root.__S3_TIER_LOD = Object.freeze({apply(tier) { return rendererBridge.applyTierLod(tier); }});
 
     selectQuery(queryFromControls());
     state.rafId = schedule(frame);

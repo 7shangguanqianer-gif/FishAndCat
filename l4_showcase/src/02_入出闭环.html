@@ -484,7 +484,9 @@
   .miniCompareRow[data-current="true"]>span:first-child{color:#d6000c}.miniCompareRow[data-current="true"] .miniCompareTrack i{background:#ff000f}
 
   /* Task10：高窗不再把 6 个统计按钮拉成空白海报；剩余高度用于同一 trace 的三段证据链。 */
-  #judgePath{order:5;display:none;min-width:0;min-height:0;padding:7px 8px;border:1px solid #bfc7cd;border-top:3px solid #17365d;
+  /* B7 根修(0720 T5):判定式 display:none 基础规则与 1600×900 视口显示覆写已删——
+     judgePath 现搬入 #evidenceCenter,显示与否由弹层 hidden 决定,与视口无关(旧覆写见下方媒体块的删除记录)。 */
+  #judgePath{order:5;min-width:0;min-height:0;padding:7px 8px;border:1px solid #bfc7cd;border-top:3px solid #17365d;
     background:#fff;color:#18232c;overflow:hidden}
   .judgePathHead{display:flex;justify-content:space-between;gap:6px;align-items:baseline;padding-bottom:6px;border-bottom:1px solid #d5dbe0}
   .judgePathHead b{font:800 9.5px/1.1 "Microsoft YaHei",sans-serif}.judgePathHead span{color:#68747d;font:8px/1 Consolas,monospace}
@@ -497,7 +499,6 @@
   @media(min-width:1600px) and (min-height:900px){
     #insightStack{grid-template-rows:auto auto auto auto minmax(0,1fr);align-content:stretch}
     #traceStats{display:block;min-height:auto}#traceStats .statsGrid{display:grid;grid-template-rows:repeat(3,minmax(38px,auto));flex:none}
-    #judgePath{display:flex;flex-direction:column}.judgePathSteps{flex:1}
   }
 
   #comparisonLab{position:absolute;z-index:70;inset:0;background:#17202b52;padding:0;pointer-events:auto}
@@ -579,7 +580,9 @@
      0720 命名总表 A9:轴名 X/Z→X(行走)/Y(升降),标签列 12px→46px 防止新 label 被挤成两行;
      F 行(第 3 个 .axis)整行隐藏(DOM/runtime 每帧写入保留,只 CSS 不可见)。 */
   #axisHud .axis{grid-template-columns:46px 1fr 47px 1fr 52px;gap:5px;margin:5px 0;align-items:center}
-  #axisHud .axis:nth-of-type(3){display:none}
+  /* F 货叉行按用户拍板隐藏(runtime 每帧写入,DOM 留);语义类定位——nth-of-type 按 div 标签计数,
+     axisHudHead 包裹标题后曾把隐藏错位到 Y 行(0720 T5 验收抓获),禁止再用位置选择器 */
+  #axisHud .axisFork{display:none}
   #axisHud .axis>span:first-child{font:800 8.5px/1 Consolas,monospace;color:#16191d;white-space:nowrap}
   #axisHud .axis .velTrack{position:relative;display:block;height:6px;background:#e7ebee;border-radius:2px;
     box-shadow:inset 0 0 0 1px #d5dbe0;overflow:hidden}
@@ -786,7 +789,8 @@
   #evidenceDock header h2{margin:5px 0 0;font-size:14.5px;line-height:1.25;color:#16191d}
   #evidenceDock #closeEvidenceDock{flex:none;width:26px;height:26px;border:1px solid #18232c;background:#fff;
     color:#18232c;font:500 17px/1 Arial,sans-serif;cursor:pointer}
-  #evidenceDock #judgePath,#evidenceDock #comparisonMini{margin-top:12px}
+  /* T5:judgePath/comparisonMini 已搬入 #evidenceCenterTab1,选择器随之改指(旧 #evidenceDock 壳体永久 hidden) */
+  #evidenceCenterTab1 #judgePath,#evidenceCenterTab1 #comparisonMini{margin-top:12px}
   #openEvidenceDock[aria-haspopup="dialog"]{white-space:nowrap}
 
   /* ===== 0719 功能批次(甲·地图王):sparkline / 故障红点 / 口径小字 / 复现指纹 / PLC 徽章 / 叠层扩容 ===== */
@@ -833,8 +837,8 @@
   #evCiPanel .ciRow code{width:78px;font:700 8.5px/1 Consolas,monospace;color:#26343e;text-align:right}
   #evCiPanel .ciDelta{margin-top:5px;font:800 9.5px/1 Consolas,monospace;color:#0b5c2e}
   #evCiPanel .ciNote{margin-top:3px;font-size:6.5px;line-height:1.4;color:#65717c}
-  #evidenceDock .decisionAdvanced{margin-top:12px}
-  #evidenceDock .decisionAdvanced .advancedBody{position:static;box-shadow:none;border:1px solid #d7dce0;margin-top:4px}
+  #evidenceCenterTab1 .decisionAdvanced{margin-top:12px}
+  #evidenceCenterTab1 .decisionAdvanced .advancedBody{position:static;box-shadow:none;border:1px solid #d7dce0;margin-top:4px}
 
   /* -- 大屏:顶栏字号略升(0720 版B 转正:topbar-h 固定 40px 不再随大屏升高,进度轴已迁入右栏自适应内容高) -- */
   @media(min-width:1600px) and (min-height:860px){
@@ -956,6 +960,65 @@
   #opsEvidence .oeRef{font-size:7.5px}
   #opsEvidence .oeNote{font-size:7.5px}
   .phaseSeg .phaseAvg{font-size:7.5px}
+
+  /* ================================================================
+     T5 · 证据中心重构 + 三档四件套(2026-07-20,用户拍板批次;本节按文件惯例放末尾收口)
+     证据中心 #evidenceCenter 由 s3_ac_runtime.js 创建后挂 document.body(不挂 workHud/rail)——
+     这是 B1(对照证据窄条化)/B4(左上死区)的根修:workHud 是 position:absolute+z-index:5 的
+     祖先层叠上下文,子级无论自身 z-index 多高都只能在该上下文内排序,会被同级 topbarA(z:12)盖住。
+     旧壳体 #evidenceDock/#comparisonLab 的内容节点被搬空后永久 hidden,不删 DOM(见 runtime 注释)。
+     ================================================================ */
+  #evidenceCenter{position:fixed;z-index:200;inset:0;display:flex;align-items:center;justify-content:center;background:#17202b73}
+  #evidenceCenter[hidden]{display:none}
+  #evidenceCenterPanel{width:min(880px,92vw);max-height:86vh;overflow-y:auto;background:#fff;
+    border-top:4px solid var(--abb-red,#ff000f);box-shadow:0 18px 50px #0f171e59;padding:0 18px 18px}
+  #evidenceCenterPanel>header{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;
+    gap:12px;padding:14px 0 11px;background:#fff;border-bottom:1px solid #e2e6ea}
+  #evidenceCenterPanel>header span{display:block;font:700 8.5px/1 Consolas,monospace;letter-spacing:.7px;color:#6d7780}
+  #evidenceCenterPanel>header h2{margin:5px 0 0;font-size:16px;line-height:1.25;color:#16191d}
+  #closeEvidenceCenter{flex:none;width:28px;height:28px;border:1px solid #18232c;background:#fff;color:#18232c;
+    font:500 18px/1 Arial,sans-serif;cursor:pointer}
+  #evidenceCenterTabs{position:sticky;top:55px;z-index:2;display:grid;grid-template-columns:1fr 1fr;
+    border-bottom:2px solid #18232c;background:#fff}
+  #evidenceCenterTabs button{min-height:36px;border:0;border-right:1px solid #b9c2c9;background:#e8ecef;color:#4d5962;
+    font:700 11px/1 "Microsoft YaHei",sans-serif;cursor:pointer}
+  #evidenceCenterTabs button:last-child{border-right:0}
+  #evidenceCenterTabs button[aria-selected="true"]{background:#18232c;color:#fff}
+  #evidenceCenterTab1,#evidenceCenterTab2{padding-top:4px}
+  #evidenceCenterTab1[hidden],#evidenceCenterTab2[hidden]{display:none}
+  #evidenceCenterTab1 #judgePath,#evidenceCenterTab1 #comparisonMini{margin-top:12px}
+  /* comparisonPanel 整体(含内部 comparisonTabs/toolbar/autoSummary/table/foot)原样搬入 tab2;
+     只隐藏其内层重复 header(证据中心已有统一 header),不改内部结构与渲染函数 */
+  #evidenceCenterTab2 .comparisonPanel{height:auto;padding:14px 0 4px;border-top:0;box-shadow:none;background:transparent}
+  #evidenceCenterTab2 .comparisonPanel>header{display:none}
+  #evidenceCenter button:focus-visible,#evidenceCenter select:focus-visible{outline:3px solid #e7b800;outline-offset:2px}
+  @media(max-width:1380px),(max-height:780px){
+    #evidenceCenterPanel{width:min(760px,94vw)}
+  }
+
+  /* -- 三档分段按钮:替 #tierSelect 顶栏可见项;#tierSelect DOM 与 value 仍是真相源,
+     分段按钮只是其视图(点击改 value + 派发 change,交由既有 change 监听重载;syncControls 反向同步选中态) -- */
+  #tierSelect{display:none}
+  .tierSegs{display:flex;align-items:stretch;gap:1px;background:#d6dde2;border:1px solid #d6dde2}
+  .tierSeg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:56px;
+    padding:2px 5px;border:0;background:#fff;color:#3d4a54;cursor:pointer;font-family:"Microsoft YaHei",sans-serif}
+  .tierSeg b{font:700 8.5px/1.15 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  .tierSeg small{font:7.5px/1.2 Consolas,"Microsoft YaHei",monospace;color:#69747d;white-space:nowrap}
+  .tierSeg[aria-checked="true"]{background:#17365d}
+  .tierSeg[aria-checked="true"] b{color:#fff}
+  .tierSeg[aria-checked="true"] small{color:#c7d2dc}
+  @media(max-width:1480px){.tierSeg{min-width:48px;padding:2px 3px}.tierSeg b{font-size:8px}.tierSeg small{font-size:7px}}
+
+  /* -- 档位徽章:轴状态块头右侧,显示当前档机理词(trace 重载后由 setTrace 更新,读 tierSelect 映射不编数) -- */
+  #axisHud .axisHudHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  #tierBadge{flex:none;font:700 7.5px/1.2 Consolas,monospace;color:#5d6972;white-space:nowrap}
+
+  /* -- 切档差异条:3.2s 自动收,仅 tier 切换触发(算法/画像切换不触发) -- */
+  #tierDiffToast{position:absolute;z-index:11;top:calc(var(--topbar-h) + 12px);left:50%;transform:translateX(-50%);
+    padding:7px 14px;background:#17365df0;color:#fff;font:700 10.5px/1.3 "Microsoft YaHei",sans-serif;
+    box-shadow:0 4px 14px #17202b33;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s linear}
+  #tierDiffToast.show{opacity:1}
+  #viewport:has(#pausedHint:not([hidden])) #tierDiffToast{top:calc(var(--topbar-h) + 44px)}
 </style>
 <link rel="stylesheet" href="./s3_shell_v2.css">
 </head>
@@ -973,7 +1036,7 @@
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="轴状态：位置与速度，数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
+        <div id="axisHud" aria-label="轴状态：位置与速度，数值随演示连续变化" aria-live="off"><div class="axisHudHead"><b>轴状态 · 位置与速度</b><span id="tierBadge">档3 · 加减速+故障+潮汐</span></div><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis axisFork"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
       </div>
       <div id="progressAxisHost" aria-label="作业周期进度轴">
         <div id="cycleAxis">

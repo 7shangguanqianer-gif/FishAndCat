@@ -49,6 +49,12 @@
       scenarioGroup.setAttribute("aria-label", "情景配置：算法 · 拟真档 · 货物画像");
       runtimeControls.querySelectorAll(":scope > label").forEach(label => scenarioGroup.append(label));
       runtimeControls.prepend(scenarioGroup);
+      /* T5:三档分段按钮(#tierSegs,s3_ac_runtime.js 建在「拟真档」label 之后)是原生 <label> 的兄弟节点,
+         不是 label 本身,不会被上面 :scope > label 的搬运捎带——显式接着挪到同一 label 后面,
+         保证顶栏视觉顺序仍是「拟真档 [段1][段2][段3]」而不是被冲到货物画像后面。 */
+      const tierSegsEl = byId("tierSegs");
+      const tierLabelEl = byId("tierSelect") && byId("tierSelect").closest("label");
+      if (tierSegsEl && tierLabelEl) tierLabelEl.after(tierSegsEl);
       const actions = byId("runtimeActions");
       if (actions) {
         const playSet = doc.createElement("span"); playSet.className = "btnSet";
