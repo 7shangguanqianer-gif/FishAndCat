@@ -816,6 +816,9 @@
   #opsEvidence .oeGrid>div{padding:4px 6px;background:#eef1f3;min-width:0}
   #opsEvidence .oeGrid b{display:block;font:800 11px/1 Consolas,monospace;color:#17202b}
   #opsEvidence .oeGrid span{display:block;margin-top:2px;font-size:6.5px;color:#5d6972;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* M5 省一趟角标:文献基准(Bozer-White 1984)与实测并列,悬停见口径 */
+  #opsEvidence .oeRef{display:block;margin-top:3px;padding:2px 4px;font:700 6px/1.2 "Microsoft YaHei",sans-serif;font-style:normal;
+    color:#7a5c1e;background:#faf3df;border:1px solid #ecdfbc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #opsEvidence .oeHot{background:#fdf3d5;box-shadow:inset 0 0 0 1px #e7b800}
   #opsEvidence .oeNote{margin-top:4px;font-size:6.5px;line-height:1.45;color:#8a949c}
 
@@ -1176,7 +1179,7 @@ addConveyorLane(OUTFEED,OUTFEED.startX,OUTFEED.endX,M.outfeedRail);
 addTransferBridge({x:INFEED.loadX,y:INFEED.y},TRANSFER_ANCHOR,M.infeedRail);
 addTransferBridge(TRANSFER_ANCHOR,{x:OUTFEED.startX,y:OUTFEED.y},M.outfeedRail);
 addFloorFlowLabel('入库  →',(INFEED.entryX+INFEED.loadX)/2,STATION_Y-.83,'#17365d');
-addFloorFlowLabel('→  出库',(OUTFEED.startX+OUTFEED.endX)/2,STATION_Y-.83,'#2f7895');
+addFloorFlowLabel('→  出库 · 取货侧',(OUTFEED.startX+OUTFEED.endX)/2,STATION_Y-.83,'#2f7895'); /* M5 lane 头标 */
 
 /* 入→装 与 卸→扫→出可见工位；仅做展示层物理语义，坐标仍映射 canonical (0,0)。 */
 const stationCollisionSolids=[];
@@ -1227,7 +1230,7 @@ function addPath(points,options={}){const group=new THREE.Group(),material=new T
   else{const curve=new PiecewiseLinearCurve(clean),segments=Math.max(12,clean.length-1);
     const halo=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.haloRadius??.25,8,false),haloMaterial),
       mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.radius??.16,8,false),material);group.add(halo,mesh);
-    const arrowCount=Math.max(1,Math.min(3,options.arrowCount??2));
+    const arrowCount=Math.max(0,Math.min(3,options.arrowCount??2)); /* M5:虚线段允许显式 0 箭头;默认 2 不变 */
     Array.from({length:arrowCount},(_,index)=>(index+1)/(arrowCount+1)).forEach(fr=>{const p=curve.getPoint(fr),p2=curve.getPoint(Math.min(1,fr+.02)),dir=p2.clone().sub(p);
       if(dir.lengthSq()<1e-8)return;dir.normalize();const arrow=new THREE.Mesh(new THREE.ConeGeometry(.15,.36,10),material);
       arrow.position.copy(p);arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);group.add(arrow);});}

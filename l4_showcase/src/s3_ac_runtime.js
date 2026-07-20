@@ -828,6 +828,17 @@
     /* 0719:3D 故障可视化(用户指正「3D 看不出故障表现」)——载货台警示红球,faulted 帧显示、随 carrier 移动 */
     const faultBeacon = new THREE.Mesh(new THREE.SphereGeometry(.26, 14, 10), new THREE.MeshBasicMaterial({color: 0xd32f2f}));
     faultBeacon.visible = false; faultBeacon.position.set(0, 0, 1.05); carrier.add(faultBeacon);
+    /* M5 lane 头标:出库带上方「取货侧」立牌——Sprite 永面向相机;地贴在常用低平机位退化成一条线,立牌补强可读性 */
+    const retrLabelCanvas = doc.createElement("canvas"); retrLabelCanvas.width = 256; retrLabelCanvas.height = 96;
+    const retrLabelCtx = retrLabelCanvas.getContext("2d");
+    retrLabelCtx.fillStyle = "rgba(0,132,168,.92)"; retrLabelCtx.fillRect(0, 0, 256, 96);
+    retrLabelCtx.strokeStyle = "#ffffff"; retrLabelCtx.lineWidth = 6; retrLabelCtx.strokeRect(3, 3, 250, 90);
+    retrLabelCtx.fillStyle = "#fff"; retrLabelCtx.font = '800 46px "Microsoft YaHei", sans-serif';
+    retrLabelCtx.textAlign = "center"; retrLabelCtx.textBaseline = "middle"; retrLabelCtx.fillText("取货侧", 128, 50);
+    const retrieveSideSprite = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(retrLabelCanvas), transparent: true, depthWrite: false}));
+    retrieveSideSprite.scale.set(1.85, .69, 1);
+    retrieveSideSprite.position.set((OUTFEED.startX + OUTFEED.endX) / 2, OUTFEED.y, 2.15);
+    scene.add(retrieveSideSprite);
     if (cargo.parent) cargo.parent.remove(cargo);
     scene.add(cargo); cargo.visible = false;
 
@@ -1023,6 +1034,29 @@
 
     function clearPaths() { while (livePaths.length) disposePath(livePaths.pop()); }
 
+    /* M5 交织腿标记:LINK_TRAVEL(存→取空驶联程)虚线化——实线=载货/作业,虚线=空驶,
+       「一趟两单」的差异腿一眼可辨。拆段只在呈现层,operationPathPlan 七步 invariant 不动。 */
+    function dashPolyline(points, dashLen, gapLen) {
+      const dashes = [];
+      let inDash = true, remain = dashLen, current = [points[0].clone()];
+      for (let index = 1; index < points.length; index += 1) {
+        let a = points[index - 1].clone();
+        const b = points[index];
+        let segLen = a.distanceTo(b);
+        while (segLen > remain + 1e-9) {
+          const cut = a.clone().lerp(b, remain / segLen);
+          if (inDash) { current.push(cut.clone()); dashes.push(current); current = null; }
+          else current = [cut.clone()];
+          inDash = !inDash;
+          a = cut; segLen = a.distanceTo(b); remain = inDash ? dashLen : gapLen;
+        }
+        remain -= segLen;
+        if (inDash && current) current.push(b.clone());
+      }
+      if (inDash && current && current.length > 1) dashes.push(current);
+      return dashes.filter(dash => dash.length > 1);
+    }
+
     function setPaths(trace, event) {
       const signature = `${trace.meta.trace_id}|${event.cycle}|${event.store_slot.col}/${event.store_slot.tier}|${event.retrieve_slot.col}/${event.retrieve_slot.tier}`;
       if (signature === pathSignature) return;
@@ -1032,18 +1066,28 @@
         cargoZOffset: CARGO_Z_OFFSET, cargoDrop: CARGO_DROP, cargoReach: CARGO_REACH};
       operationPathPlan(trace, event, geometry).forEach(plan => {
         const points = plan.points.map(point => new THREE.Vector3(point.x, point.y, point.z));
-        const path = addPath(points, {color: colors[plan.kind], opacity: .28, radius: .065, haloRadius: .12, arrowCount: plan.arrowCount, operationKey: plan.operationKey, kind: plan.kind});
-        path.operationKey = plan.operationKey; path.kind = plan.kind; path.baseColor = colors[plan.kind];
-        path.auditPoints = plan.points.map(point => ({x: point.x, y: point.y, z: point.z}));
-        livePaths.push(path);
+        /* M5:交织空驶腿拆虚线段;多段共享 operationKey,emphasis 与审计端点语义不变 */
+        const pieces = plan.operationKey === "LINK_TRAVEL" ? dashPolyline(points, .62, .38) : [points];
+        const arrowPiece = Math.floor(pieces.length / 2);
+        pieces.forEach((piece, pieceIndex) => {
+          const path = addPath(piece, {color: colors[plan.kind], opacity: .28, radius: .065, haloRadius: .12,
+            arrowCount: pieces.length === 1 ? plan.arrowCount : (pieceIndex === arrowPiece ? 1 : 0),
+            operationKey: plan.operationKey, kind: plan.kind});
+          path.operationKey = plan.operationKey; path.kind = plan.kind; path.baseColor = colors[plan.kind];
+          path.auditPoints = plan.points.map(point => ({x: point.x, y: point.y, z: point.z}));
+          livePaths.push(path);
+        });
       });
     }
 
+    /* M5 取货 lane 高亮:当前腿分侧着色——入库半程橙、取货半程(联程/取货/回口/扫码)青,
+       与 dock 图例「出库」同色系;评委一眼分辨 02 独有的「取」半程。 */
+    const RETRIEVAL_SIDE = new Set(["LINK_TRAVEL", "RETRIEVE_HANDLE", "OUTBOUND_TRAVEL", "SCAN_EXIT"]);
     function updatePathEmphasis(operationKey) {
       const current = STEP_INDEX[operationKey];
       livePaths.forEach(path => {
         const index = STEP_INDEX[path.operationKey];
-        path.material.color.setHex(index === current ? 0xff6a00 : path.baseColor);
+        path.material.color.setHex(index === current ? (RETRIEVAL_SIDE.has(path.operationKey) ? 0x00a3c8 : 0xff6a00) : path.baseColor);
         path.material.opacity = index === current ? .96 : index < current ? .42 : .24;
         path.material.depthTest = index !== current;
         if (path.haloMaterial) path.haloMaterial.opacity = index === current ? .84 : index < current ? .10 : 0;
@@ -1410,7 +1454,7 @@
         `<div class="oeHot"><b>${fmt(data.hotAvg)} s</b><span>热门件取货均时 · n=${data.hotN}</span></div>` +
         `<div><b>${fmt(data.coldAvg)} s</b><span>非热门取货均时 · n=${data.coldN}</span></div>` +
         `<div><b>${fmt(data.linkAvg)} s</b><span>交织腿均时 · 存→取直达</span></div>` +
-        `<div><b>${(data.savedTotal / 60).toFixed(1)} min</b><span>省一趟合计 / ${data.n} 周期</span></div></div>` +
+        `<div><b>${(data.savedTotal / 60).toFixed(1)} min</b><span>省一趟合计 / ${data.n} 周期</span><em class="oeRef" title="文献基准:Bozer & White 1984——随机存储下单命令两次往返≈2×1.27、双命令一趟≈1.71(归一化行程),省约 33%。本格 min 数为本页轨迹按同一运动学折算的实测合计;文献值与实测值并列印证,口径不混用。">双命令省行程 ≈33% · Bozer-White 1984</em></div></div>` +
         `<div class="oeNote">腿时长 = 七步 SIM 时刻差；省一趟 = 同一运动学（${data.motion === "constant_speed" ? "匀速" : "加减速"}）折算「回 I/O 再出发 − 直达」</div>`;
       const target = byId("sceneDock");
       if (target && host.parentElement !== target) target.append(host);
