@@ -35,7 +35,24 @@
     plcBadge.textContent = "PLC 分片可行性 · 另页详述";
     plcBadge.title = "AC500 分片下装可行性另页详述;本页为 SIM 演示口径,不虚构 PLC 实测结论。";
     topbar.append(plcBadge);
-    if (runtimeControls) topbar.append(runtimeControls); /* 含 runtimeActions / traceLoadState / traceErrorHost */
+    if (runtimeControls) {
+      /* 0719d 结构重排(绿框):三个「label+select」融为一个情景配置单元;动作按钮分「播放/证据」两组。
+         只包壳搬运,不动 id——runtime 已按 id 绑好监听,元素搬家监听随行。 */
+      const scenarioGroup = doc.createElement("div");
+      scenarioGroup.className = "scenarioGroup";
+      scenarioGroup.setAttribute("aria-label", "情景配置：算法 · 拟真档 · 货物画像");
+      runtimeControls.querySelectorAll(":scope > label").forEach(label => scenarioGroup.append(label));
+      runtimeControls.prepend(scenarioGroup);
+      const actions = byId("runtimeActions");
+      if (actions) {
+        const playSet = doc.createElement("span"); playSet.className = "btnSet";
+        const proofSet = doc.createElement("span"); proofSet.className = "btnSet";
+        ["pauseMotion", "replayTrace"].forEach(id => { const el = byId(id); if (el) playSet.append(el); });
+        ["exp", "openEvidenceDock", "openComparisonLab"].forEach(id => { const el = byId(id); if (el) proofSet.append(el); });
+        actions.prepend(playSet, proofSet);
+      }
+      topbar.append(runtimeControls);
+    }
   }
 
   /* 0719 C2 组件公约:镜头与演示倍率 → 进度轴行尾(01 已如此,02 从 sceneDock 第三列搬来;

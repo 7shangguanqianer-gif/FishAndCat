@@ -1719,6 +1719,10 @@
       const faultBanner = byId("faultStateBanner"); faultBanner.hidden = !frame.faulted;
       if (frame.faulted) faultBanner.querySelector("span").textContent = `故障 ${String((frame.faultIndex ?? 0) + 1).padStart(2, "0")} · ${visibleStepLabel} 保持位`;
       byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
+      /* 0719d:速度并入遥测网格(速度 canvas 退役);故障帧 vx/vz 已在 deriveFrame 清零 */
+      const xVelEl = byId("xVel"), zVelEl = byId("zVel");
+      if (xVelEl) xVelEl.textContent = `${Math.abs(frame.machine.vx).toFixed(2)} m/s`;
+      if (zVelEl) zVelEl.textContent = `${Math.abs(frame.machine.vz).toFixed(2)} m/s`;
       byId("xFill").style.setProperty("--fill", `${frame.machine.x / 19 * 100}%`); byId("zFill").style.setProperty("--fill", `${frame.machine.z / 19 * 100}%`); byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
       byId("queueMeta").textContent = `${frame.queueGids.length} 等待`;
       const judgeAction = byId("judgeAction"), judgeActionMeta = byId("judgeActionMeta");

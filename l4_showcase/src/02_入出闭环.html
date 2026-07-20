@@ -60,9 +60,11 @@
   #axisHud b{display:block;color:#fff;font-size:11px;margin-bottom:2px}#axisHud .axis{display:grid;grid-template-columns:22px 1fr auto;gap:5px;align-items:center}
   /* 0719 编码修正(用户「实时轴位看不出来」):位置是**点**不是量——fill 条在 X=0.16m 时宽 0.8% 恒不可见;
      改为轨道+位置点标,任意位置一眼可读 */
-  #axisHud .axis i{position:relative;height:4px;background:#e4e8ec;overflow:visible;border-radius:2px}
-  #axisHud .axis i:after{content:"";position:absolute;top:-3px;left:clamp(0%,calc(var(--fill,0%) - 2px),calc(100% - 5px));
-    width:5px;height:10px;background:var(--c,#17365d);border-radius:1px;box-shadow:0 0 0 1px #fff}
+  #axisHud .axis i{position:relative;height:6px;background:#e7ebee;overflow:visible;border-radius:2px;
+    box-shadow:inset 0 0 0 1px #d5dbe0}
+  #axisHud .axis i:before{content:"";position:absolute;left:50%;top:-1px;bottom:-1px;width:1px;background:#c3ccd2} /* 半程刻度 */
+  #axisHud .axis i:after{content:"";position:absolute;top:-4px;left:clamp(0%,calc(var(--fill,0%) - 3px),calc(100% - 7px));
+    width:7px;height:14px;background:var(--c,#17365d);border-radius:2px;box-shadow:0 0 0 1.5px #fff}
   #phaseRail{position:absolute;z-index:4;left:10px;bottom:9px;width:min(51%,460px);padding:6px 8px 7px;background:#fffffff0;
     border:1px solid #d8dadd;border-radius:3px;box-shadow:0 2px 8px #00000012}
   #phaseRail .phaseTitle{display:flex;justify-content:space-between;margin-bottom:4px;color:#626a73;font:9px/1.2 Consolas,"Microsoft YaHei",monospace}
@@ -111,7 +113,7 @@
   #axisHud{order:3;width:100%;padding:12px 13px;background:var(--axis-bg,#17202b);border:0;border-radius:0;box-shadow:none;font-size:11px}
   #axisHud b{font-size:10px;letter-spacing:1.2px;color:#c7d2dc;margin-bottom:8px}
   #axisHud .axis{grid-template-columns:20px 1fr 62px;gap:8px;margin:7px 0}#axisHud .axis i{height:5px;border-radius:0}
-  #axisHud .axis span:last-child{text-align:right;font-size:12px;color:#fff}
+  /* (0719d 删死代:b 代深壳 span:last-child 白字——A 壳白底下把速度列变隐形) */
   #liveChartWrap{order:5;min-height:132px;padding:10px 11px 7px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
   #liveChartWrap .cap{display:flex;justify-content:space-between;gap:12px;font-size:10px;font-weight:700;color:var(--rail-muted,#65717c)}
   #liveChartWrap .cap b{color:var(--rail-ink,#15202b)}#speed{display:block;width:100%;height:96px;margin-top:5px}
@@ -178,7 +180,7 @@
   @media(max-width:1200px){#workHud{padding:18px 16px 14px;gap:9px}#railHead h1{font-size:18px}#liveChartWrap{min-height:116px}#speed{height:80px}}
   @media(max-height:800px){#workHud{padding:12px 14px 10px;gap:7px}#railHead{padding-bottom:7px}#railHead h1{font-size:18px;margin-top:2px}
     #taskline{padding:8px 9px}#taskline .primary{margin-top:3px;font-size:12px}#actionBadge{margin-top:6px;padding:4px 7px}#taskline .metaRow{margin-top:5px}
-    #axisHud{padding:7px 9px}#axisHud b{margin-bottom:3px}#axisHud .axis{margin:4px 0}#axisHud .axis span:last-child{font-size:10px}
+    #axisHud{padding:7px 9px}#axisHud b{margin-bottom:3px}#axisHud .axis{margin:4px 0}
     #slotMapWrap{min-height:145px;padding:7px 8px 6px}#slotMapWrap .mapKey{margin-top:2px}
     #liveChartWrap{min-height:94px;padding:6px 8px 4px}#speed{height:66px;margin-top:2px}#phaseRail{padding:6px 8px}#phaseSegments{height:21px}
     #sceneCaption{bottom:10px}}
@@ -242,9 +244,8 @@
   #decisionWrap .proofLead{margin-top:4px;padding:4px 5px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #decisionWrap .routeSignals{display:flex;gap:4px;margin-top:4px;color:#5e6a73;font:7.5px/1.2 Consolas,monospace}
   #decisionWrap .routeSignals span{padding:3px 4px;background:#eef2f5;white-space:nowrap}
-  #axisHud{grid-area:axis;align-self:stretch;min-width:0;padding:7px 8px;font-size:9px}
-  #axisHud b{font-size:8px;margin-bottom:4px}#axisHud .axis{grid-template-columns:14px 1fr 46px;gap:5px;margin:5px 0}
-  #axisHud .axis span:last-child{font-size:9px}#axisHud .axis i{height:4px}
+  /* (0719d 删死代:老 rail-grid 的 #axisHud 三行——grid-area:axis 在新遥测网格里制造隐式轨道
+     把 1fr 轨道挤成 129px;其余属性均被 A 壳段后代覆盖) */
   #slotMapWrap{grid-area:map;min-width:0;min-height:0;padding:7px 8px 6px;overflow:hidden}
   #slotMapWrap .mapHead b{font-size:9.5px}#slotMapWrap .mapHead span{font-size:7px}#slotMapWrap .mapHead strong{font-size:15px}
   #slotMapWrap .hatch{width:15px;height:8px}
@@ -303,7 +304,7 @@
     #decisionWrap .weightGrid .metricHelp{padding:5px 3px}#decisionWrap .weightGrid .metricHelp b{font-size:9px}#decisionWrap .weightGrid .metricHelp small{font-size:7px}
     #decisionWrap .weightNote{margin-top:5px;padding:5px 6px;font-size:8px}
     #axisHud{padding:10px 11px;font-size:10px}#axisHud b{font-size:9px;margin-bottom:7px}#axisHud .axis{grid-template-columns:18px 1fr 54px;gap:7px;margin:8px 0}
-    #axisHud .axis span:last-child{font-size:10px}#axisHud .axis i{height:5px}
+    #axisHud .axis i{height:5px}
     #slotMapWrap{align-self:start;padding:11px 12px 9px}#slotMapWrap .mapHead b{font-size:11px}#slotMapWrap .mapHead span{font-size:8.5px}
     #slotMapWrap .mapHead strong{font-size:18px}
     #slotMap{flex:none;height:auto;min-height:0;aspect-ratio:1/1;margin-top:7px}#slotMapWrap .mapKey{gap:8px;margin-top:6px;font-size:8px;line-height:1.25}
@@ -380,9 +381,11 @@
   #sceneTools .toolHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
   #playbackValue{text-align:right}
   /* 0719 修:right:18 落在右栏底下被盖(用户「看不到故障表现」的一半根因)→ 移到 3D 区右上、热度图例上方 */
-  #faultStateBanner{position:absolute;z-index:8;right:calc(var(--rail-w) + 18px);top:82px;min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
+  /* 0719d:原 right 定位压住镜头行「总览」+倍率滑条 → 顶部居中;与暂停贴条同现时经 :has 下移一档成组 */
+  #faultStateBanner{position:absolute;z-index:8;left:50%;transform:translateX(-50%);top:calc(var(--topbar-h) + var(--axis-h) + 12px);min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
     background:#fff5f4f2;box-shadow:0 5px 18px #6d17172b;color:#6f1717;pointer-events:none}
   #faultStateBanner[hidden]{display:none}#faultStateBanner b{display:block;font:900 10px/1.1 "Microsoft YaHei",sans-serif}
+  #viewport:has(#pausedHint:not([hidden])) #faultStateBanner{top:calc(var(--topbar-h) + var(--axis-h) + 44px)}
   #faultStateBanner span{display:block;margin-top:4px;font:8.5px/1.3 Consolas,"Microsoft YaHei",monospace;color:#7d3430}
   /* gen3:#sceneCaption 一代定位→578(static 化);font-size→478;#reserveRuleBadge 一代定位→593 */
 
@@ -542,23 +545,30 @@
     overflow:hidden;background:#f9fafbeF;border:1px solid #9ea9b1;border-top:3px solid var(--abb-red);box-shadow:0 8px 24px #17202b2b;color:#1c2932}
   #sceneDock>*{min-width:0;min-height:0;height:100%;overflow:hidden;border:0;border-left:1px solid #c7cfd5;border-radius:0;box-shadow:none}
   #sceneDock>*:first-child{border-left:0}
-  #sceneCaption{position:static;max-width:none;padding:6px 10px;display:grid;grid-template-columns:auto 1fr;grid-template-areas:"label meta" "action action" "cargo legend";
-    align-content:center;gap:3px 8px;background:#fff;color:#1b2831;pointer-events:none;font-family:"Microsoft YaHei",sans-serif}
+  /* 0719d:图例独立底行(原与 cargo meta 同行互挤),meta 得整行宽 */
+  #sceneCaption{position:static;max-width:none;padding:5px 10px;display:grid;grid-template-columns:auto 1fr;grid-template-areas:"label meta" "action action" "cargo cargo" "legend legend";
+    align-content:center;gap:2px 8px;background:#fff;color:#1b2831;pointer-events:none;font-family:"Microsoft YaHei",sans-serif}
   #sceneCaption .dockLabel{grid-area:label;color:#16191d;font-size:9px;font-weight:700} /* 0719:三块标题统一深色 */
   #sceneCaption #sceneActionMeta{grid-area:meta;justify-self:end;color:#5d6972;font:8.5px/1.1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
   #sceneCaption #sceneActionText{grid-area:action;display:block;overflow:hidden;color:#17365d;font-size:11px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis}
-  #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;font:8px/1.15 Consolas,"Microsoft YaHei",monospace;white-space:nowrap;text-overflow:ellipsis}
+  /* 0719d:meta 允许两行,消除「…」截断 */
+  #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;font:8px/1.35 Consolas,"Microsoft YaHei",monospace;
+    white-space:normal;max-height:2.7em}
   /* 0719 白化:深色遥测块与 dock 白底顶撞(用户指正「统一成白色」);drawSpeed 画布用色本就浅底友好,只改壳 */
-  #sceneTelemetry{position:static;width:auto;padding:6px 10px;display:grid;grid-template-columns:1.05fr .95fr;gap:10px;
-    background:#fff;color:#26343e;pointer-events:none}
+  /* 0719d:速度 canvas 退役(信息并入遥测网格),遥测块单列 */
+  #sceneTelemetry{position:static;width:auto;padding:6px 12px;display:grid;grid-template-columns:1fr;gap:0;
+    background:#fff;color:#26343e;pointer-events:none;align-content:center}
+  #liveChartWrap{display:none}
   #sceneTelemetry .telemetryTitle{display:none}
   #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
   #axisHud b{margin:0 0 2px;color:#16191d;font-size:8.5px;letter-spacing:0}
-  #axisHud .axis{grid-template-columns:12px 1fr 43px;gap:5px;margin:2px 0}
-  #axisHud .axis span:last-child{color:#17202b;font-size:8.5px;text-align:right;font-family:Consolas,monospace}
-  #liveChartWrap{width:auto;min-width:0;min-height:0;padding:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:transparent;border:0}
-  #liveChartWrap .cap{font-size:7.5px;color:#66727b}#liveChartWrap .cap b{color:#16191d}#speed{height:42px;min-height:0;margin-top:1px}
-  #reserveRuleBadge{grid-area:legend;position:static;padding:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+  /* 0719d 结构重排:每轴一行 = 轴名|位置点标轨道|位置值|速度值(速度 canvas 退役,信息合并进同一网格) */
+  #axisHud .axis{grid-template-columns:14px 1fr 54px 58px;gap:6px;margin:5px 0;align-items:center}
+  #axisHud .axis>span:first-child{font:800 9.5px/1 Consolas,monospace;color:#16191d}
+  #axisHud .axis .vel{font:700 8.5px/1 Consolas,monospace;color:#69747d;text-align:right;white-space:nowrap}
+  #axisHud .axis span:nth-child(3){color:#17202b;font-size:9px;font-weight:700;text-align:right;font-family:Consolas,monospace}
+  /* (0719d 删死代:液晶 canvas 组样式——559 行 display:none 会被此处 display:grid 反杀,故整段清除) */
+  #reserveRuleBadge{grid-area:legend;position:static;margin-top:1px;padding:3px 0 0;border-top:1px solid #eef1f4;display:flex;align-items:center;justify-content:flex-start;gap:8px;
     background:transparent;color:#53616b;pointer-events:none;font:700 7px/1 "Microsoft YaHei",sans-serif}
   #reserveRuleBadge span{min-width:0;display:flex;align-items:center;gap:4px;white-space:nowrap}
   #reserveRuleBadge i{display:block;width:14px;height:4px;flex:none;background:#17365d}
@@ -637,14 +647,21 @@
   #topbarA #railHead .eyebrow{font-size:7px}
   #topbarA #railHead .matrix{display:none}
   /* 0719 顶栏革新:控件统一 26px 高、间距节律 10px、组间分隔线;状态徽章(已校验/PLC)去按钮观感 */
-  #topbarA #runtimeControls{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;padding:0;background:transparent}
-  #topbarA #runtimeControls label{display:flex;align-items:center;gap:5px;font-size:8.5px;white-space:nowrap;color:#59656e}
-  #topbarA #runtimeControls select{width:auto;min-width:118px;height:26px;border:1px solid #b6c0c8;background:#fff;font-size:9.5px;padding:0 6px}
-  #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:8px;grid-column:auto;
-    border-left:1px solid #e2e6ea;padding-left:12px}
+  #topbarA #runtimeControls{display:flex;align-items:center;gap:12px;flex:1;min-width:0;border:0;padding:0;background:transparent}
+  /* 0719d(绿框):情景配置组容器化——三个 label+select 融为一个灰底单元,select 去独立边框;裸珠子散排消除 */
+  #topbarA .scenarioGroup{display:flex;align-items:center;min-width:0;background:#f2f4f6;border:1px solid #dde3e8;padding:2px 6px}
+  #topbarA .scenarioGroup label+label{border-left:1px solid #d6dde2;margin-left:9px;padding-left:9px}
+  #topbarA #runtimeControls label{display:flex;align-items:center;gap:5px;font-size:8.5px;white-space:nowrap;color:#59656e;font-weight:700}
+  #topbarA #runtimeControls select{width:auto;min-width:110px;height:24px;border:0;background:transparent;font-size:9.5px;padding:0 4px;color:#17202b;font-weight:700}
+  /* 按钮分组:播放组(暂停/回放)| 证据组(导出/本屏/对照),组间 1px 分隔;「暂停/继续」为主按钮深蓝实底 */
+  #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:9px;grid-column:auto}
+  #topbarA #runtimeActions .btnSet{display:flex;align-items:center;gap:5px}
+  #topbarA #runtimeActions .btnSet+.btnSet{border-left:1px solid #d6dde2;padding-left:10px}
   #topbarA #runtimeActions button{height:26px;min-height:26px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
   #topbarA #runtimeActions button:hover{background:#17365d;color:#fff;border-color:#17365d}
-  #topbarA #traceLoadState{margin-left:2px;padding:5px 9px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap}
+  #topbarA #runtimeActions #pauseMotion{background:#17365d;color:#fff;border-color:#17365d;font-weight:700} /* 3id 压过通用按钮规则 */
+  #topbarA #runtimeActions #pauseMotion:hover{background:#0f2440;border-color:#0f2440}
+  #topbarA #traceLoadState{padding:5px 9px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap}
   #topbarA #traceErrorHost{position:absolute;top:100%;left:0;right:0;z-index:30}
 
   /* -- 左栏 rail:决策卡 → insight 统计 → 2D 货位图 → 七步条(axisHud/liveChart 在 dock,不占 rail) -- */
@@ -804,7 +821,7 @@
 
   /* 0719 收敛(用户选甲):dock 底带转正为唯一版;rail/axis 两分支删,?s3b 机制退役 */
   #viewport{--scene-dock-h:96px}
-  #sceneDock{grid-template-columns:minmax(250px,1.08fr) minmax(235px,1fr) minmax(280px,1.12fr)} /* 0719:三列密度平衡(左块内容少收窄,右证据块放宽) */
+  #sceneDock{grid-template-columns:minmax(268px,1.2fr) minmax(196px,.78fr) minmax(292px,1.22fr)} /* 0719d:速度canvas退役后遥测块收窄;左「当前作业」放宽容纳整行meta+图例底行 */
   #sceneDock #opsEvidence{padding:5px 10px}
   #opsEvidence .oePair{grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
   #opsEvidence .oeLeg i{height:3px}
@@ -845,7 +862,7 @@
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="实时轴位；数值随演示连续变化" aria-live="off"><b>实时轴位</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span></div></div>
+        <div id="axisHud" aria-label="运动遥测：三轴位置与速度，数值随演示连续变化" aria-live="off"><b>运动遥测 · 位置 + 速度</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span><span class="vel" id="xVel">0.00 m/s</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span><span class="vel" id="zVel">0.00 m/s</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><span class="vel">—</span></div></div>
       </div>
       <div id="progressAxisHost" aria-label="入出周期里程碑轴">
         <div id="cycleAxis">
