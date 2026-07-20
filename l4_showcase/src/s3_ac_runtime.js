@@ -1759,12 +1759,13 @@
       const faultBanner = byId("faultStateBanner"); faultBanner.hidden = !frame.faulted;
       if (frame.faulted) faultBanner.querySelector("span").textContent = `故障 ${String((frame.faultIndex ?? 0) + 1).padStart(2, "0")} · ${visibleStepLabel} 保持位`;
       byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
-      /* 0719d:速度并入遥测网格(canvas 退役);数字+满速占比条(VX/VZ 额定归一),故障帧已清零 */
-      [[byId("xVel"), frame.machine.vx, VX], [byId("zVel"), frame.machine.vz, VZ]].forEach(([element, value, vMax]) => {
-        if (!element) return;
-        const speed = Math.abs(value), label = element.querySelector("b");
-        if (label) label.textContent = `${speed.toFixed(2)} m/s`; else element.textContent = `${speed.toFixed(2)} m/s`;
-        element.style.setProperty("--vfill", `${Math.min(100, speed / vMax * 100).toFixed(1)}%`);
+      /* 0719d:速度并入遥测网格(canvas 退役);轨道条+数字分列(VX/VZ 额定归一),故障帧已清零 */
+      [["xVel", frame.machine.vx, VX], ["zVel", frame.machine.vz, VZ]].forEach(([id, value, vMax]) => {
+        const numEl = byId(id), trackEl = byId(`${id}Track`);
+        if (!numEl) return;
+        const speed = Math.abs(value);
+        numEl.textContent = `${speed.toFixed(2)} m/s`;
+        if (trackEl) trackEl.style.setProperty("--vfill", `${Math.min(100, speed / vMax * 100).toFixed(1)}%`);
       });
       byId("xFill").style.setProperty("--fill", `${frame.machine.x / 19 * 100}%`); byId("zFill").style.setProperty("--fill", `${frame.machine.z / 19 * 100}%`); byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
       byId("queueMeta").textContent = `${frame.queueGids.length} 等待`;

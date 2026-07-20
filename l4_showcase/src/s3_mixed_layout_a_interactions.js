@@ -61,6 +61,12 @@
   const sceneTools = byId("sceneTools");
   if (cycleAxisHost && sceneTools) cycleAxisHost.append(sceneTools);
 
+  /* 0719 四分割(用户红框):货位热度图例从 3D 悬浮层集成进底 dock。本层运行时 opsEvidence
+     尚未由 runtime 创建(trace 加载后才 append),故最终列序 = 当前作业|运动遥测|货位热度|存取对置 */
+  const heatLegendEl = byId("heatLegend");
+  const sceneDockEl = byId("sceneDock");
+  if (heatLegendEl && sceneDockEl) sceneDockEl.append(heatLegendEl);
+
   /* ---------- 3. 共享浮层容器 ---------- */
   const nodePop = doc.createElement("div");
   nodePop.id = "cycleNodePop";

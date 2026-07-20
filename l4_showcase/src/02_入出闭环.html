@@ -562,14 +562,13 @@
   #sceneTelemetry .telemetryTitle{display:none}
   #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
   #axisHud b{margin:0 0 2px;color:#16191d;font-size:8.5px;letter-spacing:0}
-  /* 0719d 结构重排:每轴一行 = 轴名|位置点标轨道|位置值|速度值(速度 canvas 退役,信息合并进同一网格) */
-  #axisHud .axis{grid-template-columns:14px 1fr 54px 58px;gap:6px;margin:5px 0;align-items:center}
+  /* 0719 蓝框均分:每轴一行 = 轴名|位置轨道|位置值|速度轨道|速度值——位置组与速度组等宽对称 */
+  #axisHud .axis{grid-template-columns:12px 1fr 47px 1fr 52px;gap:5px;margin:5px 0;align-items:center}
   #axisHud .axis>span:first-child{font:800 9.5px/1 Consolas,monospace;color:#16191d}
-  /* 0719 用户指正「速度信息条完全消失」:速度列=满速占比条(VX/VZ 额定归一)+数字 */
-  #axisHud .axis .vel{display:grid;gap:2px;font:700 8.5px/1 Consolas,monospace;color:#69747d;text-align:right;white-space:nowrap}
-  #axisHud .axis .vel i{display:block;height:3px;background:#e7ebee;position:relative;overflow:hidden}
-  #axisHud .axis .vel i:after{content:"";position:absolute;inset:0;width:var(--vfill,0%);background:#4a88a8}
-  #axisHud .axis .vel b{font-weight:700}
+  #axisHud .axis .velTrack{position:relative;display:block;height:6px;background:#e7ebee;border-radius:2px;
+    box-shadow:inset 0 0 0 1px #d5dbe0;overflow:hidden}
+  #axisHud .axis .velTrack:after{content:"";position:absolute;inset:0;width:var(--vfill,0%);background:#4a88a8}
+  #axisHud .axis .velNum{font:700 8.5px/1 Consolas,monospace;color:#69747d;text-align:right;white-space:nowrap}
   #axisHud .axis span:nth-child(3){color:#17202b;font-size:9px;font-weight:700;text-align:right;font-family:Consolas,monospace}
   /* (0719d 删死代:液晶 canvas 组样式——559 行 display:none 会被此处 display:grid 反杀,故整段清除) */
   #reserveRuleBadge{grid-area:legend;position:static;margin-top:1px;padding:3px 0 0;border-top:1px solid #eef1f4;display:flex;align-items:center;justify-content:flex-start;gap:8px;
@@ -831,7 +830,13 @@
 
   /* 0719 收敛(用户选甲):dock 底带转正为唯一版;rail/axis 两分支删,?s3b 机制退役 */
   #viewport{--scene-dock-h:96px}
-  #sceneDock{grid-template-columns:minmax(268px,1.2fr) minmax(196px,.78fr) minmax(292px,1.22fr)} /* 0719d:速度canvas退役后遥测块收窄;左「当前作业」放宽容纳整行meta+图例底行 */
+  /* 0719 四分割(用户红框):当前作业|运动遥测|货位热度|存取对置 */
+  #sceneDock{grid-template-columns:minmax(238px,1.02fr) minmax(212px,.94fr) minmax(176px,.72fr) minmax(278px,1.18fr)}
+  #sceneDock #heatLegend{position:static;z-index:auto;width:auto;padding:3px 10px;background:#fff;border:0;box-shadow:none;
+    display:grid;align-content:center;gap:2px}
+  #sceneDock #heatLegend .hlBar{margin:3px 0 2px}
+  #sceneDock #heatLegend .hlToggles{margin-top:2px;padding-top:3px}
+  #sceneDock #heatLegend .hlZone{margin-top:2px;padding-top:3px}
   #sceneDock #opsEvidence{padding:5px 10px}
   #opsEvidence .oePair{grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
   #opsEvidence .oeLeg i{height:3px}
@@ -872,7 +877,7 @@
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="运动遥测：三轴位置与速度，数值随演示连续变化" aria-live="off"><b>运动遥测 · 位置 + 速度</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span><span class="vel" id="xVel"><i aria-hidden="true"></i><b>0.00 m/s</b></span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span><span class="vel" id="zVel"><i aria-hidden="true"></i><b>0.00 m/s</b></span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><span class="vel">—</span></div></div>
+        <div id="axisHud" aria-label="运动遥测：三轴位置与速度，数值随演示连续变化" aria-live="off"><b>运动遥测 · 位置 + 速度</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
       </div>
       <div id="progressAxisHost" aria-label="入出周期里程碑轴">
         <div id="cycleAxis">
@@ -950,8 +955,9 @@ const VX=2.0,VZ=0.5,AX=0.5,AZ=0.3,T_LOAD=4.0,T_DWELL=4.0;
 /* canonical 仍只有一个逻辑 I/O=(0,0)。INFEED/OUTFEED 仅把 Factory I/O 的 Entry→Load、Unload→Exit 物理工位可视化；不进入 sim/KPI。 */
 const IO={x:0.5,y:-0.75,z:0.5};
 const STATION_Y=IO.y-1.75;
-const INFEED=Object.freeze({y:STATION_Y,entryX:IO.x-4.40,loadX:IO.x-.90,z:.55,width:1.02});
-const OUTFEED=Object.freeze({y:STATION_Y,startX:IO.x+.90,scanX:IO.x+2.05,maskX:IO.x+3.20,endX:IO.x+4.40,z:.55,width:1.02});
+/* 0719 悬空修:z 是带上货物中心高——原 .55 使货底(-.30 半高)悬于滚筒面(顶 .195)5.5cm;.50 贴合留 7mm 视觉缝 */
+const INFEED=Object.freeze({y:STATION_Y,entryX:IO.x-4.40,loadX:IO.x-.90,z:.50,width:1.02});
+const OUTFEED=Object.freeze({y:STATION_Y,startX:IO.x+.90,scanX:IO.x+2.05,maskX:IO.x+3.20,endX:IO.x+4.40,z:.50,width:1.02});
 const TRANSFER_ANCHOR=Object.freeze({x:IO.x,y:IO.y,z:.55});
 const CONVEYOR_ENVELOPES=Object.freeze({
   infeed:Object.freeze({xMin:INFEED.entryX-.05,xMax:INFEED.loadX+.05,yMin:INFEED.y-.59,yMax:INFEED.y+.59}),
