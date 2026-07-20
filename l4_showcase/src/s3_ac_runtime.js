@@ -110,10 +110,10 @@
     invariant(geometry && geometry.io && geometry.transfer && geometry.infeed && geometry.outfeed, "货物几何参数缺失");
     const io = geometry.io, transfer = geometry.transfer, infeed = geometry.infeed, outfeed = geometry.outfeed;
     const cargoZOffset = Number(geometry.cargoZOffset), cargoDrop = Number(geometry.cargoDrop), cargoReach = Number(geometry.cargoReach);
-    invariant(Number.isFinite(io.x) && Number.isFinite(io.y) && Number.isFinite(infeed.y) &&
-      Number.isFinite(infeed.entryX) && Number.isFinite(infeed.loadX) && Number.isFinite(infeed.z) &&
-      Number.isFinite(outfeed.y) && Number.isFinite(outfeed.startX) && Number.isFinite(outfeed.scanX) &&
-      Number.isFinite(outfeed.maskX) && Number.isFinite(outfeed.endX) && Number.isFinite(outfeed.z) &&
+    invariant(Number.isFinite(io.x) && Number.isFinite(io.y) && Number.isFinite(infeed.x) &&
+      Number.isFinite(infeed.entryY) && Number.isFinite(infeed.loadY) && Number.isFinite(infeed.z) &&
+      Number.isFinite(outfeed.x) && Number.isFinite(outfeed.startY) && Number.isFinite(outfeed.scanY) &&
+      Number.isFinite(outfeed.maskY) && Number.isFinite(outfeed.endY) && Number.isFinite(outfeed.z) &&
       Number.isFinite(transfer.x) && Number.isFinite(transfer.y) && Number.isFinite(transfer.z) &&
       Number.isFinite(cargoZOffset) && Number.isFinite(cargoDrop) && cargoDrop >= 0 && Number.isFinite(cargoReach) && cargoReach > 0,
       "货物几何参数非法");
@@ -124,19 +124,19 @@
       const p = ease(frame.phaseProgress);
       if (frame.cargoOwner === "QUEUE") {
         /* QUEUE 是入场前等待，不得借真实排队时长偷跑输送动作。 */
-        x = infeed.entryX; y = infeed.y; z = infeed.z;
+        x = infeed.x; y = infeed.entryY; z = infeed.z;
       } else {
         /* 不计 SIM/KPI 的入口交接补段承载完整 Entry→Load→Transfer 视觉路径。 */
-        const firstLength = Math.abs(infeed.loadX - infeed.entryX);
-        const secondLength = Math.hypot(transfer.x - infeed.loadX, transfer.y - infeed.y, transfer.z - infeed.z);
+        const firstLength = Math.abs(infeed.loadY - infeed.entryY);
+        const secondLength = Math.hypot(transfer.x - infeed.x, transfer.y - infeed.loadY, transfer.z - infeed.z);
         const split = firstLength / Math.max(EPS, firstLength + secondLength);
         if (p <= split) {
           const u = split > EPS ? p / split : 1;
-          x = infeed.entryX + (infeed.loadX - infeed.entryX) * u; y = infeed.y; z = infeed.z;
+          x = infeed.x; y = infeed.entryY + (infeed.loadY - infeed.entryY) * u; z = infeed.z;
         } else {
           const u = (p - split) / Math.max(EPS, 1 - split);
-          x = infeed.loadX + (transfer.x - infeed.loadX) * u;
-          y = infeed.y + (transfer.y - infeed.y) * u; z = infeed.z + (transfer.z - infeed.z) * u;
+          x = infeed.x + (transfer.x - infeed.x) * u;
+          y = infeed.loadY + (transfer.y - infeed.loadY) * u; z = infeed.z + (transfer.z - infeed.z) * u;
         }
       }
     } else if (frame.operationKey === "STORE_HANDLE") {
@@ -152,15 +152,15 @@
       if (frame.cargoOwner === "OUTFEED") {
         const split = .38;
         if (p <= split) {
-          const u = ease(p / split); x = transfer.x + (outfeed.startX - transfer.x) * u;
-          y = transfer.y + (outfeed.y - transfer.y) * u;
+          const u = ease(p / split); x = transfer.x + (outfeed.x - transfer.x) * u;
+          y = transfer.y + (outfeed.startY - transfer.y) * u;
         } else {
-          const u = ease((p - split) / (1 - split)); x = outfeed.startX + (outfeed.scanX - outfeed.startX) * u; y = outfeed.y;
+          const u = ease((p - split) / (1 - split)); x = outfeed.x; y = outfeed.startY + (outfeed.scanY - outfeed.startY) * u;
         }
       } else if (frame.cargoOwner === "SCANNED") {
-        x = outfeed.scanX + (outfeed.maskX - outfeed.scanX) * p; y = outfeed.y;
+        x = outfeed.x; y = outfeed.scanY + (outfeed.maskY - outfeed.scanY) * p;
       } else {
-        x = outfeed.maskX + (outfeed.endX - outfeed.maskX) * p; y = outfeed.y;
+        x = outfeed.x; y = outfeed.maskY + (outfeed.endY - outfeed.maskY) * p;
       }
     }
     return {x, y, z};
@@ -184,26 +184,25 @@
     invariant(topology && topology.io && topology.transfer && topology.infeed && topology.outfeed &&
       topology.infeedEnvelope && topology.outfeedEnvelope, "双工位拓扑缺失");
     const {io, transfer, infeed, outfeed, infeedEnvelope, outfeedEnvelope} = topology;
-    [infeed.y, infeed.entryX, infeed.loadX, infeed.width, outfeed.y, outfeed.startX, outfeed.endX, outfeed.width].forEach(value => invariant(Number.isFinite(value), "双工位拓扑坐标非法"));
+    [infeed.x, infeed.entryY, infeed.loadY, infeed.width, outfeed.x, outfeed.startY, outfeed.endY, outfeed.width].forEach(value => invariant(Number.isFinite(value), "双工位拓扑坐标非法"));
     invariant(topology.visualOnly === true, "双工位必须声明为展示层");
     invariant(Array.isArray(topology.logicalOrigin) && topology.logicalOrigin[0] === 0 && topology.logicalOrigin[1] === 0, "双工位不得改变 canonical I/O (0,0)");
-    invariant(topology.collinear === true && topology.sharedBelt === false && topology.oppositeSides === true,
-      "入/出库链必须是同轴分段、不得共用可争用带段");
-    invariant(topology.collinearAxis === "x", "输送链共轴方向必须为横向 x");
+    invariant(topology.parallel === true && topology.parallelAxis === "y" && topology.sharedBelt === false && topology.dualLane === true,
+      "入/出库链必须是并行双线、沿纵深 y 垂直货架、不得共用可争用带段");
     [transfer.x, transfer.y, transfer.z].forEach(value => invariant(Number.isFinite(value), "I/O 转接锚非法"));
     invariant(Math.abs(transfer.x - io.x) <= EPS && Math.abs(transfer.y - io.y) <= EPS,
       "物理转接锚与逻辑 I/O 映射不一致");
-    const axisOffset = Math.abs(outfeed.y - infeed.y);
-    invariant(axisOffset <= 1e-9, "入/出库链未处于同一中心轴");
-    invariant(infeed.entryX < infeed.loadX && infeed.loadX < io.x, "入库段必须从左侧单向接近 I/O");
-    invariant(io.x < outfeed.startX && outfeed.startX < outfeed.scanX && outfeed.scanX < outfeed.maskX && outfeed.maskX < outfeed.endX,
+    const axisOffset = Math.abs(outfeed.startY - infeed.loadY);
+    invariant(axisOffset <= 1e-9, "入/出库链必须在同一进深与 I/O 交接");
+    invariant(infeed.entryY < infeed.loadY && infeed.loadY < io.y, "入库段必须单向朝货架靠近 I/O");
+    invariant(outfeed.endY < outfeed.maskY && outfeed.maskY < outfeed.scanY && outfeed.scanY < outfeed.startY && outfeed.startY < io.y,
       "出库段必须从 I/O 单向远离并依次通过卸载/扫码/离场");
-    const junctionGap = outfeed.startX - infeed.loadX;
-    invariant(junctionGap > Math.max(infeed.width, outfeed.width), "I/O 两侧分段净距不足一个活动货物宽度");
+    const junctionGap = outfeed.x - infeed.x;
+    invariant(junctionGap > Math.max(infeed.width, outfeed.width), "入/出两线横向净距不足一个活动货物宽度");
     const rackFrontY = Number(topology.rackFrontY);
     invariant(Number.isFinite(rackFrontY), "货架前界缺失");
-    const rackFrontClearance = rackFrontY - Math.max(infeed.y + infeed.width / 2, outfeed.y + outfeed.width / 2);
-    invariant(rackFrontClearance >= .30, "共轴输送链与货架前界净距不足 0.30 m");
+    const rackFrontClearance = rackFrontY - Math.max(infeed.loadY, outfeed.startY);
+    invariant(rackFrontClearance >= .30, "并行输送链与货架前界净距不足 0.30 m");
     const validEnvelope = envelope => [envelope.xMin, envelope.xMax, envelope.yMin, envelope.yMax].every(Number.isFinite) &&
       envelope.xMin < envelope.xMax && envelope.yMin < envelope.yMax;
     invariant(validEnvelope(infeedEnvelope) && validEnvelope(outfeedEnvelope), "输送链物理包络非法");
@@ -211,9 +210,9 @@
     const overlapY = Math.max(0, Math.min(infeedEnvelope.yMax, outfeedEnvelope.yMax) - Math.max(infeedEnvelope.yMin, outfeedEnvelope.yMin));
     const envelopeOverlapArea = overlapX * overlapY;
     invariant(envelopeOverlapArea <= EPS, "入/出库物理带段包络发生重叠");
-    invariant(infeedEnvelope.xMax <= transfer.x + EPS && outfeedEnvelope.xMin >= transfer.x - EPS,
+    invariant(infeedEnvelope.yMax <= transfer.y + EPS && outfeedEnvelope.yMax <= transfer.y + EPS,
       "入/出库带段必须只通过受控转接区连接 I/O");
-    return {axisOffset, junctionGap, rackFrontClearance, collinearAxis: "x", collinear: true, sharedBelt: false, oppositeSides: true,
+    return {axisOffset, junctionGap, rackFrontClearance, parallelAxis: "y", parallel: true, sharedBelt: false, dualLane: true,
       logicalOrigin: topology.logicalOrigin.slice(), visualOnly: true,
       singleRackFace: topology.singleRackFace === true, singleAisle: topology.singleAisle === true,
       transferAnchor: {x: transfer.x, y: transfer.y, z: transfer.z}, envelopeOverlapArea,
@@ -695,8 +694,8 @@
     });
     const plans = [
       {operationKey: "LOAD_IN", kind: "cargo-in", arrowCount: 2, points: [
-        {x: infeed.entryX, y: infeed.y, z: infeed.z},
-        {x: infeed.loadX, y: infeed.y, z: infeed.z},
+        {x: infeed.x, y: infeed.entryY, z: infeed.z},
+        {x: infeed.x, y: infeed.loadY, z: infeed.z},
         {x: transfer.x, y: transfer.y, z: transfer.z}
       ]},
       {operationKey: "INBOUND_TRAVEL", kind: "cargo-in", arrowCount: 3, points: machinePath([0, 0], store, true)},
@@ -706,10 +705,10 @@
       {operationKey: "OUTBOUND_TRAVEL", kind: "cargo-out", arrowCount: 3, points: machinePath(retrieve, [0, 0], true)},
       {operationKey: "SCAN_EXIT", kind: "cargo-out", arrowCount: 3, points: [
         {x: transfer.x, y: transfer.y, z: transfer.z},
-        {x: outfeed.startX, y: outfeed.y, z: outfeed.z},
-        {x: outfeed.scanX, y: outfeed.y, z: outfeed.z},
-        {x: outfeed.maskX, y: outfeed.y, z: outfeed.z},
-        {x: outfeed.endX, y: outfeed.y, z: outfeed.z}
+        {x: outfeed.x, y: outfeed.startY, z: outfeed.z},
+        {x: outfeed.x, y: outfeed.scanY, z: outfeed.z},
+        {x: outfeed.x, y: outfeed.maskY, z: outfeed.z},
+        {x: outfeed.x, y: outfeed.endY, z: outfeed.z}
       ]}
     ];
     invariant(plans.length === PROCESS_STEPS.length && plans.every((plan, index) => plan.operationKey === PROCESS_STEPS[index]), "路径计划未覆盖七步顺序");
@@ -998,7 +997,7 @@
       queuePool.forEach(item => { item.unit.visible = false; });
       shown3d.forEach((gid, index) => {
         const item = ensureQueueUnit(index), cargoGood = good(gid);
-        item.unit.visible = true; item.unit.position.set(INFEED.entryX - .72 - index * .58, INFEED.y, 0); item.unit.userData = {gid, owner: "QUEUE_WAITING", lane: "INFEED"};
+        item.unit.visible = true; item.unit.position.set(INFEED.x, INFEED.entryY - .72 - index * .58, 0); item.unit.userData = {gid, owner: "QUEUE_WAITING", lane: "INFEED"};
         item.box.material = gradeMaterial[cargoGood.grade] || M.mid;
       });
       const strip = byId("queueStrip");
@@ -1595,17 +1594,17 @@
         new THREE.Vector3(-.35, -.30, Z0),
         new THREE.Vector3(N + .35, 1.10, N + .20)
       );
-      const stationMinX = Math.min(INFEED.entryX, INFEED.loadX, OUTFEED.startX, OUTFEED.endX, IO.x) - .16;
-      const stationMaxX = Math.max(INFEED.entryX, INFEED.loadX, OUTFEED.startX, OUTFEED.endX, IO.x) + .16;
-      const stationMinY = Math.min(INFEED.y - .76, OUTFEED.y - .76, IO.y - .76);
-      const stationMaxY = Math.max(INFEED.y + .76, OUTFEED.y + .76, IO.y + .76);
+      const stationMinX = Math.min(INFEED.x, OUTFEED.x) - .76;
+      const stationMaxX = Math.max(INFEED.x, OUTFEED.x) + .76;
+      const stationMinY = Math.min(INFEED.entryY, OUTFEED.endY);
+      const stationMaxY = IO.y;
       const stations = new THREE.Box3(
         new THREE.Vector3(stationMinX, stationMinY, Z0),
         new THREE.Vector3(stationMaxX, stationMaxY, 1.68)
       );
       const maximumQueueEnvelope = new THREE.Box3(
-        new THREE.Vector3(INFEED.entryX - 3.38, INFEED.y - .48, Z0),
-        new THREE.Vector3(INFEED.entryX - .38, INFEED.y + .48, 1.06)
+        new THREE.Vector3(INFEED.x - .48, INFEED.entryY - 3.38, Z0),
+        new THREE.Vector3(INFEED.x + .48, INFEED.entryY - .38, 1.06)
       );
       const rackProjection = projectWorldBox(rack);
       const stationProjection = projectWorldBox(stations);
@@ -1983,8 +1982,8 @@
           x: cargo.position.x, y: cargo.position.y, z: cargo.position.z, opacity: cargo.material.opacity
         },
         transfer: {x: TRANSFER_ANCHOR.x, y: TRANSFER_ANCHOR.y, z: TRANSFER_ANCHOR.z},
-        infeed: {y: INFEED.y, entryX: INFEED.entryX, loadX: INFEED.loadX, z: INFEED.z},
-        outfeed: {y: OUTFEED.y, startX: OUTFEED.startX, scanX: OUTFEED.scanX, maskX: OUTFEED.maskX, endX: OUTFEED.endX, z: OUTFEED.z},
+        infeed: {x: INFEED.x, entryY: INFEED.entryY, loadY: INFEED.loadY, z: INFEED.z},
+        outfeed: {x: OUTFEED.x, startY: OUTFEED.startY, scanY: OUTFEED.scanY, maskY: OUTFEED.maskY, endY: OUTFEED.endY, z: OUTFEED.z},
         topology: topologyAudit, labels: lastOverlayLayout, stationLabels: lastStationLayout, collisions: collisionSnapshot(), composition: compositionSnapshot(),
         ownership: lastFrame ? ownershipSnapshot(lastFrame) : null,
         camera: cameraSnapshot()

@@ -43,10 +43,10 @@ const traces = new Map(traceFiles.map(filename => [path.basename(filename, ".js"
 const visualGeometry = Object.freeze({
   io: {x: .5, y: -.75},
   transfer: {x: .5, y: -.75, z: .55},
-  infeed: {y: -2.5, entryX: -3.9, loadX: -.4, z: .55, width: 1.02},
-  outfeed: {y: -2.5, startX: 1.4, scanX: 2.55, maskX: 3.7, endX: 4.9, z: .55, width: 1.02},
-  infeedEnvelope: {xMin: -3.95, xMax: -.35, yMin: -3.09, yMax: -1.91},
-  outfeedEnvelope: {xMin: 1.35, xMax: 4.95, yMin: -3.09, yMax: -1.91},
+  infeed: {x: -.45, entryY: -5.15, loadY: -1.65, z: .55, width: 1.02},
+  outfeed: {x: 1.45, startY: -1.65, scanY: -2.80, maskY: -3.95, endY: -5.15, z: .55, width: 1.02},
+  infeedEnvelope: {xMin: -1.04, xMax: .14, yMin: -5.20, yMax: -1.60},
+  outfeedEnvelope: {xMin: .86, xMax: 2.04, yMin: -5.20, yMax: -1.60},
   cargoZOffset: .05, cargoDrop: .055, cargoReach: 1.25, rackLoadY: .50
 });
 
@@ -191,7 +191,8 @@ test("Task16 phase-aware presentation timing is monotone, bounded and excluded f
   assert.equal(frame.timing.presentationOnlyDurationS,
     reference.groupsByKey.get("20|LOAD_IN").presentationOnlyDurationS);
   const source = fs.readFileSync(runtimePath, "utf8"), html = fs.readFileSync(htmlPath, "utf8");
-  for (const token of ["phaseTimeScale", "phaseTimeCursor", "1=排队/交接", "QUEUE_LABEL", "排队 SIM", "交接为展示补段"]) {
+  /* 0719 去重复批次:meta 不再复述本步 SIM 数值(「排队 SIM x.x s」→「排队+交接 · SIM 见七步条」) */
+  for (const token of ["phaseTimeScale", "phaseTimeCursor", "1=排队/交接", "QUEUE_LABEL", "排队+交接", "交接展示"]) {
     assert(source.includes(token) || html.includes(token), `real-time phase disclosure missing ${token}`);
   }
 });
@@ -411,7 +412,7 @@ test("Task12 single-rack dual-station scene, adjustable camera and compact ABB c
     "browser QA hook must expose actor/solid boxes for swept-volume verification");
   for (const token of [
     "validateVisualTopology", "ownershipSnapshot", "chooseLabelPairLayout", "layoutProjectedLabels", "layoutStationTags",
-    'parent: cargo.parent === scene ? "scene"', "infeed: {y: INFEED.y", "outfeed: {y: OUTFEED.y",
+    'parent: cargo.parent === scene ? "scene"', "infeed: {x: INFEED.x", "outfeed: {x: OUTFEED.x",
     'g.strokeStyle = "#e7b800"', 'line.setAttribute("points"', "chooseLeaderRoute", "routePlacedLeaders",
     "leaderObstacleHits", "leaderCrossings", "maxLeaderLength",
     "seek(cycleIndex, operationKey, progress = .5)", 'state.paused = true',
@@ -483,7 +484,7 @@ test("Task14 unifies fixed scene information into one Chinese-first bottom evide
   assert.equal((body.match(/133 \/ 400/g) || []).length, 1, "reserve count must appear once in the left rule map");
   assert.match(html, /#taskline\{display:none!important\}/, "top task summary must not duplicate the bottom current-job dock");
   assert.match(runtimeSource, /const fixedObstacles = \["sceneDock", "faultStateBanner"\]/);
-  assert.match(runtimeSource, /byId\("sceneActionText"\)\.textContent = `\$\{visibleStepLabel/);
+  assert.match(runtimeSource, /byId\("sceneActionText"\)\.textContent = cargoGood \?/); /* 0719:货物名并入动作行 */
   assert.match(runtimeSource, /byId\("sceneActionMeta"\)\.textContent =/);
 });
 
@@ -517,7 +518,7 @@ test("Task15 seven-step path plan is complete, finite and aligned with cargo han
     assert.deepEqual(Array.from(plans, plan => plan.kind), ["cargo-in", "cargo-in", "handle", "empty", "handle", "cargo-out", "cargo-out"]);
     assert(plans.every(plan => plan.points.length >= 3 && plan.points.every(point => [point.x, point.y, point.z].every(Number.isFinite))));
     const [load, inbound, store, link, retrieve, outbound, exit] = plans;
-    assert.deepEqual(load.points[0], {x: visualGeometry.infeed.entryX, y: visualGeometry.infeed.y, z: visualGeometry.infeed.z});
+    assert.deepEqual(load.points[0], {x: visualGeometry.infeed.x, y: visualGeometry.infeed.entryY, z: visualGeometry.infeed.z});
     assert.deepEqual(load.points.at(-1), inbound.points[0]);
     assert.deepEqual(retrieve.points.at(-1), outbound.points[0]);
     assert.deepEqual(outbound.points.at(-1), exit.points[0]);
@@ -535,10 +536,10 @@ test("Task15 seven-step path plan is complete, finite and aligned with cargo han
     assert(Math.abs(store.points.at(-1).y - visualGeometry.rackLoadY) <= 1e-12, "stored cargo must end at stock center depth");
     assert(Math.abs(retrieve.points[0].y - visualGeometry.rackLoadY) <= 1e-12, "retrieved cargo must start at stock center depth");
     assert.deepEqual(exit.points.slice(1), [
-      {x: visualGeometry.outfeed.startX, y: visualGeometry.outfeed.y, z: visualGeometry.outfeed.z},
-      {x: visualGeometry.outfeed.scanX, y: visualGeometry.outfeed.y, z: visualGeometry.outfeed.z},
-      {x: visualGeometry.outfeed.maskX, y: visualGeometry.outfeed.y, z: visualGeometry.outfeed.z},
-      {x: visualGeometry.outfeed.endX, y: visualGeometry.outfeed.y, z: visualGeometry.outfeed.z}
+      {x: visualGeometry.outfeed.x, y: visualGeometry.outfeed.startY, z: visualGeometry.outfeed.z},
+      {x: visualGeometry.outfeed.x, y: visualGeometry.outfeed.scanY, z: visualGeometry.outfeed.z},
+      {x: visualGeometry.outfeed.x, y: visualGeometry.outfeed.maskY, z: visualGeometry.outfeed.z},
+      {x: visualGeometry.outfeed.x, y: visualGeometry.outfeed.endY, z: visualGeometry.outfeed.z}
     ]);
     checked += 1;
   }
@@ -600,7 +601,7 @@ test("Task16 Entry→Load and Unload→Exit are continuous on coaxial but non-sh
   const samePoint = (left, right) => Math.hypot(left.x-right.x,left.y-right.y,left.z-right.z) <= 1e-9;
   const queueStart = point("LOAD_IN", "QUEUE", 0), queueMid = point("LOAD_IN", "QUEUE", .5), queueEnd = point("LOAD_IN", "QUEUE", 1);
   const loadStart = point("LOAD_IN", "CARRIER_IN", 0), loadEnd = point("LOAD_IN", "CARRIER_IN", 1);
-  assert.deepEqual(queueStart, {x: visualGeometry.infeed.entryX, y: visualGeometry.infeed.y, z: visualGeometry.infeed.z});
+  assert.deepEqual(queueStart, {x: visualGeometry.infeed.x, y: visualGeometry.infeed.entryY, z: visualGeometry.infeed.z});
   assert(samePoint(queueStart, queueMid)); assert(samePoint(queueMid, queueEnd));
   assert(samePoint(queueEnd, loadStart)); assert(samePoint(loadEnd, visualGeometry.transfer));
   const outfeedEnd = point("SCAN_EXIT", "OUTFEED", 1), scannedStart = point("SCAN_EXIT", "SCANNED", 0);
@@ -610,13 +611,13 @@ test("Task16 Entry→Load and Unload→Exit are continuous on coaxial but non-sh
     infeed: visualGeometry.infeed, outfeed: visualGeometry.outfeed,
     infeedEnvelope: visualGeometry.infeedEnvelope, outfeedEnvelope: visualGeometry.outfeedEnvelope,
     logicalOrigin: [0, 0], visualOnly: true, singleAisle: true, singleRackFace: true,
-    collinear: true, collinearAxis: "x", sharedBelt: false, oppositeSides: true, rackFrontY: 0});
+    parallel: true, parallelAxis: "y", sharedBelt: false, dualLane: true, rackFrontY: 0});
   assert.equal(audit.axisOffset, 0); assert(audit.junctionGap > visualGeometry.infeed.width);
-  assert(audit.rackFrontClearance >= .30); assert.equal(audit.collinearAxis, "x"); assert.deepEqual(audit.logicalOrigin, [0, 0]);
-  assert.equal(audit.sharedBelt, false); assert.equal(audit.oppositeSides, true);
+  assert(audit.rackFrontClearance >= .30); assert.equal(audit.parallelAxis, "y"); assert.deepEqual(audit.logicalOrigin, [0, 0]);
+  assert.equal(audit.sharedBelt, false); assert.equal(audit.dualLane, true);
   assert.equal(audit.envelopeOverlapArea, 0); assert.deepEqual(audit.transferAnchor, visualGeometry.transfer);
-  assert(visualGeometry.infeed.loadX < visualGeometry.io.x && visualGeometry.io.x < visualGeometry.outfeed.startX,
-    "coaxial segments must remain on opposite sides of I/O");
+  assert(visualGeometry.infeed.loadY < visualGeometry.io.y && visualGeometry.outfeed.startY < visualGeometry.io.y,
+    "parallel dual lanes must both approach I/O from the rack-facing end");
 });
 
 test("Task12 every sampled frame has exactly one logical owner per gid", () => {
