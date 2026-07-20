@@ -1328,7 +1328,8 @@
         host = doc.createElement("section"); host.id = "respSpark"; statsHost.after(host);
       }
       const p95 = Number(trace.stats.response_p95_s);
-      host.innerHTML = `<div class="sparkHead"><b>响应时间趋势 · ${trace.events.length} 周期</b><span>虚线 = P95 ${p95.toFixed(1)}s(同批口径)· 红点 = 故障周期</span></div>`;
+      /* 去重复(0719):图例不印 P95 数值——同一数字的主位在上方统计块 P95 芯片,此处只声明参照关系 */
+      host.innerHTML = `<div class="sparkHead"><b>响应时间趋势 · ${trace.events.length} 周期</b><span>虚线 = 批 P95(值见上方)· 红点 = 故障周期</span></div>`;
       const canvas = doc.createElement("canvas"); host.append(canvas);
       /* 固定虚拟宽 720:CSS 100% 拉伸适配任意 rail 宽,免 resize 重绘(跨闭包 resize 钩子曾致 not defined 页错) */
       const width = 720, height = 26, dpr = 2;
@@ -1423,9 +1424,11 @@
       const motion = trace.meta.motion;
       const leg = (a, b) => Math.max(axisTime(Math.abs(b[0] - a[0]), VX, AX, motion), axisTime(Math.abs(b[1] - a[1]), VZ, AZ, motion));
       let storeSum = 0, retrSum = 0, linkSum = 0, savedSum = 0, hotSum = 0, hotN = 0, coldSum = 0, coldN = 0;
+      const stepSums = Object.fromEntries(PROCESS_STEPS.map(name => [name, 0]));
       trace.events.forEach(event => {
         const bySteps = new Map(event.process_steps.map(step => [step.name, step]));
         const span = key => { const step = bySteps.get(key); return step ? Number(step.t1) - Number(step.t0) : 0; };
+        PROCESS_STEPS.forEach(name => { stepSums[name] += span(name); });
         const storeLeg = span("INBOUND_TRAVEL") + span("STORE_HANDLE");
         const retrLeg = span("LINK_TRAVEL") + span("RETRIEVE_HANDLE") + span("OUTBOUND_TRAVEL");
         storeSum += storeLeg; retrSum += retrLeg; linkSum += span("LINK_TRAVEL");
@@ -1436,7 +1439,8 @@
       const n = trace.events.length || 1;
       return {n, hotN, coldN, motion,
         storeAvg: storeSum / n, retrAvg: retrSum / n, linkAvg: linkSum / n,
-        hotAvg: hotN ? hotSum / hotN : 0, coldAvg: coldN ? coldSum / coldN : 0, savedTotal: savedSum};
+        hotAvg: hotN ? hotSum / hotN : 0, coldAvg: coldN ? coldSum / coldN : 0, savedTotal: savedSum,
+        stepAvg: Object.fromEntries(PROCESS_STEPS.map(name => [name, stepSums[name] / n]))};
     }
 
     function renderOpsEvidence(trace) {
@@ -1453,8 +1457,8 @@
         `<div class="oeGrid">` +
         `<div class="oeHot"><b>${fmt(data.hotAvg)} s</b><span>热门件取货均时 · n=${data.hotN}</span></div>` +
         `<div><b>${fmt(data.coldAvg)} s</b><span>非热门取货均时 · n=${data.coldN}</span></div>` +
-        `<div><b>${fmt(data.linkAvg)} s</b><span>交织腿均时 · 存→取直达</span></div>` +
-        `<div><b>${(data.savedTotal / 60).toFixed(1)} min</b><span>省一趟合计 / ${data.n} 周期</span><em class="oeRef" title="文献基准:Bozer & White 1984——随机存储下单命令两次往返≈2×1.27、双命令一趟≈1.71(归一化行程),省约 33%。本格 min 数为本页轨迹按同一运动学折算的实测合计;文献值与实测值并列印证,口径不混用。">双命令省行程 ≈33% · Bozer-White 1984</em></div></div>` +
+        /* 去重复:交织腿均时格删——同一数字改挂七步条「联程」格批均行,页面一数一主位 */
+        `<div class="oeSaved"><b>${(data.savedTotal / 60).toFixed(1)} min</b><span>省一趟合计 / ${data.n} 周期 · 直达 vs 回 I/O 再出发</span><em class="oeRef" title="文献基准:Bozer & White 1984——随机存储下单命令两次往返≈2×1.27、双命令一趟≈1.71(归一化行程),省约 33%。本格 min 数为本页轨迹按同一运动学折算的实测合计;文献值与实测值并列印证,口径不混用。">双命令省行程 ≈33% · Bozer-White 1984</em></div></div>` +
         `<div class="oeNote">腿时长 = 七步 SIM 时刻差；省一趟 = 同一运动学（${data.motion === "constant_speed" ? "匀速" : "加减速"}）折算「回 I/O 再出发 − 直达」</div>`;
       const target = byId("sceneDock");
       if (target && host.parentElement !== target) target.append(host);
@@ -1810,10 +1814,11 @@
       const cargoSummary = cargoGood ? `${cargoGood.name} · ${cargoGood.weight_kg.toFixed(1)} kg · ${GRADE_LABEL[cargoGood.grade] || cargoGood.grade}` : "空载联程";
       const timing = frame.timing || {simDurationS: 0, presentationDurationS: 0};
       const wallSeconds = timing.presentationDurationS / DEFAULT_PLAYBACK_SCALE;
+      /* 去重复(0719):meta 不再复述本步 SIM 数值——与七步条当前高亮格完全同值;此处只留演示口径 */
       const timingText = frame.operationKey === "LOAD_IN" ? (timing.simDurationS > EPS ?
-        `排队 SIM ${timing.simDurationS.toFixed(1)} s · 交接为展示补段 · 1×共 ${wallSeconds.toFixed(1)} s` :
+        `排队+交接 · 1×共 ${wallSeconds.toFixed(1)} s · SIM 见七步条` :
         `无排队 · 交接展示 ${wallSeconds.toFixed(1)} s · 不计 KPI`) : timing.simDurationS > EPS ?
-        `SIM ${timing.simDurationS.toFixed(1)} s → 1×演示 ${wallSeconds.toFixed(1)} s` :
+        `1×演示 ${wallSeconds.toFixed(1)} s · 本步 SIM 见七步条` :
         `1×展示补段 ${wallSeconds.toFixed(1)} s · 不计 KPI`;
       /* 0719 修:去掉与步骤名语义重复的 owner 后缀(货物位置详情已在 sceneCargoMeta) */
       byId("sceneActionText").textContent = cargoGood ? `${visibleStepLabel} · ${cargoGood.name}` : `${visibleStepLabel} · ${ownerText}`;
@@ -1842,15 +1847,23 @@
       const phaseSegments = byId("phaseSegments"), phaseTimeScale = byId("phaseTimeScale");
       phaseSegments.replaceChildren(); phaseTimeScale.replaceChildren();
       PROCESS_STEPS.forEach((name, index) => {
-        const segment = doc.createElement("span"), phaseName = doc.createElement("span"), duration = doc.createElement("small");
+        const segment = doc.createElement("span"), phaseName = doc.createElement("span"), duration = doc.createElement("small"), stepAvgEl = doc.createElement("small");
         segment.className = "phaseSeg"; segment.append(doc.createTextNode(String(index + 1)));
         phaseName.className = "phaseName"; phaseName.textContent = STEP_SHORT_LABEL[name]; duration.className = "phaseDuration"; duration.textContent = "--";
-        segment.append(phaseName, duration); segment.title = `${index + 1}. ${STEP_LABEL[name]}`;
+        stepAvgEl.className = "phaseAvg"; stepAvgEl.textContent = "";
+        segment.append(phaseName, duration, stepAvgEl); segment.title = `${index + 1}. ${STEP_LABEL[name]}`;
         segment.setAttribute("aria-label", `${index + 1}. ${STEP_LABEL[name]}`); phaseSegments.append(segment);
         const timePart = doc.createElement("span"); timePart.className = `phaseTimePart phaseTone${index + 1}`;
         timePart.setAttribute("aria-hidden", "true"); phaseTimeScale.append(timePart);
       });
       const cursor = doc.createElement("i"); cursor.id = "phaseTimeCursor"; cursor.setAttribute("aria-hidden", "true"); phaseTimeScale.append(cursor);
+      /* 去重复(0719):批均参照挂进七步条——每格第三行「均 x.x s」;联程格批均即原对置块「交织腿均时」,
+         同一数字只留一个主位,本周期值与批均同格对照(数据同源 buildOpsEvidence,不另算)。 */
+      const stepAvg = buildOpsEvidence(trace).stepAvg;
+      Array.from(phaseSegments.querySelectorAll(".phaseAvg")).forEach((element, index) => {
+        const avgS = stepAvg[PROCESS_STEPS[index]];
+        element.textContent = avgS > EPS ? `均 ${avgS.toFixed(1)}s` : "";
+      });
     }
 
     function renderFrame(trace, frame) {

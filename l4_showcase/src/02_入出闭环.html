@@ -604,11 +604,14 @@
   .phaseTone1,.phaseTone3{background:#e7b800}.phaseTone2,.phaseTone6{background:#17365d}.phaseTone4{background:#8c969e}
   .phaseTone5{background:#7a4aa8}.phaseTone7{background:#0084a8}
   #phaseTimeCursor{position:absolute;z-index:2;top:-2px;bottom:-2px;width:3px;background:#ff000f;box-shadow:0 0 0 1px #fff;transform:translateX(-1px)}
-  #phaseSegments{position:static;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;height:auto;min-height:34px} /* P3:对手全删,important 摘除 */
+  #phaseSegments{position:static;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;height:auto;min-height:42px} /* P3:对手全删,important 摘除;0719 去重复批均行加高 */
   .phaseSeg{min-width:0;padding:4px 2px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:1px 3px;
     align-content:center;justify-content:center;background:#edf1f3;color:#4c5963;font:800 9px/1 Consolas,monospace;text-align:center}
   .phaseSeg .phaseName{display:block;overflow:hidden;color:#26343e;font:700 8px/1.1 "Microsoft YaHei",sans-serif;white-space:nowrap;text-overflow:ellipsis}
   .phaseSeg .phaseDuration{grid-column:1/3;display:block;color:#66727b;font:700 8px/1 Consolas,monospace;white-space:nowrap}
+  /* 0719 去重复:第三行批均参照(灰、次要)——本周期值 vs 批均同格对照,交织腿数字归一位 */
+  .phaseSeg .phaseAvg{grid-column:1/3;display:block;color:#98a2aa;font:700 6.5px/1 Consolas,monospace;white-space:nowrap}
+  .phaseSeg.active .phaseAvg{color:#b9c6d0}
   .phaseSeg.active{background:#17202b;color:#fff;box-shadow:inset 0 0 0 2px #ff6a00} /* P3:双类 specificity 本就胜 phaseTone 单类,important 冗余摘 */
   .phaseSeg.active .phaseName,.phaseSeg.active .phaseDuration{color:#fff}
   #phaseCursor{display:none!important}
@@ -816,7 +819,8 @@
   #opsEvidence .oeGrid>div{padding:4px 6px;background:#eef1f3;min-width:0}
   #opsEvidence .oeGrid b{display:block;font:800 11px/1 Consolas,monospace;color:#17202b}
   #opsEvidence .oeGrid span{display:block;margin-top:2px;font-size:6.5px;color:#5d6972;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* M5 省一趟角标:文献基准(Bozer-White 1984)与实测并列,悬停见口径 */
+  /* M5 省一趟角标:文献基准(Bozer-White 1984)与实测并列,悬停见口径;0719 去重复后省一趟格跨双列,角标全文可显 */
+  #opsEvidence .oeSaved{grid-column:1/-1}
   #opsEvidence .oeRef{display:block;margin-top:3px;padding:2px 4px;font:700 6px/1.2 "Microsoft YaHei",sans-serif;font-style:normal;
     color:#7a5c1e;background:#faf3df;border:1px solid #ecdfbc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #opsEvidence .oeHot{background:#fdf3d5;box-shadow:inset 0 0 0 1px #e7b800}
