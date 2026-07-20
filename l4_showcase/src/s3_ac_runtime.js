@@ -825,6 +825,9 @@
       infeedEnvelope: CONVEYOR_ENVELOPES.infeed, outfeedEnvelope: CONVEYOR_ENVELOPES.outfeed}, TRANSFER_TOPOLOGY));
     const stockGroup = new THREE.Group(), queueGroup = new THREE.Group();
     scene.add(stockGroup); scene.add(queueGroup);
+    /* 0719:3D 故障可视化(用户指正「3D 看不出故障表现」)——载货台警示红球,faulted 帧显示、随 carrier 移动 */
+    const faultBeacon = new THREE.Mesh(new THREE.SphereGeometry(.26, 14, 10), new THREE.MeshBasicMaterial({color: 0xd32f2f}));
+    faultBeacon.visible = false; faultBeacon.position.set(0, 0, 1.05); carrier.add(faultBeacon);
     if (cargo.parent) cargo.parent.remove(cargo);
     scene.add(cargo); cargo.visible = false;
 
@@ -1052,6 +1055,7 @@
       const worldX = frame.machine.x + .5, worldZ = frame.machine.z + .5;
       mast.position.x = worldX; machineParts.forEach(part => { part.position.x = worldX; });
       carrier.position.set(worldX, IO.y, worldZ);
+      faultBeacon.visible = !!frame.faulted;
       const beltLength = Math.max(.45, N - worldZ + .05), beltCenter = (N + worldZ) / 2;
       liftBelts.forEach(belt => { belt.scale.z = beltLength; belt.position.z = beltCenter; });
       forkGroup.position.set(0, 0, 0);
@@ -1145,6 +1149,12 @@
       const setOpen = open => {
         button.classList.toggle("is-open", open);
         button.setAttribute("aria-expanded", String(open));
+        /* tipBubble 为 fixed(脱 workHud 裁剪):打开时按 chip 位置放到其左侧(rail 居右,左侧是 3D 区,空间充裕) */
+        if (open) {
+          const rect = button.getBoundingClientRect();
+          tip.style.left = `${Math.max(8, rect.left - 222)}px`;
+          tip.style.top = `${Math.max(8, Math.min(root.innerHeight - 140, rect.top - 4))}px`;
+        }
       };
       button.addEventListener("mouseenter", () => setOpen(true));
       button.addEventListener("mouseleave", () => { if (doc.activeElement !== button) setOpen(false); });

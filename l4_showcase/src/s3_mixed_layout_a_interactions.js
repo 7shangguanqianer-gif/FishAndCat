@@ -29,13 +29,13 @@
   const runtimeControls = byId("runtimeControls");
   if (topbar) {
     if (railHead) topbar.append(railHead);            /* railHead 由场景脚本创建并 prepend 到 workHud */
-    if (runtimeControls) topbar.append(runtimeControls); /* 含 runtimeActions / traceLoadState / traceErrorHost */
-    /* 0719 功能批次 M3:PLC 分片可行性占位徽章——赛题 AI+PLC,本页仅 SIM 口径;T1 完成前指路不虚构结论 */
+    /* 0719 功能批次 M3:PLC 分片可行性占位徽章——紧跟品牌(页面级口径徽章),在控件组之前 */
     const plcBadge = doc.createElement("span");
     plcBadge.id = "plcFeasBadge";
     plcBadge.textContent = "PLC 分片可行性 · 另页详述";
     plcBadge.title = "AC500 分片下装可行性另页详述;本页为 SIM 演示口径,不虚构 PLC 实测结论。";
     topbar.append(plcBadge);
+    if (runtimeControls) topbar.append(runtimeControls); /* 含 runtimeActions / traceLoadState / traceErrorHost */
   }
 
   /* 0719 C2 组件公约:镜头与演示倍率 → 进度轴行尾(01 已如此,02 从 sceneDock 第三列搬来;

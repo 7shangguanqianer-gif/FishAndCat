@@ -58,7 +58,11 @@
   #axisHud{width:auto;padding:7px 9px;background:#17202be8;color:#eef3f8;
     border:1px solid #ffffff30;border-radius:3px;box-shadow:0 3px 12px #0002;font:10px/1.55 Consolas,"JetBrains Mono",monospace}
   #axisHud b{display:block;color:#fff;font-size:11px;margin-bottom:2px}#axisHud .axis{display:grid;grid-template-columns:22px 1fr auto;gap:5px;align-items:center}
-  #axisHud .axis i{height:3px;background:#65707c;overflow:hidden}#axisHud .axis i:after{content:"";display:block;width:var(--fill,0%);height:100%;background:var(--c,#4a6fa5)}
+  /* 0719 编码修正(用户「实时轴位看不出来」):位置是**点**不是量——fill 条在 X=0.16m 时宽 0.8% 恒不可见;
+     改为轨道+位置点标,任意位置一眼可读 */
+  #axisHud .axis i{position:relative;height:4px;background:#e4e8ec;overflow:visible;border-radius:2px}
+  #axisHud .axis i:after{content:"";position:absolute;top:-3px;left:clamp(0%,calc(var(--fill,0%) - 2px),calc(100% - 5px));
+    width:5px;height:10px;background:var(--c,#17365d);border-radius:1px;box-shadow:0 0 0 1px #fff}
   #phaseRail{position:absolute;z-index:4;left:10px;bottom:9px;width:min(51%,460px);padding:6px 8px 7px;background:#fffffff0;
     border:1px solid #d8dadd;border-radius:3px;box-shadow:0 2px 8px #00000012}
   #phaseRail .phaseTitle{display:flex;justify-content:space-between;margin-bottom:4px;color:#626a73;font:9px/1.2 Consolas,"Microsoft YaHei",monospace}
@@ -266,11 +270,11 @@
     background:#eef2f5;color:#52616c;font-family:inherit;text-align:left;cursor:help;outline:none;touch-action:manipulation}
   .metricHelp b{display:block;color:#17202b;font:800 10px/1 Consolas,monospace;white-space:nowrap}.metricHelp small{display:block;margin-top:2px;font-size:6.5px;white-space:nowrap}
   .metricHelp:focus-visible{box-shadow:0 0 0 2px #e7b800;z-index:32}
-  .tipBubble{position:absolute;z-index:40;right:0;bottom:calc(100% + 6px);width:210px;padding:7px 8px;background:#17202b;color:#f5f7f8;
+  /* 0719 修:tooltip 被 #workHud overflow 裁剪(用户「解释会被隔断」)→ fixed 脱离裁剪链,位置由 metricChip JS 按 chip rect 计算 */
+  .tipBubble{position:fixed;z-index:90;right:auto;bottom:auto;width:210px;padding:7px 8px;background:#17202b;color:#f5f7f8;
     border-left:3px solid #e7b800;box-shadow:0 7px 20px #0004;font:8px/1.5 "Microsoft YaHei",sans-serif;white-space:normal;
     opacity:0;visibility:hidden;transform:translateY(3px);transition:opacity .12s,transform .12s;pointer-events:none}
   .metricHelp.is-open{z-index:42}.metricHelp.is-open .tipBubble{opacity:1;visibility:visible;transform:translateY(0)}
-  #decisionWrap .metricHelp .tipBubble{left:0;right:auto}
   #decisionWrap .weightBlock{margin-top:4px}#decisionWrap .weightHead{display:flex;justify-content:space-between;color:#6a747c;font:7px/1.2 Consolas,monospace}
   #decisionWrap .weightGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin-top:3px}
   #decisionWrap .weightGrid .metricHelp{padding:3px 2px;text-align:center}#decisionWrap .weightGrid .metricHelp b{font-size:8px}#decisionWrap .weightGrid .metricHelp small{font-size:6px}
@@ -375,7 +379,8 @@
      labelLeaders/targetBeacon 装饰随 130 行 display:none 保护令死亡(保护令与 DOM 铁律不动)。一代存活键拆出: */
   #sceneTools .toolHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
   #playbackValue{text-align:right}
-  #faultStateBanner{position:absolute;z-index:8;right:18px;top:82px;min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
+  /* 0719 修:right:18 落在右栏底下被盖(用户「看不到故障表现」的一半根因)→ 移到 3D 区右上、热度图例上方 */
+  #faultStateBanner{position:absolute;z-index:8;right:calc(var(--rail-w) + 18px);top:82px;min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
     background:#fff5f4f2;box-shadow:0 5px 18px #6d17172b;color:#6f1717;pointer-events:none}
   #faultStateBanner[hidden]{display:none}#faultStateBanner b{display:block;font:900 10px/1.1 "Microsoft YaHei",sans-serif}
   #faultStateBanner span{display:block;margin-top:4px;font:8.5px/1.3 Consolas,"Microsoft YaHei",monospace;color:#7d3430}
@@ -538,19 +543,19 @@
   #sceneDock>*{min-width:0;min-height:0;height:100%;overflow:hidden;border:0;border-left:1px solid #c7cfd5;border-radius:0;box-shadow:none}
   #sceneDock>*:first-child{border-left:0}
   #sceneCaption{position:static;max-width:none;padding:6px 10px;display:grid;grid-template-columns:auto 1fr;grid-template-areas:"label meta" "action action" "cargo legend";
-    align-content:center;gap:4px 8px;background:#fff;color:#1b2831;pointer-events:none;font-family:"Microsoft YaHei",sans-serif}
-  #sceneCaption .dockLabel{grid-area:label;color:#5d6972;font-size:9px;font-weight:700}
+    align-content:center;gap:3px 8px;background:#fff;color:#1b2831;pointer-events:none;font-family:"Microsoft YaHei",sans-serif}
+  #sceneCaption .dockLabel{grid-area:label;color:#16191d;font-size:9px;font-weight:700} /* 0719:三块标题统一深色 */
   #sceneCaption #sceneActionMeta{grid-area:meta;justify-self:end;color:#5d6972;font:8.5px/1.1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
   #sceneCaption #sceneActionText{grid-area:action;display:block;overflow:hidden;color:#17365d;font-size:11px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis}
   #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;font:8px/1.15 Consolas,"Microsoft YaHei",monospace;white-space:nowrap;text-overflow:ellipsis}
   /* 0719 白化:深色遥测块与 dock 白底顶撞(用户指正「统一成白色」);drawSpeed 画布用色本就浅底友好,只改壳 */
-  #sceneTelemetry{position:static;width:auto;padding:6px 8px;display:grid;grid-template-columns:1.12fr .88fr;gap:8px;
+  #sceneTelemetry{position:static;width:auto;padding:6px 10px;display:grid;grid-template-columns:1.05fr .95fr;gap:10px;
     background:#fff;color:#26343e;pointer-events:none}
   #sceneTelemetry .telemetryTitle{display:none}
   #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
   #axisHud b{margin:0 0 2px;color:#16191d;font-size:8.5px;letter-spacing:0}
   #axisHud .axis{grid-template-columns:12px 1fr 43px;gap:5px;margin:2px 0}
-  #axisHud .axis i{height:4px;background:#e0e5e9}#axisHud .axis span:last-child{color:#17202b;font-size:8.5px;text-align:right}
+  #axisHud .axis span:last-child{color:#17202b;font-size:8.5px;text-align:right;font-family:Consolas,monospace}
   #liveChartWrap{width:auto;min-width:0;min-height:0;padding:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:transparent;border:0}
   #liveChartWrap .cap{font-size:7.5px;color:#66727b}#liveChartWrap .cap b{color:#16191d}#speed{height:42px;min-height:0;margin-top:1px}
   #reserveRuleBadge{grid-area:legend;position:static;padding:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;
@@ -631,12 +636,15 @@
   #topbarA #railHead h1{font-size:15px;white-space:nowrap}
   #topbarA #railHead .eyebrow{font-size:7px}
   #topbarA #railHead .matrix{display:none}
-  #topbarA #runtimeControls{display:flex;align-items:center;gap:9px;flex:1;min-width:0;border:0;padding:0;background:transparent}
-  #topbarA #runtimeControls label{display:flex;align-items:center;gap:4px;font-size:8.5px;white-space:nowrap;color:#59656e}
-  #topbarA #runtimeControls select{width:auto;min-width:118px;height:27px}
-  #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:6px;grid-column:auto}
-  #topbarA #runtimeActions button{height:27px;min-height:27px}
-  #topbarA #traceLoadState{margin-left:4px;color:#17365d}
+  /* 0719 顶栏革新:控件统一 26px 高、间距节律 10px、组间分隔线;状态徽章(已校验/PLC)去按钮观感 */
+  #topbarA #runtimeControls{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;padding:0;background:transparent}
+  #topbarA #runtimeControls label{display:flex;align-items:center;gap:5px;font-size:8.5px;white-space:nowrap;color:#59656e}
+  #topbarA #runtimeControls select{width:auto;min-width:118px;height:26px;border:1px solid #b6c0c8;background:#fff;font-size:9.5px;padding:0 6px}
+  #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:8px;grid-column:auto;
+    border-left:1px solid #e2e6ea;padding-left:12px}
+  #topbarA #runtimeActions button{height:26px;min-height:26px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
+  #topbarA #runtimeActions button:hover{background:#17365d;color:#fff;border-color:#17365d}
+  #topbarA #traceLoadState{margin-left:2px;padding:5px 9px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap}
   #topbarA #traceErrorHost{position:absolute;top:100%;left:0;right:0;z-index:30}
 
   /* -- 左栏 rail:决策卡 → insight 统计 → 2D 货位图 → 七步条(axisHud/liveChart 在 dock,不占 rail) -- */
@@ -747,7 +755,7 @@
   .metricHelp .statCaliber{display:block;margin-top:2px;font:400 6.5px/1.2 "Microsoft YaHei",sans-serif;color:#8a6d00;font-style:normal}
   .statFinger{margin-top:4px;font:7px/1.3 Consolas,monospace;color:#65717c}
   .metricHelp.statJump{cursor:pointer;box-shadow:inset 0 0 0 1px #c6282833}
-  #plcFeasBadge{margin-left:8px;padding:3px 8px;border:1px dashed #8a96a1;font-size:9px;color:#5a6771;background:#f2f4f6;white-space:nowrap;align-self:center;flex:none}
+  #plcFeasBadge{margin-left:2px;padding:5px 9px;border:0;font-size:8.5px;color:#4e5a64;background:#eef1f4;white-space:nowrap;align-self:center;flex:none} /* 0719:去虚线边框(曾被误读为可点按钮) */
   #evFaultCard{margin-top:12px;background:#fff7f5;border:1px solid #e2b8b0;border-left:3px solid #c62828;padding:8px 10px;font-size:9px;color:#3a2b28}
   #evFaultCard[hidden]{display:none}
   #evFaultCard b{display:block;font-size:10px;color:#8e1f14;margin-bottom:3px}
@@ -796,7 +804,7 @@
 
   /* 0719 收敛(用户选甲):dock 底带转正为唯一版;rail/axis 两分支删,?s3b 机制退役 */
   #viewport{--scene-dock-h:96px}
-  #sceneDock{grid-template-columns:minmax(270px,1.25fr) minmax(215px,.95fr) minmax(265px,1.05fr)}
+  #sceneDock{grid-template-columns:minmax(250px,1.08fr) minmax(235px,1fr) minmax(280px,1.12fr)} /* 0719:三列密度平衡(左块内容少收窄,右证据块放宽) */
   #sceneDock #opsEvidence{padding:5px 10px}
   #opsEvidence .oePair{grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
   #opsEvidence .oeLeg i{height:3px}
