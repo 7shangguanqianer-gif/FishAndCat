@@ -341,7 +341,7 @@ test("Task10 rail uses current-trace facts and accessible definitions without a 
     "stats.response_p50_s", "stats.response_p95_s", "stats.utilization", "stats.queue_peak_waiting",
     "stats.faults", "stats.violations", "trace.meta.score_weights && trace.meta.score_weights.online",
     "当前 trace；不与 S1 多 seed 聚合合并", "本链不调用四项候选位评分函数",
-    "权重，不是本周期分值", "AUTO 路由额外策略", "insight.prepend(queue)",
+    "权重，不是本周期分值", "AUTO 策略路由", "insight.prepend(queue)",
     'advanced.className = "decisionAdvanced"', 'advancedBody.className = "advancedBody"',
     'const shown3d = gids.slice(0, 4), shownRail = gids.slice(0, 2)'
   ]) assert(runtimeSource.includes(token), `Task10 runtime token missing: ${token}`);

@@ -1206,8 +1206,8 @@
       const host = byId("decisionWrap"), router = trace.router, requested = trace.meta.strategy_mode;
       const picked = STRATEGY_LABEL[router.picked] || String(router.picked).toUpperCase();
       const chain = `${STRATEGY_LABEL[router.initial_strategy] || router.initial_strategy} → ${STRATEGY_LABEL[router.online_strategy] || router.online_strategy}`;
-      const routedExtra = requested === "AUTO" && ["cb", "tob"].includes(router.picked);
-      const title = requested === "AUTO" ? `${routedExtra ? "AUTO 路由额外策略" : "AUTO 已选择"} · ${picked}` : `人工固定 ${STRATEGY_LABEL[requested] || requested}`;
+      /* 0720 命名总表 A11:AUTO 策略路由全站唯一词,决策卡标题不再区分「已选择/路由额外策略」两种前缀 */
+      const title = requested === "AUTO" ? `AUTO 策略路由 · ${picked}` : `人工固定 ${STRATEGY_LABEL[requested] || requested}`;
       const judgeRoute = byId("judgeRoute"), judgeRouteMeta = byId("judgeRouteMeta");
       if (judgeRoute) judgeRoute.textContent = requested === "AUTO" ? `AUTO · ${chain}` : `固定 · ${picked}`;
       if (judgeRouteMeta) judgeRouteMeta.textContent = requested === "AUTO" ? "启动时一次选定 · SIM" : "人工固定策略 · SIM";
@@ -1215,7 +1215,10 @@
       const head = doc.createElement("div"); head.className = "dHead";
       const strong = doc.createElement("b"), scope = doc.createElement("span"); strong.textContent = title; scope.textContent = "启动时一次选定 · SIM"; head.append(strong, scope);
       const selection = doc.createElement("div"); selection.className = "selectionSummary";
-      const summaryStrong = doc.createElement("strong"), summaryText = doc.createElement("span"); summaryStrong.textContent = chain; summaryText.textContent = requested === "AUTO" ? "启动时一次选定" : "AUTO 未接管"; selection.append(summaryStrong, summaryText);
+      const summaryStrong = doc.createElement("strong"), summaryText = doc.createElement("span"); summaryStrong.textContent = chain; summaryText.textContent = requested === "AUTO" ? "启动时一次选定" : "AUTO 未接管";
+      /* 0720 命名总表 A11 黑框去冗余:「启动时一次选定」与 dHead scope 同句重复,标题行尾注留一处即可 */
+      if (requested === "AUTO") summaryText.style.display = "none";
+      selection.append(summaryStrong, summaryText);
       const reason = doc.createElement("div"); reason.className = "proofLead"; reason.textContent = router.reason;
       const signals = doc.createElement("div"); signals.className = "routeSignals";
       const facts = [
@@ -1268,7 +1271,7 @@
       host.replaceChildren();
       const head = doc.createElement("div"); head.className = "statsHead";
       const title = doc.createElement("b"), scope = doc.createElement("span");
-      title.textContent = "本批统计"; scope.textContent = "单 seed · SIM";
+      title.textContent = "批次 KPI"; scope.textContent = "单 seed · SIM";
       scope.title = "当前 trace；不与 S1 多 seed 聚合合并"; head.append(title, scope);
       const grid = doc.createElement("div"); grid.className = "statsGrid";
       const tierBoundary = trace.meta.tier === 3 ? "Tier 3 响应包含等待、装卸与故障恢复。" : `Tier ${trace.meta.tier} 不包含 Tier 3 的等待、装卸与故障恢复。`;
@@ -1440,9 +1443,9 @@
       const storeShare = Math.round(100 * data.storeAvg / Math.max(1e-9, data.storeAvg + data.retrAvg));
       let host = byId("opsEvidence");
       if (!host) { host = doc.createElement("section"); host.id = "opsEvidence"; host.setAttribute("aria-label", "存取对置与取货实测,SIM 同源"); }
-      /* 0719 用户指正比例/溢出/与本批统计关系:①对置改单条双段(一眼见占比,省一行高);
-         ②头部标注「腿级分解 · 补充右栏本批统计」写明总-分关系(右栏=周期级 KPI,本块=腿级细分,数字互不重复) */
-      host.innerHTML = `<div class="oeHead"><b>存取对置 · 取货实测</b><span>腿级分解 · 补充右栏本批统计 · 单 seed · SIM</span></div>` +
+      /* 0719 用户指正比例/溢出/与批次 KPI 关系:①对置改单条双段(一眼见占比,省一行高);
+         ②0720 命名总表 A6:头部标注精简为「入库腿 vs 出库腿 · 单 seed · SIM」,与右栏批次 KPI 去重,不复述「补充」关系 */
+      host.innerHTML = `<div class="oeHead"><b>出入库耗时分解</b><span>入库腿 vs 出库腿 · 单 seed · SIM</span></div>` +
         `<div class="oeVs" style="--store:${storeShare}%">` +
         `<span class="vsL"><b>${fmt(data.storeAvg)} s</b> 入库腿均时</span><i aria-hidden="true"></i><span class="vsR">取货腿均时 <b>${fmt(data.retrAvg)} s</b></span></div>` +
         `<div class="oeGrid">` +
@@ -2036,6 +2039,12 @@
     const evidenceButton = doc.createElement("button"); evidenceButton.id = "openEvidenceDock"; evidenceButton.type = "button";
     evidenceButton.textContent = "本屏证据"; evidenceButton.setAttribute("aria-haspopup", "dialog");
     actionHost.insertBefore(evidenceButton, compareButton);
+    /* 0720 版B 转正:证据两键(本屏证据/对照证据)→单键「证据中心」;旧两键 DOM 与监听原样保留(只 CSS 隐藏),
+       弹层彻底重构留待 T5,本键暂转发 openEvidenceDock 的点击行为 */
+    const evidenceCenterButton = doc.createElement("button"); evidenceCenterButton.id = "openEvidenceCenter"; evidenceCenterButton.type = "button";
+    evidenceCenterButton.textContent = "证据中心"; evidenceCenterButton.setAttribute("aria-haspopup", "dialog");
+    evidenceCenterButton.addEventListener("click", () => { evidenceButton.click(); });
+    actionHost.insertBefore(evidenceCenterButton, evidenceButton);
     rail.append(decision, comparisonLab, evidenceDock); insight.prepend(queue);
   }
 
@@ -2245,7 +2254,7 @@
 
     function setLoading(loading, query) {
       state.loading = loading;
-      byId("traceLoadState").textContent = loading ? `校验 T${query.tier}/${query.profile}/${query.strategy_mode}…` : "已校验 · sim trace";
+      byId("traceLoadState").textContent = loading ? `校验 T${query.tier}/${query.profile}/${query.strategy_mode}…` : "已校验 · SIM 轨迹";
       byId("runtimeControls").setAttribute("aria-busy", String(loading));
       ["tierSelect", "profileSelect", "strategySelect"].forEach(id => { byId(id).setAttribute("aria-busy", String(loading)); });
     }

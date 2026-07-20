@@ -23,6 +23,12 @@
   /* ---------- 1. 布局作用域 ---------- */
   doc.documentElement.dataset.s3Layout = "A";
 
+  /* 0720 版B 转正:作业周期进度轴从顶栏下的独立横条搬入右栏顶部(竖排空间换横排,3D 视野增大)。
+     prepend 对已存在节点是移动不是复制,幂等安全;#progressAxisHost 的 order:-1(见 02 html 样式区)
+     保证不论搬运时机都恒居 #workHud 首位。 */
+  const progressAxisHost = byId("progressAxisHost");
+  if (progressAxisHost && progressAxisHost.parentElement !== workHud) workHud.prepend(progressAxisHost);
+
   /* ---------- 2. 顶栏:railHead + runtimeControls 搬入静态 #topbarA ---------- */
   const topbar = byId("topbarA");
   const railHead = byId("railHead");
@@ -48,18 +54,20 @@
         const playSet = doc.createElement("span"); playSet.className = "btnSet";
         const proofSet = doc.createElement("span"); proofSet.className = "btnSet";
         ["pauseMotion", "replayTrace"].forEach(id => { const el = byId(id); if (el) playSet.append(el); });
-        ["exp", "openEvidenceDock", "openComparisonLab"].forEach(id => { const el = byId(id); if (el) proofSet.append(el); });
+        /* 0720 版B 转正:openEvidenceCenter 是唯一可见证据入口;exp/openEvidenceDock/openComparisonLab
+           三个旧按钮 CSS 已隐藏(02 html 样式区),DOM 与监听原样保留、仍随组搬运,不单独摘出 */
+        ["exp", "openEvidenceCenter", "openEvidenceDock", "openComparisonLab"].forEach(id => { const el = byId(id); if (el) proofSet.append(el); });
         actions.prepend(playSet, proofSet);
       }
       topbar.append(runtimeControls);
     }
   }
 
-  /* 0719 C2 组件公约:镜头与演示倍率 → 进度轴行尾(01 已如此,02 从 sceneDock 第三列搬来;
-     样式在 s3_shell_v2.css 的 #cycleAxis #sceneTools 段,dock 腾出的列位留给取货实测块)。 */
-  const cycleAxisHost = byId("cycleAxis");
+  /* 0720 版B 转正:进度轴迁入右栏后不再有「行尾」可挂;镜头与演示倍率改安置到 3D 区右下角
+     悬浮小卡(直接挂 #viewport,position:absolute 由 02 html 样式区的 #sceneTools 规则给出;
+     s3_shell_v2.css 的 #cycleAxis #sceneTools 段随之退役并已清)。 */
   const sceneTools = byId("sceneTools");
-  if (cycleAxisHost && sceneTools) cycleAxisHost.append(sceneTools);
+  if (sceneTools && sceneTools.parentElement !== viewport) viewport.append(sceneTools);
 
   /* 0719 四分割(用户红框):货位热度图例从 3D 悬浮层集成进底 dock。本层运行时 opsEvidence
      尚未由 runtime 创建(trace 加载后才 append),故最终列序 = 当前作业|运动遥测|货位热度|存取对置 */

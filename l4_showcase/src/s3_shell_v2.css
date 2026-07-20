@@ -34,22 +34,7 @@ html[data-s3-rail="right"][data-s3-layout="A"] #sceneDock{left:14px;right:calc(v
 html[data-s3-rail="right"][data-s3-layout="A"] #heatLegend{right:calc(var(--rail-w) + 18px)}
 html[data-s3-rail="right"][data-s3-layout="A"] #topbarA #traceErrorHost{left:0;right:var(--rail-w)}
 
-/* ---- C2 组件位置公约:镜头与演示倍率 → 进度轴行尾(两页一致) ----
-   01 已如此(01 内联 #fillBookmarks #sceneTools,01:837-846;规则暂留 01 页内,
-   R5 收拢前不动稳定页)。02 由 s3_mixed_layout_a_interactions.js 把 #sceneTools
-   搬入 #cycleAxis,样式在此(选择器 #cycleAxis 为 02 专属,01 无此 id、零影响): */
-html[data-s3-layout="A"] #cycleAxis #sceneTools{position:static;flex:none;display:flex;align-items:center;
-  gap:8px;width:auto;padding:0 0 0 12px;background:transparent;border:0;border-left:1px solid #d4dade;box-shadow:none}
-html[data-s3-layout="A"] #cycleAxis #sceneTools .toolHead{font:700 8.5px/1.15 "Microsoft YaHei",sans-serif;color:#5d6972;white-space:nowrap}
-html[data-s3-layout="A"] #cycleAxis #sceneTools .toolHead span{display:block;color:#8a949c;font-size:6.5px;font-weight:500}
-html[data-s3-layout="A"] #cycleAxis #sceneTools .toolRow{display:flex;align-items:center;gap:7px;margin:0}
-html[data-s3-layout="A"] #cycleAxis #sceneTools button{height:22px;padding:0 10px;font-size:9px;font-weight:700;
-  border:1px solid #17365d;background:#fff;color:#17365d;cursor:pointer}
-html[data-s3-layout="A"] #cycleAxis #sceneTools button:hover{background:#17365d;color:#fff}
-html[data-s3-layout="A"] #cycleAxis #sceneTools input[type="range"]{width:104px;min-height:18px;accent-color:#17365d}
-html[data-s3-layout="A"] #cycleAxis #sceneTools #playbackValue{min-width:40px;font:800 9.5px/1 Consolas,monospace;color:#17365d}
-html[data-s3-layout="A"] #cycleAxis #sceneTools .toolNote{display:none}
-@media(max-width:1480px){
-  html[data-s3-layout="A"] #cycleAxis #sceneTools .toolHead span{display:none}
-  html[data-s3-layout="A"] #cycleAxis #sceneTools input[type="range"]{width:84px}
-}
+/* ---- C2 组件位置公约(01 专属残留):01 页镜头与演示倍率仍挂进度轴行尾 ----
+   01 内联 #fillBookmarks #sceneTools 自带样式(01:837-846),规则暂留 01 页内,R5 收拢前不动稳定页。
+   02 页:0720 版B 转正后进度轴迁入右栏,#sceneTools 改安置 3D 区右下角悬浮小卡(挂 #viewport 直接子级,
+   样式随 02_入出闭环.html 自身的 #sceneTools 规则给出),原 #cycleAxis #sceneTools 选择器已不可达,整段删除。 */

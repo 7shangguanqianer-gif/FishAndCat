@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>智储优控 · 入出库闭环作业 · S3</title>
+<title>智储优控 · 存取闭环 · S3</title>
 <style>
 /* ================== 结构地图(0719 根治后;P4 采「轻量版」:死码/对手已清尽,不再大规模搬家——
    赛前稳定优先,源序级联翻车风险 > 纯可读性收益;media 归并同理跳过,决定记录于
    docs/CSS层积病根治计划_0719.md。新规则请按节就位,勿跨节回写:
-   ① tokens   :root 与 html{} 令牌(--rail-w/--topbar-h/--axis-h 唯一定义在 A 壳段头)
+   ① tokens   :root 与 html{} 令牌(--rail-w/--topbar-h 唯一定义在 A 壳段头)
    ② 组件密度垫底 (~110-460 行区)历代字号/padding——布局键已清,仅密度残值,后代覆盖为准
    ③ Task16 scene 底带 + comparisonLab + 叠层(evidenceDock)
    ④ A 壳(现行唯一布局层,已转正无前缀):topbar/进度轴/rail flex+order/2D 放大层
@@ -173,7 +173,7 @@
   #cycleReset{left:var(--rail-w,32%)}
 
   /* P2b:--rail-w 历代死值(30%/410-470/600/440/32.5vw)全删——现行=631 html{} 令牌,防转正反超 */
-  html[data-style="A"]{--rail-bg:#f7f8fa;--scene-bg:#e9eef1;--card:#fff;--rail-ink:#17202b;--rail-muted:#65717c;--rail-line:#cbd2d8;--accent:#17365d;--axis-bg:#17202b}
+  html[data-style="A"]{--rail-bg:#f7f8fa;--scene-bg:#e9eef1;--card:#fff;--rail-ink:#17202b;--rail-muted:#65717c;--rail-line:#d6dde2;--accent:#17365d;--axis-bg:#17202b}
   /* P1(0719 层积根治):data-style B/C 两代死块已删——dataset.style 唯一赋值点硬编码 'A'(本页 script),
      B/C 永不可达;其中还藏着废止黄牌 #targetBeacon 的两条装饰样式(0717 #28 已废止),一并清除。
      git 历史可找回;风格重启用请走 tokens 层,勿复活多代并存。 */
@@ -382,10 +382,10 @@
   #playbackValue{text-align:right}
   /* 0719 修:right:18 落在右栏底下被盖(用户「看不到故障表现」的一半根因)→ 移到 3D 区右上、热度图例上方 */
   /* 0719d:原 right 定位压住镜头行「总览」+倍率滑条 → 顶部居中;与暂停贴条同现时经 :has 下移一档成组 */
-  #faultStateBanner{position:absolute;z-index:8;left:50%;transform:translateX(-50%);top:calc(var(--topbar-h) + var(--axis-h) + 12px);min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
+  #faultStateBanner{position:absolute;z-index:8;left:50%;transform:translateX(-50%);top:calc(var(--topbar-h) + 12px);min-width:198px;padding:8px 10px;border-left:5px solid #b71c1c;
     background:#fff5f4f2;box-shadow:0 5px 18px #6d17172b;color:#6f1717;pointer-events:none}
   #faultStateBanner[hidden]{display:none}#faultStateBanner b{display:block;font:900 10px/1.1 "Microsoft YaHei",sans-serif}
-  #viewport:has(#pausedHint:not([hidden])) #faultStateBanner{top:calc(var(--topbar-h) + var(--axis-h) + 44px)}
+  #viewport:has(#pausedHint:not([hidden])) #faultStateBanner{top:calc(var(--topbar-h) + 44px)}
   #faultStateBanner span{display:block;margin-top:4px;font:8.5px/1.3 Consolas,"Microsoft YaHei",monospace;color:#7d3430}
   /* gen3:#sceneCaption 一代定位→578(static 化);font-size→478;#reserveRuleBadge 一代定位→593 */
 
@@ -550,10 +550,23 @@
     align-content:center;gap:2px 8px;background:#fff;color:#1b2831;pointer-events:none;font-family:"Microsoft YaHei",sans-serif}
   #sceneCaption .dockLabel{grid-area:label;color:#16191d;font-size:9px;font-weight:700} /* 0719:三块标题统一深色 */
   #sceneCaption #sceneActionMeta{grid-area:meta;justify-self:end;color:#5d6972;font:8.5px/1.1 Consolas,"Microsoft YaHei",monospace;white-space:nowrap}
-  #sceneCaption #sceneActionText{grid-area:action;display:block;overflow:hidden;color:#17365d;font-size:11px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis}
-  /* 0719d:meta 允许两行,消除「…」截断 */
+  /* 0720 可读性精修:当前作业货物行放大(用户点名「大字货物行」)——动作文案 800/12px,
+     颜色改深色基调 #16191d(与其余块头统一),盖过旧 11px/#17365d */
+  #sceneCaption #sceneActionText{grid-area:action;display:block;overflow:hidden;font:800 12px/1.3 "Microsoft YaHei",sans-serif;color:#16191d;white-space:nowrap;text-overflow:ellipsis}
+  /* 0719d:meta 允许两行,消除「…」截断;0720:货物元信息改横排 chip(重量大数字 + 等级/热冷徽章 + 时间),
+     不再是纯文本行,故由 nowrap 单行文本改 flex 换行容器 */
   #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;font:8px/1.35 Consolas,"Microsoft YaHei",monospace;
-    white-space:normal;max-height:2.7em}
+    display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;white-space:normal;max-height:none;margin-top:4px}
+  /* cgChip 是共享底座(padding/圆角/基础字号),cgWeight 的更大字号必须晚于 cgChip 声明才能在
+     同选择器特异性下正确覆盖(两者常同时挂在同一 span 上,源序决定胜出方) */
+  #sceneCargoMeta .cgChip{padding:2px 7px;border-radius:3px;font:700 9.5px/1.4 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  #sceneCargoMeta .cgWeight{font:800 14px/1 Consolas,"JetBrains Mono",monospace;color:#16191d}
+  #sceneCargoMeta .cgGrade-heavy{background:#102a43;color:#fff}
+  #sceneCargoMeta .cgGrade-mid{background:#006bb6;color:#fff}
+  #sceneCargoMeta .cgGrade-light{background:#42c7e6;color:#0b1f33}
+  #sceneCargoMeta .cgHot{background:#fdecc8;color:#8a5b00;box-shadow:inset 0 0 0 1px #e7b800}
+  #sceneCargoMeta .cgCold{background:#eef1f4;color:#52616c}
+  #sceneCargoMeta .cgTime{font:400 9px/1.3 Consolas,monospace;color:#5d6972;width:100%}
   /* 0719 白化:深色遥测块与 dock 白底顶撞(用户指正「统一成白色」);drawSpeed 画布用色本就浅底友好,只改壳 */
   /* 0719d:速度 canvas 退役(信息并入遥测网格),遥测块单列 */
   #sceneTelemetry{position:static;width:auto;padding:6px 12px;display:grid;grid-template-columns:1fr;gap:0;
@@ -562,9 +575,12 @@
   #sceneTelemetry .telemetryTitle{display:none}
   #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
   #axisHud b{margin:0 0 2px;color:#16191d;font-size:8.5px;letter-spacing:0}
-  /* 0719 蓝框均分:每轴一行 = 轴名|位置轨道|位置值|速度轨道|速度值——位置组与速度组等宽对称 */
-  #axisHud .axis{grid-template-columns:12px 1fr 47px 1fr 52px;gap:5px;margin:5px 0;align-items:center}
-  #axisHud .axis>span:first-child{font:800 9.5px/1 Consolas,monospace;color:#16191d}
+  /* 0719 蓝框均分:每轴一行 = 轴名|位置轨道|位置值|速度轨道|速度值——位置组与速度组等宽对称
+     0720 命名总表 A9:轴名 X/Z→X(行走)/Y(升降),标签列 12px→46px 防止新 label 被挤成两行;
+     F 行(第 3 个 .axis)整行隐藏(DOM/runtime 每帧写入保留,只 CSS 不可见)。 */
+  #axisHud .axis{grid-template-columns:46px 1fr 47px 1fr 52px;gap:5px;margin:5px 0;align-items:center}
+  #axisHud .axis:nth-of-type(3){display:none}
+  #axisHud .axis>span:first-child{font:800 8.5px/1 Consolas,monospace;color:#16191d;white-space:nowrap}
   #axisHud .axis .velTrack{position:relative;display:block;height:6px;background:#e7ebee;border-radius:2px;
     box-shadow:inset 0 0 0 1px #d5dbe0;overflow:hidden}
   #axisHud .axis .velTrack:after{content:"";position:absolute;inset:0;width:var(--vfill,0%);background:#4a88a8}
@@ -577,11 +593,22 @@
   #reserveRuleBadge i{display:block;width:14px;height:4px;flex:none;background:#17365d}
   #reserveRuleBadge .empty i{background:#7d8790}#reserveRuleBadge .out i{background:#4a88a8}
   #reserveRuleBadge .blocked i{height:9px;background:repeating-linear-gradient(135deg,#65727d 0 3px,#c7d0d6 3px 6px)}
-  #sceneTools{position:static;width:auto;padding:6px 8px;display:grid;grid-template-rows:auto 1fr auto;background:#fff;color:#26343e;pointer-events:auto}
-  #sceneTools .toolHead{font:700 9px/1.15 "Microsoft YaHei",sans-serif}#sceneTools .toolHead span{display:block;color:#68747d;font-size:7px;font-weight:500}
-  #sceneTools .toolRow{grid-template-columns:auto minmax(66px,1fr) 38px;gap:7px;margin-top:3px}
-  #sceneTools button{height:26px;padding:0 8px;font-size:9px}#sceneTools input[type="range"]{min-height:24px}#playbackValue{font-size:9px}
-  #sceneTools .scaleEnds{display:none}#sceneTools .toolNote{display:block;margin:1px 0 0;color:#65717a;font-size:7px;line-height:1.05;white-space:nowrap}
+  /* 0720 版B 转正:镜头与演示倍率从 dock 网格格/cycleAxis 行尾找回,安置到 3D 区右下角悬浮小卡
+     (interactions 层已把 DOM 搬到 #viewport 直接子级,不再是 sceneDock/cycleAxis 的网格成员)。
+     bottom 用既有 --scene-dock-h/--scene-dock-bottom 令牌换算,贴 dock 上缘 12px,不遮 dock 与 faultStateBanner。 */
+  /* 0720 修(实测才发现):02 是 data-s3-rail="right"(rail 在右、3D 在左),裸 right:18px 会把浮条
+     钉在右栏内容上方而非 3D 区;须扣掉 --rail-w 才能落回 3D 区右下角(与 shell_v2.css 里
+     heatLegend 曾用的 right:calc(var(--rail-w) + 18px) 同一惯例)。 */
+  #sceneTools{position:absolute;z-index:7;right:calc(var(--rail-w) + 18px);bottom:calc(var(--scene-dock-h) + var(--scene-dock-bottom) + 12px);
+    width:auto;display:flex;align-items:center;gap:7px;padding:4px 8px;background:#ffffffd9;
+    border:1px solid #aeb8bf;box-shadow:0 4px 15px #17202b1f;color:#26343e;pointer-events:auto}
+  #sceneTools .toolHead{display:none} /* 浮条从简,「总览」按钮 + 滑条自解释;文案保留 DOM 不删 */
+  #sceneTools .toolRow{display:flex;align-items:center;gap:7px;margin:0}
+  #sceneTools button{height:24px;padding:0 9px;font:700 9px/1 "Microsoft YaHei",sans-serif;border:1px solid #17365d;background:#fff;color:#17365d;cursor:pointer}
+  #sceneTools button:hover{background:#17365d;color:#fff}
+  #sceneTools input[type="range"]{width:84px;min-height:20px;accent-color:#17365d}
+  #sceneTools #playbackValue{min-width:38px;font:800 9px/1 Consolas,monospace;color:#17365d;text-align:right}
+  #sceneTools .scaleEnds{display:none}#sceneTools .toolNote{display:none}
   @media(max-width:1380px){
     #sceneDock{left:calc(var(--rail-w) + 10px);right:10px;grid-template-columns:minmax(240px,1.32fr) minmax(205px,1fr) minmax(170px,.8fr)}
     #sceneCaption{padding:7px 9px}#sceneCaption #sceneActionText{font-size:10px}#sceneTelemetry{padding:6px 7px;gap:7px}
@@ -641,7 +668,7 @@
      runtime / 场景脚本零改动,仅 CSS 重塑 + DOM 搬运。变量对齐 01_连续填仓。
      步骤1 只求「A 壳能起来、不白屏」;差异标记/取货实测块留步骤2/3。
      ================================================================ */
-  html{--rail-w:clamp(296px,23vw,352px);--topbar-h:46px;--axis-h:56px} /* P2b 转正:A 壳令牌=唯一现行值 */
+  html{--rail-w:clamp(296px,23vw,352px);--topbar-h:40px} /* P2b 转正:A 壳令牌=唯一现行值;0720 版B 转正:topbar 单行变矮 46→40,进度轴迁入右栏后 --axis-h 令牌退役 */
 
   /* -- 顶栏:railHead + runtimeControls 由交互层搬入 -- */
   #topbarA{position:absolute;z-index:12;top:0;left:0;right:0;height:var(--topbar-h);
@@ -650,7 +677,7 @@
   #topbarA #railHead .brandLock{gap:9px}
   #topbarA #railHead .abbWord{font-size:20px}
   #topbarA #railHead h1{font-size:15px;white-space:nowrap}
-  #topbarA #railHead .eyebrow{font-size:7px}
+  #topbarA #railHead .eyebrow{font-size:7.5px}
   #topbarA #railHead .matrix{display:none}
   /* 0719 顶栏革新:控件统一 26px 高、间距节律 10px、组间分隔线;状态徽章(已校验/PLC)去按钮观感 */
   #topbarA #runtimeControls{display:flex;align-items:center;gap:12px;flex:1;min-width:0;border:0;padding:0;background:transparent}
@@ -669,11 +696,14 @@
   #topbarA #runtimeActions #pauseMotion:hover{background:#0f2440;border-color:#0f2440}
   #topbarA #traceLoadState{padding:5px 9px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap}
   #topbarA #traceErrorHost{position:absolute;top:100%;left:0;right:0;z-index:30}
+  /* 0720 版B 转正:从头回放/导出3D帧删(用户拍板);证据两键(本屏证据/对照证据)并入单键「证据中心」——
+     四者 DOM 与监听原样保留只隐藏,弹层彻底重构留待 T5(#openEvidenceCenter 见 s3_ac_runtime.js 新增) */
+  #replayTrace,#exp,#openComparisonLab,#openEvidenceDock{display:none}
 
   /* -- 左栏 rail:决策卡 → insight 统计 → 2D 货位图 → 七步条(axisHud/liveChart 在 dock,不占 rail) -- */
   /* P2b:三 none 中和器与 border-top:0/grid-area:auto 反制已删(前代 grid 对手全清) */
   #workHud{inset:var(--topbar-h) auto 0 0;width:var(--rail-w);
-    display:flex;flex-direction:column;gap:7px;padding:8px 9px;overflow:hidden;border-right:1px solid #b9c2c9;background:#f6f7f8}
+    display:flex;flex-direction:column;gap:10px;padding:8px 9px;overflow:hidden;border-right:1px solid #b9c2c9;background:#f6f7f8}
   #taskline{display:none!important}
   #decisionWrap{order:1;flex:none;align-self:stretch}
   #insightStack{order:2;flex:none;display:block}
@@ -694,29 +724,38 @@
     min-height:0;flex:1 1 0;margin:4px 0 0;align-self:stretch} /* P3:对手(旧 !important 组)gen3 已删,4 个 important 全摘 */
   #phaseRail{order:4;flex:none;position:static;width:auto}
 
-  /* -- 入出周期轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进) -- */
-  #progressAxisHost{position:absolute;z-index:8;top:var(--topbar-h);left:var(--rail-w);right:0;height:var(--axis-h);
-    background:#fff;border-bottom:1px solid #b9c3ca;box-shadow:0 2px 8px #17202b0d}
-  #cycleAxis{position:relative;height:100%;display:flex;align-items:center;gap:16px;padding:0 16px}
-  #cycleAxis .cycleHead{flex:none}
+  /* -- 作业周期进度轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进)
+     0720 版B 转正:轴从顶栏下的独立横条迁入右栏顶部(竖排空间换横排),position 由 absolute 改 static、
+     跟随 #workHud 的 flex 纵向排列(order:-1 保证恒居首)。 -- */
+  #progressAxisHost{position:static;order:-1;flex:none;height:auto;
+    background:transparent;border:0;border-bottom:1px solid var(--rail-line,#d6dde2);box-shadow:none;padding:0 0 8px;margin-bottom:6px}
+  #cycleAxis{position:relative;height:auto;display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:0}
+  #cycleAxis .cycleHead{display:flex;align-items:baseline;justify-content:space-between;flex:none}
   #cycleAxis .cycleHead b{display:block;font-size:11.5px;white-space:nowrap;color:#16191d}
-  #cycleAxis .cycleHead span{display:block;margin-top:2px;font-size:7.5px;white-space:nowrap;color:#65717c}
-  #cycleAxisTrack{flex:1 1 auto;position:relative;height:34px;min-width:220px}
-  #cycleAxisTrack::before{content:"";position:absolute;left:0;right:0;top:16px;height:3px;background:#d9dde1}
-  #cycleAxisTrack .cycleFill{position:absolute;left:0;top:16px;height:3px;background:#17365d;width:var(--cycle-fill,0%);transition:width .2s linear}
-  #cycleAxisTrack button{position:absolute;top:7px;width:21px;height:21px;margin-left:-11px;padding:0;
+  #cycleAxis .cycleHead span{display:none} /* 右栏窄条容不下副题;文案保留 DOM,不删 */
+  /* 轨道贴边会让 0%/100% 节点的居中文字标签一半探出 #workHud 的 overflow:hidden 边界
+     (button 15px 宽 + ::after 居中标签比 button 宽得多);左右各留 24px 安全边距。
+     0720 可读性精修实测:预览稿的 24px 轨道高度装不下「按钮 4-19px + 标签 21-28.5px」,
+     实测 scrollHeight 31 > clientHeight 24(会被 #workHud 的 overflow:hidden 咬掉标签下半);
+     提到 32px 并同步下移轨道线/进度条(top:16→10px)以对准新按钮几何中心(4+15/2=11.5px)。 */
+  #cycleAxisTrack{min-width:0;position:relative;height:32px;flex:none;margin:0 24px}
+  #cycleAxisTrack::before{content:"";position:absolute;left:0;right:0;top:10px;height:3px;background:#d9dde1}
+  #cycleAxisTrack .cycleFill{position:absolute;left:0;top:10px;height:3px;background:#17365d;width:var(--cycle-fill,0%);transition:width .2s linear}
+  #cycleAxisTrack button{position:absolute;top:4px;width:15px;height:15px;margin-left:-7.5px;padding:0;
     border:2px solid #17365d;border-radius:50%;background:#fff;color:transparent;font-size:0;line-height:0;cursor:pointer;box-shadow:none}
   #cycleAxisTrack button.axisDone{background:#17365d}
   #cycleAxisTrack button[aria-current="true"]{border-color:#ff000f;background:#ff000f;box-shadow:0 0 0 4px #ff000f2b}
   #cycleAxisTrack button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
-  #cycleAxisTrack button::after{content:attr(data-axis-label);position:absolute;top:24px;left:50%;
-    transform:translateX(-50%);color:#75828c;font:8.5px/1 Consolas,monospace;white-space:nowrap}
-  #cycleAxisRight{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px;color:#5d6a74;font:7.5px/1.2 Consolas,monospace}
+  /* 0720 可读性精修:节点标签去双写(data-axis-label 已从「25 · 25%」精简为「25%」);
+     字号从预览稿的 6.5px 提到 ≥7.5px 地板,首尾标签 top 17px 内落在 24px 安全边距内不被裁切 */
+  #cycleAxisTrack button::after{content:attr(data-axis-label);position:absolute;top:17px;left:50%;
+    transform:translateX(-50%);color:#75828c;font:7.5px/1 Consolas,monospace;white-space:nowrap}
+  #cycleAxisRight{flex:none;display:flex;flex-direction:row;align-items:baseline;gap:5px;color:#5d6a74;font:7.5px/1.2 Consolas,monospace}
   #cycleAxisRight b{font-size:11px;color:#16191d}
 
   /* -- 3D 区:让位给顶栏 + 周期轴(bottom 仍由 sceneDock 规则承担) -- */
-  #gl{left:var(--rail-w);top:calc(var(--topbar-h) + var(--axis-h))}
-  #cycleReset{left:var(--rail-w);top:calc(var(--topbar-h) + var(--axis-h))}
+  #gl{left:var(--rail-w);top:var(--topbar-h)}
+  #cycleReset{left:var(--rail-w);top:var(--topbar-h)}
 
   /* -- 共享浮层(节点快照) + 2D 放大层 -- */
   .s3aPop{position:absolute;z-index:80;width:250px;background:#fff;border:1px solid #c9ced3;border-top:3px solid var(--abb-red,#ff000f);
@@ -752,7 +791,7 @@
 
   /* ===== 0719 功能批次(甲·地图王):sparkline / 故障红点 / 口径小字 / 复现指纹 / PLC 徽章 / 叠层扩容 ===== */
   /* 暂停贴条:seek/seekFault 后的显眼状态反馈(交互可见性) */
-  #pausedHint{position:absolute;z-index:12;top:calc(var(--topbar-h) + var(--axis-h) + 12px);left:50%;transform:translateX(-50%);
+  #pausedHint{position:absolute;z-index:12;top:calc(var(--topbar-h) + 12px);left:50%;transform:translateX(-50%);
     padding:6px 14px;background:#17365df0;color:#fff;font:700 11px/1.3 "Microsoft YaHei",sans-serif;
     box-shadow:0 4px 14px #17202b33;pointer-events:none;white-space:nowrap}
   #pausedHint[hidden]{display:none}
@@ -768,7 +807,7 @@
   #respSpark{margin-top:6px;background:#fff;border:1px solid #cbd2d8;padding:6px 9px 5px}
   #respSpark .sparkHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
   #respSpark .sparkHead b{font-size:9.5px;color:#16191d}
-  #respSpark .sparkHead span{font:7px/1 Consolas,"Microsoft YaHei",monospace;color:#65717c}
+  #respSpark .sparkHead span{font:7.5px/1 Consolas,"Microsoft YaHei",monospace;color:#65717c}
   #respSpark canvas{display:block;width:100%;height:26px}
   #cycleAxisTrack .axisFaultDot{position:absolute;top:10px;width:15px;height:15px;margin-left:-7.5px;padding:0;
     border:2px solid #fff;border-radius:50%;background:#c62828;box-shadow:0 0 0 2px #c62828;cursor:pointer}
@@ -776,7 +815,7 @@
   #cycleAxisTrack .axisFaultDot i{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
     font:900 8px/1 Consolas,monospace;color:#c62828;font-style:normal;white-space:nowrap}
   .metricHelp .statCaliber{display:block;margin-top:2px;font:400 6.5px/1.2 "Microsoft YaHei",sans-serif;color:#8a6d00;font-style:normal}
-  .statFinger{margin-top:4px;font:7px/1.3 Consolas,monospace;color:#65717c}
+  .statFinger{margin-top:4px;font:7.5px/1.3 Consolas,monospace;color:#65717c}
   .metricHelp.statJump{cursor:pointer;box-shadow:inset 0 0 0 1px #c6282833}
   #plcFeasBadge{margin-left:2px;padding:5px 9px;border:0;font-size:8.5px;color:#4e5a64;background:#eef1f4;white-space:nowrap;align-self:center;flex:none} /* 0719:去虚线边框(曾被误读为可点按钮) */
   #evFaultCard{margin-top:12px;background:#fff7f5;border:1px solid #e2b8b0;border-left:3px solid #c62828;padding:8px 10px;font-size:9px;color:#3a2b28}
@@ -797,11 +836,9 @@
   #evidenceDock .decisionAdvanced{margin-top:12px}
   #evidenceDock .decisionAdvanced .advancedBody{position:static;box-shadow:none;border:1px solid #d7dce0;margin-top:4px}
 
-  /* -- 大屏:顶栏/轴条略高 -- */
+  /* -- 大屏:顶栏字号略升(0720 版B 转正:topbar-h 固定 40px 不再随大屏升高,进度轴已迁入右栏自适应内容高) -- */
   @media(min-width:1600px) and (min-height:860px){
-    html{--topbar-h:50px;--axis-h:62px}
     #topbarA #railHead h1{font-size:17px}
-    #cycleAxis .cycleHead b{font-size:13px}
   }
   /* 0719 C2 组件公约落地:镜头与演示倍率移入进度轴行(样式见 s3_shell_v2.css),
      #sceneDock 三列改两列;第三列位预留给任务 b「取货实测块」。 */
@@ -830,8 +867,13 @@
 
   /* 0719 收敛(用户选甲):dock 底带转正为唯一版;rail/axis 两分支删,?s3b 机制退役 */
   #viewport{--scene-dock-h:96px}
-  /* 0719 四分割(用户红框):当前作业|运动遥测|货位热度|存取对置 */
-  #sceneDock{grid-template-columns:minmax(238px,1.02fr) minmax(212px,.94fr) minmax(176px,.72fr) minmax(278px,1.18fr)}
+  /* 0720 命名总表 A 表落地后重排:当前作业→出入库耗时分解→轴状态→货位访问频率(用 order 定序,
+     DOM append 顺序不变——opsEvidence 由 runtime 在 trace 就绪后才追加,天然殿后,故用 order 显式定位) */
+  #sceneDock{grid-template-columns:minmax(238px,1.02fr) minmax(278px,1.18fr) minmax(212px,.94fr) minmax(176px,.72fr)}
+  #sceneCaption{order:1}
+  #opsEvidence{order:2}
+  #sceneTelemetry{order:3}
+  #sceneDock #heatLegend{order:4}
   #sceneDock #heatLegend{position:static;z-index:auto;width:auto;padding:3px 10px;background:#fff;border:0;box-shadow:none;
     display:grid;align-content:center;gap:2px}
   #sceneDock #heatLegend .hlBar{margin:3px 0 2px}
@@ -860,6 +902,60 @@
     #phaseRail{padding:4px 6px 5px}
     #slotMapWrap{min-height:200px}
   }
+
+  /* ================================================================
+     0720 版B 转正 · 收尾统一层(设计 tokens 落地 + 可读性精修)
+     本节故意放在 <style> 末尾:块头/统计塔/右栏块间距等选择器在前文历经多轮响应式分层覆盖
+     (见文件头结构地图),逐层改值风险高于「按既有规则约定,后代覆盖为准」;此处以等同或更高
+     specificity 的选择器统一收口,是本文件一贯的分层收敛写法,不是新惯例。
+     ================================================================ */
+
+  /* -- 块头统一:9px/700/#16191d,中文标签 letter-spacing .2px(right 栏 + 底 dock 共九处) -- */
+  #decisionWrap .dHead b,#traceStats .statsHead b,#opsEvidence .oeHead b,#queueCard .qHead b,
+  #slotMapWrap .mapHead b,#cycleAxis .cycleHead b,#heatLegend .hlRow b,#axisHud>b,
+  #sceneCaption .dockLabel,#respSpark .sparkHead b{
+    font:700 9px/1.3 "Microsoft YaHei",sans-serif;color:#16191d;letter-spacing:.2px}
+
+  /* -- 右栏块间距统一 10px(workHud gap 已改)、块内 padding 统一 7px 10px -- */
+  #decisionWrap,#traceStats,#queueCard,#slotMapWrap,#phaseRail,#respSpark{padding:7px 10px}
+
+  /* -- 底 dock 四块:块头与内容间距统一 4px -- */
+  #sceneCaption{gap:4px 8px}
+  #opsEvidence .oeVs{margin-top:4px}
+  #axisHud b{margin:0 0 4px}
+  #sceneDock #heatLegend .hlBar{margin:4px 0 2px}
+
+  /* -- 批次 KPI:核心四大格(P50/P95/利用率/模型故障)2×2 塔 + 次级三小格(峰值等待/约束违规/周期均行程)一横条
+     数值 17px/800、标签 9px、格 padding 8px 10px、格间 gap 6px(用户点名精修,数值高于早前预览稿的 18px/6px 6px) -- */
+  #traceStats .statsGrid{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:auto auto auto;gap:6px}
+  #traceStats .statsGrid .metricHelp{padding:8px 10px;min-height:auto;display:flex;flex-direction:column;justify-content:center;
+    background:#f4f6f7;border:1px solid #e1e5e8}
+  #traceStats .statsGrid .metricHelp b{font:800 17px/1.15 Consolas,"JetBrains Mono",monospace;color:#16191d;white-space:nowrap}
+  #traceStats .statsGrid .metricHelp small{font:700 9px/1.3 "Microsoft YaHei",sans-serif;color:#5d6972;display:block;
+    margin-top:2px;white-space:normal;letter-spacing:.2px}
+  #traceStats .statsGrid .metricHelp .statCaliber{white-space:normal;word-break:break-all;font-size:7.5px}
+  #traceStats .statsGrid .metricHelp:nth-child(1){grid-row:1;grid-column:1/4}
+  #traceStats .statsGrid .metricHelp:nth-child(2){grid-row:1;grid-column:4/7}
+  #traceStats .statsGrid .metricHelp:nth-child(3){grid-row:2;grid-column:1/4}
+  #traceStats .statsGrid .metricHelp:nth-child(5){grid-row:2;grid-column:4/7}
+  #traceStats .statsGrid .metricHelp:nth-child(4){grid-row:3;grid-column:1/3}
+  #traceStats .statsGrid .metricHelp:nth-child(6){grid-row:3;grid-column:3/5}
+  #traceStats .statsGrid .metricHelp:nth-child(7){grid-row:3;grid-column:5/7}
+  #traceStats .statsGrid .metricHelp:nth-child(1),
+  #traceStats .statsGrid .metricHelp:nth-child(2),
+  #traceStats .statsGrid .metricHelp:nth-child(3),
+  #traceStats .statsGrid .metricHelp:nth-child(5){background:#eef2f5;border-color:#c9d2d8;min-height:58px}
+  #traceStats .statsGrid .metricHelp:nth-child(4) b,
+  #traceStats .statsGrid .metricHelp:nth-child(6) b,
+  #traceStats .statsGrid .metricHelp:nth-child(7) b{font-size:10px}
+
+  /* -- 可读性兜底:预览稿遗留的 <7.5px 可见小字提到地板值 -- */
+  #reserveRuleBadge{font-size:7.5px}
+  #opsEvidence .oeHead span{font-size:7.5px}
+  #opsEvidence .oeGrid span{font-size:7.5px}
+  #opsEvidence .oeRef{font-size:7.5px}
+  #opsEvidence .oeNote{font-size:7.5px}
+  .phaseSeg .phaseAvg{font-size:7.5px}
 </style>
 <link rel="stylesheet" href="./s3_shell_v2.css">
 </head>
@@ -871,26 +967,26 @@
       <div id="workHud">
         <div id="taskline"><div class="kicker">已校验 · 同源 SIM 轨迹载入中</div><div class="primary"><span id="taskPrimary">正在加载同源作业轨迹</span><span id="actionBadge">等待轨迹</span></div><div id="stepPurpose"><b id="stepIndex">步骤 -- / 7</b><span id="stepPurposeText">载入后按事件流显示动作目的</span></div><div class="metaRow"><span id="ownerState">货物：--</span><span>单巷道 · 单机</span></div></div>
         <section id="runtimeControls" aria-label="仿真回放选择" aria-busy="false">
-          <label>算法<select id="strategySelect"><optgroup label="在线逐件决策"><option value="seq">顺序放置（SEQ）</option><option value="near">就近放置（NEAR）</option><option value="score">多目标评分（SCORE）</option><option value="AUTO" selected>规则路由 AUTO（启动时一次选定）</option></optgroup><optgroup label="离线批量参照 · 非同信息集"><option value="awra">批量优化参照（AWRA-LS）</option></optgroup></select></label>
+          <label>算法<select id="strategySelect"><optgroup label="在线逐件决策"><option value="seq">顺序放置（SEQ）</option><option value="near">就近放置（NEAR）</option><option value="score">多目标评分（SCORE）</option><option value="AUTO" selected>AUTO 策略路由（启动时一次选定）</option></optgroup><optgroup label="离线批量参照 · 非同信息集"><option value="awra">批量优化参照（AWRA-LS）</option></optgroup></select></label>
           <label>拟真档<select id="tierSelect"><option value="1">档 1 · 数据模型</option><option value="2">档 2 · 加减速设计</option><option value="3" selected>档 3 · 综合情景</option></select></label>
           <label>货物画像<select id="profileSelect"><option value="uniform">均匀</option><option value="skew" selected>偏斜</option><option value="heavy">重货</option></select></label>
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="运动遥测：三轴位置与速度，数值随演示连续变化" aria-live="off"><b>运动遥测 · 位置 + 速度</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
+        <div id="axisHud" aria-label="轴状态：位置与速度，数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
       </div>
-      <div id="progressAxisHost" aria-label="入出周期里程碑轴">
+      <div id="progressAxisHost" aria-label="作业周期进度轴">
         <div id="cycleAxis">
-          <div class="cycleHead"><b>入出周期 · 里程碑</b><span>点击节点暂停到已验证快照 · SIM</span></div>
+          <div class="cycleHead"><b>作业周期进度</b><span>点击节点暂停到已验证快照 · SIM</span></div>
           <div id="cycleAxisTrack">
             <i class="cycleFill" aria-hidden="true"></i>
-            <button type="button" data-cycle="0" data-axis-label="0 · 0%" aria-label="跳转到周期 0 / 100（0%）并暂停到已验证快照" style="left:0%">0</button>
-            <button type="button" data-cycle="25" data-axis-label="25 · 25%" aria-label="跳转到周期 25 / 100（25%）并暂停到已验证快照" style="left:25%">25</button>
-            <button type="button" data-cycle="50" data-axis-label="50 · 50%" aria-label="跳转到周期 50 / 100（50%）并暂停到已验证快照" style="left:50%">50</button>
-            <button type="button" data-cycle="75" data-axis-label="75 · 75%" aria-label="跳转到周期 75 / 100（75%）并暂停到已验证快照" style="left:75%">75</button>
-            <button type="button" data-cycle="100" data-axis-label="100 · 100%" aria-label="跳转到周期 100 / 100（100%）并暂停到已验证快照" style="left:100%">100</button>
+            <button type="button" data-cycle="0" data-axis-label="0%" aria-label="跳转到周期 0 / 100（0%）并暂停到已验证快照" style="left:0%">0</button>
+            <button type="button" data-cycle="25" data-axis-label="25%" aria-label="跳转到周期 25 / 100（25%）并暂停到已验证快照" style="left:25%">25</button>
+            <button type="button" data-cycle="50" data-axis-label="50%" aria-label="跳转到周期 50 / 100（50%）并暂停到已验证快照" style="left:50%">50</button>
+            <button type="button" data-cycle="75" data-axis-label="75%" aria-label="跳转到周期 75 / 100（75%）并暂停到已验证快照" style="left:75%">75</button>
+            <button type="button" data-cycle="100" data-axis-label="100%" aria-label="跳转到周期 100 / 100（100%）并暂停到已验证快照" style="left:100%">100</button>
           </div>
-          <div id="cycleAxisRight"><span>混合周期</span><b id="cycleAxisCount">-- / 100</b></div>
+          <div id="cycleAxisRight"><span>周期</span><b id="cycleAxisCount">-- / 100</b></div>
         </div>
       </div>
       <div id="gl" role="img" aria-label="三维仓储 sim 轨迹回放；仓位、货物和设备状态由已验证 trace 同源驱动"></div>
@@ -913,20 +1009,20 @@
 const STYLE='A';
 const VISUAL={
   /* 仍沿 tools/anim3d_formal.py 的右前上方位；只按当前可见实体校准，不用潜在队列包络虚增主体占比。 */
-  A:{name:'工业操作台 · 存取运营',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
+  A:{name:'AS/RS 单机作业台',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
 }[STYLE];
 document.documentElement.dataset.style='A';
 /* V2 区域重映射(s3_shell_v2.css):02=存取运营 → rail-right(scene-first,先看作业现场再读监控指标);
    01=放货决策保持 rail-left(data-first)。同一套骨架语法,两页只差这一个映射声明。 */
 document.documentElement.dataset.s3Rail='right';
-document.title='智储优控 · 入出闭环 · 存取运营 · S3';
+document.title='智储优控 · 存取闭环 · S3';
 
 /* 信息架构：把同源动态数据移回左侧；三维画面始终留在右侧，不再切页。 */
 const rail=document.getElementById('workHud'),viewportEl=document.getElementById('viewport');
 const railHead=document.createElement('div');railHead.id='railHead';railHead.innerHTML=`<div class="brandLock"><span class="abbWord">ABB</span><div><div class="eyebrow">${VISUAL.sub}</div><h1>${VISUAL.name}</h1></div></div><div class="matrix">20 × 20<br>SIM / T3</div>`;rail.prepend(railHead);
 const speedCanvas=document.createElement('canvas'),liveChartWrap=document.createElement('section');speedCanvas.id='speed';liveChartWrap.id='liveChartWrap';
 liveChartWrap.innerHTML='<div class="cap"><b>双轴速度</b><span>X / Z · m/s</span></div>';liveChartWrap.append(speedCanvas);
-const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><canvas id="slotMap"></canvas><div class="mapKey"><span title="(列 + 层) mod 3 = 0 的货位预留为运维通道,启动即封板,不参与分配"><i class="hatch"></i>预占封板</span><span><i class="free"></i>可用空位</span><span class="gradeKey" hidden><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span class="heatKey"><i class="heatRamp"></i>热度：低 → 高</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
+const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>货位状态图 · 20×20</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><canvas id="slotMap"></canvas><div class="mapKey"><span title="(列 + 层) mod 3 = 0 的货位预留为运维通道,启动即封板,不参与分配"><i class="hatch"></i>预占封板</span><span><i class="free"></i>可用空位</span><span class="gradeKey" hidden><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span class="heatKey"><i class="heatRamp"></i>访问频率：低 → 高</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
 /* 0719 功能批次:railFacts 三格删——周期计数由 runtime 直写 #cycleAxisCount,等待/故障与统计块重复(docs/02功能零基审计_0719.md 1b) */
 const traceStats=document.createElement('section');traceStats.id='traceStats';traceStats.setAttribute('aria-label','当前单 seed trace 统计');
 const insightStack=document.createElement('section');insightStack.id='insightStack';insightStack.append(traceStats);
@@ -937,7 +1033,7 @@ const reserveRuleBadge=document.createElement('div');reserveRuleBadge.id='reserv
 reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="empty"><i></i>空载</span><span class="out"><i></i>出库</span><span class="blocked"><i></i>预占</span>';sceneCaption.append(reserveRuleBadge);
 /* 0718 #26-2 货位热度色阶图例 + 近 I/O 热区说明(替代逐箱金顶)。 */
 const heatLegend=document.createElement('div');heatLegend.id='heatLegend';heatLegend.setAttribute('aria-label','货位热度色阶与近 I/O 热区图例');
-heatLegend.innerHTML='<div class="hlRow"><b>货位热度</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlToggles"><label><input type="checkbox" id="heat3dToggle" checked><span>3D 货位</span></label><label><input type="checkbox" id="heat2dToggle" checked><span>2D 图</span></label></div><div class="hlZone"><i></i><span>热门货聚集区 · 近 I/O（好放置兑现）</span></div>';
+heatLegend.innerHTML='<div class="hlRow"><b>货位访问频率</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlToggles"><label><input type="checkbox" id="heat3dToggle" checked><span>3D 货位</span></label><label><input type="checkbox" id="heat2dToggle" checked><span>2D 图</span></label></div><div class="hlZone"><i></i><span>热门货聚集区 · 近存取口（P&D）</span></div>';
 viewportEl.append(heatLegend);
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
