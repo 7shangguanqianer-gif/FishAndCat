@@ -828,17 +828,7 @@
     /* 0719:3D 故障可视化(用户指正「3D 看不出故障表现」)——载货台警示红球,faulted 帧显示、随 carrier 移动 */
     const faultBeacon = new THREE.Mesh(new THREE.SphereGeometry(.26, 14, 10), new THREE.MeshBasicMaterial({color: 0xd32f2f}));
     faultBeacon.visible = false; faultBeacon.position.set(0, 0, 1.05); carrier.add(faultBeacon);
-    /* M5 lane 头标:出库带上方「取货侧」立牌——Sprite 永面向相机;地贴在常用低平机位退化成一条线,立牌补强可读性 */
-    const retrLabelCanvas = doc.createElement("canvas"); retrLabelCanvas.width = 256; retrLabelCanvas.height = 96;
-    const retrLabelCtx = retrLabelCanvas.getContext("2d");
-    retrLabelCtx.fillStyle = "rgba(0,132,168,.92)"; retrLabelCtx.fillRect(0, 0, 256, 96);
-    retrLabelCtx.strokeStyle = "#ffffff"; retrLabelCtx.lineWidth = 6; retrLabelCtx.strokeRect(3, 3, 250, 90);
-    retrLabelCtx.fillStyle = "#fff"; retrLabelCtx.font = '800 46px "Microsoft YaHei", sans-serif';
-    retrLabelCtx.textAlign = "center"; retrLabelCtx.textBaseline = "middle"; retrLabelCtx.fillText("取货侧", 128, 50);
-    const retrieveSideSprite = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(retrLabelCanvas), transparent: true, depthWrite: false}));
-    retrieveSideSprite.scale.set(1.85, .69, 1);
-    retrieveSideSprite.position.set((OUTFEED.startX + OUTFEED.endX) / 2, OUTFEED.y, 2.15);
-    scene.add(retrieveSideSprite);
+    /* (0719 用户否决:「取货侧」立牌画蛇添足已删;取货侧辨识由青色高亮+联程虚线承担) */
     if (cargo.parent) cargo.parent.remove(cargo);
     scene.add(cargo); cargo.visible = false;
 
@@ -918,8 +908,9 @@
     const heat3DBox = document.getElementById("heat3dToggle"), heat2DBox = document.getElementById("heat2dToggle");
     if (heat3DBox) { heat3DBox.checked = heat3DOn; heat3DBox.addEventListener("change", () => { heat3DOn = !!heat3DBox.checked; applyHeat3D(); }); }
     if (heat2DBox) { heat2DBox.checked = heat2DOn; heat2DBox.addEventListener("change", () => { heat2DOn = !!heat2DBox.checked; }); }
-    const queueBaseGeometry = new THREE.BoxGeometry(.76, .72, .10);
-    const queueBoxGeometry = new THREE.BoxGeometry(.69, .66, .58);
+    /* 0719 用户指正 I/O 区建模(紫框):队列货箱过大、在远视角挡货架——整体缩小并贴地 */
+    const queueBaseGeometry = new THREE.BoxGeometry(.58, .55, .08);
+    const queueBoxGeometry = new THREE.BoxGeometry(.50, .48, .40);
     const queueEdgeGeometry = new THREE.EdgesGeometry(queueBoxGeometry);
     const queueEdgeMaterial = new THREE.LineBasicMaterial({color: 0x17202b});
     const activeMaterial = {};
@@ -992,7 +983,7 @@
         const unit = new THREE.Group();
         const base = new THREE.Mesh(queueBaseGeometry, M.wood);
         const box = new THREE.Mesh(queueBoxGeometry, M.mid);
-        base.position.z = .12; box.position.z = .48; base.castShadow = box.castShadow = true;
+        base.position.z = .09; box.position.z = .33; base.castShadow = box.castShadow = true;
         box.add(new THREE.LineSegments(queueEdgeGeometry, queueEdgeMaterial));
         unit.add(base, box); queueGroup.add(unit); queuePool.push({unit, box});
       }
@@ -1007,7 +998,7 @@
       queuePool.forEach(item => { item.unit.visible = false; });
       shown3d.forEach((gid, index) => {
         const item = ensureQueueUnit(index), cargoGood = good(gid);
-        item.unit.visible = true; item.unit.position.set(INFEED.entryX - .78 - index * .76, INFEED.y, 0); item.unit.userData = {gid, owner: "QUEUE_WAITING", lane: "INFEED"};
+        item.unit.visible = true; item.unit.position.set(INFEED.entryX - .72 - index * .58, INFEED.y, 0); item.unit.userData = {gid, owner: "QUEUE_WAITING", lane: "INFEED"};
         item.box.material = gradeMaterial[cargoGood.grade] || M.mid;
       });
       const strip = byId("queueStrip");
@@ -1450,10 +1441,11 @@
       const storeShare = Math.round(100 * data.storeAvg / Math.max(1e-9, data.storeAvg + data.retrAvg));
       let host = byId("opsEvidence");
       if (!host) { host = doc.createElement("section"); host.id = "opsEvidence"; host.setAttribute("aria-label", "存取对置与取货实测,SIM 同源"); }
-      host.innerHTML = `<div class="oeHead"><b>存取对置 · 取货实测</b><span>单 seed · SIM</span></div>` +
-        `<div class="oePair" style="--store:${storeShare}%">` +
-        `<div class="oeLeg oeStore"><label>入库腿均时</label><b>${fmt(data.storeAvg)} s</b><i></i></div>` +
-        `<div class="oeLeg oeRetr"><label>取货腿均时</label><b>${fmt(data.retrAvg)} s</b><i></i></div></div>` +
+      /* 0719 用户指正比例/溢出/与本批统计关系:①对置改单条双段(一眼见占比,省一行高);
+         ②头部标注「腿级分解 · 补充右栏本批统计」写明总-分关系(右栏=周期级 KPI,本块=腿级细分,数字互不重复) */
+      host.innerHTML = `<div class="oeHead"><b>存取对置 · 取货实测</b><span>腿级分解 · 补充右栏本批统计 · 单 seed · SIM</span></div>` +
+        `<div class="oeVs" style="--store:${storeShare}%">` +
+        `<span class="vsL"><b>${fmt(data.storeAvg)} s</b> 入库腿均时</span><i aria-hidden="true"></i><span class="vsR">取货腿均时 <b>${fmt(data.retrAvg)} s</b></span></div>` +
         `<div class="oeGrid">` +
         `<div class="oeHot"><b>${fmt(data.hotAvg)} s</b><span>热门件取货均时 · n=${data.hotN}</span></div>` +
         `<div><b>${fmt(data.coldAvg)} s</b><span>非热门取货均时 · n=${data.coldN}</span></div>` +
@@ -1767,10 +1759,13 @@
       const faultBanner = byId("faultStateBanner"); faultBanner.hidden = !frame.faulted;
       if (frame.faulted) faultBanner.querySelector("span").textContent = `故障 ${String((frame.faultIndex ?? 0) + 1).padStart(2, "0")} · ${visibleStepLabel} 保持位`;
       byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
-      /* 0719d:速度并入遥测网格(速度 canvas 退役);故障帧 vx/vz 已在 deriveFrame 清零 */
-      const xVelEl = byId("xVel"), zVelEl = byId("zVel");
-      if (xVelEl) xVelEl.textContent = `${Math.abs(frame.machine.vx).toFixed(2)} m/s`;
-      if (zVelEl) zVelEl.textContent = `${Math.abs(frame.machine.vz).toFixed(2)} m/s`;
+      /* 0719d:速度并入遥测网格(canvas 退役);数字+满速占比条(VX/VZ 额定归一),故障帧已清零 */
+      [[byId("xVel"), frame.machine.vx, VX], [byId("zVel"), frame.machine.vz, VZ]].forEach(([element, value, vMax]) => {
+        if (!element) return;
+        const speed = Math.abs(value), label = element.querySelector("b");
+        if (label) label.textContent = `${speed.toFixed(2)} m/s`; else element.textContent = `${speed.toFixed(2)} m/s`;
+        element.style.setProperty("--vfill", `${Math.min(100, speed / vMax * 100).toFixed(1)}%`);
+      });
       byId("xFill").style.setProperty("--fill", `${frame.machine.x / 19 * 100}%`); byId("zFill").style.setProperty("--fill", `${frame.machine.z / 19 * 100}%`); byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
       byId("queueMeta").textContent = `${frame.queueGids.length} 等待`;
       const judgeAction = byId("judgeAction"), judgeActionMeta = byId("judgeActionMeta");
@@ -1811,7 +1806,6 @@
       const currentSim = frame.cycleTiming[STEP_INDEX[frame.operationKey]].simDurationS;
       byId("phaseTimeCursor").style.left = `${totalCycleSim > EPS ? (completedSim + currentSim * frame.operationProgress) / totalCycleSim * 100 : 0}%`;
       const ownerText = cargoGood ? (OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner) : "空载台";
-      const cargoSummary = cargoGood ? `${cargoGood.name} · ${cargoGood.weight_kg.toFixed(1)} kg · ${GRADE_LABEL[cargoGood.grade] || cargoGood.grade}` : "空载联程";
       const timing = frame.timing || {simDurationS: 0, presentationDurationS: 0};
       const wallSeconds = timing.presentationDurationS / DEFAULT_PLAYBACK_SCALE;
       /* 去重复(0719):meta 不再复述本步 SIM 数值——与七步条当前高亮格完全同值;此处只留演示口径 */
@@ -1822,7 +1816,16 @@
         `1×展示补段 ${wallSeconds.toFixed(1)} s · 不计 KPI`;
       /* 0719 修:去掉与步骤名语义重复的 owner 后缀(货物位置详情已在 sceneCargoMeta) */
       byId("sceneActionText").textContent = cargoGood ? `${visibleStepLabel} · ${cargoGood.name}` : `${visibleStepLabel} · ${ownerText}`;
-      byId("sceneCargoMeta").textContent = `${cargoSummary} · ${timingText}`;
+      /* 0719 用户要求货物信息更醒目:重量/等级/热冷芯片化(热门=freq_true 前 20%,与热度图同口径;
+         catalog 无体积字段,不编)。空载帧无货物,只显时长口径。 */
+      const metaHost = byId("sceneCargoMeta");
+      if (cargoGood) {
+        const isHot = hotGids.has(frame.cargoGid);
+        metaHost.innerHTML = `<span class="cgChip cgWeight">${cargoGood.weight_kg.toFixed(1)} kg</span>` +
+          `<span class="cgChip cgGrade-${cargoGood.grade}">${GRADE_LABEL[cargoGood.grade] || cargoGood.grade}</span>` +
+          `<span class="cgChip ${isHot ? "cgHot" : "cgCold"}">${isHot ? "热门件 · freq 前20%" : "非热门"}</span>` +
+          `<span class="cgTime">${timingText}</span>`;
+      } else metaHost.textContent = timingText;
       byId("sceneActionMeta").textContent = `${frame.faulted ? "故障保持" : `步骤 ${STEP_INDEX[frame.operationKey] + 1}/7`} · 缩时演示 · SIM`;
       byId("sceneCaption").setAttribute("aria-label", `当前动作：${byId("sceneActionText").textContent}`);
     }

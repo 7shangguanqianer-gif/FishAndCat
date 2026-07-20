@@ -565,7 +565,11 @@
   /* 0719d 结构重排:每轴一行 = 轴名|位置点标轨道|位置值|速度值(速度 canvas 退役,信息合并进同一网格) */
   #axisHud .axis{grid-template-columns:14px 1fr 54px 58px;gap:6px;margin:5px 0;align-items:center}
   #axisHud .axis>span:first-child{font:800 9.5px/1 Consolas,monospace;color:#16191d}
-  #axisHud .axis .vel{font:700 8.5px/1 Consolas,monospace;color:#69747d;text-align:right;white-space:nowrap}
+  /* 0719 用户指正「速度信息条完全消失」:速度列=满速占比条(VX/VZ 额定归一)+数字 */
+  #axisHud .axis .vel{display:grid;gap:2px;font:700 8.5px/1 Consolas,monospace;color:#69747d;text-align:right;white-space:nowrap}
+  #axisHud .axis .vel i{display:block;height:3px;background:#e7ebee;position:relative;overflow:hidden}
+  #axisHud .axis .vel i:after{content:"";position:absolute;inset:0;width:var(--vfill,0%);background:#4a88a8}
+  #axisHud .axis .vel b{font-weight:700}
   #axisHud .axis span:nth-child(3){color:#17202b;font-size:9px;font-weight:700;text-align:right;font-family:Consolas,monospace}
   /* (0719d 删死代:液晶 canvas 组样式——559 行 display:none 会被此处 display:grid 反杀,故整段清除) */
   #reserveRuleBadge{grid-area:legend;position:static;margin-top:1px;padding:3px 0 0;border-top:1px solid #eef1f4;display:flex;align-items:center;justify-content:flex-start;gap:8px;
@@ -808,19 +812,18 @@
   #opsEvidence .oeHead{display:flex;justify-content:space-between;align-items:center;gap:8px}
   #opsEvidence .oeHead b{font-size:9.5px;color:#16191d;white-space:nowrap}
   #opsEvidence .oeHead span{font:700 6.5px/1 Consolas,monospace;color:#69747d;letter-spacing:.5px;white-space:nowrap}
-  #opsEvidence .oePair{display:grid;gap:4px;margin-top:5px}
-  #opsEvidence .oeLeg{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:baseline}
-  #opsEvidence .oeLeg label{font-size:7.5px;color:#59656e;white-space:nowrap}
-  #opsEvidence .oeLeg b{font:800 11px/1 Consolas,monospace;color:#17202b}
-  #opsEvidence .oeLeg i{grid-column:1/-1;display:block;height:5px;background:#17365d}
-  #opsEvidence .oeStore i{width:var(--store)}
-  #opsEvidence .oeRetr i{width:calc(100% - var(--store));background:#0084a8}
-  #opsEvidence .oeGrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:6px}
+  /* 0719 重构:对置=单条双段(左深蓝入库占比/右青取货),两端数值;一行讲完占比,消灭竖向溢出 */
+  #opsEvidence .oeVs{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;margin-top:5px}
+  #opsEvidence .oeVs b{font:800 11px/1 Consolas,monospace;color:#17202b}
+  #opsEvidence .vsL,#opsEvidence .vsR{font-size:7.5px;color:#59656e;white-space:nowrap}
+  #opsEvidence .oeVs i{display:block;height:8px;min-width:90px;
+    background:linear-gradient(to right,#17365d var(--store,50%),#0084a8 var(--store,50%))}
+  #opsEvidence .oeGrid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:3px;margin-top:5px}
   #opsEvidence .oeGrid>div{padding:4px 6px;background:#eef1f3;min-width:0}
   #opsEvidence .oeGrid b{display:block;font:800 11px/1 Consolas,monospace;color:#17202b}
   #opsEvidence .oeGrid span{display:block;margin-top:2px;font-size:6.5px;color:#5d6972;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* M5 省一趟角标:文献基准(Bozer-White 1984)与实测并列,悬停见口径;0719 去重复后省一趟格跨双列,角标全文可显 */
-  #opsEvidence .oeSaved{grid-column:1/-1}
+  #opsEvidence .oeSaved{grid-column:auto} /* 0719:三格一行后省一趟占宽列,不再跨行 */
   #opsEvidence .oeRef{display:block;margin-top:3px;padding:2px 4px;font:700 6px/1.2 "Microsoft YaHei",sans-serif;font-style:normal;
     color:#7a5c1e;background:#faf3df;border:1px solid #ecdfbc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #opsEvidence .oeHot{background:#fdf3d5;box-shadow:inset 0 0 0 1px #e7b800}
@@ -869,7 +872,7 @@
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="运动遥测：三轴位置与速度，数值随演示连续变化" aria-live="off"><b>运动遥测 · 位置 + 速度</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span><span class="vel" id="xVel">0.00 m/s</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span><span class="vel" id="zVel">0.00 m/s</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><span class="vel">—</span></div></div>
+        <div id="axisHud" aria-label="运动遥测：三轴位置与速度，数值随演示连续变化" aria-live="off"><b>运动遥测 · 位置 + 速度</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span><span class="vel" id="xVel"><i aria-hidden="true"></i><b>0.00 m/s</b></span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span><span class="vel" id="zVel"><i aria-hidden="true"></i><b>0.00 m/s</b></span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><span class="vel">—</span></div></div>
       </div>
       <div id="progressAxisHost" aria-label="入出周期里程碑轴">
         <div id="cycleAxis">
@@ -1154,7 +1157,10 @@ function makeLabel(text,x,z,scale=.9){
 /* 官方 sum 规则预占封板已作为背板单元嵌入货架，不再在货架前表面叠放灰片。 */
 /* 单巷道轨道 + 同一逻辑 I/O 前端的两条物理工位链。两条链只在展示层分流，绝不增加货架、堆垛机或容量。 */
 addBox(N+1,.14,.08,N/2,IO.y,Z0+.04,M.rail,true,true);
-addBox(1.05,.76,.16,IO.x,IO.y-.38,Z0+.10,M.amber,true,true);
+/* 0719 紫框整修:IO 交接台从「纯黄躺块」改设备形态——钢灰台体+两条黄警示边条(位置/占地不变) */
+addBox(1.05,.76,.13,IO.x,IO.y-.38,Z0+.085,M.body,true,true);
+addBox(1.02,.09,.018,IO.x,IO.y-.38-.315,Z0+.16,M.amber,false,true);
+addBox(1.02,.09,.018,IO.x,IO.y-.38+.315,Z0+.16,M.amber,false,true);
 
 /* 转运台必须与货物真实转运路径同向：runtime 在 loadX ↔ TRANSFER_ANCHOR 间线性插值（s3_ac_runtime.js:138），
    故台面保持斜向，不得改 L 形（改路径会动 validateVisualTopology 不变量链）。
@@ -1183,7 +1189,7 @@ addConveyorLane(OUTFEED,OUTFEED.startX,OUTFEED.endX,M.outfeedRail);
 addTransferBridge({x:INFEED.loadX,y:INFEED.y},TRANSFER_ANCHOR,M.infeedRail);
 addTransferBridge(TRANSFER_ANCHOR,{x:OUTFEED.startX,y:OUTFEED.y},M.outfeedRail);
 addFloorFlowLabel('入库  →',(INFEED.entryX+INFEED.loadX)/2,STATION_Y-.83,'#17365d');
-addFloorFlowLabel('→  出库 · 取货侧',(OUTFEED.startX+OUTFEED.endX)/2,STATION_Y-.83,'#2f7895'); /* M5 lane 头标 */
+addFloorFlowLabel('→  出库',(OUTFEED.startX+OUTFEED.endX)/2,STATION_Y-.83,'#2f7895');
 
 /* 入→装 与 卸→扫→出可见工位；仅做展示层物理语义，坐标仍映射 canonical (0,0)。 */
 const stationCollisionSolids=[];
@@ -1214,8 +1220,13 @@ partFaceLabel(exitCurtain,'出',OUTFEED.maskX,OUTFEED.y-.665,1.14,.34,.20);
   stationSolid(addBox(.07,.07,.64,x,lane.y+dy,Z0+.32,M.sensor,true,true),`STATION_SENSOR_${index}_${dy}`);
   stationSolid(addBox(.12,.12,.10,x,lane.y+dy,Z0+.64,M.amber,true,true),`STATION_CAP_${index}_${dy}`);
 }));
+/* 0719 紫框整修:防撞柱从纯亮黄改黄黑警示环纹(工业惯例);几何尺寸/碰撞包络不变,只换皮 */
+M.bollard=(()=>{const cv=document.createElement('canvas');cv.width=8;cv.height=64;const g=cv.getContext('2d');
+  for(let i=0;i<4;i++){g.fillStyle=i%2?'#1c2126':'#e7b800';g.fillRect(0,i*16,8,16);}
+  const tx=new THREE.CanvasTexture(cv);tx.magFilter=THREE.NearestFilter;
+  return new THREE.MeshStandardMaterial({map:tx,roughness:.58,metalness:.06});})();
 [{x:INFEED.loadX-.25,y:INFEED.y-.78},{x:OUTFEED.startX+.25,y:OUTFEED.y-.78}].forEach((point,index)=>{
-  stationSolid(addBox(.14,.14,.88,point.x,point.y,Z0+.44,M.amber,true,true),`BOLLARD_${index}`);
+  stationSolid(addBox(.14,.14,.88,point.x,point.y,Z0+.44,M.bollard,true,true),`BOLLARD_${index}`);
   stationSolid(addBox(.19,.19,.08,point.x,point.y,Z0+.04,M.rubber,true,true),`BOLLARD_BASE_${index}`);
 });
 
