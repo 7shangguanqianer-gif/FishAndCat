@@ -149,41 +149,51 @@ try {
         clipped: rail.bottom > innerHeight + .5 || dock.bottom > innerHeight + .5 || gl.width < 300 || gl.height < 300,
         mapClipped: map.left < mapWrap.left - .5 || map.right > mapWrap.right + .5 || map.top < mapWrap.top - .5 || map.bottom > mapWrap.bottom + .5,
         hudOverflow,
-        axisAboveGl: axis.bottom <= gl.top + .5 && topbar.bottom <= axis.top + .5};
+        /* W6(0720 照 02 语言重做):入库进度轴从"顶栏下独立横条"迁入右栏顶部(同 02 0720 版B),
+           axis 不再与 gl 上下堆叠,而是并列于 rail 内——axisAboveGl 的堆叠假设不再成立,
+           改核「轴在 rail 边界内」+「gl 紧贴 topbar 下缘(不留独立轴条空隙)」两项等价断言。 */
+        axisInsideRail: axis.left >= rail.left - .5 && axis.right <= rail.right + .5 && axis.top >= rail.top - .5,
+        glStartsAtTopbar: Math.abs(gl.top - topbar.bottom) <= .5};
     });
     report.viewports.push({width, height, ...viewportAudit});
     const layoutAudit = await page.evaluate(() => window.__S3_LAYOUT_A.audit());
     const placement = await page.evaluate(() => ({
       traceStatsVisible: getComputedStyle(document.getElementById('traceStats')).display !== 'none' &&
         document.getElementById('traceStats').getBoundingClientRect().height > 20,
-      queueVisible: document.getElementById('factQueue').getBoundingClientRect().height > 4,
+      /* W6:railFacts(含 factQueue)整栏 display:none 退役——三格中两格(factQueue/factAlarm)恒硬编码
+         "0"从未反映真实状态,第三格(factCycle/已入库)与 fillEvidence 的管理货计数完全重复
+         (同 02 0719 删 railFacts 的理由:「等待/故障与统计块重复」)。改核同一信息的现役位置。 */
+      fillEvidenceVisible: document.getElementById('fillEvidence').getBoundingClientRect().height > 4,
       zoomHintPresent: Boolean(document.querySelector('#slotMapWrap .zoomHint')),
       releaseBadgeInAxis: document.getElementById('releaseBadge').closest('#axisRight') !== null,
       evidenceInAxis: document.getElementById('fillEvidence').closest('#axisRight') !== null,
       selectionReasonPresent: /固定四项权重|首个可用格|行程时间最短/.test(document.getElementById('decisionWrap').textContent),
       speedCanvasPresent: Boolean(document.getElementById('speed')),
-      phaseRailInDock: document.getElementById('phaseRail').closest('#sceneDock') !== null,
+      /* W6(照 02 语言重做):phaseRail(七步条)迁回右栏,恢复 02 终态信息架构——不再并入 dock 的
+         「当前作业」格(旧 0717 #28 的收纳手法在 02 后续迭代中已被舍弃,01 跟进同一决定) */
+      phaseRailInRail: document.getElementById('phaseRail').closest('#workHud') !== null,
       controlsInTopbar: document.getElementById('runtimeControls').closest('#topbarA') !== null,
       retrievalNotePresent: /存取效率/.test(document.getElementById('retrievalNote')?.textContent || ''),
       /* 0717 #28 用户拍板:②拟真档换说明标签(非 select 且原下拉不复存在) */
       tierTagPresent: (() => { const tag = document.getElementById('tierFixedTag');
         return Boolean(tag) && tag.tagName !== 'SELECT' && /SIM 数据门/.test(tag.textContent) &&
           !document.getElementById('tierSelect'); })(),
-      /* 0717 #28:③dock 三格,七段微条并入「当前作业」格 */
-      dockThreeColumns: document.getElementById('sceneDock').children.length === 3 &&
-        document.getElementById('phaseRail').closest('#sceneCaption') !== null,
-      /* 0717 #28:「当前作业」格约占半幅且货物行为大字 */
+      /* W6:dock 四分列(当前作业 | 轴状态 | 目标货位卡 | 2D 图例),不再靠"phaseRail 在 caption 内"判定 */
+      dockColumnsComplete: Array.from(document.getElementById('sceneDock').children).filter(c => c.id !== 'dockCollapseBtn').length === 4,
+      /* W6:「当前作业」格不再需要容纳七段微条,不再要求约占半幅——仍要求它是 dock 内最宽的信息列
+         且货物行为大字(fontSize>=13,同旧门槛,未随 02 blueprint 的 12px 松动——见改动清单说明) */
       cargoHeadlineDominant: (() => {
         const caption = document.getElementById('sceneCaption').getBoundingClientRect();
         const dock = document.getElementById('sceneDock').getBoundingClientRect();
         const fontSize = parseFloat(getComputedStyle(document.getElementById('sceneActionText')).fontSize);
         const share = caption.width / dock.width;
-        return share > .42 && share < .60 && fontSize >= 13; })(),
-      /* 0717 #28 二轮:镜头/倍率簇上移进度轴行;dock 第三格=目标货位卡;3D 黄标牌退役 */
-      toolsInAxis: document.getElementById('sceneTools').closest('#fillBookmarks') !== null,
+        return share > .28 && share < .55 && fontSize >= 13; })(),
+      /* W6:镜头/演示倍率迁到 3D 区右下角悬浮小卡(同 02 0720 版B),不再挂进度轴行尾 */
+      toolsFloating: document.getElementById('sceneTools').closest('#viewport') !== null &&
+        document.getElementById('sceneTools').closest('#fillBookmarks') === null,
       targetCardInDock: (() => { const card = document.getElementById('targetCard');
         return Boolean(card) && card.closest('#sceneDock') !== null &&
-          document.getElementById('sceneDock').children.length === 3; })(),
+          Array.from(document.getElementById('sceneDock').children).filter(c => c.id !== 'dockCollapseBtn').length === 4; })(),
       beaconRetired: getComputedStyle(document.getElementById('targetBeacon')).display === 'none' &&
         getComputedStyle(document.getElementById('labelLeaders')).display === 'none'
     }));
@@ -292,6 +302,35 @@ try {
   report.popAudits = pops;
   report.diffZoom = diffZoom;
 
+  /* W6(0720 照 02 语言重做,拍板新增):折叠收纳自检——右栏整体收边、底 dock 整体收边、
+     决策卡单块收边,三者同时验证尺寸真的收缩且 __S3_LAYOUT_A.audit().collapse 如实反映态。
+     结束前原样切回展开,不残留态污染后续断言。 */
+  const collapseBefore = await page.evaluate(() => ({
+    railW: document.getElementById('workHud').getBoundingClientRect().width,
+    dockH: document.getElementById('sceneDock').getBoundingClientRect().height,
+    decisionH: document.getElementById('decisionWrap').getBoundingClientRect().height
+  }));
+  await page.evaluate(() => {
+    window.__S3_LAYOUT_A.toggleRailCollapse();
+    window.__S3_LAYOUT_A.toggleDockCollapse();
+    window.__S3_LAYOUT_A.toggleBlockCollapse('decisionWrap');
+  });
+  await page.waitForTimeout(150);
+  const collapseAfter = await page.evaluate(() => ({
+    railW: document.getElementById('workHud').getBoundingClientRect().width,
+    dockH: document.getElementById('sceneDock').getBoundingClientRect().height,
+    decisionH: document.getElementById('decisionWrap').getBoundingClientRect().height,
+    audit: window.__S3_LAYOUT_A.audit().collapse
+  }));
+  await page.screenshot({ path: join(OUT, 'collapsed_state.png'), fullPage: false });
+  await page.evaluate(() => {
+    window.__S3_LAYOUT_A.toggleRailCollapse();
+    window.__S3_LAYOUT_A.toggleDockCollapse();
+    window.__S3_LAYOUT_A.toggleBlockCollapse('decisionWrap');
+  });
+  await page.waitForTimeout(150);
+  report.collapseAudit = { before: collapseBefore, after: collapseAfter };
+
   const laneStates = {};
   for (const algorithm of ['seq', 'near', 'score', 'AUTO']) {
     laneStates[algorithm] = await page.evaluate(value => { window.__S3_FILL_QA.setAlgorithm(value); return window.__S3_FILL_QA.seekBookmark(134); }, algorithm);
@@ -353,7 +392,7 @@ try {
     stepPurposeNotResident: report.layoutAudits.every(item => item.stepPurposeVisibleHits === 0),
     processGuideHidden: report.layoutAudits.every(item => item.processGuideHidden && item.taskLineHidden),
     layoutSkeleton: report.layoutAudits.every(item => item.topbarPresent && item.axisNodeCount === 6 && item.segmentsFocusable) &&
-      report.viewports.every(item => item.axisAboveGl),
+      report.viewports.every(item => item.axisInsideRail && item.glStartsAtTopbar),
     placementComplete: report.layoutAudits.every(item => Object.values(item.placement).every(Boolean)),
     reserveBadgeCompact: report.viewports.every(item => item.badgeAreaShare < .15 && item.badge.width < item.gl.width * .6),
     axisFillProgress: bookmarkOverlays[134]?.axisFill === '50.19%' && bookmarkOverlays[267]?.axisFill === '100%' && bookmarkOverlays[0]?.axisFill === '0%',
@@ -402,15 +441,18 @@ try {
     }),
     /* --- 0717 #28:②拟真档说明标签替换锁死下拉 --- */
     fx28TierTagLabel: report.layoutAudits.every(item => item.placement.tierTagPresent),
-    /* --- 0717 #28:③dock 四格并三格,当前作业约占半幅且货物为大字 --- */
-    fx28DockThreeColumns: report.layoutAudits.every(item => item.placement.dockThreeColumns && item.placement.cargoHeadlineDominant),
+    /* --- W6:dock 四分列完整、当前作业格是 dock 内最宽列且货物为大字(照 02 语言重做后,
+       七段微条已迁回右栏,门槛调整见 placement.cargoHeadlineDominant 处注释) --- */
+    fx28DockColumnsComplete: report.layoutAudits.every(item => item.placement.dockColumnsComplete && item.placement.cargoHeadlineDominant),
     /* --- 0717 #28 二轮:货物属性行(重量+体积+频次为数据门真实字段;热门标与 sim 前 1/5 口径一致) --- */
+    /* W6:重量/体积从大字行下沉到货物属性芯片行(同 02 sceneActionText/sceneCargoMeta 分工),
+       kg/m³ 断言改核 meta(货物属性行),headline 现只留「步骤 · 货名」 */
     fx28CargoAttrs: report.states.filter(item => item.name.startsWith('event134_')).every(item =>
-      /kg/.test(item.snapshot.cargoCard.headline) && /m³/.test(item.snapshot.cargoCard.headline) &&
+      /kg/.test(item.snapshot.cargoCard.meta) && /m³/.test(item.snapshot.cargoCard.meta) &&
       /访问频次/.test(item.snapshot.cargoCard.meta)) &&
       report.states.every(item => item.snapshot.cargoCard.hotSetSize === 53 && item.snapshot.cargoCard.hotMatches),
-    /* --- 0717 #28 二轮:目标货位卡入 dock 第三格、镜头/倍率簇入进度轴行、3D 黄标牌退役 --- */
-    fx28TargetCardAndTools: report.layoutAudits.every(item => item.placement.toolsInAxis &&
+    /* --- 目标货位卡入 dock、镜头/倍率簇迁 3D 区悬浮小卡(W6 同 02 0720 版B)、3D 黄标牌退役 --- */
+    fx28TargetCardAndTools: report.layoutAudits.every(item => item.placement.toolsFloating &&
       item.placement.targetCardInDock && item.placement.beaconRetired) &&
       report.states.every(item => item.snapshot.target === null ?
         item.snapshot.targetCard.done && item.snapshot.targetCard.slotText === '267 / 267' :
@@ -438,7 +480,13 @@ try {
       Boolean(report.railDiff) && report.railDiff.overlayOpen === false &&
       report.railDiff.display !== 'none' &&
       report.railDiff.diffRect && report.railDiff.diffRect.height > 2 && report.railDiff.diffRect.width > 2 &&
-      Boolean(report.railDiff.diffAudit) && report.railDiff.diffAudit.nonZeroCells > 0
+      Boolean(report.railDiff.diffAudit) && report.railDiff.diffAudit.nonZeroCells > 0,
+    /* --- W6(0720 照 02 语言重做,拍板新增):折叠收纳三级(整栏/整 dock/单块)真实收缩 + 自检钩子如实 --- */
+    collapseMechanismWorks: report.collapseAudit.after.railW < report.collapseAudit.before.railW - 100 &&
+      report.collapseAudit.after.dockH < report.collapseAudit.before.dockH - 40 &&
+      report.collapseAudit.after.decisionH < report.collapseAudit.before.decisionH - 10 &&
+      report.collapseAudit.after.audit.rail === true && report.collapseAudit.after.audit.dock === true &&
+      report.collapseAudit.after.audit.blocks.decisionWrap === true
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

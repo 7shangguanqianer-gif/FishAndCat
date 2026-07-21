@@ -909,6 +909,302 @@
     html[data-s3-layout="A"] #slotMapWrap .zoomHint{bottom:6px}
     html[data-s3-layout="A"] .phaseSeg .phaseName{font-size:8.5px}
   }
+
+  /* ================================================================
+     W6(2026-07-20,用户拍板「照 02 语言全面重做」)· 01 页 A 壳终态收口
+     蓝本 = 02_入出闭环.html(commit d9b4dab,只读不改)的 0718 R2 → T5 → W1-7 → 0720 版B 落地状态,
+     以下按其等价结构口径搬入。01 保持 rail-left(data-first;s3_shell_v2.css 默认映射,
+     不设 data-s3-rail)。01 特有结构(三算法 2D 三联对比/终态货-格差异图/目标货位卡/
+     入库进度轴/七步条/固定拟真档说明牌)功能不动,只套本节 tokens/间距/字号/折叠/白化语言。
+     本节按仓库既有惯例整段追加于末尾,不回改前文历史层("后代覆盖为准"),避免源序级联翻车;
+     0716/0717/0718 各历史小节的定位类声明(position/inset/order 等)在此逐条覆盖为终态值。
+     ================================================================ */
+  html[data-s3-layout="A"]{--topbar-h:40px}
+
+  /* -- 顶栏:40px 单行,控件统一 30px 高基线(同 02 W1-5) -- */
+  html[data-s3-layout="A"] #topbarA{height:var(--topbar-h);gap:14px;padding:0 14px}
+  html[data-s3-layout="A"] #topbarA #railHead h1{font-size:15px}
+  html[data-s3-layout="A"] #topbarA #railHead .eyebrow{font-size:7.5px}
+  html[data-s3-layout="A"] #topbarA #runtimeControls{gap:12px}
+  html[data-s3-layout="A"] #topbarA .scenarioGroup{display:flex;align-items:center;min-width:0;background:#f2f4f6;border:1px solid #dde3e8;padding:2px 6px}
+  html[data-s3-layout="A"] #topbarA .scenarioGroup label+label{border-left:1px solid #d6dde2;margin-left:9px;padding-left:9px}
+  html[data-s3-layout="A"] #topbarA #runtimeControls label{display:flex;align-items:center;gap:5px;height:30px;font-size:8.5px;white-space:nowrap;color:#59656e;font-weight:700}
+  html[data-s3-layout="A"] #topbarA #runtimeControls select{width:auto;min-width:104px;height:30px;border:0;background:transparent;font-size:9.5px;padding:0 4px;color:#17202b;font-weight:700}
+  html[data-s3-layout="A"] #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:9px;grid-column:auto;flex-wrap:nowrap}
+  html[data-s3-layout="A"] #topbarA #runtimeActions .btnSet{display:flex;align-items:center;gap:5px}
+  html[data-s3-layout="A"] #topbarA #runtimeActions .btnSet+.btnSet{border-left:1px solid #d6dde2;padding-left:10px}
+  html[data-s3-layout="A"] #topbarA #runtimeActions button{height:30px;min-height:30px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
+  html[data-s3-layout="A"] #topbarA #runtimeActions button:hover{background:#17365d;color:#fff;border-color:#17365d}
+  html[data-s3-layout="A"] #topbarA #runtimeActions #pauseMotion{background:#17365d;color:#fff;border-color:#17365d;font-weight:700}
+  html[data-s3-layout="A"] #topbarA #runtimeActions #pauseMotion:hover{background:#0f2440;border-color:#0f2440}
+  html[data-s3-layout="A"] #topbarA #traceLoadState{height:30px;display:flex;align-items:center;padding:0 9px;margin-left:4px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap;box-sizing:border-box;text-decoration:none}
+  /* 情景配置组:算法 + 拟真档说明牌 + 货物画像,融为一个灰底单元(同 02 0719d 绿框) */
+  #tierFixedTag{height:30px;padding:0 8px;box-sizing:border-box}
+  #tierFixedTag b{font-size:9px}#tierFixedTag small{font-size:6.5px}
+
+  /* -- 右栏 rail:flex 纵列,order 定序(进度轴→决策卡→批次KPI塔→2D三联→七步条),块间 10px -- */
+  html[data-s3-layout="A"] #workHud{display:flex;flex-direction:column;gap:10px;padding:8px 9px;overflow:hidden;
+    background:#f6f7f8;border-right:1px solid var(--rail-line,#d6dde2);border-top:0;box-shadow:none}
+  html[data-s3-layout="A"] #decisionWrap{order:1;flex:none;align-self:stretch}
+  html[data-s3-layout="A"] #insightStack{order:2;flex:none;display:flex;flex-direction:column;gap:10px}
+  html[data-s3-layout="A"] #slotMapWrap{order:3}
+  html[data-s3-layout="A"] #phaseRail{order:4;flex:none;position:static;width:auto;align-self:stretch}
+  #railFacts{display:none}
+
+  /* -- 入库进度轴:从「顶栏下独立横条」迁入右栏顶部(同 02 0720 版B),order:-1 恒居首 -- */
+  html[data-s3-layout="A"] #progressAxisHost{position:static;order:-1;flex:none;z-index:auto;height:auto;
+    left:auto;right:auto;top:auto;width:auto;background:transparent;border:0;
+    border-bottom:1px solid var(--rail-line,#d6dde2);box-shadow:none;padding:0 0 8px;margin-bottom:0}
+  html[data-s3-layout="A"] #fillBookmarks{position:static;height:auto;display:flex;flex-direction:column;
+    align-items:stretch;gap:6px;padding:0;border:0;background:transparent}
+  html[data-s3-layout="A"] #fillBookmarks .fillHead{margin:0;flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  html[data-s3-layout="A"] #fillBookmarks .fillHead b{font-size:11.5px;white-space:nowrap}
+  html[data-s3-layout="A"] #fillBookmarks .fillHead span{display:block;font-size:7.5px;white-space:nowrap;margin:0}
+  html[data-s3-layout="A"] #fillBookmarkButtons{flex:none;position:relative;display:block;height:32px;min-width:0;margin:0 24px}
+  html[data-s3-layout="A"] #fillBookmarkButtons::before{content:"";position:absolute;left:0;right:0;top:10px;height:3px;background:#d9dde1}
+  html[data-s3-layout="A"] #fillBookmarkButtons .axisFill{position:absolute;left:0;top:10px;height:3px;background:#17365d;width:var(--axis-fill,0%);transition:width .2s linear}
+  html[data-s3-layout="A"] #fillBookmarkButtons button{position:absolute;top:4px;width:15px;height:15px;margin-left:-7.5px;padding:0;
+    border:2px solid #17365d;border-radius:50%;background:#fff;color:transparent;font-size:0;line-height:0;cursor:pointer;box-shadow:none}
+  html[data-s3-layout="A"] #fillBookmarkButtons button small{display:none}
+  html[data-s3-layout="A"] #fillBookmarkButtons button.axisDone{background:#17365d}
+  html[data-s3-layout="A"] #fillBookmarkButtons button[aria-current="true"]{border-color:#ff000f;background:#ff000f;box-shadow:0 0 0 4px #ff000f2b}
+  html[data-s3-layout="A"] #fillBookmarkButtons button::after{content:attr(data-axis-label);position:absolute;top:17px;left:50%;
+    transform:translateX(-50%);color:#75828c;font:7.5px/1 Consolas,monospace;white-space:nowrap;display:block}
+  html[data-s3-layout="A"] #axisRight{flex:none;display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px 9px;padding:0}
+  html[data-s3-layout="A"] #fillEvidence{margin:0;border:0;display:flex;flex-wrap:wrap;gap:0 9px}
+  html[data-s3-layout="A"] #fillEvidence span{padding:0;border-right:0;font-size:7.5px;white-space:nowrap;color:#5d6a74}
+  html[data-s3-layout="A"] #fillEvidence b{font-size:10.5px;color:#16191d}
+  html[data-s3-layout="A"] #releaseBadge{position:static;padding:0;border:0;background:transparent;box-shadow:none;
+    color:#75828c;font:7.5px/1.3 Consolas,monospace;white-space:nowrap}
+  html[data-s3-layout="A"] #releaseBadge b{display:inline;color:#5d6a74;font-size:7.5px}
+
+  /* -- 3D 区:让位给顶栏(进度轴已迁入右栏,不再占独立横条高度) -- */
+  html[data-s3-layout="A"] #gl{left:var(--rail-w);top:var(--topbar-h)}
+  html[data-s3-layout="A"] #cycleReset{left:var(--rail-w);top:var(--topbar-h)}
+  html[data-s3-layout="A"] #reserveBadgeAnchor{display:none}
+
+  /* -- 块头统一:9px/700/#16191d,中文标签 letter-spacing .2px(右栏 + 底 dock 共用) -- */
+  html[data-s3-layout="A"] #decisionWrap .dHead b,html[data-s3-layout="A"] #traceStats .statsHead b,
+  html[data-s3-layout="A"] #slotMapWrap .mapHead b,html[data-s3-layout="A"] #processGuide .processGuideHead b,
+  html[data-s3-layout="A"] #phaseRail .phaseTitle,html[data-s3-layout="A"] #fillBookmarks .fillHead b,
+  html[data-s3-layout="A"] #axisHud>b,html[data-s3-layout="A"] #sceneCaption .dockLabel,
+  html[data-s3-layout="A"] #targetCard .targetHead b,html[data-s3-layout="A"] #reserveRuleBadge .legendHead b{
+    font:700 9px/1.3 "Microsoft YaHei",sans-serif;color:#16191d;letter-spacing:.2px}
+  /* -- 右栏块统一 padding、分隔线 1px #d6dde2(块内已有 border,此处仅补齐未覆盖到的) -- */
+  html[data-s3-layout="A"] #decisionWrap,html[data-s3-layout="A"] #traceStats,html[data-s3-layout="A"] #slotMapWrap,
+  html[data-s3-layout="A"] #phaseRail,html[data-s3-layout="A"] #processGuide{
+    padding:7px 10px;border:1px solid var(--rail-line,#d6dde2);background:var(--card,#fff)}
+  html[data-s3-layout="A"] #decisionWrap .dHead,html[data-s3-layout="A"] #traceStats .statsHead,
+  html[data-s3-layout="A"] #slotMapWrap .mapHead,html[data-s3-layout="A"] #processGuide .processGuideHead,
+  html[data-s3-layout="A"] #phaseRail .phaseTitle{border-bottom:1px solid var(--rail-line,#d6dde2);padding-bottom:5px;margin-bottom:0}
+
+  /* -- 批次 KPI(终态)大格塔:核心四大格(17px/800,浅蓝灰底)+ 次级两小格(约束违规/守恒量) -- */
+  html[data-s3-layout="A"] #traceStats .statsGrid{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:auto auto auto;gap:6px;margin-top:6px}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp{padding:8px 10px;min-height:auto;display:flex;flex-direction:column;justify-content:center}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp b{font:800 11px/1.15 Consolas,"JetBrains Mono",monospace;color:#16191d;white-space:nowrap}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp small{font:700 9px/1.3 "Microsoft YaHei",sans-serif;color:#5d6972;display:block;margin-top:2px;white-space:normal;letter-spacing:.2px}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(1){grid-row:1;grid-column:1/4}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(2){grid-row:1;grid-column:4/7}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(3){grid-row:2;grid-column:1/4}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(4){grid-row:2;grid-column:4/7}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(1),html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(2),
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(3),html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(4){
+    background:#eef2f5;border:1px solid #c9d2d8;min-height:58px}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(1) b,html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(2) b,
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(3) b,html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(4) b{font-size:17px}
+  /* 次级两格:约束违规半宽、完工/行程守恒量占宽(数值较长);守恒量自带 .conservedCell 虚线金框
+     (governanceStyle 运行时注入,不在此覆盖其底色,只给位置) */
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(5){grid-row:3;grid-column:1/3;background:#f4f6f7;border:1px solid #e1e5e8}
+  html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(6){grid-row:3;grid-column:3/7}
+  html[data-s3-layout="A"] #traceStats .statFinger{margin-top:6px;font-size:7.5px}
+
+  /* -- 2D 三算法对比区:方形撑满(高度主导,同 02 W1-3 修法) -- */
+  html[data-s3-layout="A"] #slotMapWrap{display:flex!important;flex-direction:column;height:auto;max-height:none}
+  html[data-s3-layout="A"] #slotMap{width:auto!important;height:auto!important;max-width:100%;aspect-ratio:2.55/1;
+    flex:1 1 0;min-height:0!important;margin:6px auto 0;align-self:center}
+  html[data-s3-layout="A"] #slotMapWrap .mapKey{display:flex!important;flex-wrap:wrap;margin-top:5px}
+  html[data-s3-layout="A"] #decisionWrap .cand,html[data-s3-layout="A"] #decisionWrap .decisionLine{font-size:9px}
+
+  /* -- 折叠收纳(拍板「整栏收边+逐块折叠+持久化」,同 02 W1-7):右栏/底 dock 整栏收 26px 边条,
+     栏内块头可单独折叠。localStorage 键 s3_collapse_01_v1,与 02 的 s3_collapse_v1 区分;
+     机制同 02:收展只改既有 --rail-w/--scene-dock-h 两变量,#gl/#sceneDock 等引用它们的规则自动跟随。 -- */
+  html[data-s3-layout="A"] #railCollapseBtn{order:-2;flex:none;display:flex;align-items:center;justify-content:center;gap:5px;
+    height:24px;margin:0;padding:0 8px;border:1px solid var(--rail-line,#d6dde2);background:#fff;
+    color:#3d4a54;cursor:pointer;font:700 9px/1 "Microsoft YaHei",sans-serif}
+  html[data-s3-layout="A"] #railCollapseBtn:hover{background:#eef1f4}
+  html[data-s3-layout="A"] #railCollapseBtn .edgeArrow{display:inline-block;font-size:10px;transition:transform .15s}
+  html[data-s3-layout="A"] #workHud.is-collapsed{width:26px!important;min-width:26px;padding:6px 2px;overflow:visible}
+  html[data-s3-layout="A"] #workHud.is-collapsed>*:not(#railCollapseBtn){display:none}
+  html[data-s3-layout="A"] #workHud.is-collapsed #railCollapseBtn{flex-direction:column;height:auto;width:100%;margin:0;
+    padding:10px 2px;gap:8px;writing-mode:vertical-rl;text-orientation:upright}
+  html[data-s3-layout="A"] #workHud.is-collapsed #railCollapseBtn .edgeArrow{transform:rotate(180deg);writing-mode:horizontal-tb}
+  html[data-s3-layout="A"] #dockCollapseBtn{position:absolute;z-index:5;top:4px;right:6px;display:flex;align-items:center;gap:3px;
+    height:18px;padding:0 7px;border:1px solid #9ea9b1;background:#ffffffed;color:#3d4a54;cursor:pointer;
+    font:700 8px/1 "Microsoft YaHei",sans-serif;box-shadow:0 1px 4px #17202b26}
+  html[data-s3-layout="A"] #dockCollapseBtn:hover{background:#f2f4f6}
+  html[data-s3-layout="A"] #dockCollapseBtn .edgeArrow{display:inline-block;font-size:9px;transition:transform .15s}
+  html[data-s3-layout="A"] #sceneDock.is-collapsed>*:not(#dockCollapseBtn){display:none}
+  html[data-s3-layout="A"] #sceneDock.is-collapsed #dockCollapseBtn .edgeArrow{transform:rotate(180deg)}
+  html[data-s3-layout="A"] #decisionWrap .dHead,html[data-s3-layout="A"] #slotMapWrap .mapHead,
+  html[data-s3-layout="A"] #traceStats .statsHead,html[data-s3-layout="A"] #processGuide .processGuideHead,
+  html[data-s3-layout="A"] #phaseRail .phaseTitle{position:relative;cursor:pointer;padding-right:18px}
+  html[data-s3-layout="A"] #decisionWrap .dHead::after,html[data-s3-layout="A"] #slotMapWrap .mapHead::after,
+  html[data-s3-layout="A"] #traceStats .statsHead::after,html[data-s3-layout="A"] #processGuide .processGuideHead::after,
+  html[data-s3-layout="A"] #phaseRail .phaseTitle::after{
+    content:"▾";position:absolute;top:50%;right:0;transform:translateY(-50%);width:14px;height:14px;
+    display:flex;align-items:center;justify-content:center;color:#69717c;font:900 9px/1 Consolas,monospace;
+    pointer-events:none;transition:transform .15s}
+  html[data-s3-layout="A"] #decisionWrap.railBlockCollapsed .dHead::after,html[data-s3-layout="A"] #slotMapWrap.railBlockCollapsed .mapHead::after,
+  html[data-s3-layout="A"] #traceStats.railBlockCollapsed .statsHead::after,html[data-s3-layout="A"] #processGuide.railBlockCollapsed .processGuideHead::after,
+  html[data-s3-layout="A"] #phaseRail.railBlockCollapsed .phaseTitle::after{transform:translateY(-50%) rotate(-90deg)}
+  html[data-s3-layout="A"] #decisionWrap.railBlockCollapsed>*:not(.dHead),html[data-s3-layout="A"] #slotMapWrap.railBlockCollapsed>*:not(.mapHead),
+  html[data-s3-layout="A"] #traceStats.railBlockCollapsed>*:not(.statsHead),html[data-s3-layout="A"] #processGuide.railBlockCollapsed>*:not(.processGuideHead),
+  html[data-s3-layout="A"] #phaseRail.railBlockCollapsed>*:not(.phaseTitle){display:none}
+
+  /* -- dock:白化四分列(当前作业货物行 | 轴状态·位置与速度 | 目标货位卡 | 2D 图例)-- */
+  html[data-s3-layout="A"] #viewport{--scene-dock-h:128px}
+  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(320px,1.5fr) minmax(220px,1fr) minmax(150px,.78fr) minmax(180px,.9fr);
+    background:#f9fafbef;border-top:3px solid var(--abb-red,#ff000f)}
+  html[data-s3-layout="A"] #sceneDock>#sceneCaption{grid-column:1;grid-row:1}
+  html[data-s3-layout="A"] #sceneDock>#sceneTelemetry{grid-column:2;grid-row:1}
+  html[data-s3-layout="A"] #sceneDock>#targetCard{grid-column:3;grid-row:1}
+  html[data-s3-layout="A"] #sceneDock>#reserveRuleBadge{grid-column:4;grid-row:1}
+
+  /* -- 当前作业格:大字货物行改芯片化(重量/体积/等级/热冷/热度/排名),同 02 W1-2 -- */
+  html[data-s3-layout="A"] #sceneCaption{padding:6px 12px 5px;align-content:stretch;gap:2px 8px;
+    grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"label meta facts" "action action action" "cargo cargo cargo"}
+  html[data-s3-layout="A"] #sceneCaption .dockLabel{grid-area:label;align-self:center}
+  html[data-s3-layout="A"] #sceneCaption #sceneActionMeta{grid-area:meta;align-self:center;justify-self:end}
+  html[data-s3-layout="A"] #sceneCaption #railFactsDockSlot{grid-area:facts;display:none}
+  html[data-s3-layout="A"] #sceneCaption #sceneActionText{grid-area:action;font:800 13px/1.3 "Microsoft YaHei",sans-serif;
+    color:#0f1c27;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html[data-s3-layout="A"] #sceneCargoMeta{grid-area:cargo;min-width:0;overflow:hidden;color:#53616b;
+    font:8px/1.35 Consolas,"Microsoft YaHei",monospace;display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;
+    white-space:normal;max-height:none;margin-top:3px}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgChip{padding:2px 7px;border-radius:3px;font:700 9.5px/1.4 "Microsoft YaHei",sans-serif;white-space:nowrap}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgWeight{font:800 14px/1 Consolas,"JetBrains Mono",monospace;color:#16191d;background:none;padding:0}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgVolume{font:800 14px/1 Consolas,"JetBrains Mono",monospace;color:#374854;background:none;padding:0}
+  /* 等级色沿用 01 自有 3D/2D 采样色(GRADE_CSS #366786/#4ea9c2/#abd1d8),与本页货位图、货架货物视觉同源,
+     不套用 02 未采样前的旧值(#102a43/#006bb6/#42c7e6)——同一页内颜色一致优先于跨页字面复制。 */
+  html[data-s3-layout="A"] #sceneCargoMeta .cgGrade-heavy{background:#366786;color:#fff}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgGrade-mid{background:#4ea9c2;color:#0b1f33}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgGrade-light{background:#abd1d8;color:#0b1f33}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgHot{background:#fdecc8;color:#8a5b00;box-shadow:inset 0 0 0 1px #e7b800}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgCold{background:#eef1f4;color:#52616c}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgRank{font:700 9px/1.3 Consolas,monospace;color:#5d6972;white-space:nowrap}
+  html[data-s3-layout="A"] #sceneCargoMeta .cgTime{font:400 9px/1.3 Consolas,monospace;color:#5d6972}
+
+  /* -- 轴状态格:白化(原深色块 #17212a 全清),X/Y 五列均分,F 行保留但弱化(0720 命名总表同款标签) -- */
+  html[data-s3-layout="A"] #sceneTelemetry{padding:6px 12px;display:grid;grid-template-columns:1fr;gap:0;
+    background:#fff;color:#26343e;align-content:center}
+  html[data-s3-layout="A"] #liveChartWrap{display:none}
+  html[data-s3-layout="A"] #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
+  html[data-s3-layout="A"] #axisHud>b{margin:0 0 3px}
+  html[data-s3-layout="A"] #axisHud .axis{grid-template-columns:46px 1fr 47px 1fr 52px;gap:5px;margin:5px 0;align-items:center}
+  html[data-s3-layout="A"] #axisHud .axis>span:first-child{font:800 8.5px/1 Consolas,monospace;color:#16191d;white-space:nowrap}
+  html[data-s3-layout="A"] #axisHud .axis i{position:static;height:6px;background:#e7ebee;border-radius:2px;box-shadow:inset 0 0 0 1px #d5dbe0}
+  html[data-s3-layout="A"] #axisHud .axis i:before,html[data-s3-layout="A"] #axisHud .axis i:after{content:none}
+  html[data-s3-layout="A"] #axisHud .axis #xFill,html[data-s3-layout="A"] #axisHud .axis #zFill,html[data-s3-layout="A"] #axisHud .axis #forkFill{
+    position:relative;overflow:visible}
+  html[data-s3-layout="A"] #axisHud .axis #xFill:after,html[data-s3-layout="A"] #axisHud .axis #zFill:after,html[data-s3-layout="A"] #axisHud .axis #forkFill:after{
+    content:"";position:absolute;top:-4px;left:clamp(0%,calc(var(--fill,0%) - 3px),calc(100% - 7px));
+    width:7px;height:14px;background:#17365d;border-radius:2px;box-shadow:0 0 0 1.5px #fff}
+  html[data-s3-layout="A"] #axisHud .axis span:nth-child(3){color:#17202b;font-size:9px;font-weight:700;text-align:right;font-family:Consolas,monospace}
+  html[data-s3-layout="A"] #axisHud .axis .velTrack{position:relative;display:block;height:6px;background:#e7ebee;border-radius:2px;
+    box-shadow:inset 0 0 0 1px #d5dbe0;overflow:hidden}
+  html[data-s3-layout="A"] #axisHud .axis .velTrack:after{content:"";position:absolute;inset:0;width:var(--vfill,0%);background:#4a88a8}
+  html[data-s3-layout="A"] #axisHud .axis .velNum{font:700 8.5px/1 Consolas,monospace;color:#69747d;text-align:right;white-space:nowrap}
+  /* F(货叉)行:01 有真实货叉伸缩演示,弱化(缩字+调暗)而非 02 那样整行隐藏 */
+  html[data-s3-layout="A"] #axisHud .axisFork{opacity:.62;margin-top:2px}
+  html[data-s3-layout="A"] #axisHud .axisFork>span:first-child{font-size:7.5px}
+  html[data-s3-layout="A"] #axisHud .axisFork .velTrack,html[data-s3-layout="A"] #axisHud .axisFork .velNum{visibility:hidden}
+
+  /* -- 目标货位卡:0717 既有白底结构,微调贴合新块头/字号语言 -- */
+  html[data-s3-layout="A"] #targetCard{padding:6px 10px;border-left:4px solid var(--amber);grid-template-rows:auto auto auto;gap:2px}
+  html[data-s3-layout="A"] #targetCard .targetHead b{letter-spacing:.2px}
+  html[data-s3-layout="A"] #targetCardSlot{font:800 15px/1.1 Consolas,"Microsoft YaHei",monospace;color:#0f1c27}
+  html[data-s3-layout="A"] #targetCardDetail{font-size:7.5px}
+
+  /* -- 2D 图例格:reserveRuleBadge 由 3D 悬浮小卡改安置为 dock 第四格(同 02 heatLegend 收编手法) -- */
+  html[data-s3-layout="A"] #reserveRuleBadge{position:static;z-index:auto;left:auto;right:auto;top:auto;bottom:auto;
+    width:auto;height:auto;padding:6px 12px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+    gap:4px;background:#fff;border:0;box-shadow:none;color:#53616b;pointer-events:auto}
+  html[data-s3-layout="A"] #reserveRuleBadge .legendHead{display:block;margin-bottom:1px}
+  html[data-s3-layout="A"] #reserveRuleBadge span{min-width:0;display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:7.5px}
+  html[data-s3-layout="A"] #reserveRuleBadge i{display:block;width:14px;height:4px;flex:none;background:#17365d}
+  html[data-s3-layout="A"] #reserveRuleBadge .empty i{background:#7d8790}
+  html[data-s3-layout="A"] #reserveRuleBadge .blocked i{height:9px;background:repeating-linear-gradient(135deg,#65727d 0 3px,#c7d0d6 3px 6px)}
+  html[data-s3-layout="A"] #reserveRuleBadge .hotlid i{height:7px}
+
+  /* -- 镜头与演示倍率:从进度轴行找回,安置到 3D 区右下角悬浮小卡(同 02 0720 版B);
+     01 rail 在左、3D 在右,右侧无 rail 遮挡,right 不需扣 --rail-w(与 02 的惯例差异见此注释) -- */
+  html[data-s3-layout="A"] #sceneTools{position:absolute;z-index:7;right:18px;
+    bottom:calc(var(--scene-dock-h) + var(--scene-dock-bottom,10px) + 12px);
+    width:auto;display:flex;align-items:center;gap:7px;padding:4px 8px;background:#ffffffd9;
+    border:1px solid #aeb8bf;box-shadow:0 4px 15px #17202b1f;color:#26343e;pointer-events:auto}
+  html[data-s3-layout="A"] #sceneTools .toolHead{display:none}
+  html[data-s3-layout="A"] #sceneTools .toolRow{display:flex;align-items:center;gap:7px;margin:0}
+  html[data-s3-layout="A"] #sceneTools button{height:24px;padding:0 9px;font:700 9px/1 "Microsoft YaHei",sans-serif;border:1px solid #17365d;background:#fff;color:#17365d;cursor:pointer}
+  html[data-s3-layout="A"] #sceneTools button:hover{background:#17365d;color:#fff}
+  html[data-s3-layout="A"] #sceneTools input[type="range"]{width:100px;min-height:20px;accent-color:#17365d}
+  html[data-s3-layout="A"] #sceneTools #playbackValue{min-width:38px;font:800 9px/1 Consolas,monospace;color:#17365d;text-align:right}
+  html[data-s3-layout="A"] #sceneTools .scaleEnds,html[data-s3-layout="A"] #sceneTools .toolNote{display:none}
+
+  /* -- 可读性兜底:无 <7.5px 可见文字 -- */
+  html[data-s3-layout="A"] #fillEvidence span{font-size:7.5px}
+  html[data-s3-layout="A"] #reserveRuleBadge span{font-size:7.5px}
+  html[data-s3-layout="A"] #processGuide .processGuideHead span{font-size:7.5px}
+
+  /* -- 窄高视口(≤920px,覆盖 QA 1280×720 与 1600×900 两档)安全网 --
+     实测(node 诊断脚本)根因:decisionWrap/traceStats/phaseRail/progressAxisHost 四块全 flex:none,
+     在 720px 高度下四者合计已逼近 rail 总高,#slotMapWrap(唯一 flex:1 的块,三算法 2D 对比——
+     01 的核心可视化)被挤压到 16px、canvas 0×0。修法:压缩四块的次要说明性子内容(供进阶查看的
+     并列/冷门送远/评分分项解说 · 期望取货口径脚注),不删 DOM(只藏,内容仍可通过折叠按钮展开区域
+     换取空间后完整可见),把让出的高度还给 2D 三联对比,这是 01 的功能主体,不能给说明性文字让路。 */
+  @media(max-height:920px){
+    html[data-s3-layout="A"] #workHud{gap:5px;padding:5px 7px}
+    html[data-s3-layout="A"] #insightStack{gap:5px}
+    /* 「容量节点」副题字号收紧但不隐藏——QA capacityNodeTermUnique 断言要求该术语可见恰好一次,
+       与其余说明性文字(评分分项/并列/冷门送远解说)不同,它是唯一出现处,不能藏 */
+    html[data-s3-layout="A"] #progressAxisHost{padding-bottom:5px}
+    html[data-s3-layout="A"] #fillBookmarks .fillHead span{font-size:7.5px}
+    html[data-s3-layout="A"] #fillBookmarkButtons{height:28px}
+    html[data-s3-layout="A"] #fillBookmarkButtons::before,html[data-s3-layout="A"] #fillBookmarkButtons .axisFill{top:8px}
+    html[data-s3-layout="A"] #fillBookmarkButtons button{top:2px}
+    html[data-s3-layout="A"] #decisionWrap,html[data-s3-layout="A"] #traceStats,
+    html[data-s3-layout="A"] #phaseRail{padding:4px 7px}
+    /* 决策卡:核心(标题/选择依据/目标/候选审计/三候选行)常显;说明性子内容收起,不删 DOM */
+    html[data-s3-layout="A"] #decisionWrap .tieNote,html[data-s3-layout="A"] #decisionWrap .reserveNote,
+    html[data-s3-layout="A"] #decisionWrap .scoreBreakdown,html[data-s3-layout="A"] #decisionWrap .scoreFactorNote,
+    html[data-s3-layout="A"] #decisionWrap .candidateTop{display:none}
+    html[data-s3-layout="A"] #decisionWrap .decisionLine{padding:1px 0}
+    html[data-s3-layout="A"] #decisionWrap .candidates{gap:2px}
+    html[data-s3-layout="A"] #retrievalNote{display:none}
+    html[data-s3-layout="A"] #traceStats .statsGrid{gap:4px;margin-top:4px}
+    html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp{padding:4px 6px}
+    html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(1),html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(2),
+    html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(3),html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(4){min-height:38px}
+    html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(1) b,html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(2) b,
+    html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(3) b,html[data-s3-layout="A"] #traceStats .statsGrid .metricHelp:nth-child(4) b{font-size:13px}
+    html[data-s3-layout="A"] #traceStats .statFinger{display:none}
+    /* 2D 三联对比:压缩紧后仍是 rail 里唯一 flex-grow 的块,实测(诊断脚本)可用高度仍会把
+       aspect-ratio 的"高度主导"算法反向拖成 83×33px 的不可读小图——改「宽度主导」(同 02
+       overlay 浮层的成因手法):canvas 宽=撑满 wrap 内宽,高由宽反推,不再受挤压的纵向预算牵连;
+       mapRule(预占规则脚注)收起,把行高让给画布与图例。 */
+    html[data-s3-layout="A"] #slotMapWrap{min-height:184px}
+    html[data-s3-layout="A"] #slotMapWrap .mapRule{display:none}
+    html[data-s3-layout="A"] #slotMap{width:100%!important;height:auto!important;flex:none!important;align-self:stretch!important;margin-top:4px}
+    html[data-s3-layout="A"] #phaseRail .phaseTitle{margin-bottom:3px}
+    html[data-s3-layout="A"] .phaseSeg .phaseName{display:none}
+    html[data-s3-layout="A"] #viewport{--scene-dock-h:104px}
+    /* fontSize 保持 >=13px(不随 02 blueprint 的 12px 松动)——QA cargoHeadlineDominant 门槛
+       fontSize>=13 是既有质量线,窄高视口收紧其它维度即可腾出空间,不靠降字号达标 */
+    html[data-s3-layout="A"] #sceneCaption #sceneActionText{font-size:13px}
+    html[data-s3-layout="A"] #sceneCaption{padding:4px 10px 3px}
+    html[data-s3-layout="A"] #sceneCargoMeta{margin-top:2px;gap:3px 6px}
+    html[data-s3-layout="A"] #sceneCargoMeta .cgChip{padding:1px 5px}
+  }
 </style>
 <!-- V2 壳体共享语法(0719):01=连续入库保持 rail-left(data-first),不设 data-s3-rail 即缺省 left;
      文件内 rail-right 映射与 #cycleAxis 规则对本页零命中,link 仅作为后续侧向规则收拢的接口。 -->
@@ -918,6 +1214,7 @@
 <main id="main">
   <section id="sceneView" class="view active" aria-label="三维作业视图" aria-hidden="false">
     <section id="viewport">
+      <div id="topbarA"></div>
       <div id="workHud">
         <div id="taskline"><div class="kicker">已校验 · 同源 SIM 轨迹载入中</div><div class="primary"><span id="taskPrimary">正在加载同源作业轨迹</span><span id="actionBadge">等待轨迹</span></div><div id="stepPurpose"><b id="stepIndex">步骤 -- / 7</b><span id="stepPurposeText">载入后按事件流显示动作目的</span></div><div class="metaRow"><span id="ownerState">货物：--</span><span>单巷道 · 单机</span></div></div>
         <section id="runtimeControls" aria-label="仿真回放选择" aria-busy="false">
@@ -927,7 +1224,7 @@
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="轴状态 · 位置与速度；数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span></div></div>
+        <div id="axisHud" aria-label="轴状态 · 位置与速度；数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis axisFork"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
       </div>
       <div id="gl" role="img" aria-label="三维仓储 sim 轨迹回放；仓位、货物和设备状态由已验证 trace 同源驱动"></div>
       <div id="phaseRail"><div class="phaseTitle"><span id="phaseNow">等待 trace</span><span id="phaseClock">--</span></div><div id="phaseTimeScale" aria-label="本周期四阶段 trace 按几何与货叉阈值拆分的七步 SIM 时长比例"><i id="phaseTimeCursor" aria-hidden="true"></i></div><div id="phaseSegments"><span class="phaseSeg">1</span><span class="phaseSeg">2</span><span class="phaseSeg">3</span><span class="phaseSeg">4</span><span class="phaseSeg">5</span><span class="phaseSeg">6</span><span class="phaseSeg">7</span></div></div>
@@ -972,7 +1269,7 @@ reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="em
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
 const sceneTools=document.createElement('section');sceneTools.id='sceneTools';sceneTools.setAttribute('aria-label','三维镜头与回放速度');
-sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><button id="resetCamera" type="button">总览</button><input id="playbackSpeed" type="range" min="0.25" max="2" step="0.25" value="1" title="0.25× 慢放 — 2.00× 快放" aria-label="演示速度倍率"><output id="playbackValue" for="playbackSpeed">1.00×</output></div>';
+sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><input id="playbackSpeed" type="range" min="0.25" max="5" step="0.05" value="1" list="playbackTicks" aria-label="演示速度倍率"><datalist id="playbackTicks"><option value="0.25"></option><option value="0.5"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="5"></option></datalist><output id="playbackValue" for="playbackSpeed">1.00×</output></div><div class="toolNote">0.25× 慢放 · 5.00× 快放 · 吸附 0.25/0.5/1/2/3/5</div>';
 sceneDock.append(sceneTools);
 const labelLeaders=document.createElementNS('http://www.w3.org/2000/svg','svg');labelLeaders.id='labelLeaders';labelLeaders.setAttribute('aria-hidden','true');
 ['targetLeader'].forEach(id=>{const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.id=id;line.hidden=true;line.style.display='none';labelLeaders.append(line);});viewportEl.append(labelLeaders);

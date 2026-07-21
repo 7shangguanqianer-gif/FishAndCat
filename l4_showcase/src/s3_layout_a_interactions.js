@@ -17,16 +17,16 @@
   /* ---------- 1. 布局作用域 ---------- */
   doc.documentElement.dataset.s3Layout = "A";
 
-  /* ---------- 2. 顶栏:railHead + runtimeControls 搬入 ---------- */
-  const topbar = doc.createElement("div");
-  topbar.id = "topbarA";
-  viewport.prepend(topbar);
-  topbar.append(byId("railHead"), byId("runtimeControls"));
+  /* ---------- 2. 顶栏:railHead + runtimeControls 搬入静态 #topbarA(W6:改用 HTML 静态占位,
+     同 02 终态,免一次 JS createElement 的首屏时序缝隙;元素不存在则整段安全跳过) ---------- */
+  const topbar = byId("topbarA");
+  if (topbar) topbar.append(byId("railHead"), byId("runtimeControls"));
 
-  /* ---------- 3. 进度轴宿主:fillBookmarks 重塑 ---------- */
+  /* ---------- 3. 进度轴宿主:fillBookmarks 重塑,迁入右栏顶部(W6 同 02 0720 版B:竖排空间换横排,
+     3D 视野增大)。#progressAxisHost 的 order:-1(见样式区)保证恒居 #workHud 首位。 ---------- */
   const axisHost = doc.createElement("div");
   axisHost.id = "progressAxisHost";
-  viewport.insertBefore(axisHost, byId("gl"));
+  workHud.prepend(axisHost);
   const bookmarks = byId("fillBookmarks");
   axisHost.append(bookmarks);
   /* 0720 命名总表 B4:标题简化为「入库进度」,「容量节点」语义降入副题小字(全页唯一出现处) */
@@ -51,12 +51,14 @@
   axisRight.id = "axisRight";
   bookmarks.append(axisRight);
   axisRight.append(byId("fillEvidence"), byId("releaseBadge"));
-  /* 0717 #28 二轮(用户拍板):镜头与演示倍率整体上移到进度轴行(节点轴与计数簇之间) */
-  bookmarks.insertBefore(byId("sceneTools"), axisRight);
 
-  /* ---------- 4. dock:0717 #28 四格并三格——七段微条并入「当前作业」格(仍在 sceneDock 内,
-     步骤名由微条题行唯一承担,货物信息升大字);入口等待入 caption;路径图例移场景左下 ---------- */
-  byId("sceneCaption").append(byId("phaseRail"));
+  /* ---------- 4. dock:W6(照 02 语言重做)白化四分列(当前作业 | 轴状态 | 目标货位卡 | 2D 图例)。
+     七段微条(phaseRail)不再并入「当前作业」格——迁回右栏,成为独立可折叠块,恢复 02 终态的
+     信息架构(七步条与决策卡/KPI塔同级,不再挤占 dock 空间);它在 inline 场景脚本里本就是
+     rail.append(...) 的直接子级,这里不搬运,只需不再把它 append 进 sceneCaption。
+     镜头/演示倍率迁到 3D 区右下角悬浮小卡(同 02 0720 版B);01 rail 在左、3D 在右,不需要像
+     02 那样在样式里扣减 --rail-w。 ---------- */
+  if (byId("sceneTools").parentElement !== viewport) viewport.append(byId("sceneTools"));
   /* 0717 #28 二轮(用户拍板):dock 第三格=目标货位卡——接管 3D 黄标牌的全部文字信息
      (3D 场景只留发光壳+面框+箭头图形高亮);声明 target-card 模式供 runtime 分支。 */
   doc.documentElement.dataset.s3TargetCard = "1";
@@ -73,7 +75,16 @@
   const queueCell = byId("factQueue").parentElement; /* <div><b id=factQueue>..</b><span>入口等待</span></div> */
   queueCell.style.cssText = "display:flex;gap:4px;align-items:baseline;background:transparent;padding:0";
   factsSlot.append(queueCell);
-  viewport.append(byId("reserveRuleBadge"));
+  /* W6:reserveRuleBadge 由 3D 悬浮小标牌收编为 dock 第四格「2D 图例」列(同 02 heatLegend 收编手法);
+     补一个块头(runtime.js 的 innerHTML 只写图例条目本身,不含标题),对齐其余三格都有标题的观感。
+     不改 runtime.js 里 reserveRuleBadge.innerHTML 的原文——QA hotVisual.legendPresent 断言依赖
+     其中「热门前 20%」原文子串,搬运/加壳不碰这段文本。 */
+  const reserveBadgeEl = byId("reserveRuleBadge");
+  const legendHead = doc.createElement("div");
+  legendHead.className = "legendHead";
+  legendHead.innerHTML = "<b>2D 图例</b>";
+  reserveBadgeEl.prepend(legendHead);
+  sceneDock.append(reserveBadgeEl);
   /* 七段可聚焦 */
   const segments = Array.from(byId("phaseSegments").children);
   segments.forEach(segment => segment.setAttribute("tabindex", "0"));
@@ -261,7 +272,100 @@
   /* ---------- 8b. 布局搬运改变了 #gl 尺寸:触发 resize 让 renderer/浮签重算 ---------- */
   root.dispatchEvent(new Event("resize"));
 
-  /* ---------- 9. QA 自检钩子 ---------- */
+  /* ---------- 9. 折叠收纳(W6,拍板「整栏收边+逐块折叠+持久化」,同 02 W1-7) ----------
+     右栏(#workHud)与底 dock(#sceneDock)两大版块整体收成 26px 边缘细条;
+     栏内五块(算法决策/2D 三算法对比/批次KPI/七步在做什么/七步条)块头可单独折叠。
+     机制:收展只改 --rail-w / --scene-dock-h 两个既有 CSS 变量的值,#gl/#sceneDock 等一切引用它们的
+     规则自动跟随(样式见 01 html 的 W6 收口节)。持久化 localStorage s3_collapse_01_v1 =
+     {rail,dock,blocks:{id:bool}}(键名与 02 的 s3_collapse_v1 区分,互不干扰);
+     缺省/解析失败=全展开,保证 QA 脚本首次加载零感知。
+     01 的五个可折叠块全在右栏(不像 02 还有一个 opsEvidence 住在 dock),事件代理挂在
+     #workHud 本身即可覆盖,不需要像 02 那样上提到共同祖先 #viewport。同理,01 的
+     decisionWrap/slotMapWrap/traceStats/processGuide/phaseRail 全部在 configureDom()
+     同步创建(不像 02 的 opsEvidence 要等异步 trace 就绪才 append),故不需要 MutationObserver
+     兜底,直接查一次即可。用捕获阶段是因为 #slotMapWrap 自身已有「点击放大 2D 图」的冒泡监听
+     (见下第 6 节),块头点击若走冒泡会先触发放大再触发折叠;捕获阶段能抢在放大监听之前
+     stopPropagation 拦下块头点击。 */
+  /* processGuide 不入列:它自 0716 起即 display:none!important 退役(七步常驻面板已被 dock 微条+
+     phaseRail 悬浮说明取代,QA processGuideHidden 断言强制其隐藏),W6 不重开此决定——只重排
+     "仍可见" 的块。 */
+  const COLLAPSE_KEY = "s3_collapse_01_v1";
+  const RAIL_BLOCK_IDS = ["decisionWrap", "slotMapWrap", "traceStats", "phaseRail"];
+  const RAIL_BLOCK_HEADER_SELECTOR = "#decisionWrap .dHead,#slotMapWrap .mapHead,#traceStats .statsHead,#phaseRail .phaseTitle";
+
+  function loadCollapseState() {
+    try {
+      const raw = root.localStorage.getItem(COLLAPSE_KEY);
+      if (!raw) return { rail: false, dock: false, blocks: {} };
+      const parsed = JSON.parse(raw);
+      return {
+        rail: Boolean(parsed.rail), dock: Boolean(parsed.dock),
+        blocks: (parsed.blocks && typeof parsed.blocks === "object") ? parsed.blocks : {}
+      };
+    } catch (error) { return { rail: false, dock: false, blocks: {} }; }
+  }
+  function saveCollapseState() {
+    try { root.localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapseState)); } catch (error) { /* 隐私模式/配额满,静默降级,不影响功能 */ }
+  }
+  const collapseState = loadCollapseState();
+
+  const railCollapseBtn = doc.createElement("button");
+  railCollapseBtn.id = "railCollapseBtn"; railCollapseBtn.type = "button";
+  railCollapseBtn.innerHTML = '<i class="edgeArrow" aria-hidden="true">◂</i><span class="edgeLabel">面板</span>';
+  function applyRailCollapsed(collapsed) {
+    doc.documentElement.style.setProperty("--rail-w", collapsed ? "26px" : "");
+    if (!collapsed) doc.documentElement.style.removeProperty("--rail-w");
+    workHud.classList.toggle("is-collapsed", collapsed);
+    railCollapseBtn.setAttribute("aria-expanded", String(!collapsed));
+    railCollapseBtn.setAttribute("aria-label", collapsed ? "展开右栏" : "收起右栏");
+  }
+  railCollapseBtn.addEventListener("click", () => {
+    const collapsed = !workHud.classList.contains("is-collapsed");
+    applyRailCollapsed(collapsed);
+    collapseState.rail = collapsed; saveCollapseState();
+    root.dispatchEvent(new Event("resize"));
+  });
+  workHud.append(railCollapseBtn);
+  applyRailCollapsed(collapseState.rail);
+
+  let dockCollapseBtn = null;
+  if (sceneDock) {
+    dockCollapseBtn = doc.createElement("button");
+    dockCollapseBtn.id = "dockCollapseBtn"; dockCollapseBtn.type = "button";
+    dockCollapseBtn.innerHTML = '<i class="edgeArrow" aria-hidden="true">▾</i><span class="edgeLabel">面板</span>';
+    const applyDockCollapsed = collapsed => {
+      viewport.style.setProperty("--scene-dock-h", collapsed ? "26px" : "");
+      if (!collapsed) viewport.style.removeProperty("--scene-dock-h");
+      sceneDock.classList.toggle("is-collapsed", collapsed);
+      dockCollapseBtn.setAttribute("aria-expanded", String(!collapsed));
+      dockCollapseBtn.setAttribute("aria-label", collapsed ? "展开底部信息带" : "收起底部信息带");
+    };
+    dockCollapseBtn.addEventListener("click", () => {
+      const collapsed = !sceneDock.classList.contains("is-collapsed");
+      applyDockCollapsed(collapsed);
+      collapseState.dock = collapsed; saveCollapseState();
+      root.dispatchEvent(new Event("resize"));
+    });
+    sceneDock.append(dockCollapseBtn);
+    applyDockCollapsed(collapseState.dock);
+  }
+
+  RAIL_BLOCK_IDS.forEach(id => {
+    const block = byId(id);
+    if (block && collapseState.blocks[id]) block.classList.add("railBlockCollapsed");
+  });
+  workHud.addEventListener("click", event => {
+    const header = event.target.closest(RAIL_BLOCK_HEADER_SELECTOR);
+    if (!header) return;
+    const block = header.closest(RAIL_BLOCK_IDS.map(id => `#${id}`).join(","));
+    if (!block) return;
+    event.stopPropagation();
+    const collapsed = block.classList.toggle("railBlockCollapsed");
+    collapseState.blocks[block.id] = collapsed; saveCollapseState();
+    root.dispatchEvent(new Event("resize"));
+  }, true);
+
+  /* ---------- 10. QA 自检钩子 ---------- */
   function visibleLeafTexts() {
     return Array.from(doc.querySelectorAll("body *")).filter(element => {
       const style = getComputedStyle(element);
@@ -291,6 +395,12 @@
           node: nodePop.classList.contains("show"),
           seg: segPop.classList.contains("show"),
           evidence: evidencePop.classList.contains("show")
+        },
+        /* W6:折叠态自检(同 02 __S3_MIXED_LAYOUT_A.audit() 的 collapse 字段) */
+        collapse: {
+          rail: workHud.classList.contains("is-collapsed"),
+          dock: Boolean(sceneDock && sceneDock.classList.contains("is-collapsed")),
+          blocks: Object.fromEntries(RAIL_BLOCK_IDS.map(id => { const el = byId(id); return [id, Boolean(el && el.classList.contains("railBlockCollapsed"))]; }))
         }
       };
     },
@@ -298,6 +408,14 @@
     showNodePop(index) { renderNodePop(nodeButtons[index]); return nodePop.getBoundingClientRect(); },
     showSegPop(index) { renderSegPop(segments[index], index); return segPop.getBoundingClientRect(); },
     showEvidence() { if (!evidencePop.classList.contains("show")) toggleEvidence(); return evidencePop.getBoundingClientRect(); },
-    hidePops
+    hidePops,
+    toggleRailCollapse() { railCollapseBtn.click(); return workHud.classList.contains("is-collapsed"); },
+    toggleDockCollapse() { if (dockCollapseBtn) dockCollapseBtn.click(); return Boolean(sceneDock && sceneDock.classList.contains("is-collapsed")); },
+    toggleBlockCollapse(id) {
+      const block = byId(id); if (!block) return null;
+      const header = block.querySelector(".dHead,.mapHead,.statsHead,.phaseTitle");
+      if (header) header.click();
+      return block.classList.contains("railBlockCollapsed");
+    }
   });
 })(window);

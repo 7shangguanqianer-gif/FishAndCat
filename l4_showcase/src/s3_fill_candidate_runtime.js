@@ -29,6 +29,12 @@
   const PATH_COLOR = Object.freeze({
     INFEED_HANDOFF: 0xe85d04, LADEN_TRAVEL: 0xff000f, STORE_HANDLE: 0xe7b800, EMPTY_RETURN: 0x7b2cbf
   });
+  /* W6(0720 照 02 语言重做):演示倍率吸附刻度,数值与 s3_ac_runtime.js 的 PLAYBACK_MULTIPLIER_MIN/MAX/
+     PLAYBACK_SNAP_TICKS/RADIUS 同源(同一批用户拍板值);01 无独立 DEFAULT_PLAYBACK_SCALE 概念,
+     倍率直接驱动 state.multiplier,不引入 effectivePlaybackScale 这层抽象。 */
+  const PLAYBACK_MULTIPLIER_MIN = 0.25, PLAYBACK_MULTIPLIER_MAX = 5;
+  const PLAYBACK_SNAP_TICKS = Object.freeze([0.25, 0.5, 1, 2, 3, 5]);
+  const PLAYBACK_SNAP_RADIUS = 0.1;
 
   function invariant(condition, message) {
     if (!condition) throw new Error(message);
@@ -41,6 +47,19 @@
   function ease(value) {
     const p = clamp(value, 0, 1);
     return p * p * (3 - 2 * p);
+  }
+
+  function normalizePlaybackMultiplier(value) {
+    const parsed = Number(value);
+    invariant(Number.isFinite(parsed), "演示倍率非法");
+    const clamped = clamp(parsed, PLAYBACK_MULTIPLIER_MIN, PLAYBACK_MULTIPLIER_MAX);
+    let nearestTick = clamped, nearestDist = Infinity;
+    PLAYBACK_SNAP_TICKS.forEach(tick => {
+      const dist = Math.abs(clamped - tick);
+      if (dist < nearestDist) { nearestDist = dist; nearestTick = tick; }
+    });
+    const snapped = nearestDist <= PLAYBACK_SNAP_RADIUS ? nearestTick : clamped;
+    return Math.round(snapped * 100) / 100;
   }
 
   function payloadFromVerifiedQueue() {
@@ -225,11 +244,16 @@
   const good = gid => { const item = catalog.get(gid); invariant(item, `cargo_catalog 缺少 gid=${gid}`); return item; };
   /* 0717 #28 二轮:热门集合口径同 sim/warehouse_sim.py:400——已放置货按 freq 降序前 1/5
      (稳定排序保放置序),267 件→前 53;三 lane 同一到达队列,集合一致,任取一 lane 计算。 */
-  const hotGids = (() => {
+  /* W6:货位访问排名(第 N/267 名)与热门集合同源同序——复用同一份按 freq 降序、稳定排序的 order,
+     不另起一套排序口径。呼应 02 的 freqRankByGid;01 数据门无 freq_true 字段,同义用 freq(已核实,
+     见 s3_fill_store.js 字段名)。 */
+  const {hotGids, freqRankByGid} = (() => {
     const order = models.get("score").lane.events.map((event, index) =>
       ({gid: event.gid, freq: good(event.gid).freq, index}));
     order.sort((a, b) => b.freq - a.freq || a.index - b.index);
-    return new Set(order.slice(0, Math.max(1, Math.floor(order.length / 5))).map(entry => entry.gid));
+    const hotSet = new Set(order.slice(0, Math.max(1, Math.floor(order.length / 5))).map(entry => entry.gid));
+    const rankByGid = new Map(order.map((entry, rankIndex) => [entry.gid, rankIndex + 1]));
+    return {hotGids: hotSet, freqRankByGid: rankByGid};
   })();
   const targetCardMode = document.documentElement.dataset.s3TargetCard === "1";
   const infeedEntryDistance = Math.abs(INFEED.loadY - INFEED.entryY);
@@ -840,18 +864,39 @@
     byId("fillManaged").textContent = `${frame.managedCount} / 267`; byId("fillTotal").textContent = `${133 + frame.managedCount} / 400`;
     byId("fillViol").textContent = String(state.model.lane.metrics.violations); byId("fillSource").textContent = "SIM";
     byId("xValue").textContent = `${frame.machine.x.toFixed(2)} m`; byId("zValue").textContent = `${frame.machine.z.toFixed(2)} m`; byId("forkValue").textContent = `${forkExtension.toFixed(2)} m`;
+    /* W6:双轴速度并入轴状态行(轨道+数字),口径与 02 s3_ac_runtime.js 同源;F 轴无速度概念,不接。 */
+    [["xVel", frame.machine.vx, VX], ["zVel", frame.machine.vz, VZ]].forEach(([id, value, vMax]) => {
+      const numEl = byId(id), trackEl = byId(`${id}Track`);
+      if (!numEl) return;
+      const speed = Math.abs(value);
+      numEl.textContent = `${speed.toFixed(2)} m/s`;
+      if (trackEl) trackEl.style.setProperty("--vfill", `${Math.min(100, speed / vMax * 100).toFixed(1)}%`);
+    });
     byId("xFill").style.setProperty("--fill", `${frame.machine.x / 19 * 100}%`); byId("zFill").style.setProperty("--fill", `${frame.machine.z / 19 * 100}%`);
     byId("forkFill").style.setProperty("--fill", `${forkExtension / FORK_MAX * 100}%`);
-    /* 0717 #28 二轮(用户拍板):大字行=货物本体全属性(等级色块+名称+等级重量+体积+热门标,
-       数据门真实字段 weight_kg/volume_m3/freq,不虚构);目标格信息整体移交 dock 目标货位卡,不再重复;
-       步骤名由并入本格的七段微条题行唯一承担。 */
-    byId("sceneActionText").innerHTML = frame.idle
+    /* W6(0720 照 02 语言重做):大字行只留步骤+货名(与 02 sceneActionText 同构;七步条已迁回右栏,
+       不再需要在此兼职承担步骤名)。货物全量属性(重量/体积/等级/热冷/热度/排名)下沉到
+       sceneCargoMeta 芯片行——字段口径未变(weight_kg/volume_m3/grade/freq 均为数据门真实字段,
+       01 无 freq_true,同义用 freq;不虚构任何字段)。目标格信息仍归 dock 目标货位卡,不重复。 */
+    const stepIndex = displayStepIndex(frame), stepLabel = stepIndex >= 0 ? DISPLAY_STEPS[stepIndex].label : "";
+    byId("sceneActionText").textContent = frame.idle
       ? (frame.managedCount === 267 ? "连续填满完成 · 267 / 267" : `入库进度 · 已入库 ${frame.managedCount} / 267`)
-      : `<i class="gradeDot ${item.grade}"></i>${item.name} · ${GRADE_LABEL[item.grade]} ${item.weight_kg.toFixed(1)} kg · ${item.volume_m3.toFixed(2)} m³` +
-        (hotGids.has(item.gid) ? '<em class="hotChip">★ 热门前 20%</em>' : "");
+      : `${stepLabel} · ${item.name}`;
     byId("sceneActionMeta").textContent = frame.idle ? "已验证快照 · SIM" : `SIM ${frame.simTime.toFixed(1)} s`;
-    byId("sceneCargoMeta").textContent = frame.idle ? `${133 + frame.managedCount} / 400 总占用 · 违规 0` :
-      `访问频次 ${item.freq.toFixed(2)} · 第 ${frame.eventIndex + 1} / 267 件 · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}`;
+    const metaHost = byId("sceneCargoMeta");
+    if (frame.idle) {
+      metaHost.textContent = `${133 + frame.managedCount} / 400 总占用 · 违规 0`;
+    } else {
+      const isHot = hotGids.has(item.gid);
+      const rank = freqRankByGid.get(item.gid);
+      const rankText = rank ? `第 ${rank}/267 名` : "名次未知";
+      metaHost.innerHTML = `<span class="cgChip cgWeight">${item.weight_kg.toFixed(1)} kg</span>` +
+        `<span class="cgChip cgVolume">${Number(item.volume_m3).toFixed(2)} m³</span>` +
+        `<span class="cgChip cgGrade-${item.grade}">${GRADE_LABEL[item.grade] || item.grade}</span>` +
+        `<span class="cgChip ${isHot ? "cgHot" : "cgCold"}">${isHot ? "热门件 · 前20%" : "非热门"}</span>` +
+        `<span class="cgRank">访问频次 ${item.freq.toFixed(2)} · ${rankText}</span>` +
+        `<span class="cgTime">第 ${frame.eventIndex + 1} / 267 件 · 归属 ${OWNER_LABEL[frame.cargoOwner] || frame.cargoOwner}</span>`;
+    }
     Array.from(byId("fillBookmarkButtons").querySelectorAll("button")).forEach(button =>
       button.setAttribute("aria-current", String(Number(button.dataset.count) === frame.managedCount && frame.idle)));
   }
@@ -969,9 +1014,10 @@
         glowOpacity: Number(targetFx.glowMat.opacity.toFixed(3)),
         glowPosition: targetFx.glow.position.toArray()} : null,
       cargoCard: {headline: byId("sceneActionText").textContent, meta: byId("sceneCargoMeta").textContent,
-        hotChipShown: Boolean(document.querySelector("#sceneActionText .hotChip")),
+        /* W6:热门标已随货物属性行下沉到 sceneCargoMeta(.cgHot),不再挂 #sceneActionText */
+        hotChipShown: Boolean(document.querySelector("#sceneCargoMeta .cgHot")),
         hotMatches: lastFrame && !lastFrame.idle ?
-          Boolean(document.querySelector("#sceneActionText .hotChip")) === hotGids.has(lastFrame.event.gid) : true,
+          Boolean(document.querySelector("#sceneCargoMeta .cgHot")) === hotGids.has(lastFrame.event.gid) : true,
         hotSetSize: hotGids.size},
       targetCard: byId("targetCard") ? {state: byId("targetCardState").textContent,
         slotText: byId("targetCardSlot").textContent, detail: byId("targetCardDetail").textContent,
@@ -1014,8 +1060,9 @@
 
   byId("strategySelect").addEventListener("change", event => setAlgorithm(event.target.value));
   byId("pauseMotion").addEventListener("click", togglePause); byId("replayTrace").addEventListener("click", () => seekBookmark(0));
-  byId("resetCamera").addEventListener("click", () => { restoreDefaultCamera(); if (lastFrame) { renderer.render(scene, camera); layoutTarget(lastFrame); } });
-  byId("playbackSpeed").addEventListener("input", event => { state.multiplier = clamp(Number(event.target.value), .25, 2); byId("playbackValue").textContent = `${state.multiplier.toFixed(2)}×`; });
+  /* W6(0720,拍板同 02 W1-8):「总览」相机复位按钮与其 DOM 一并删除;resetCamera() 仍留作
+     QA 程序化钩子(见下方公开 API,__S3_FILL_QA.resetCamera() 供脚本调用)。 */
+  byId("playbackSpeed").addEventListener("input", event => { state.multiplier = normalizePlaybackMultiplier(event.target.value); byId("playbackValue").textContent = `${state.multiplier.toFixed(2)}×`; });
   byId("exp").addEventListener("click", exportFrame);
   byId("fillBookmarkButtons").addEventListener("click", event => { const button = event.target.closest("button[data-count]"); if (button) seekBookmark(Number(button.dataset.count)); });
   controls.addEventListener("change", () => { if (lastFrame) { renderer.render(scene, camera); layoutTarget(lastFrame); } });
@@ -1047,7 +1094,7 @@
       invariant(segment, "seekEvent 段不存在"); state.elapsed = segment.d0 + clamp(Number(progress), 0, 1) * segment.duration;
       state.idleCount = null; state.paused = true; state.lastNow = null; renderFrame(currentFrame()); return snapshot();
     },
-    setPlaybackMultiplier(value) { state.multiplier = clamp(Number(value), .25, 2); byId("playbackSpeed").value = String(state.multiplier); byId("playbackValue").textContent = `${state.multiplier.toFixed(2)}×`; return state.multiplier; },
+    setPlaybackMultiplier(value) { state.multiplier = normalizePlaybackMultiplier(value); byId("playbackSpeed").value = String(state.multiplier); byId("playbackValue").textContent = `${state.multiplier.toFixed(2)}×`; return state.multiplier; },
     resetCamera() { restoreDefaultCamera(); renderFrame(currentFrame()); return snapshot(); },
     setTopologyCamera() { setTopologyCamera(); return snapshot(); }
   });
