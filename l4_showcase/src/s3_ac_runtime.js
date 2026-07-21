@@ -45,6 +45,14 @@
   const PROFILE_SCENARIO = Object.freeze({uniform: "E01", skew: "E02", heavy: "E03"});
   /* T5 · 三档机理词单一来源:分段按钮小字、#tierBadge 文案共用同一张表,防止两处各写一份后语言漂移。 */
   const TIER_MECHANISM_LABEL = Object.freeze({1: "匀速运动学", 2: "梯形加减速", 3: "加减速+故障+潮汐"});
+  /* W1-5+W1-6:tierSeg 按钮上的机理小字(原 <small>)移入悬浮解释,顶栏改单行;这里是三档悬浮文案
+     的唯一来源,与 TIER_MECHANISM_LABEL 分工——后者是徽章短词,这里是完整一句话解释。 */
+  const TIER_TOOLTIP = Object.freeze({
+    1: "匀速运动学:只验证数据模型的时间结构,无动力学细节;用于建立基线",
+    2: "梯形加减速:行走/升降按加减速度限幅,贴近真机动力学",
+    3: "综合情景:加减速 + 故障注入(MTBF/MTTR)+ 到达潮汐,最接近真实运行;本页默认档"
+  });
+  const PROFILE_TOOLTIP = "均匀：各货访问频率接近，无明显热门；偏斜：少数高频件（帕累托型），热区聚集、算法红利最大；重货：重件占比高，承重约束主导";
   const OWNER_LABEL = Object.freeze({
     QUEUE: "入口队列", CARRIER_IN: "载货台·入库", RACK: "货架库存",
     CARRIER_OUT: "载货台·出库", OUTFEED: "出口输送", SCANNED: "扫码确认",
@@ -55,7 +63,11 @@
   const DEFAULT_SIM_RATE = 80;
   /* 真实 VX/VZ/AX/AZ 不变；此比例只把长 trace 压缩为可辨识的画面时间。2×≈旧版 0.55 的节奏。 */
   const DEFAULT_PLAYBACK_SCALE = 0.22;
-  const PLAYBACK_MULTIPLIER_MIN = 0.25, PLAYBACK_MULTIPLIER_MAX = 2.0;
+  /* W1-8(橙框下,拍板「速度滑条 0.25-5」):上限从 2.0 放开到 5;吸附改「就近刻度 ±0.1 半径内才吸附,
+     否则连续跟手」,不再是「无脑取整到 0.25 倍数」——旧行为在 1.13 这类值上会跳到 1.25,新行为原样保留 1.13。 */
+  const PLAYBACK_MULTIPLIER_MIN = 0.25, PLAYBACK_MULTIPLIER_MAX = 5;
+  const PLAYBACK_SNAP_TICKS = Object.freeze([0.25, 0.5, 1, 2, 3, 5]);
+  const PLAYBACK_SNAP_RADIUS = 0.1;
   /*
      演示时间与仿真时间严格分层：t0/t1、motionPoint 与 KPI 永远使用原始 sim；
      下列常量只决定观众看到多久。主行程采用同类单调映射，避免旧版 /80 后
@@ -91,7 +103,14 @@
   function normalizePlaybackMultiplier(value) {
     const parsed = Number(value);
     invariant(Number.isFinite(parsed), "演示倍率非法");
-    return clamp(Math.round(parsed * 4) / 4, PLAYBACK_MULTIPLIER_MIN, PLAYBACK_MULTIPLIER_MAX);
+    const clamped = clamp(parsed, PLAYBACK_MULTIPLIER_MIN, PLAYBACK_MULTIPLIER_MAX);
+    let nearestTick = clamped, nearestDist = Infinity;
+    PLAYBACK_SNAP_TICKS.forEach(tick => {
+      const dist = Math.abs(clamped - tick);
+      if (dist < nearestDist) { nearestDist = dist; nearestTick = tick; }
+    });
+    const snapped = nearestDist <= PLAYBACK_SNAP_RADIUS ? nearestTick : clamped;
+    return Math.round(snapped * 100) / 100;
   }
 
   function effectivePlaybackScale(multiplier) {
@@ -961,6 +980,9 @@
     let lastStockGradeCounts = {heavy: 0, mid: 0, light: 0};
     /* 0717 #26-2 热门集合:cargo_catalog[].freq_true 降序前 1/5,随每条 trace 在 setTrace 内重算。 */
     let hotGids = new Set();
+    /* W1-2(蓝框,货物全量信息行):gid→热门名次(1-based,freq_true 降序),随 setTrace 与 hotGids/
+       freqRank 同批重算;cargoTotalCount 是当批 trace 的货物总数,用于「第 N/总数 名」渲染。 */
+    let freqRankByGid = new Map(), cargoTotalCount = 0;
 
     function good(gid) {
       const value = catalog.get(gid);
@@ -1860,14 +1882,21 @@
         `1×展示补段 ${wallSeconds.toFixed(1)} s · 不计 KPI`;
       /* 0719 修:去掉与步骤名语义重复的 owner 后缀(货物位置详情已在 sceneCargoMeta) */
       byId("sceneActionText").textContent = cargoGood ? `${visibleStepLabel} · ${cargoGood.name}` : `${visibleStepLabel} · ${ownerText}`;
-      /* 0719 用户要求货物信息更醒目:重量/等级/热冷芯片化(热门=freq_true 前 20%,与热度图同口径;
-         catalog 无体积字段,不编)。空载帧无货物,只显时长口径。 */
+      /* 0719 用户要求货物信息更醒目:重量/等级/热冷芯片化(热门=freq_true 前 20%,与热度图同口径)。
+         W1-2(蓝框「尽可能详细」,0720):追加体积(catalog 100% 有 volume_m3 字段,0719 旧注释「无体积
+         字段不编」是侦察前的误判,已核实作废)+ 热度原始分 + 热门排名,读同一 freqRank 家族数据
+         (freqRankByGid 与 3D/2D 热力图同一 order 排序,秩口径一致,不另起一套)。空载帧无货物,
+         只显时长口径,不变。 */
       const metaHost = byId("sceneCargoMeta");
       if (cargoGood) {
         const isHot = hotGids.has(frame.cargoGid);
+        const rank = freqRankByGid.get(frame.cargoGid);
+        const rankText = rank ? `第 ${rank}/${cargoTotalCount} 名` : "名次未知";
         metaHost.innerHTML = `<span class="cgChip cgWeight">${cargoGood.weight_kg.toFixed(1)} kg</span>` +
+          `<span class="cgChip cgVolume">${Number(cargoGood.volume_m3).toFixed(2)} m³</span>` +
           `<span class="cgChip cgGrade-${cargoGood.grade}">${GRADE_LABEL[cargoGood.grade] || cargoGood.grade}</span>` +
           `<span class="cgChip ${isHot ? "cgHot" : "cgCold"}">${isHot ? "热门件 · freq 前20%" : "非热门"}</span>` +
+          `<span class="cgRank">热度 ${Number(cargoGood.freq_true).toFixed(1)} · ${rankText}</span>` +
           `<span class="cgTime">${timingText}</span>`;
       } else metaHost.textContent = timingText;
       byId("sceneActionMeta").textContent = `${frame.faulted ? "故障保持" : `步骤 ${STEP_INDEX[frame.operationKey] + 1}/7`} · 缩时演示 · SIM`;
@@ -1886,6 +1915,10 @@
          order 已按 freq 降序,index 0=最热→t=1,末位=最冷→t=0。B层近 I/O 热区随之重算。 */
       const denom = order.length > 1 ? order.length - 1 : 1;
       freqRank = new Map(order.map((e, index) => [e.gid, order.length > 1 ? 1 - index / denom : .5]));
+      /* W1-2:名次表与上面的秩归一化同源 order(已按 freq_true 降序、同值按原 index 稳定排序),
+         直接取 1-based 位置即「热门排名」,不再另起一套排序。 */
+      freqRankByGid = new Map(order.map((e, index) => [e.gid, index + 1]));
+      cargoTotalCount = order.length;
       updateHotZone(trace);
       trace.events.forEach(event => { good(event.inbound_gid); good(event.outbound_gid); });
       pathSignature = ""; clearPaths(); renderDecision(trace); renderTraceStats(trace);
@@ -2108,23 +2141,61 @@
     /* T5 · 三档分段按钮:替 #tierSelect 顶栏可见项;value 与 change 事件仍以 tierSelect 为真相源与重载入口,
        分段按钮只是其视图 + 输入代理(点击=改 value+派发 change,复用既有 ["tierSelect",...].forEach 重载监听)。
        aria-checked 初值按 tierSelect 当前 value 计算(冷启动即 T3),后续由 bootstrap() 的 syncTierSegs 保活。 */
+    /* W1-6(橙框上,悬浮解释):通用「自定义浮层」hover/focus tooltip,复用 metricChip(createBrowserRenderer
+       作用域内,本函数摸不到)同一套 position:fixed 定位公式——脱离 #workHud/#topbarA 的 overflow
+       裁剪链(0719 tipBubble 被裁的教训,见样式区注释)。trigger 可以是任意元素(tierSeg 分段按钮 /
+       货物画像 ⓘ 图标);不用原生 title 属性,规避浏览器系统级 hover 延迟。
+       placement="below" 用于顶栏控件(顶栏贴视口顶部,浮层理应朝下开,避免出屏)。
+       本函数只在 createRuntimeDom 内用,故就地定义,不与 createBrowserRenderer 内 metricChip
+       的 setOpen 共享实现(两个函数是同级作用域,互相摸不到对方闭包变量)。 */
+    function attachFixedTooltip(trigger, text, placement = "below") {
+      const tip = doc.createElement("span"); tip.className = "tipBubble"; tip.setAttribute("role", "tooltip"); tip.textContent = text;
+      trigger.classList.add("hasFixedTip"); trigger.append(tip);
+      const setOpen = open => {
+        trigger.classList.toggle("is-open", open);
+        if (!open) return;
+        const rect = trigger.getBoundingClientRect(), tipWidth = tip.getBoundingClientRect().width || 220;
+        if (placement === "below") {
+          tip.style.left = `${Math.max(8, Math.min(root.innerWidth - tipWidth - 8, rect.left))}px`;
+          tip.style.top = `${rect.bottom + 6}px`;
+        } else {
+          tip.style.left = `${Math.max(8, rect.left - tipWidth - 12)}px`;
+          tip.style.top = `${Math.max(8, rect.top - 4)}px`;
+        }
+      };
+      trigger.addEventListener("mouseenter", () => setOpen(true));
+      trigger.addEventListener("mouseleave", () => { if (doc.activeElement !== trigger) setOpen(false); });
+      trigger.addEventListener("focus", () => setOpen(true));
+      trigger.addEventListener("blur", () => setOpen(false));
+      trigger.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+        event.preventDefault(); setOpen(false); trigger.blur();
+      });
+      return tip;
+    }
+
     const tierSelectEl = doc.getElementById("tierSelect");
     if (tierSelectEl) {
       const TIER_SEG_PRIMARY = {1: "档1 · 数据模型", 2: "档2 · 加减速", 3: "档3 · 综合情景"};
-      const TIER_SEG_INFO = [1, 2, 3].map(tier => ({tier: String(tier), primary: TIER_SEG_PRIMARY[tier], mech: TIER_MECHANISM_LABEL[tier]}));
+      const TIER_SEG_INFO = [1, 2, 3].map(tier => ({tier: String(tier), primary: TIER_SEG_PRIMARY[tier]}));
       const tierSegs = doc.createElement("div"); tierSegs.id = "tierSegs"; tierSegs.className = "tierSegs";
       tierSegs.setAttribute("role", "radiogroup"); tierSegs.setAttribute("aria-label", "拟真档位");
       TIER_SEG_INFO.forEach(info => {
         const seg = doc.createElement("button"); seg.type = "button"; seg.className = "tierSeg";
         seg.dataset.tier = info.tier; seg.setAttribute("role", "radio");
         seg.setAttribute("aria-checked", String(tierSelectEl.value === info.tier));
+        /* W1-5:单行,只留主词;机理小字改 W1-6 悬浮解释(见 attachFixedTooltip) */
         const primary = doc.createElement("b"); primary.textContent = info.primary;
-        const mech = doc.createElement("small"); mech.textContent = info.mech;
-        seg.append(primary, mech); tierSegs.append(seg);
+        seg.append(primary); tierSegs.append(seg);
+        attachFixedTooltip(seg, TIER_TOOLTIP[info.tier], "below");
       });
       const tierLabel = tierSelectEl.closest("label");
       (tierLabel || tierSelectEl).insertAdjacentElement("afterend", tierSegs);
     }
+    /* W1-6:货物画像 ⓘ 图标悬浮解释(静态 HTML 里的 #profileInfoIcon,选项 title 属性已在 02 html
+       内联标注,这里只补自定义浮层——原生 title 有系统延迟,三档 tooltip 已弃用同理弃用于此)。 */
+    const profileInfoIcon = doc.getElementById("profileInfoIcon");
+    if (profileInfoIcon) attachFixedTooltip(profileInfoIcon, PROFILE_TOOLTIP, "below");
   }
 
   /* T5 · 证据中心:单一弹层承接旧 evidenceDock(本页证据链)+ comparisonLab(S1 受控对照)两套内容,
@@ -2571,7 +2642,9 @@
 
     ["strategySelect", "tierSelect", "profileSelect"].forEach(id => listen(byId(id), "change", () => { selectQuery(queryFromControls()); }));
     listen(byId("pauseMotion"), "click", togglePause); listen(byId("replayTrace"), "click", replay);
-    listen(byId("resetCamera"), "click", () => { setCamera(); }); listen(byId("exp"), "click", exportFrame);
+    /* W1-8:总览按钮已从 sceneTools 移除(DOM 与本行监听同步删,镜头复位随按钮退役);
+       setCamera() 仍是内部函数(初始建镜头用),__S3_QA.resetCamera() 仍留作程序化 QA 钩子。 */
+    listen(byId("exp"), "click", exportFrame);
     listen(byId("playbackSpeed"), "input", event => { setPlaybackMultiplier(event.target.value); });
 
     /* T5 · 三档分段按钮:点击=改 tierSelect.value+派发 change(复用上面的重载监听),不越权直接 selectQuery。 */
@@ -2697,9 +2770,15 @@
         invariant(state.trace && state.timeline, "seekFault 前 trace 尚未就绪");
         const faults = state.timeline.segments.filter(segment => segment.phaseName === "FAULT_RECOVERY");
         invariant(Number.isInteger(faultIndex) && faultIndex >= 0 && faultIndex < faults.length, "seekFault faultIndex 越界");
-        const segment = faults[faultIndex]; state.elapsed = (segment.d0 + segment.d1) / 2; state.lastNow = null; state.paused = true;
-        byId("pauseMotion").textContent = "继续"; byId("pauseMotion").setAttribute("aria-pressed", "true");
-        rendererBridge.renderFrame(state.trace, deriveFrame(state.trace, state.timeline, state.elapsed));
+        /* W1-4(黑框②,拍板统一语义「周期起点+自动播放」):旧版跳到故障段中点并暂停,评委只看到
+           一帧静止的故障中段;改为跳到该故障所在周期的 LOAD_IN 起点(progress 0)并恢复播放,
+           完整看「排队→入库→故障→停机→恢复」全程。复用 seek() 的落点计算(避免重复 group 查找逻辑),
+           再显式把 paused 改回 false——seek() 本身语义是"暂停查看快照",故障口径不同,故障卡/红点/
+           模型故障 chip 三处调用方都经这一个函数,不必各自改,口径自动统一。 */
+        const segment = faults[faultIndex];
+        root.__S3_QA.seek(segment.cycleIndex, "LOAD_IN", 0);
+        state.paused = false; state.lastNow = null;
+        byId("pauseMotion").textContent = "暂停"; byId("pauseMotion").setAttribute("aria-pressed", "false");
         syncPauseHint();
         return root.__S3_QA.snapshot();
       },

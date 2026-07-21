@@ -562,12 +562,19 @@
      同选择器特异性下正确覆盖(两者常同时挂在同一 span 上,源序决定胜出方) */
   #sceneCargoMeta .cgChip{padding:2px 7px;border-radius:3px;font:700 9.5px/1.4 "Microsoft YaHei",sans-serif;white-space:nowrap}
   #sceneCargoMeta .cgWeight{font:800 14px/1 Consolas,"JetBrains Mono",monospace;color:#16191d}
+  /* W1-2:体积字号与重量同档(13-14px/800),但用稍浅色阶区分主次(重量=主键,体积=伴随量) */
+  #sceneCargoMeta .cgVolume{font:800 14px/1 Consolas,"JetBrains Mono",monospace;color:#374854}
   #sceneCargoMeta .cgGrade-heavy{background:#102a43;color:#fff}
   #sceneCargoMeta .cgGrade-mid{background:#006bb6;color:#fff}
   #sceneCargoMeta .cgGrade-light{background:#42c7e6;color:#0b1f33}
   #sceneCargoMeta .cgHot{background:#fdecc8;color:#8a5b00;box-shadow:inset 0 0 0 1px #e7b800}
   #sceneCargoMeta .cgCold{background:#eef1f4;color:#52616c}
-  #sceneCargoMeta .cgTime{font:400 9px/1.3 Consolas,monospace;color:#5d6972;width:100%}
+  /* W1-2:热度原始分 + 热门排名,紧跟徽章后、时长口径前;不强制 100% 宽度,让它能与徽章同行流动换行 */
+  #sceneCargoMeta .cgRank{font:700 9px/1.3 Consolas,monospace;color:#5d6972;white-space:nowrap}
+  /* W1-2 修:width:100% 曾强制时长口径独占一整行(规格图示是一行流式文本,不分段换行);
+     现在这一行前面又多了体积/热度/排名三项,继续强制整行只会多吃一行高度、加剧裁切——
+     去掉后随其余 chip 一起 flex-wrap 自然流动,按最短总高排布。 */
+  #sceneCargoMeta .cgTime{font:400 9px/1.3 Consolas,monospace;color:#5d6972}
   /* 0719 白化:深色遥测块与 dock 白底顶撞(用户指正「统一成白色」);drawSpeed 画布用色本就浅底友好,只改壳 */
   /* 0719d:速度 canvas 退役(信息并入遥测网格),遥测块单列 */
   #sceneTelemetry{position:static;width:auto;padding:6px 12px;display:grid;grid-template-columns:1fr;gap:0;
@@ -605,11 +612,13 @@
   #sceneTools{position:absolute;z-index:7;right:calc(var(--rail-w) + 18px);bottom:calc(var(--scene-dock-h) + var(--scene-dock-bottom) + 12px);
     width:auto;display:flex;align-items:center;gap:7px;padding:4px 8px;background:#ffffffd9;
     border:1px solid #aeb8bf;box-shadow:0 4px 15px #17202b1f;color:#26343e;pointer-events:auto}
-  #sceneTools .toolHead{display:none} /* 浮条从简,「总览」按钮 + 滑条自解释;文案保留 DOM 不删 */
+  #sceneTools .toolHead{display:none} /* 浮条从简,滑条自解释;文案保留 DOM 不删 */
   #sceneTools .toolRow{display:flex;align-items:center;gap:7px;margin:0}
+  /* W1-8:总览按钮已删(DOM 与 runtime listener 同步清),.toolRow 只剩滑条+读数;
+     button 规则留作历史死值(0 命中,无害),不删——遵循本文件既有的分层容错惯例。 */
   #sceneTools button{height:24px;padding:0 9px;font:700 9px/1 "Microsoft YaHei",sans-serif;border:1px solid #17365d;background:#fff;color:#17365d;cursor:pointer}
   #sceneTools button:hover{background:#17365d;color:#fff}
-  #sceneTools input[type="range"]{width:84px;min-height:20px;accent-color:#17365d}
+  #sceneTools input[type="range"]{width:100px;min-height:20px;accent-color:#17365d}
   #sceneTools #playbackValue{min-width:38px;font:800 9px/1 Consolas,monospace;color:#17365d;text-align:right}
   #sceneTools .scaleEnds{display:none}#sceneTools .toolNote{display:none}
   @media(max-width:1380px){
@@ -619,7 +628,8 @@
   }
   @media(max-width:1180px){#sceneDock{grid-template-columns:minmax(220px,1.2fr) minmax(190px,1fr) minmax(160px,.8fr)}
     #reserveRuleBadge{gap:4px}#reserveRuleBadge i{width:11px}#reserveRuleBadge span{font-size:6.5px}}
-  @media(max-height:780px){#viewport{--scene-dock-h:70px;--scene-dock-bottom:8px}#sceneCaption{padding-top:4px;padding-bottom:4px}#speed{height:36px}}
+  /* W1-2 修:矮视口原 70px 更挤,同理按比例放宽,避免货物信息行在窄高窗口下裁得更狠 */
+  @media(max-height:780px){#viewport{--scene-dock-h:96px;--scene-dock-bottom:8px}#sceneCaption{padding-top:4px;padding-bottom:4px}#speed{height:36px}}
 
   /* 0715 Task17：方形货位图不再被拉成长卡；释放出的高度用于真实 SIM 时长标尺。 */
   /* P2b:Task17 grid 三行死——rail 已被 A 壳 flex 化(中和器对手) */
@@ -682,22 +692,27 @@
   #topbarA #railHead h1{font-size:15px;white-space:nowrap}
   #topbarA #railHead .eyebrow{font-size:7.5px}
   #topbarA #railHead .matrix{display:none}
-  /* 0719 顶栏革新:控件统一 26px 高、间距节律 10px、组间分隔线;状态徽章(已校验/PLC)去按钮观感 */
+  /* W1-5(橙框「彻底重新设计」):顶栏所有控件统一 30px 高度盒、垂直居中同一基线。
+     旧值 select 24px / runtimeActions 26px / tierSeg 双行~34-38px(无显式高,由两行内容撑高)/
+     traceLoadState、plcFeasBadge 纯 padding 撑高(~20-22px)——五种不同高度并排,顶栏看着"上上下下"。
+     统一后:每个叶子控件本体都是 30px 高的盒子,内部 flex 居中;--topbar-h:40px 留 5px 上下呼吸。
+     数学上 align-items:center 在任意层级嵌套下都会让叶子控件的几何中心重合于最外层 #topbarA 的
+     中心线(这本来就已经是 center),真正的视觉修复是"盒高一致"本身——消除参差的上下边缘。 */
   #topbarA #runtimeControls{display:flex;align-items:center;gap:12px;flex:1;min-width:0;border:0;padding:0;background:transparent}
   /* 0719d(绿框):情景配置组容器化——三个 label+select 融为一个灰底单元,select 去独立边框;裸珠子散排消除 */
   #topbarA .scenarioGroup{display:flex;align-items:center;min-width:0;background:#f2f4f6;border:1px solid #dde3e8;padding:2px 6px}
   #topbarA .scenarioGroup label+label{border-left:1px solid #d6dde2;margin-left:9px;padding-left:9px}
-  #topbarA #runtimeControls label{display:flex;align-items:center;gap:5px;font-size:8.5px;white-space:nowrap;color:#59656e;font-weight:700}
-  #topbarA #runtimeControls select{width:auto;min-width:110px;height:24px;border:0;background:transparent;font-size:9.5px;padding:0 4px;color:#17202b;font-weight:700}
+  #topbarA #runtimeControls label{display:flex;align-items:center;gap:5px;height:30px;font-size:8.5px;white-space:nowrap;color:#59656e;font-weight:700}
+  #topbarA #runtimeControls select{width:auto;min-width:110px;height:30px;border:0;background:transparent;font-size:9.5px;padding:0 4px;color:#17202b;font-weight:700}
   /* 按钮分组:播放组(暂停/回放)| 证据组(导出/本屏/对照),组间 1px 分隔;「暂停/继续」为主按钮深蓝实底 */
   #topbarA #runtimeActions{margin-left:auto;display:flex;align-items:center;gap:9px;grid-column:auto}
   #topbarA #runtimeActions .btnSet{display:flex;align-items:center;gap:5px}
   #topbarA #runtimeActions .btnSet+.btnSet{border-left:1px solid #d6dde2;padding-left:10px}
-  #topbarA #runtimeActions button{height:26px;min-height:26px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
+  #topbarA #runtimeActions button{height:30px;min-height:30px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
   #topbarA #runtimeActions button:hover{background:#17365d;color:#fff;border-color:#17365d}
   #topbarA #runtimeActions #pauseMotion{background:#17365d;color:#fff;border-color:#17365d;font-weight:700} /* 3id 压过通用按钮规则 */
   #topbarA #runtimeActions #pauseMotion:hover{background:#0f2440;border-color:#0f2440}
-  #topbarA #traceLoadState{padding:5px 9px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap}
+  #topbarA #traceLoadState{height:30px;display:flex;align-items:center;padding:0 9px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap;box-sizing:border-box}
   #topbarA #traceErrorHost{position:absolute;top:100%;left:0;right:0;z-index:30}
   /* 0720 版B 转正:从头回放/导出3D帧删(用户拍板);证据两键(本屏证据/对照证据)并入单键「证据中心」——
      四者 DOM 与监听原样保留只隐藏,弹层彻底重构留待 T5(#openEvidenceCenter 见 s3_ac_runtime.js 新增) */
@@ -723,8 +738,14 @@
      ② 640 行旧规则带 flex:none!important / height:auto!important / aspect-ratio:1/1,
         会压掉本处 A 壳规则(实测计算样式一直是 flex:0 0 auto、aspectRatio:1/1),故须同以 !important 覆盖。
      ③ 上一版这段注释写成了两个 /* 块,第二段变成裸文本把规则一起吞掉——CSS 静默失效,只有读计算样式才发现。 */
-  #slotMap{width:100%;height:auto;max-width:100%;aspect-ratio:auto;
-    min-height:0;flex:1 1 0;margin:4px 0 0;align-self:stretch} /* P3:对手(旧 !important 组)gen3 已删,4 个 important 全摘 */
+  /* W1-3(绿框,2D 撑满):侦察证实格子比例 2D/3D 均 1:1 无失配,只是 canvas 显示区被 width:100%
+     拉成宽屏(311×208 实测),方阵居中后两侧空 ~37%。改 aspect-ratio:1 让 canvas 自身变正方形——
+     flex:1 1 0 不动(高度仍由列向 flex 分配决定,即"高度主导"),width 从 100% 改 auto 交给
+     aspect-ratio 从高度反推,align-self 从 stretch 改 center 做水平居中。max-width:100% 兜底
+     窄栏场景(高度反推的宽度超容器宽时退化为宽度受限)。drawSlotMap 的 size=min(w,h) 居中逻辑
+     不动;它按 canvas.getBoundingClientRect() 逐帧取值,CSS 一变它自动跟着方形走,无需同步。 */
+  #slotMap{width:auto;height:auto;max-width:100%;aspect-ratio:1/1;
+    min-height:0;flex:1 1 0;margin:4px 0 0;align-self:center} /* P3:对手(旧 !important 组)gen3 已删,4 个 important 全摘 */
   #phaseRail{order:4;flex:none;position:static;width:auto}
 
   /* -- 作业周期进度轴:里程碑节点 0/25/50/75/100(几何仿 01 fillBookmarks;语义=入出交替推进)
@@ -776,7 +797,16 @@
   #s3MapOverlay .mapDockClose{position:absolute;right:8px;top:6px;width:26px;height:26px;border:1px solid #18232c;background:#fff;
     color:#18232c;font:500 17px/1 Arial,sans-serif;cursor:pointer}
   #s3MapOverlay #slotMapWrap{flex:none;order:0;min-height:0;cursor:default;border:0;padding:0;overflow:visible;width:auto} /* P3:specificity 本就胜出,important 冗余摘 */
-  #s3MapOverlay #slotMap{min-height:0;margin:8px auto 0;max-height:none} /* P3:与 667 同值,important 冗余摘 */
+  /* W1-3 修:base #slotMap 规则(见 A 壳段)靠"高度主导"(flex:1 1 0 从列向 flex 分配的可用高反推宽);
+     overlay 里 slotMapWrap 是 flex:none 的普通块级子级,mapDock 没有显式高度,列向 flex 没有可分配的
+     "剩余空间"可言,flex:1 1 0 在此退化成 0——实测 canvas 变 0×0(经截图脚本抓到,不是猜的)。
+     overlay 唯一可靠的定长维度是宽(mapDock 的 width:min(78vh,720px) 是显式值),故这里反过来
+     "宽度主导":width:100% 取 slotMapWrap 的定长内容宽,aspect-ratio:1/1 从宽反推高,
+     align-self:stretch 覆盖 base 的 center(此处不需要水平居中,宽本来就撑满)。 */
+  /* flex 必须从 base 的 "1 1 0" 改掉:flex-basis:0 在列向 flex 里把主轴(高)判定成"已有定值(0)",
+     aspect-ratio 只补"auto"的那一维,基数非 auto 时它没东西可算,于是宽 642 但高仍 0(实测抓到)。
+     改 flex:none 后高度才真正 auto,交给 aspect-ratio 从已定宽反推。 */
+  #s3MapOverlay #slotMap{width:100%;height:auto;aspect-ratio:1/1;flex:none;align-self:stretch;min-height:0;margin:8px auto 0;max-height:none} /* P3:与 667 同值,important 冗余摘 */
 
   /* -- 0719 本屏证据叠层:承接从左栏降级下来的「本屏证据链」+「S1 受控对照」(ISA-101 L2-L3 按需层) -- */
   #evidenceDock{position:fixed;z-index:64;inset:0;display:flex;align-items:center;justify-content:center;background:#17202b73}
@@ -813,7 +843,10 @@
   #respSpark .sparkHead b{font-size:9.5px;color:#16191d}
   #respSpark .sparkHead span{font:7.5px/1 Consolas,"Microsoft YaHei",monospace;color:#65717c}
   #respSpark canvas{display:block;width:100%;height:26px}
-  #cycleAxisTrack .axisFaultDot{position:absolute;top:10px;width:15px;height:15px;margin-left:-7.5px;padding:0;
+  /* W1-4(黑框①):红点 top 曾按旧轴几何写死 10px;0720 版B 把轨道线/按钮中心校准到 top:4px+15px高
+     (中心 11.5px,见 #cycleAxisTrack::before 与 button 规则)后红点没跟着改,中心落到 17.5px——
+     偏轴线下方 6px。红点也是 15px 圆,直接同按钮 top:4px 即中心对齐。 */
+  #cycleAxisTrack .axisFaultDot{position:absolute;top:4px;width:15px;height:15px;margin-left:-7.5px;padding:0;
     border:2px solid #fff;border-radius:50%;background:#c62828;box-shadow:0 0 0 2px #c62828;cursor:pointer}
   #cycleAxisTrack .axisFaultDot:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
   #cycleAxisTrack .axisFaultDot i{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
@@ -821,7 +854,8 @@
   .metricHelp .statCaliber{display:block;margin-top:2px;font:400 6.5px/1.2 "Microsoft YaHei",sans-serif;color:#8a6d00;font-style:normal}
   .statFinger{margin-top:4px;font:7.5px/1.3 Consolas,monospace;color:#65717c}
   .metricHelp.statJump{cursor:pointer;box-shadow:inset 0 0 0 1px #c6282833}
-  #plcFeasBadge{margin-left:2px;padding:5px 9px;border:0;font-size:8.5px;color:#4e5a64;background:#eef1f4;white-space:nowrap;align-self:center;flex:none} /* 0719:去虚线边框(曾被误读为可点按钮) */
+  /* W1-5:高度纳入顶栏 30px 统一盒(见顶栏基线重排注释) */
+  #plcFeasBadge{margin-left:2px;height:30px;display:flex;align-items:center;padding:0 9px;border:0;font-size:8.5px;color:#4e5a64;background:#eef1f4;white-space:nowrap;align-self:center;flex:none;box-sizing:border-box} /* 0719:去虚线边框(曾被误读为可点按钮) */
   #evFaultCard{margin-top:12px;background:#fff7f5;border:1px solid #e2b8b0;border-left:3px solid #c62828;padding:8px 10px;font-size:9px;color:#3a2b28}
   #evFaultCard[hidden]{display:none}
   #evFaultCard b{display:block;font-size:10px;color:#8e1f14;margin-bottom:3px}
@@ -870,7 +904,12 @@
   #opsEvidence .oeNote{margin-top:4px;font-size:6.5px;line-height:1.45;color:#8a949c}
 
   /* 0719 收敛(用户选甲):dock 底带转正为唯一版;rail/axis 两分支删,?s3b 机制退役 */
-  #viewport{--scene-dock-h:96px}
+  /* W1-2 修(实测抓到的裁切):96px 是 0719 定的值,当时 #sceneCargoMeta 只有 3 个徽章 + 1 行时长,
+     scrollHeight 能塞进单行留白里。W1-2 追加体积+热度排名两项后 scrollHeight 实测到 51px
+     (getBoundingClientRect 却只报 20.7px——父级 #sceneDock>* 的 height:100%+overflow:hidden
+     把超出部分整段裁没了,肉眼完全看不到新增信息,是静默丢失不是报错)。128px 留出約 30px 余量,
+     其余三列(出入库耗时分解/轴状态/热度图例)内容没变,多出的高度只是空白边距,不影响它们。 */
+  #viewport{--scene-dock-h:128px}
   /* 0720 命名总表 A 表落地后重排:当前作业→出入库耗时分解→轴状态→货位访问频率(用 order 定序,
      DOM append 顺序不变——opsEvidence 由 runtime 在 trace 就绪后才追加,天然殿后,故用 order 显式定位) */
   #sceneDock{grid-template-columns:minmax(238px,1.02fr) minmax(278px,1.18fr) minmax(212px,.94fr) minmax(176px,.72fr)}
@@ -999,15 +1038,25 @@
   /* -- 三档分段按钮:替 #tierSelect 顶栏可见项;#tierSelect DOM 与 value 仍是真相源,
      分段按钮只是其视图(点击改 value + 派发 change,交由既有 change 监听重载;syncControls 反向同步选中态) -- */
   #tierSelect{display:none}
-  .tierSegs{display:flex;align-items:stretch;gap:1px;background:#d6dde2;border:1px solid #d6dde2}
-  .tierSeg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:56px;
-    padding:2px 5px;border:0;background:#fff;color:#3d4a54;cursor:pointer;font-family:"Microsoft YaHei",sans-serif}
-  .tierSeg b{font:700 8.5px/1.15 "Microsoft YaHei",sans-serif;white-space:nowrap}
-  .tierSeg small{font:7.5px/1.2 Consolas,"Microsoft YaHei",monospace;color:#69747d;white-space:nowrap}
+  /* W1-5+W1-6:tierSeg 曾是双行(主词+机理小字)比同排 select/button 高,顶栏参差不齐——
+     机理小字移入悬浮解释(见下 .hasFixedTip),按钮改单行、显式 30px 高同顶栏其余控件基线。 */
+  .tierSegs{display:flex;align-items:stretch;height:30px;gap:1px;background:#d6dde2;border:1px solid #d6dde2}
+  .tierSeg{position:relative;display:flex;align-items:center;justify-content:center;min-width:78px;
+    padding:0 8px;border:0;background:#fff;color:#3d4a54;cursor:pointer;font-family:"Microsoft YaHei",sans-serif}
+  .tierSeg b{font:700 9px/1 "Microsoft YaHei",sans-serif;white-space:nowrap}
   .tierSeg[aria-checked="true"]{background:#17365d}
   .tierSeg[aria-checked="true"] b{color:#fff}
-  .tierSeg[aria-checked="true"] small{color:#c7d2dc}
-  @media(max-width:1480px){.tierSeg{min-width:48px;padding:2px 3px}.tierSeg b{font-size:8px}.tierSeg small{font-size:7px}}
+  @media(max-width:1480px){.tierSeg{min-width:60px;padding:0 5px}.tierSeg b{font-size:8px}}
+  /* W1-6(橙框上,悬浮解释):自定义浮层复用 .tipBubble 视觉(position:fixed 防 #workHud/#topbarA
+     overflow 裁剪),挂 .hasFixedTip 触发类(悬停/焦点开合),不用原生 title 的系统延迟。
+     tierSeg/货物画像 ⓘ 图标共用同一套。 */
+  .hasFixedTip.is-open .tipBubble{opacity:1;visibility:visible;transform:translateY(0)}
+  .tierSeg .tipBubble{width:220px}
+  #topbarA .infoIcon{position:relative;display:inline-flex;align-items:center;justify-content:center;
+    width:15px;height:15px;border-radius:50%;background:#dde3e8;color:#4e5a64;font:700 10px/1 Consolas,monospace;
+    cursor:help;flex:none}
+  #topbarA .infoIcon:hover,#topbarA .infoIcon:focus-visible{background:#c7d2dc;color:#17202b;outline:none}
+  #topbarA .infoIcon .tipBubble{width:230px}
 
   /* -- 档位徽章:轴状态块头右侧,显示当前档机理词(trace 重载后由 setTrace 更新,读 tierSelect 映射不编数) -- */
   #axisHud .axisHudHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
@@ -1019,6 +1068,56 @@
     box-shadow:0 4px 14px #17202b33;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s linear}
   #tierDiffToast.show{opacity:1}
   #viewport:has(#pausedHint:not([hidden])) #tierDiffToast{top:calc(var(--topbar-h) + 44px)}
+
+  /* ================================================================
+     W1-7 折叠收纳(拍板「整栏收边+逐块折叠+持久化」):右栏(#workHud)与底 dock(#sceneDock)
+     两大版块都可收成 26px 边缘细条;栏内五块(算法决策/2D 货位图/批次KPI/入库排队/出入库耗时分解)
+     各自块头可单独折叠。状态存 localStorage s3_collapse_v1,默认全展开(QA 零感知,见交互层)。
+     逻辑见 s3_mixed_layout_a_interactions.js「8. 折叠收纳」;这里只放样式。
+     机制:rail/dock 收展改的是既有 --rail-w / --scene-dock-h 两个 CSS 变量的值,不新写布局规则——
+     #gl/#sceneDock/#heatLegend/#sceneTools 等一切引用这两个变量的既有规则因此自动跟随收缩/展开
+     (0719 s3_shell_v2.css 把侧向布局收敛到变量正是为此;s3_shell_v2.css 本身不改,02 页专属逻辑
+     全留在本文件与 interactions 层,不外溢到两页共享文件)。
+     ================================================================ */
+  #railCollapseBtn{order:-2;flex:none;display:flex;align-items:center;justify-content:center;gap:5px;
+    height:24px;margin:0 0 6px;padding:0 8px;border:1px solid var(--rail-line,#c6ced5);background:#fff;
+    color:#3d4a54;cursor:pointer;font:700 9px/1 "Microsoft YaHei",sans-serif}
+  #railCollapseBtn:hover{background:#eef1f4}
+  #railCollapseBtn .edgeArrow{display:inline-block;font-size:10px;transition:transform .15s}
+  #workHud.is-collapsed{width:26px!important;min-width:26px;padding:6px 2px;overflow:visible}
+  #workHud.is-collapsed>*:not(#railCollapseBtn){display:none}
+  #workHud.is-collapsed #railCollapseBtn{flex-direction:column;height:auto;width:100%;margin:0;
+    padding:10px 2px;gap:8px;writing-mode:vertical-rl;text-orientation:upright}
+  #workHud.is-collapsed #railCollapseBtn .edgeArrow{transform:rotate(180deg);writing-mode:horizontal-tb}
+
+  #dockCollapseBtn{position:absolute;z-index:5;top:4px;right:6px;display:flex;align-items:center;gap:3px;
+    height:18px;padding:0 7px;border:1px solid #9ea9b1;background:#ffffffed;color:#3d4a54;cursor:pointer;
+    font:700 8px/1 "Microsoft YaHei",sans-serif;box-shadow:0 1px 4px #17202b26}
+  #dockCollapseBtn:hover{background:#f2f4f6}
+  #dockCollapseBtn .edgeArrow{display:inline-block;font-size:9px;transition:transform .15s}
+  #sceneDock.is-collapsed>*:not(#dockCollapseBtn){display:none}
+  #sceneDock.is-collapsed #dockCollapseBtn .edgeArrow{transform:rotate(180deg)}
+
+  /* 栏内逐块折叠:箭头挂 ::after 在块头 class 选择器上(不是具体 DOM 节点)——renderDecision 等
+     replaceChildren 重渲染会换新 .dHead 节点,但新节点仍匹配同一 CSS 选择器,箭头自动重现,
+     不需要 JS 每次重渲后再插入一次。收起态类 railBlockCollapsed 挂在稳定外层容器 id 上
+     (#decisionWrap 等 id 恒在,只内部子节点被换新),JS 只需 toggle 这一个类。 */
+  /* #opsEvidence(dock 内「出入库耗时分解」,.oeHead 为头)与前 5 个同套处理——它是规格三例之一
+     但物理上住在底 dock 而非右栏,交互层的事件代理已相应从 #workHud 扩到 #viewport 以覆盖它。 */
+  #decisionWrap .dHead,#slotMapWrap .mapHead,#traceStats .statsHead,#queueCard .qHead,#phaseRail .phaseTitle,
+  #opsEvidence .oeHead{
+    position:relative;cursor:pointer;padding-right:18px}
+  #decisionWrap .dHead::after,#slotMapWrap .mapHead::after,#traceStats .statsHead::after,
+  #queueCard .qHead::after,#phaseRail .phaseTitle::after,#opsEvidence .oeHead::after{
+    content:"▾";position:absolute;top:50%;right:0;transform:translateY(-50%);width:14px;height:14px;
+    display:flex;align-items:center;justify-content:center;color:#69717c;font:900 9px/1 Consolas,monospace;
+    pointer-events:none;transition:transform .15s}
+  #decisionWrap.railBlockCollapsed .dHead::after,#slotMapWrap.railBlockCollapsed .mapHead::after,
+  #traceStats.railBlockCollapsed .statsHead::after,#queueCard.railBlockCollapsed .qHead::after,
+  #phaseRail.railBlockCollapsed .phaseTitle::after,#opsEvidence.railBlockCollapsed .oeHead::after{transform:translateY(-50%) rotate(-90deg)}
+  #decisionWrap.railBlockCollapsed>*:not(.dHead),#slotMapWrap.railBlockCollapsed>*:not(.mapHead),
+  #traceStats.railBlockCollapsed>*:not(.statsHead),#queueCard.railBlockCollapsed>*:not(.qHead),
+  #phaseRail.railBlockCollapsed>*:not(.phaseTitle),#opsEvidence.railBlockCollapsed>*:not(.oeHead){display:none}
 </style>
 <link rel="stylesheet" href="./s3_shell_v2.css">
 </head>
@@ -1032,7 +1131,7 @@
         <section id="runtimeControls" aria-label="仿真回放选择" aria-busy="false">
           <label>算法<select id="strategySelect"><optgroup label="在线逐件决策"><option value="seq">顺序放置（SEQ）</option><option value="near">就近放置（NEAR）</option><option value="score">多目标评分（SCORE）</option><option value="AUTO" selected>AUTO 策略路由（启动时一次选定）</option></optgroup><optgroup label="离线批量参照 · 非同信息集"><option value="awra">批量优化参照（AWRA-LS）</option></optgroup></select></label>
           <label>拟真档<select id="tierSelect"><option value="1">档 1 · 数据模型</option><option value="2">档 2 · 加减速设计</option><option value="3" selected>档 3 · 综合情景</option></select></label>
-          <label>货物画像<select id="profileSelect"><option value="uniform">均匀</option><option value="skew" selected>偏斜</option><option value="heavy">重货</option></select></label>
+          <label>货物画像<select id="profileSelect"><option value="uniform" title="均匀：各货访问频率接近，无明显热门">均匀</option><option value="skew" selected title="偏斜：少数高频件（帕累托型），热区聚集、算法红利最大">偏斜</option><option value="heavy" title="重货：重件占比高，承重约束主导">重货</option></select><i id="profileInfoIcon" class="infoIcon hasFixedTip" tabindex="0" role="button" aria-label="货物画像三种画像说明">ⓘ</i></label>
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
@@ -1101,7 +1200,11 @@ viewportEl.append(heatLegend);
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
 const sceneTools=document.createElement('section');sceneTools.id='sceneTools';sceneTools.setAttribute('aria-label','三维镜头与回放速度');
-sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><button id="resetCamera" type="button">总览</button><input id="playbackSpeed" type="range" min="0.25" max="2" step="0.25" value="1" aria-label="演示速度倍率"><output id="playbackValue" for="playbackSpeed">1.00×</output></div><div class="toolNote">0.25× 慢放 · 2.00× 快放</div>';
+/* W1-8(拍板「删总览+速度滑条 0.25-5」):resetCamera 按钮与其 DOM 一并删除(runtime listener 同步清,
+   见 s3_ac_runtime.js);滑条 max 2→5、step 从粗粒度 0.25 改细粒度 0.05(连续拖拽手感),
+   吸附刻度({0.25,0.5,1,2,3,5},±0.1 半径)交给 normalizePlaybackMultiplier 的 input 事件处理,
+   不再靠原生 step 硬量化。list=playbackTicks 挂 datalist 出刻度小标记(Chromium 原生渲染,QA 用同一 Chromium)。 */
+sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><input id="playbackSpeed" type="range" min="0.25" max="5" step="0.05" value="1" list="playbackTicks" aria-label="演示速度倍率"><datalist id="playbackTicks"><option value="0.25"></option><option value="0.5"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="5"></option></datalist><output id="playbackValue" for="playbackSpeed">1.00×</output></div><div class="toolNote">0.25× 慢放 · 5.00× 快放 · 吸附 0.25/0.5/1/2/3/5</div>';
 sceneDock.append(sceneTools);
 const labelLeaders=document.createElementNS('http://www.w3.org/2000/svg','svg');labelLeaders.id='labelLeaders';labelLeaders.setAttribute('aria-hidden','true');
 ['targetLeader'].forEach(id=>{const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.id=id;line.hidden=true;line.style.display='none';labelLeaders.append(line);});viewportEl.append(labelLeaders);
@@ -1352,6 +1455,15 @@ function addConveyorLane(lane,nearY,farY,laneMaterial){
 }
 addConveyorLane(INFEED,INFEED.entryY,INFEED.loadY,M.infeedRail);
 addConveyorLane(OUTFEED,OUTFEED.startY,OUTFEED.endY,M.outfeedRail);
+/* W1-1(红框修复,拍板「延伸入库带包住队列」):排队箱位于 y=INFEED.entryY-.72-index*.58(0..3,
+   见 s3_ac_runtime.js setQueue),最远达 entryY-2.46;入库带建模原只铺到 entryY,4 箱悬空裸地。
+   纯装饰续铺:方向参数取负(向 entryY 之外延伸),addConveyorLane 按 |nearY-farY| 定长、方向自适应,
+   无需改函数体。铺到 entryY-2.85(覆盖全部 4 箱 + 余量),末端加止挡矮板(工业积放输送机惯例)。
+   IO/TRANSFER_ANCHOR/RACK/INFEED/OUTFEED 常量与 CONVEYOR_ENVELOPES 一个数字不改——延伸不进运输
+   功能段包络,只是可视化装饰件。 */
+const INFEED_QUEUE_FAR=INFEED.entryY-2.85;
+addConveyorLane(INFEED,INFEED.entryY,INFEED_QUEUE_FAR,M.infeedRail);
+addBox(1.30,.12,.30,INFEED.x,INFEED_QUEUE_FAR-.04,Z0+.30,M.infeedRail,true,true);
 addTransferBridge({x:INFEED.x,y:INFEED.loadY},TRANSFER_ANCHOR,M.infeedRail);
 addTransferBridge(TRANSFER_ANCHOR,{x:OUTFEED.x,y:OUTFEED.startY},M.outfeedRail);
 addFloorFlowLabel('入库  ↑',INFEED.x,(INFEED.entryY+INFEED.loadY)/2,'#17365d');

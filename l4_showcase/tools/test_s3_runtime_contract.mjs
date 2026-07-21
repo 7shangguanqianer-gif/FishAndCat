@@ -399,6 +399,9 @@ test("Task12 single-rack dual-station scene, adjustable camera and compact ABB c
     "const FLOOR={x0:-7.5,x1:N+3,y0:-8.65,y1:7.15}", "const stationCollisionSolids=[]", "'ENTRY_BEAM'"
   ]) assert(html.includes(token), `Task12 HTML token missing: ${token}`);
   assert(!html.includes("controls.enabled=false"), "manual camera must not be disabled");
+  /* 注意:此 htmlPath 恒指向 archive_候选历史/样张_S3_三方向候选.html(冻结的历史候选页,W1 批次
+     不碰),与 02_入出闭环.html 是两个独立文件——02 页 0720 已按用户拍板删除 resetCamera/总览按钮,
+     但那不影响本条断言(该归档页从未有过这次改动,原样保留 1 处属正确预期,不同步)。 */
   assert.equal((html.match(/id="resetCamera"/g) || []).length, 1, "one camera preset button required");
   assert.match(runtimeSource, /function refreshProjection\(\)[\s\S]*layoutProjectedLabels\(lastFrame\)/,
     "camera-only movement must refresh projected labels from the current business frame");
@@ -644,9 +647,12 @@ test("Task12 every sampled frame has exactly one logical owner per gid", () => {
 
 test("Task12 playback multiplier changes presentation time only", () => {
   assert.equal(runtime.DEFAULT_PLAYBACK_SCALE, .22);
+  /* W1-8(0720,用户拍板「速度滑条 0.25-5」):上限 2.0→5,断言同步;吸附逻辑从「无脑取整到 0.25
+     倍数」改「就近刻度(0.25/0.5/1/2/3/5)±0.1 半径内才吸附,否则原样连续跟手」——
+     9 现在钳到新上限 5(不再是旧上限 2);1.13 离最近刻度 1 的距离 .13 > .1 半径,不吸附,原样返回。 */
   assert.equal(runtime.normalizePlaybackMultiplier(.1), .25);
-  assert.equal(runtime.normalizePlaybackMultiplier(9), 2);
-  assert.equal(runtime.normalizePlaybackMultiplier(1.13), 1.25);
+  assert.equal(runtime.normalizePlaybackMultiplier(9), 5);
+  assert.equal(runtime.normalizePlaybackMultiplier(1.13), 1.13);
   assert.equal(runtime.effectivePlaybackScale(.25), .055);
   assert.equal(runtime.effectivePlaybackScale(1), .22);
   assert.equal(runtime.effectivePlaybackScale(2), .44);
