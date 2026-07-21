@@ -29,10 +29,10 @@
   viewport.insertBefore(axisHost, byId("gl"));
   const bookmarks = byId("fillBookmarks");
   axisHost.append(bookmarks);
-  /* 术语(一次性,全页唯一出现处):原「容量书签 · 从空到满」 */
+  /* 0720 命名总表 B4:标题简化为「入库进度」,「容量节点」语义降入副题小字(全页唯一出现处) */
   const fillHead = bookmarks.querySelector(".fillHead");
-  fillHead.querySelector("b").textContent = "入库进度 · 容量节点";
-  fillHead.querySelector("span").textContent = "点击节点跳转并暂停到已验证快照";
+  fillHead.querySelector("b").textContent = "入库进度";
+  fillHead.querySelector("span").textContent = "容量节点 · 点击跳转并暂停到已验证快照";
   /* 轴线填充与节点定位 */
   const buttonHost = byId("fillBookmarkButtons");
   const axisFill = doc.createElement("i");
@@ -233,8 +233,9 @@
   syncAxis();
 
   /* ---------- 8. runtime 写死文案治理(防重入改写;不改 runtime) ----------
-     规则(spec §3/§5):禁止词「容量书签」;idle 态计数不得在 dock 重复。 */
-  const phaseNow = byId("phaseNow");
+     0720 命名总表 B4:源「容量书签」已改「入库进度」词根并清零,原「容量书签」专属拦截分支
+     (phaseNow/actionText 命中该词的重写)随之整体删除;此处只保留与该词无关的治理——
+     连续填满完成简写、idle 态总占用隐藏(避免 dock 内计数重复)。 */
   const actionText = byId("sceneActionText");
   const cargoMeta = byId("sceneCargoMeta");
   let rewriting = false;
@@ -242,13 +243,8 @@
     if (rewriting) return;
     rewriting = true;
     try {
-      const now = phaseNow.textContent;
-      if (now.includes("容量书签")) phaseNow.textContent = "已暂停 · 节点快照";
       const action = actionText.textContent;
-      if (action.includes("容量书签")) {
-        const match = action.match(/等待第 (\d+) 件/);
-        actionText.textContent = match ? `等待第 ${match[1]} 件入库` : "已暂停 · 节点快照";
-      } else if (/连续填满完成 · \d+ \/ 267/.test(action)) {
+      if (/连续填满完成 · \d+ \/ 267/.test(action)) {
         actionText.textContent = "连续填满完成";
       }
       const cargoIdle = /总占用/.test(cargoMeta.textContent);
@@ -257,14 +253,9 @@
       rewriting = false;
     }
   });
-  [phaseNow, actionText, cargoMeta].forEach(element =>
+  [actionText, cargoMeta].forEach(element =>
     rewriteObserver.observe(element, { childList: true, characterData: true, subtree: true }));
   rewriteObserver.takeRecords();
-  phaseNow.textContent = phaseNow.textContent.includes("容量书签") ? "已暂停 · 节点快照" : phaseNow.textContent;
-  if (actionText.textContent.includes("容量书签")) {
-    const match = actionText.textContent.match(/等待第 (\d+) 件/);
-    actionText.textContent = match ? `等待第 ${match[1]} 件入库` : "已暂停 · 节点快照";
-  }
   if (/总占用/.test(cargoMeta.textContent)) cargoMeta.style.visibility = "hidden";
 
   /* ---------- 8b. 布局搬运改变了 #gl 尺寸:触发 resize 让 renderer/浮签重算 ---------- */

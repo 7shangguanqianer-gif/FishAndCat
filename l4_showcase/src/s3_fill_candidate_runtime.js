@@ -7,18 +7,18 @@
   const STEP_ORDER = Object.freeze(["INFEED_HANDOFF", "LADEN_TRAVEL", "STORE_HANDLE", "EMPTY_RETURN"]);
   const STEP_META = Object.freeze({
     INFEED_HANDOFF: {short: "交接", label: "入口交接", purpose: "同侧入库链把到场货物送至 T 形互锁转接台"},
-    LADEN_TRAVEL: {short: "载货", label: "双轴载货", purpose: "X / Z 双轴按加减速模型同步运行至算法选定货位"},
+    LADEN_TRAVEL: {short: "入库", label: "双轴入库", purpose: "X / Z 双轴按加减速模型同步运行至算法选定货位"},
     STORE_HANDLE: {short: "放货", label: "伸叉放货", purpose: "货叉先承托伸入，完成交接后再空叉回收"},
-    EMPTY_RETURN: {short: "回位", label: "空载回位", purpose: "货物已由货架接管；堆垛机空载返回唯一逻辑 I/O"}
+    EMPTY_RETURN: {short: "回程", label: "空载回程", purpose: "货物已由货架接管；堆垛机空载返回唯一逻辑 I/O"}
   });
   const DISPLAY_STEPS = Object.freeze([
     {phase: "INFEED_HANDOFF", p0: 0, p1: null, short: "入场", label: "输送入场", purpose: "货物沿入库链从入口运行至装载工位"},
     {phase: "INFEED_HANDOFF", p0: null, p1: 1, short: "交接", label: "入口交接", purpose: "货物通过 T 形互锁台交接至堆垛机"},
-    {phase: "LADEN_TRAVEL", p0: 0, p1: 1, short: "载货", label: "双轴载货", purpose: "X / Z 双轴按加减速模型同步运行至目标货位"},
+    {phase: "LADEN_TRAVEL", p0: 0, p1: 1, short: "入库", label: "双轴入库", purpose: "X / Z 双轴按加减速模型同步运行至目标货位"},
     {phase: "STORE_HANDLE", p0: 0, p1: .44, short: "伸叉", label: "货叉伸入", purpose: "货叉保持承托并伸入目标货位"},
     {phase: "STORE_HANDLE", p0: .44, p1: .62, short: "放货", label: "货物交接", purpose: "货物由货叉转交货架，所有权切换为 RACK"},
     {phase: "STORE_HANDLE", p0: .62, p1: 1, short: "回叉", label: "货叉回收", purpose: "货物留在货架，空叉回收至载货台"},
-    {phase: "EMPTY_RETURN", p0: 0, p1: 1, short: "回位", label: "空载回位", purpose: "堆垛机空载返回唯一逻辑 I/O"}
+    {phase: "EMPTY_RETURN", p0: 0, p1: 1, short: "回程", label: "空载回程", purpose: "堆垛机空载返回唯一逻辑 I/O"}
   ]);
   const LANE_LABEL = Object.freeze({seq: "顺序放置 SEQ", near: "就近放置 NEAR", score: "多目标评分 SCORE"});
   const GRADE_LABEL = Object.freeze({heavy: "重货", mid: "中货", light: "轻货"});
@@ -694,8 +694,8 @@
     facts[1].querySelector("span").textContent = "入口等待"; facts[2].querySelector("span").textContent = "约束违规";
     const decision = document.createElement("section"); decision.id = "decisionWrap"; decision.setAttribute("aria-label", "当前算法决策依据");
     byId("runtimeControls").after(decision);
-    const bookmarks = document.createElement("section"); bookmarks.id = "fillBookmarks"; bookmarks.setAttribute("aria-label", "容量书签");
-    bookmarks.innerHTML = '<div class="fillHead"><b>容量书签 · 从空到满</b><span>点击即暂停到已验证快照</span></div><div id="fillBookmarkButtons"></div><div id="fillEvidence"><span><b id="fillManaged">0 / 267</b>管理货</span><span><b id="fillTotal">133 / 400</b>总占用</span><span><b id="fillViol">0</b>违规</span><span><b id="fillSource">SIM</b>证据边界</span></div>';
+    const bookmarks = document.createElement("section"); bookmarks.id = "fillBookmarks"; bookmarks.setAttribute("aria-label", "入库进度");
+    bookmarks.innerHTML = '<div class="fillHead"><b>入库进度 · 从空到满</b><span>点击即暂停到已验证快照</span></div><div id="fillBookmarkButtons"></div><div id="fillEvidence"><span><b id="fillManaged">0 / 267</b>管理货</span><span><b id="fillTotal">133 / 400</b>总占用</span><span><b id="fillViol">0</b>违规</span><span><b id="fillSource">SIM</b>证据边界</span></div>';
     decision.after(bookmarks);
     const host = byId("fillBookmarkButtons");
     BOOKMARKS.forEach((count, index) => { const button = document.createElement("button"); button.type = "button"; button.dataset.count = String(count);
@@ -707,8 +707,8 @@
     DISPLAY_STEPS.forEach((step, index) => { const row = document.createElement("div"); row.className = "processGuideRow"; row.dataset.step = String(index);
       row.innerHTML = `<i>${index + 1}</i><b>${step.label}</b><span>${step.purpose}</span>`; guide.querySelector("#processGuideRows").append(row); });
     byId("insightStack").append(guide);
-    byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回位</span><span class="blocked"><i></i>预占</span><span class="hotlid"><i style="background:#d9ad00"></i>金顶 = 热门前 20%</span>';
-    byId("phaseNow").textContent = "容量书签 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
+    byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回程</span><span class="blocked"><i></i>预占</span><span class="hotlid"><i style="background:#d9ad00"></i>金顶 = 热门前 20%</span>';
+    byId("phaseNow").textContent = "入库进度 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
   }
 
   configureDom();
@@ -789,7 +789,7 @@
       if (Math.abs(pct) < .005) return "";
       return `<em class="statsDelta ${pct < 0 ? "better" : "worse"}">${pct < 0 ? "▼" : "▲"}${Math.abs(pct).toFixed(1)}%</em>`;
     };
-    host.innerHTML = `<div class="statsHead"><b>当前算法终点统计</b><span>单种子 · 连续入库 · SIM</span></div><div class="statsGrid">` +
+    host.innerHTML = `<div class="statsHead"><b>批次 KPI(终态)</b><span>单种子 · 连续入库 · SIM</span></div><div class="statsGrid">` +
       `<button class="metricHelp" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益(30 种子跑批方向一致)。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
       `<button class="metricHelp" title="最重 20% 货物的平均层位，越低越稳(降低重心；30 种子跑批方向一致)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
       `<button class="metricHelp" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值(30 种子跑批方向一致)"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
@@ -823,7 +823,7 @@
     const localProgress = activeStep ? clamp((frame.phaseProgress - activeStep.p0) / (activeStep.p1 - activeStep.p0), 0, 1) : 0;
     const current = frame.idle ? 0 : simDurations[activeIndex] * localProgress;
     byId("phaseTimeCursor").style.left = `${frame.idle ? frame.managedCount === 267 ? 100 : 0 : (completed + current) / total * 100}%`;
-    byId("phaseNow").textContent = frame.idle ? `容量书签 ${frame.managedCount} / 267` : `步骤 ${activeIndex + 1}/7 · ${activeStep.label}`;
+    byId("phaseNow").textContent = frame.idle ? `入库进度 ${frame.managedCount} / 267` : `步骤 ${activeIndex + 1}/7 · ${activeStep.label}`;
     /* 0717 用户验收:口径句不常驻,收进 title(hover 可见);常显只留本件 SIM 时长。 */
     byId("phaseClock").textContent = `本件 SIM ${total.toFixed(1)} s`;
     byId("phaseClock").title = "七步为 4 阶段 trace 按几何与货叉阈值细分的展示口径,不是七个原生时间戳";
@@ -846,7 +846,7 @@
        数据门真实字段 weight_kg/volume_m3/freq,不虚构);目标格信息整体移交 dock 目标货位卡,不再重复;
        步骤名由并入本格的七段微条题行唯一承担。 */
     byId("sceneActionText").innerHTML = frame.idle
-      ? (frame.managedCount === 267 ? "连续填满完成 · 267 / 267" : `容量书签 · 已入库 ${frame.managedCount} / 267`)
+      ? (frame.managedCount === 267 ? "连续填满完成 · 267 / 267" : `入库进度 · 已入库 ${frame.managedCount} / 267`)
       : `<i class="gradeDot ${item.grade}"></i>${item.name} · ${GRADE_LABEL[item.grade]} ${item.weight_kg.toFixed(1)} kg · ${item.volume_m3.toFixed(2)} m³` +
         (hotGids.has(item.gid) ? '<em class="hotChip">★ 热门前 20%</em>' : "");
     byId("sceneActionMeta").textContent = frame.idle ? "已验证快照 · SIM" : `SIM ${frame.simTime.toFixed(1)} s`;
@@ -874,7 +874,7 @@
   function currentFrame() { return state.idleCount === null ? activeFrame(state.model, state.elapsed) : idleFrame(state.model, state.idleCount); }
 
   function seekBookmark(count) {
-    invariant(BOOKMARKS.includes(count), "非法容量书签"); state.idleCount = count; state.elapsed = state.model.eventStarts[count];
+    invariant(BOOKMARKS.includes(count), "非法入库进度书签"); state.idleCount = count; state.elapsed = state.model.eventStarts[count];
     state.paused = true; state.lastNow = null; byId("pauseMotion").textContent = "继续"; byId("pauseMotion").setAttribute("aria-pressed", "true");
     renderFrame(currentFrame()); return snapshot();
   }

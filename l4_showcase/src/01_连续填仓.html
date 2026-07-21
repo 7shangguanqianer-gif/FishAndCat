@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>智储优控 · S3 三维作业轨迹回放</title>
+<title>智储优控 · 连续入库 · S3</title>
 <style>
   :root{--brand:#ff000f;--ink:#1a1a1a;--muted:#69717a;--line:#d5d8dc;--paper:#fff;
     --bg:#f2f2f2;--navy:#17365d;--mid:#4a6fa5;--light:#9dbbdd;--amber:#e7b800;--alarm:#b71c1c}
@@ -587,7 +587,8 @@
   #sceneTelemetry .telemetryTitle{display:none}
   #axisHud{width:auto;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;font-size:8.5px}
   #axisHud b{margin:0 0 2px;color:#dce5eb;font-size:8.5px;letter-spacing:0}
-  #axisHud .axis{grid-template-columns:12px 1fr 43px;gap:5px;margin:2px 0}
+  /* 0720 命名总表 B6:轴名 X/Z→X(行走)/Y(升降)后标签变宽,列宽 12px→34px 防止换行(同 02 A9 治理) */
+  #axisHud .axis{grid-template-columns:34px 1fr 43px;gap:5px;margin:2px 0}
   #axisHud .axis i{height:4px;background:#56636d}#axisHud .axis span:last-child{color:#fff;font-size:8.5px;text-align:right}
   #liveChartWrap{width:auto;min-width:0;min-height:0;padding:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:transparent;border:0}
   #liveChartWrap .cap{font-size:7.5px;color:#b8c3cb}#liveChartWrap .cap b{color:#dce5eb}#speed{height:42px;min-height:0;margin-top:1px}
@@ -909,7 +910,7 @@
     html[data-s3-layout="A"] .phaseSeg .phaseName{font-size:8.5px}
   }
 </style>
-<!-- V2 壳体共享语法(0719):01=放货决策保持 rail-left(data-first),不设 data-s3-rail 即缺省 left;
+<!-- V2 壳体共享语法(0719):01=连续入库保持 rail-left(data-first),不设 data-s3-rail 即缺省 left;
      文件内 rail-right 映射与 #cycleAxis 规则对本页零命中,link 仅作为后续侧向规则收拢的接口。 -->
 <link rel="stylesheet" href="./s3_shell_v2.css">
 </head>
@@ -920,13 +921,13 @@
       <div id="workHud">
         <div id="taskline"><div class="kicker">已校验 · 同源 SIM 轨迹载入中</div><div class="primary"><span id="taskPrimary">正在加载同源作业轨迹</span><span id="actionBadge">等待轨迹</span></div><div id="stepPurpose"><b id="stepIndex">步骤 -- / 7</b><span id="stepPurposeText">载入后按事件流显示动作目的</span></div><div class="metaRow"><span id="ownerState">货物：--</span><span>单巷道 · 单机</span></div></div>
         <section id="runtimeControls" aria-label="仿真回放选择" aria-busy="false">
-          <label>算法<select id="strategySelect"><optgroup label="在线逐件决策"><option value="seq">顺序放置（SEQ）</option><option value="near">就近放置（NEAR）</option><option value="score">多目标评分（SCORE）</option><option value="AUTO" selected>智能路由（AUTO）</option></optgroup><optgroup label="离线批量参照 · 非同信息集"><option value="awra">批量优化参照（AWRA-LS）</option></optgroup></select></label>
+          <label>算法<select id="strategySelect"><option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option></select></label>
           <label>拟真档<select id="tierSelect"><option value="1">档 1 · 数据模型</option><option value="2">档 2 · 加减速设计</option><option value="3" selected>档 3 · 综合情景</option></select></label>
           <label>货物画像<select id="profileSelect"><option value="uniform">均匀</option><option value="skew" selected>偏斜</option><option value="heavy">重货</option></select></label>
           <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
-        <div id="axisHud" aria-label="实时轴位；数值随演示连续变化" aria-live="off"><b>实时轴位</b><div class="axis"><span>X</span><i id="xFill"></i><span id="xValue">0.00 m</span></div><div class="axis"><span>Z</span><i id="zFill"></i><span id="zValue">0.00 m</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span></div></div>
+        <div id="axisHud" aria-label="轴状态 · 位置与速度；数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span></div><div class="axis"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span></div></div>
       </div>
       <div id="gl" role="img" aria-label="三维仓储 sim 轨迹回放；仓位、货物和设备状态由已验证 trace 同源驱动"></div>
       <div id="phaseRail"><div class="phaseTitle"><span id="phaseNow">等待 trace</span><span id="phaseClock">--</span></div><div id="phaseTimeScale" aria-label="本周期四阶段 trace 按几何与货叉阈值拆分的七步 SIM 时长比例"><i id="phaseTimeCursor" aria-hidden="true"></i></div><div id="phaseSegments"><span class="phaseSeg">1</span><span class="phaseSeg">2</span><span class="phaseSeg">3</span><span class="phaseSeg">4</span><span class="phaseSeg">5</span><span class="phaseSeg">6</span><span class="phaseSeg">7</span></div></div>
@@ -948,10 +949,10 @@
 const STYLE='A';
 const VISUAL={
   /* 仍沿 tools/anim3d_formal.py 的右前上方位；只按当前可见实体校准，不用潜在队列包络虚增主体占比。 */
-  A:{name:'工业操作台 · 放货决策',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
+  A:{name:'AS/RS 单机作业台',sub:'同源 SIM 作业',bg:0xe7ecef,pos:[30.0,-40.0,22.5],look:[9.35,-1.25,9.20],fov:32.4,key:0xffffff,rim:0xdde9f3}
 }[STYLE];
 document.documentElement.dataset.style='A';
-document.title='智储优控 · 连续填仓 · 放货决策 · S3';
+document.title='智储优控 · 连续入库 · S3';
 document.documentElement.dataset.s3Mode='fill-only-candidate';
 
 /* 信息架构：把同源动态数据移回左侧；三维画面始终留在右侧，不再切页。 */

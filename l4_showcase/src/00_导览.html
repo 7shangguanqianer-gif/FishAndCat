@@ -149,9 +149,9 @@ td .num{font:600 12px Consolas,monospace;color:var(--navy)}
   <nav class="chapter-nav" role="tablist" aria-orientation="vertical" aria-label="材料章节">
     <button role="tab" id="tab-c0" aria-controls="panel-c0" aria-selected="true" data-id="c0"><span class="no">00</span><span class="name">总览与阅读路径</span></button>
     <button role="tab" id="tab-c1" aria-controls="panel-c1" aria-selected="false" data-id="c1" tabindex="-1"><span class="no">01</span><span class="name">验证报告</span></button>
-    <button role="tab" id="tab-c2" aria-controls="panel-c2" aria-selected="false" data-id="c2" tabindex="-1"><span class="no">02</span><span class="name">PLC 代码与工程</span></button>
+    <button role="tab" id="tab-c2" aria-controls="panel-c2" aria-selected="false" data-id="c2" tabindex="-1"><span class="no">02</span><span class="name">PLC 代码与 Automation Builder 工程</span></button>
     <button role="tab" id="tab-c3" aria-controls="panel-c3" aria-selected="false" data-id="c3" tabindex="-1"><span class="no">03</span><span class="name">建模与仿真</span></button>
-    <button role="tab" id="tab-c4" aria-controls="panel-c4" aria-selected="false" data-id="c4" tabindex="-1"><span class="no">04</span><span class="name">可视化仿真(决赛)</span></button>
+    <button role="tab" id="tab-c4" aria-controls="panel-c4" aria-selected="false" data-id="c4" tabindex="-1"><span class="no">04</span><span class="name">可视化仿真(决赛件)</span></button>
     <button role="tab" id="tab-c5" aria-controls="panel-c5" aria-selected="false" data-id="c5" tabindex="-1"><span class="no">05</span><span class="name">物理预演素材</span></button>
   </nav>
   <div class="rail-tip">键盘 ↑↓ 切换章节 · Home/End 跳转<br>指标带各项悬停或 Tab 聚焦可见口径与验证路径。</div>
@@ -260,9 +260,9 @@ td .num{font:600 12px Consolas,monospace;color:var(--navy)}
 const CHAPTERS=[
   {id:'c0',name:'总览与阅读路径'},
   {id:'c1',name:'验证报告'},
-  {id:'c2',name:'PLC 代码与工程'},
+  {id:'c2',name:'PLC 代码与 Automation Builder 工程'},
   {id:'c3',name:'建模与仿真'},
-  {id:'c4',name:'可视化仿真(决赛)'},
+  {id:'c4',name:'可视化仿真(决赛件)'},
   {id:'c5',name:'物理预演素材'}
 ];
 const tabs=[...document.querySelectorAll('[role="tab"]')],panels=[...document.querySelectorAll('[role="tabpanel"]')];
