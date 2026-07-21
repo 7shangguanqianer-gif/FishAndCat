@@ -1,0 +1,27 @@
+{
+  "_comment": "W3b 材料区路径映射。key = launch.html 内 mat-item 的 data-material-key(对应 mock 的 01/02/03/05 编号)。path 相对 F:\\abb_wh_work(main.js 内 PROJECT_ROOT = l4_showcase 的上一级)解析。todo=true 表示路径未定,main 进程直接返回 not-found,渲染侧提示占位文案。这些是占位路径,打包提交前需按最终提交清单核实到具体文件。",
+  "01": {
+    "label": "验证报告",
+    "path": "docs",
+    "todo": false,
+    "note": "占位到目录:docs/ 下研究笔记与草稿众多,尚无单一定稿验证报告文件;打包版应精确到最终 WORD/PPT 路径"
+  },
+  "02": {
+    "label": "PLC 代码与 Automation Builder 工程",
+    "path": "plc",
+    "todo": false,
+    "note": "含 AB_Project/(AB 工程)与 ST 源码导出、README_PLC.md"
+  },
+  "03": {
+    "label": "建模与仿真",
+    "path": "sim",
+    "todo": false,
+    "note": "Python 仿真源码、场景库、统计产物(sim/*.py)"
+  },
+  "05": {
+    "label": "物理预演素材",
+    "path": "l2_factoryio",
+    "todo": false,
+    "note": "含 media/g4_evidence_0713、media/F3_素材_cell30全链_0713(帧序列+mp4)、logs/ 全链诊断日志;未找到独立 .factoryio 场景工程文件,场景文件本体待确认"
+  }
+}

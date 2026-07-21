@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智储优控 · 启动页</title>
+<style>
+:root{
+  --red:#ff000f;--navy:#17365d;--ink:#16191d;--muted:#5c6670;--faint:#8a939c;
+  --line:#d6dde2;--bg:#eef1f4;--paper:#ffffff;--soft:#f4f6f8;
+  --mono:Consolas,"JetBrains Mono",monospace;
+  --sans:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100vh;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+body{display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer}
+.topline{height:4px;background:var(--red);flex:none}
+
+/* ---- 品牌横幅 ---- */
+.masthead{height:104px;background:var(--paper);border-bottom:1px solid var(--line);flex:none;
+  display:flex;align-items:center;gap:20px;padding:0 48px}
+.brandmark{font:900 30px/1 Arial,sans-serif;color:var(--red);letter-spacing:.5px;flex:none}
+.brand-text{display:flex;flex-direction:column;gap:6px;padding-left:20px;border-left:1px solid var(--line)}
+.brand-title{font:700 22px/1.2 var(--sans);color:var(--ink)}
+.brand-sub{font:11px/1.3 var(--sans);color:var(--muted)}
+
+/* ---- 通用:块头标签 ---- */
+.blk-h{font:700 10px/1.2 var(--sans);letter-spacing:1px;color:var(--ink)}
+.blk-h .sub{margin-left:10px;font:11px var(--sans);letter-spacing:0;font-weight:400;color:var(--faint)}
+
+/* ---- 场景区 ---- */
+.scenes{flex:1;min-height:0;padding:26px 48px 20px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+.scene-row{display:flex;gap:28px}
+.scene-card{position:relative;flex:1;min-width:0;background:var(--paper);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .12s,box-shadow .12s}
+.scene-card:hover,.scene-card:focus-within{border:2px solid var(--navy);box-shadow:0 6px 20px rgba(23,54,93,.22)}
+.scene-card .thumb{width:100%;aspect-ratio:16/9;background:#dfe4e8;overflow:hidden}
+.scene-card .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card-body{padding:14px 18px 18px;display:flex;flex-direction:column;gap:8px}
+.card-name{font:700 16px/1.3 var(--sans);color:var(--ink)}
+.card-desc{font:11.5px/1.55 var(--sans);color:var(--muted)}
+.btn-primary{align-self:flex-start;margin-top:2px;padding:8px 18px;background:var(--navy);color:#fff;
+  border:1px solid var(--navy);border-radius:3px;font:700 11.5px var(--sans);letter-spacing:.3px}
+.btn-primary:hover{background:#0f2740}
+.btn-primary:focus-visible{outline:2px solid #6fa3e0;outline-offset:2px}
+
+/* ---- 提交材料区(横列表) ---- */
+.materials{padding:0 48px 18px;display:flex;flex-direction:column;gap:10px;flex:none;border-radius:6px;
+  transition:box-shadow .3s ease}
+.materials.is-highlighted{box-shadow:0 0 0 3px rgba(23,54,93,.35) inset}
+.mat-row{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--paper)}
+.mat-item{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:13px 18px;
+  border-right:1px solid var(--line);text-decoration:none;color:inherit;text-align:left;border-top:0;border-bottom:0;border-left:0;background:var(--paper)}
+.mat-item:last-child{border-right:none}
+.mat-item:hover,.mat-item:focus-visible{background:var(--soft)}
+.mat-item:focus-visible{outline:2px solid #6fa3e0;outline-offset:-2px}
+.mat-no{font:700 11px var(--mono);color:var(--navy)}
+.mat-name{font:700 12.5px var(--sans);color:var(--ink)}
+.mat-desc{font:10px/1.4 var(--sans);color:var(--muted)}
+
+/* ---- 底部信息条 ---- */
+.infobar{height:38px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:22px;padding:0 48px;flex:none}
+.badge-ok{display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;font:700 10px var(--sans);
+  padding:4px 10px;border-radius:12px}
+.fingerprint{font:10px var(--mono);color:#c3cad2}
+.version{margin-left:auto;font:700 10.5px var(--mono);color:#fff}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+
+<header class="masthead">
+  <span class="brandmark">ABB</span>
+  <div class="brand-text">
+    <div class="brand-title">智储优控 · AS/RS 演示工作站</div>
+    <div class="brand-sub">2026 ABB 杯 · 智能仓储赛题 · 同源 SIM 证据</div>
+  </div>
+</header>
+
+<section class="scenes">
+  <div class="blk-h">演示场景<span class="sub">三组真实运行录像/回放场景 · 点击「进入」打开对应演示页</span></div>
+  <div class="scene-row">
+    <article class="scene-card">
+      <div class="thumb"><img src="assets/p01_thumb.png" alt="01 连续入库"></div>
+      <div class="card-body">
+        <div class="card-name">01 · 连续入库</div>
+        <p class="card-desc">空仓 0→267 逐件放置决策与容量推进</p>
+        <button class="btn-primary" type="button" data-nav-target="01">进入 →</button>
+      </div>
+    </article>
+    <article class="scene-card">
+      <div class="thumb"><img src="assets/p02_thumb.png" alt="02 存取闭环"></div>
+      <div class="card-body">
+        <div class="card-name">02 · 存取闭环</div>
+        <p class="card-desc">存取交替作业,含出库取货→出场全链</p>
+        <button class="btn-primary" type="button" data-nav-target="02">进入 →</button>
+      </div>
+    </article>
+    <article class="scene-card">
+      <div class="thumb"><img src="assets/p03_thumb.png" alt="03 物理证据"></div>
+      <div class="card-body">
+        <div class="card-name">03 · 物理证据</div>
+        <p class="card-desc">Factory I/O 全链取放技术预演 · 9/9 成功</p>
+        <button class="btn-primary" type="button" data-nav-target="03">进入 →</button>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="materials" id="materials">
+  <div class="blk-h">提交材料<span class="sub">点击项目 · 以系统默认程序打开对应文件/文件夹</span></div>
+  <div class="mat-row">
+    <button class="mat-item" type="button" data-material-key="01"><span class="mat-no">01</span><span class="mat-name">验证报告</span><span class="mat-desc">WORD 主文档 + PPT 答辩版</span></button>
+    <button class="mat-item" type="button" data-material-key="02"><span class="mat-no">02</span><span class="mat-name">PLC 代码与 Automation Builder 工程</span><span class="mat-desc">完整 AB 工程、ST 源码导出、在线测试证据</span></button>
+    <button class="mat-item" type="button" data-material-key="03"><span class="mat-no">03</span><span class="mat-name">建模与仿真</span><span class="mat-desc">Python 仿真源码、场景库、统计产物</span></button>
+    <button class="mat-item" type="button" data-material-key="05"><span class="mat-no">05</span><span class="mat-name">物理预演素材</span><span class="mat-desc">Factory I/O 场景文件、全链运行记录、影像证据</span></button>
+  </div>
+</section>
+
+<footer class="infobar">
+  <span class="badge-ok">✓ 已校验 · SIM 轨迹</span>
+  <span class="fingerprint">seed 2026 · sim_only</span>
+  <span class="version">v1.0</span>
+</footer>
+
+<script>
+'use strict';
+
+/* 本页可能被直接以顶层窗口打开(调试)或装进壳的 iframe。装进 iframe 时用 postMessage 通知壳切换/开材料;
+   顶层直开时(无 parent 壳可通知)则静默降级为无操作,不报错。 */
+var inShellFrame = window.parent && window.parent !== window;
+
+function notifyShell(payload) {
+  if (!inShellFrame) return;
+  window.parent.postMessage(Object.assign({ source: 'zhichu-shell' }, payload), window.location.origin);
+}
+
+Array.prototype.forEach.call(document.querySelectorAll('[data-nav-target]'), function (btn) {
+  btn.addEventListener('click', function () {
+    notifyShell({ type: 'navigate', target: btn.getAttribute('data-nav-target') });
+  });
+});
+
+Array.prototype.forEach.call(document.querySelectorAll('[data-material-key]'), function (btn) {
+  btn.addEventListener('click', function () {
+    notifyShell({ type: 'openMaterial', key: btn.getAttribute('data-material-key') });
+  });
+});
+
+/* 侧栏「📄 材料」入口:壳导航到 launch.html#materials 时给材料区一次脉冲高亮,帮助定位(同页无需滚动)。 */
+if (window.location.hash === '#materials') {
+  var materialsEl = document.getElementById('materials');
+  materialsEl.classList.add('is-highlighted');
+  setTimeout(function () { materialsEl.classList.remove('is-highlighted'); }, 1600);
+}
+
+window.__LAUNCH_READY__ = true;
+</script>
+</body>
+</html>

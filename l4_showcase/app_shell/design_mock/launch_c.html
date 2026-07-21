@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智储优控 · 启动页 mock · 版式C 卡片墙+抽屉</title>
+<style>
+:root{
+  --red:#ff000f;--navy:#17365d;--ink:#16191d;--muted:#5c6670;--faint:#8a939c;
+  --line:#d6dde2;--bg:#eef1f4;--paper:#ffffff;--soft:#f4f6f8;
+  --mono:Consolas,"JetBrains Mono",monospace;
+  --sans:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1600px;height:900px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);position:relative}
+button{font:inherit;cursor:pointer}
+.topline{height:4px;background:var(--red)}
+.blk-h{font:700 10px/1.2 var(--sans);letter-spacing:1px;color:var(--ink)}
+.badge-ok{display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;font:700 10px var(--sans);
+  padding:4px 10px;border-radius:12px}
+.fingerprint{font:10px var(--mono);color:#c3cad2}
+.version{font:700 10.5px var(--mono);color:#fff}
+
+/* ---- 极简顶条 ---- */
+.topbar-mini{height:46px;background:var(--paper);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:0 32px}
+.brandmark{font:900 18px/1 Arial,sans-serif;color:var(--red)}
+.brand-title-mini{font:700 13px var(--sans);color:var(--ink)}
+.brand-sub-mini{font:10px var(--sans);color:var(--faint);padding-left:14px;border-left:1px solid var(--line)}
+.masthead-tag{margin-left:auto;font:9px var(--mono);color:var(--faint);border:1px solid var(--line);
+  padding:5px 10px;border-radius:3px}
+
+/* ---- 卡片墙(占满主体) ---- */
+.wall{height:810px;padding:26px 40px;display:flex;gap:26px}
+.scene-card{position:relative;flex:1;min-width:0;background:var(--paper);border:1px solid var(--line);
+  border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+.scene-card.is-hover{border:2px solid var(--navy);box-shadow:0 10px 28px rgba(23,54,93,.24)}
+.scene-card .thumb{width:100%;height:388px;background:#dfe4e8;overflow:hidden;flex:none}
+.scene-card .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card-body{flex:1;padding:18px 22px 22px;display:flex;flex-direction:column;gap:10px}
+.card-name{font:700 19px/1.3 var(--sans);color:var(--ink)}
+.card-desc{font:12px/1.6 var(--sans);color:var(--muted)}
+.btn-primary{align-self:flex-start;margin-top:auto;padding:9px 20px;background:var(--navy);color:#fff;
+  border:1px solid var(--navy);border-radius:3px;font:700 12px var(--sans);letter-spacing:.3px}
+.btn-primary:hover{background:#0f2740}
+.hover-flag{position:absolute;top:14px;right:14px;background:var(--navy);color:#fff;font:700 9px var(--mono);
+  padding:4px 9px;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+
+/* ---- 底部抽屉条(默认收起,承载材料入口 + 信息条) ---- */
+.drawer-bar{height:44px;background:var(--ink);color:#fff;display:flex;align-items:center;
+  justify-content:space-between;padding:0 32px}
+.drawer-trigger{display:flex;align-items:center;gap:10px;font:700 11.5px var(--sans);color:#fff;cursor:pointer}
+.drawer-trigger .count{background:#ffffff26;color:#fff;font:700 9.5px var(--mono);padding:2px 7px;border-radius:9px}
+.drawer-trigger .chev{font:10px var(--sans);color:#c3cad2;font-weight:400}
+.drawer-right{display:flex;align-items:center;gap:20px}
+
+/* ---- 展开态示意(浮层插画,默认收起,仅作说明) ---- */
+.drawer-expanded-illustration{position:absolute;left:32px;bottom:66px;width:420px;background:var(--paper);
+  border:1px solid var(--line);border-radius:6px;box-shadow:0 -10px 30px rgba(22,25,29,.18);padding:14px 16px 12px;
+  opacity:.98}
+.drawer-expanded-illustration:after{content:"";position:absolute;left:28px;bottom:-9px;width:16px;height:16px;
+  background:var(--paper);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.illu-label{font:700 9.5px var(--mono);color:var(--navy);letter-spacing:.3px;margin-bottom:8px}
+.mat-vlist-mini{list-style:none;display:flex;flex-direction:column}
+.mat-vlist-mini li{display:flex;align-items:baseline;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);font:11.5px var(--sans);color:var(--ink)}
+.mat-vlist-mini li:last-child{border-bottom:none}
+.mat-vlist-mini .mat-no{font:700 10.5px var(--mono);color:var(--navy);width:16px;flex:none}
+.mat-vlist-mini .mat-hint-mini{margin-top:6px;font:9.5px var(--sans);color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+
+<header class="topbar-mini">
+  <span class="brandmark">ABB</span>
+  <span class="brand-title-mini">智储优控 · AS/RS 演示工作站</span>
+  <span class="brand-sub-mini">2026 ABB 杯 · 智能仓储赛题 · 同源 SIM 证据</span>
+  <span class="masthead-tag">启动页 mock · 版式 C · 卡片墙+抽屉</span>
+</header>
+
+<section class="wall">
+  <article class="scene-card">
+    <div class="thumb"><img src="file:///F:/abb_wh_work/l4_showcase/out/t6_0720/p01_renamed.png" alt="01 连续入库"></div>
+    <div class="card-body">
+      <div class="card-name">01 · 连续入库</div>
+      <p class="card-desc">空仓 0→267 逐件放置决策与容量推进</p>
+      <button class="btn-primary">进入 →</button>
+    </div>
+  </article>
+  <article class="scene-card is-hover">
+    <div class="thumb"><img src="file:///F:/abb_wh_work/l4_showcase/out/rework3_0720/final_normal.png" alt="02 存取闭环"></div>
+    <div class="card-body">
+      <div class="card-name">02 · 存取闭环</div>
+      <p class="card-desc">存取交替作业,含出库取货→出场全链</p>
+      <button class="btn-primary">进入 →</button>
+    </div>
+    <span class="hover-flag">hover 态示意</span>
+  </article>
+  <article class="scene-card">
+    <div class="thumb"><img src="file:///F:/abb_wh_work/l4_showcase/app_shell/design_mock/assets/p03_snapshot.png" alt="03 物理证据"></div>
+    <div class="card-body">
+      <div class="card-name">03 · 物理证据</div>
+      <p class="card-desc">Factory I/O 全链取放技术预演 · 9/9 成功</p>
+      <button class="btn-primary">进入 →</button>
+    </div>
+  </article>
+</section>
+
+<div class="drawer-expanded-illustration">
+  <div class="illu-label">展开态示意 · 默认收起,悬停/点击下方条目展开</div>
+  <ul class="mat-vlist-mini">
+    <li><span class="mat-no">01</span>验证报告</li>
+    <li><span class="mat-no">02</span>PLC 代码与 Automation Builder 工程</li>
+    <li><span class="mat-no">03</span>建模与仿真</li>
+    <li><span class="mat-no">05</span>物理预演素材</li>
+  </ul>
+  <div class="mat-hint-mini">点击项目 · 以系统默认程序打开对应文件/文件夹</div>
+</div>
+
+<footer class="drawer-bar">
+  <div class="drawer-trigger">📄 提交材料<span class="count">4</span><span class="chev">展开 ▸</span></div>
+  <div class="drawer-right">
+    <span class="badge-ok">✓ 已校验 · SIM 轨迹</span>
+    <span class="fingerprint">seed 2026 · sim_only</span>
+    <span class="version">v1.0</span>
+  </div>
+</footer>
+</body>
+</html>

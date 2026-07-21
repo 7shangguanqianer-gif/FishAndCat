@@ -1,0 +1,13 @@
+{
+  "name": "zhichu-workstation",
+  "version": "0.0.1-poc",
+  "private": true,
+  "description": "智储优控 L4 展示站 Electron 桌面壳 PoC(W2 批次)——验证现有静态站在 Electron 窗口内完整可用",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "43.1.1"
+  }
+}

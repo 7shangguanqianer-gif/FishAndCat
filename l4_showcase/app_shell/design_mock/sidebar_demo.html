@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智储优控 · 侧栏形态 mock</title>
+<style>
+:root{
+  --red:#ff000f;--navy:#17365d;--ink:#16191d;--muted:#5c6670;--faint:#8a939c;--line:#d6dde2;
+  --mono:Consolas,"JetBrains Mono",monospace;
+  --sans:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1600px;height:900px;overflow:hidden;background:#000;font-family:var(--sans)}
+
+.stage{position:relative;width:1600px;height:900px;overflow:hidden}
+.base-shot{position:absolute;left:0;top:0;width:1600px;height:900px;display:block}
+
+/* ---- 48px 常驻图标侧栏(叠加在既有顶栏下方、场景左缘) ---- */
+.sidebar-rail{position:absolute;left:0;top:40px;bottom:0;width:48px;background:var(--ink);
+  display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0 16px;
+  box-shadow:2px 0 14px rgba(0,0,0,.35);z-index:5}
+.rail-sep{width:22px;height:1px;background:rgba(255,255,255,.18);flex:none}
+.rail-item-wrap{position:relative;flex:none}
+.rail-icon{width:40px;height:40px;border:0;border-radius:5px;background:transparent;color:#c3cad2;
+  font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;opacity:.72;
+  font-family:var(--sans)}
+.rail-icon.is-active{background:var(--navy);color:#fff;opacity:1}
+.rail-icon.is-hover{background:#ffffff1f;color:#fff;opacity:1}
+
+/* ---- 悬停展开态(图标+文字标签浮出)示意 ---- */
+.hover-flyout{position:absolute;left:100%;top:0;margin-left:9px;display:flex;align-items:center;height:40px;
+  background:#16191df2;color:#fff;padding:0 14px 0 12px;border-radius:4px;white-space:nowrap;
+  font:700 12px var(--sans);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:6}
+.hover-flyout:before{content:"";position:absolute;left:-5px;top:50%;transform:translateY(-50%);
+  border:5px solid transparent;border-right-color:#16191df2}
+.hover-flyout .k{font:700 11px var(--mono);color:#8fb3e8;margin-right:8px}
+
+/* ---- 角标图例(说明性,非应用真实 UI) ---- */
+.hint-tag{position:absolute;right:16px;bottom:16px;width:460px;background:#ffffffef;color:var(--ink);
+  border:1px solid var(--line);border-radius:5px;padding:11px 15px;font:10.5px/1.6 var(--sans);
+  box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:6}
+.hint-tag .t{display:block;font:700 10px var(--mono);color:var(--navy);letter-spacing:.3px;margin-bottom:5px}
+.hint-tag b{color:var(--navy)}
+
+.corner-flag{position:absolute;left:66px;top:52px;font:700 9px var(--mono);color:#fff;background:var(--navy);
+  padding:5px 10px;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:6;letter-spacing:.3px}
+</style>
+</head>
+<body>
+<div class="stage">
+  <img class="base-shot" src="file:///F:/abb_wh_work/l4_showcase/out/rework3_0720/final_normal.png" alt="02 存取闭环(底图)">
+
+  <nav class="sidebar-rail">
+    <div class="rail-item-wrap"><button class="rail-icon" title="启动页">⌂</button></div>
+    <div class="rail-sep"></div>
+    <div class="rail-item-wrap"><button class="rail-icon">①</button></div>
+    <div class="rail-item-wrap"><button class="rail-icon is-active">②</button></div>
+    <div class="rail-item-wrap">
+      <button class="rail-icon is-hover">③</button>
+      <div class="hover-flyout"><span class="k">03</span>物理证据</div>
+    </div>
+    <div class="rail-sep"></div>
+    <div class="rail-item-wrap"><button class="rail-icon">📄</button></div>
+    <div class="rail-item-wrap"><button class="rail-icon">ⓘ</button></div>
+  </nav>
+
+  <span class="corner-flag">当前页 ② · 深蓝高亮</span>
+
+  <div class="hint-tag">
+    <span class="t">侧栏形态示意 · SIDEBAR MOCK</span>
+    48px 图标常驻列:<b>⌂</b>启动页 / <b>①②③</b> 对应 01-03 场景 / <b>📄</b>材料 / <b>ⓘ</b>关于。
+    当前页(②)以深蓝高亮;③示意<b>悬停展开态</b>——图标右侧浮出文字标签,常态收起仅显图标。
+  </div>
+</div>
+</body>
+</html>

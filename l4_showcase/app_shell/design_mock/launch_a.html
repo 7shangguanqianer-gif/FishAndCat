@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智储优控 · 启动页 mock · 版式A 横幅双区</title>
+<style>
+:root{
+  --red:#ff000f;--navy:#17365d;--ink:#16191d;--muted:#5c6670;--faint:#8a939c;
+  --line:#d6dde2;--bg:#eef1f4;--paper:#ffffff;--soft:#f4f6f8;
+  --mono:Consolas,"JetBrains Mono",monospace;
+  --sans:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1600px;height:900px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+button{font:inherit;cursor:pointer}
+.topline{height:4px;background:var(--red)}
+
+/* ---- 品牌横幅 ---- */
+.masthead{height:104px;background:var(--paper);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:20px;padding:0 48px}
+.brandmark{font:900 30px/1 Arial,sans-serif;color:var(--red);letter-spacing:.5px;flex:none}
+.brand-text{display:flex;flex-direction:column;gap:6px;padding-left:20px;border-left:1px solid var(--line)}
+.brand-title{font:700 22px/1.2 var(--sans);color:var(--ink)}
+.brand-sub{font:11px/1.3 var(--sans);color:var(--muted)}
+.masthead-tag{margin-left:auto;font:9px var(--mono);color:var(--faint);border:1px solid var(--line);
+  padding:6px 11px;border-radius:3px;white-space:nowrap}
+
+/* ---- 通用:块头标签 ---- */
+.blk-h{font:700 10px/1.2 var(--sans);letter-spacing:1px;color:var(--ink)}
+.blk-h .sub{margin-left:10px;font:11px var(--sans);letter-spacing:0;font-weight:400;color:var(--faint)}
+
+/* ---- 场景区 ---- */
+.scenes{flex:1;min-height:0;padding:26px 48px 20px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+.scene-row{display:flex;gap:28px}
+.scene-card{position:relative;flex:1;min-width:0;background:var(--paper);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden;display:flex;flex-direction:column}
+.scene-card.is-hover{border:2px solid var(--navy);box-shadow:0 6px 20px rgba(23,54,93,.22)}
+.scene-card .thumb{width:100%;aspect-ratio:16/9;background:#dfe4e8;overflow:hidden}
+.scene-card .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card-body{padding:14px 18px 18px;display:flex;flex-direction:column;gap:8px}
+.card-name{font:700 16px/1.3 var(--sans);color:var(--ink)}
+.card-desc{font:11.5px/1.55 var(--sans);color:var(--muted)}
+.btn-primary{align-self:flex-start;margin-top:2px;padding:8px 18px;background:var(--navy);color:#fff;
+  border:1px solid var(--navy);border-radius:3px;font:700 11.5px var(--sans);letter-spacing:.3px}
+.btn-primary:hover{background:#0f2740}
+.hover-flag{position:absolute;top:12px;right:12px;background:var(--navy);color:#fff;font:700 9px var(--mono);
+  padding:4px 9px;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.25);letter-spacing:.3px}
+
+/* ---- 提交材料区(横列表) ---- */
+.materials{padding:0 48px 18px;display:flex;flex-direction:column;gap:10px}
+.mat-row{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--paper)}
+.mat-item{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:13px 18px;
+  border-right:1px solid var(--line);text-decoration:none;color:inherit}
+.mat-item:last-child{border-right:none}
+.mat-item:hover{background:var(--soft)}
+.mat-no{font:700 11px var(--mono);color:var(--navy)}
+.mat-name{font:700 12.5px var(--sans);color:var(--ink)}
+.mat-desc{font:10px/1.4 var(--sans);color:var(--muted)}
+
+/* ---- 底部信息条 ---- */
+.infobar{height:38px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:22px;padding:0 48px}
+.badge-ok{display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;font:700 10px var(--sans);
+  padding:4px 10px;border-radius:12px}
+.fingerprint{font:10px var(--mono);color:#c3cad2}
+.version{margin-left:auto;font:700 10.5px var(--mono);color:#fff}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+
+<header class="masthead">
+  <span class="brandmark">ABB</span>
+  <div class="brand-text">
+    <div class="brand-title">智储优控 · AS/RS 演示工作站</div>
+    <div class="brand-sub">2026 ABB 杯 · 智能仓储赛题 · 同源 SIM 证据</div>
+  </div>
+  <span class="masthead-tag">启动页 mock · 版式 A · 横幅双区</span>
+</header>
+
+<section class="scenes">
+  <div class="blk-h">演示场景<span class="sub">三组真实运行录像/回放场景 · 点击「进入」打开对应演示页</span></div>
+  <div class="scene-row">
+    <article class="scene-card">
+      <div class="thumb"><img src="file:///F:/abb_wh_work/l4_showcase/out/t6_0720/p01_renamed.png" alt="01 连续入库"></div>
+      <div class="card-body">
+        <div class="card-name">01 · 连续入库</div>
+        <p class="card-desc">空仓 0→267 逐件放置决策与容量推进</p>
+        <button class="btn-primary">进入 →</button>
+      </div>
+    </article>
+    <article class="scene-card is-hover">
+      <div class="thumb"><img src="file:///F:/abb_wh_work/l4_showcase/out/rework3_0720/final_normal.png" alt="02 存取闭环"></div>
+      <div class="card-body">
+        <div class="card-name">02 · 存取闭环</div>
+        <p class="card-desc">存取交替作业,含出库取货→出场全链</p>
+        <button class="btn-primary">进入 →</button>
+      </div>
+      <span class="hover-flag">hover 态示意</span>
+    </article>
+    <article class="scene-card">
+      <div class="thumb"><img src="file:///F:/abb_wh_work/l4_showcase/app_shell/design_mock/assets/p03_snapshot.png" alt="03 物理证据"></div>
+      <div class="card-body">
+        <div class="card-name">03 · 物理证据</div>
+        <p class="card-desc">Factory I/O 全链取放技术预演 · 9/9 成功</p>
+        <button class="btn-primary">进入 →</button>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="materials">
+  <div class="blk-h">提交材料<span class="sub">点击项目 · 以系统默认程序打开对应文件/文件夹</span></div>
+  <div class="mat-row">
+    <a class="mat-item"><span class="mat-no">01</span><span class="mat-name">验证报告</span><span class="mat-desc">WORD 主文档 + PPT 答辩版</span></a>
+    <a class="mat-item"><span class="mat-no">02</span><span class="mat-name">PLC 代码与 Automation Builder 工程</span><span class="mat-desc">完整 AB 工程、ST 源码导出、在线测试证据</span></a>
+    <a class="mat-item"><span class="mat-no">03</span><span class="mat-name">建模与仿真</span><span class="mat-desc">Python 仿真源码、场景库、统计产物</span></a>
+    <a class="mat-item"><span class="mat-no">05</span><span class="mat-name">物理预演素材</span><span class="mat-desc">Factory I/O 场景文件、全链运行记录、影像证据</span></a>
+  </div>
+</section>
+
+<footer class="infobar">
+  <span class="badge-ok">✓ 已校验 · SIM 轨迹</span>
+  <span class="fingerprint">seed 2026 · sim_only</span>
+  <span class="version">v1.0</span>
+</footer>
+</body>
+</html>
