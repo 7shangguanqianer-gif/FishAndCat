@@ -22,13 +22,17 @@ const PROJECT_ROOT = path.resolve(SHOWCASE_ROOT, '..');       // F:\abb_wh_work(
 const ENTRY_RELATIVE = path.join('app_shell', 'shell.html');  // 相对 SHOWCASE_ROOT
 
 /* MIME 表在 W2 PoC 四种类型基础上加 .png(启动页缩略图,app_shell/assets/*.png)。
-   与 tools/capture_s3_layout_a_qa.mjs:42 的表同源扩展,不引入未用到的类型。 */
+   与 tools/capture_s3_layout_a_qa.mjs:42 的表同源扩展,不引入未用到的类型。
+   0721 素材路由批次补 .jpg/.jpeg/.mp4(03 页 l2_factoryio 实拍素材与全链视频)。 */
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
-  '.png': 'image/png'
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.mp4': 'video/mp4'
 };
 
 let staticServer = null;
@@ -40,8 +44,17 @@ function startStaticServer() {
       try {
         const pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname).replace(/^\/+/, '');
         if (pathname === 'favicon.ico') { response.writeHead(204); response.end(); return; }
-        const target = path.resolve(SHOWCASE_ROOT, pathname || ENTRY_RELATIVE);
-        if (!target.startsWith(SHOWCASE_ROOT + path.sep) || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
+        /* 0721 素材白名单路由(用户批准):03 页素材 ../../l2_factoryio/* 经浏览器归一化到
+           域根后越出 SHOWCASE_ROOT,旧闸一律 404。仅放行 l2_factoryio/ 前缀改按 PROJECT_ROOT
+           解析,其余路径仍锁 SHOWCASE_ROOT;两路各自保留前缀闸防目录穿越。
+           mp4 不做 Range 分片(438KB 全量返回,Chromium 可播;若后续大视频需 seek 再补)。 */
+        const isMaterialPath = pathname.startsWith('l2_factoryio/');
+        const rootDir = isMaterialPath ? PROJECT_ROOT : SHOWCASE_ROOT;
+        const guardPrefix = isMaterialPath
+          ? path.join(PROJECT_ROOT, 'l2_factoryio') + path.sep
+          : SHOWCASE_ROOT + path.sep;
+        const target = path.resolve(rootDir, pathname || ENTRY_RELATIVE);
+        if (!target.startsWith(guardPrefix) || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
           response.writeHead(404); response.end('not found'); return;
         }
         response.writeHead(200, {
