@@ -122,6 +122,9 @@
   const nodePop = makePop("axisNodePop");
   const segPop = makePop("segPop");
   const evidencePop = makePop("evidencePop");
+  /* W7(0721 §1.4):证据浮层由小提示卡升级为抽屉——专属 CSS(见 html 内 #evidencePop.evidenceDrawer)
+     覆盖 .s3aPop 的定位/宽度,固定一次即可,不随每次 toggle 重复加类。 */
+  evidencePop.classList.add("evidenceDrawer");
 
   function placePop(pop, anchor, prefer = "below") {
     const viewportRect = viewport.getBoundingClientRect();
@@ -197,13 +200,28 @@
   loadState.setAttribute("aria-haspopup", "dialog");
   function toggleEvidence() {
     if (evidencePop.classList.contains("show")) { evidencePop.classList.remove("show"); return; }
+    /* W7(0721 §1.4):由小浮层升级为抽屉——validator.checks 18 项具名清单 + checkpoints 哈希链
+       6 节点(sha256 前 12 位) + 终态账本(不含 fixed_score_diagnostic_total) + 口径与边界卡。
+       数据源 runtime.js 的 __S3_FILL_QA.auditDetail()(按需调用,非每帧轮询)。 */
+    const detail = root.__S3_FILL_QA.auditDetail();
     const snapshot = root.__S3_FILL_QA.snapshot();
-    evidencePop.innerHTML = `<h4>数据链已验证 · 证据链</h4>` +
-      `<table><tr><td>release</td><td>${snapshot.releaseId}</td></tr>` +
-      `<tr><td>违规</td><td>0</td></tr></table>` +
-      `<div class="rows"><div><span>bundle payload SHA-256</span></div></div><code>${snapshot.bundlePayloadSha256}</code>` +
-      `<div class="note">${snapshot.timingAudit.mapping}。本地哈希锁定的可复现证据快照,不是加密签名。三条在线算法 × 各 267 件,SIM 证据边界。</div>`;
-    placePop(evidencePop, loadState, "below");
+    const checksHtml = detail.checks.map(item => `<div class="checkItem"><span class="ok">${item.pass ? "✓" : "✕"}</span><span>${item.name}</span></div>`).join("");
+    const timelineHtml = detail.checkpoints.map(cp => `<div class="timelineNode"><div class="tHead"><span>${cp.eventCount} / 267 · ${cp.label}</span><span>${cp.phase}</span></div>` +
+      `<div class="tMeta">audit_prefix_sha256 <b>${cp.auditPrefix12}…</b> · total_unavailable ${cp.totalUnavailable} / 400</div></div>`).join("");
+    evidencePop.innerHTML = `<h4>数据链已验证 · 证据抽屉 · ${detail.laneLabel}</h4>` +
+      `<div class="drawerSection"><b>独立验证器清单 · validator.checks</b><span class="drawerMeta">${detail.checks.length} 项 · ${detail.checksPassCount === detail.checks.length ? "全部通过" : "存在未通过"} · module=${detail.validatorModule}</span><div class="checksGrid">${checksHtml}</div></div>` +
+      `<div class="drawerSection"><b>checkpoints 哈希链时间线 · ${detail.laneLabel}</b><span class="drawerMeta">切换右上角「算法」下拉可看其余两条链</span><div class="auditTimelineList">${timelineHtml}</div></div>` +
+      '<div class="drawerSection"><b>终态账本</b><div class="ledgerGrid">' +
+        `<div class="ledgerCell"><b>${(detail.ledger.managedFillRatio * 100).toFixed(1)}%</b><span>managed_fill_ratio</span></div>` +
+        `<div class="ledgerCell"><b>${(detail.ledger.totalOccupancyRatio * 100).toFixed(1)}%</b><span>total_occupancy_ratio</span></div>` +
+        `<div class="ledgerCell"><b>${detail.ledger.placed}</b><span>placed</span></div>` +
+        `<div class="ledgerCell"><b>${detail.ledger.violations}</b><span>violations</span></div>` +
+        `<div class="ledgerCell"><b>${Math.round(detail.ledger.makespanS)} s</b><span>makespan_s</span></div></div></div>` +
+      `<div class="drawerSection"><b>口径与边界卡</b><div class="boundaryQuote">"${detail.boundary.evidenceBoundary}"</div>` +
+      `<div class="note">binding_approval:${detail.boundary.approvedAtUtc} · release ${detail.boundary.registryStatus} · 独立测试 ${detail.boundary.testPassed}/${detail.boundary.testTotal} 通过</div>` +
+      `<div class="note">到达模型口径:arrival_model = <code>${detail.boundary.arrivalModel}</code> —— 即到即处理 · 单机 · 无队列(与 02_入出闭环 页的排队场景形成口径对照;本页仿真假设如此,非功能疏漏)。</div></div>` +
+      `<div class="note">release ${snapshot.releaseId} · bundle payload SHA-256 <code>${snapshot.bundlePayloadSha256}</code><br>${snapshot.timingAudit.mapping}。本地哈希锁定的可复现证据快照,不是加密签名。三条在线算法 × 各 267 件,SIM 证据边界。</div>`;
+    evidencePop.classList.add("show");
   }
   loadState.addEventListener("click", toggleEvidence);
   loadState.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleEvidence(); } });
@@ -211,13 +229,19 @@
   /* ---------- 6. 2D 放大覆盖层(DOM 搬运,canvas 自适应重画) ---------- */
   const overlay = doc.createElement("div");
   overlay.id = "s3MapOverlay";
-  overlay.innerHTML = '<div class="mapDock"><button type="button" class="mapDockClose" aria-label="关闭放大视图">×</button></div>';
+  overlay.innerHTML = '<div class="mapDock"><button type="button" class="mapDockClose" aria-label="关闭放大视图">×</button>' +
+    '<section id="scoreAnatomy" aria-label="决策解剖 · SCORE 评分瀑布与 Top-3 候选"></section></div>';
   viewport.append(overlay);
   const mapDock = overlay.querySelector(".mapDock");
+  const scoreAnatomy = overlay.querySelector("#scoreAnatomy");
   const mapHome = { parent: mapWrap.parentElement, next: mapWrap.nextSibling };
   function openMap() {
     if (overlay.classList.contains("open")) return;
     mapDock.append(mapWrap);
+    /* W7(0721 §1.3):决策解剖(评分瀑布+Top-3)并入放大视图——re-append 把 scoreAnatomy 排到
+       mapWrap 之后(mapDock 是普通 block 流,append 即定序);内容由 runtime.js 的
+       renderScoreAnatomy() 每帧写入 #scoreAnatomy,此处只管排位,不重复渲染。 */
+    mapDock.append(scoreAnatomy);
     overlay.classList.add("open");
   }
   function closeMap() {

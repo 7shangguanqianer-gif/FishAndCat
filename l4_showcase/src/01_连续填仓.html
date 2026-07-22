@@ -62,10 +62,6 @@
     width:min(37%,355px);padding:6px 8px;background:#ffffffe8;border:1px solid #d8dadd;border-radius:3px;font-size:9.5px;color:#555}
   .sw{display:inline-flex;align-items:center;gap:4px}.sw i{display:inline-block;width:18px;height:3px;border-radius:2px}
   .sw i.multi{height:7px;background:linear-gradient(90deg,#17365d 0 33%,#4a6fa5 33% 66%,#9dbbdd 66%)}
-  #cycleReset{position:absolute;z-index:10;inset:0;display:flex;align-items:center;justify-content:center;background:#e7eceff5;opacity:0;pointer-events:none;transition:opacity .12s linear}
-  #cycleReset.is-visible{opacity:1}
-  #cycleReset .resetCard{padding:11px 16px;border-left:3px solid var(--amber);background:#17202b;color:#fff;box-shadow:0 5px 20px #0003}
-  #cycleReset b{display:block;font:700 12px/1.2 Consolas,"Microsoft YaHei",monospace}#cycleReset span{display:block;margin-top:4px;color:#bfc7d0;font-size:9.5px}
   #bar{height:48px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;border-top:1px solid #d2d5d8}
   #bar .desc{flex:1;font-size:11px;line-height:1.45;color:#5d656d}
   #bar .desc b{color:#1a1a1a}
@@ -139,7 +135,6 @@
     background:#ffffffed;border:1px solid #aeb8bf;color:#26343e;box-shadow:0 4px 15px #17202b1f;pointer-events:none}
   #reserveRuleBadge i{width:25px;height:18px;background:repeating-linear-gradient(135deg,#65727d 0 4px,#aeb7be 4px 7px)}
   #reserveRuleBadge b{display:block;font-size:10px;line-height:1.15}#reserveRuleBadge span{display:block;margin-top:3px;color:#64717b;font:8.5px/1 Consolas,monospace}
-  #cycleReset{left:var(--rail-w,32%)}
 
   html[data-style="A"]{--rail-w:30%;--rail-bg:#f7f8fa;--scene-bg:#e9eef1;--card:#fff;--rail-ink:#17202b;--rail-muted:#65717c;--rail-line:#cbd2d8;--accent:#17365d;--axis-bg:#17202b}
   html[data-style="B"]{--rail-w:32%;--rail-bg:#eef4f8;--scene-bg:#eaf1f5;--card:#f8fbfd;--rail-ink:#173650;--rail-muted:#557085;--rail-line:#9fb4c3;--accent:#245b78;--axis-bg:#20475e}
@@ -189,11 +184,6 @@
   #decisionWrap .scoreFactorNote{margin-top:4px;padding:4px 6px;border-left:3px solid #e0b600;background:#fff8d6;color:#5f5100;font:7.5px/1.35 "Microsoft YaHei",sans-serif}
   #decisionWrap .proofResult{display:grid;grid-template-columns:1fr 14px 1fr;align-items:center;margin-top:7px;padding:7px;background:#edf2f6;text-align:center;color:#17365d}
   #decisionWrap .proofResult b{font:800 14px/1 Consolas,monospace}#decisionWrap .proofResult i{font-style:normal}#decisionWrap .proofResult span{grid-column:1/4;margin-top:4px;color:#65717c;font-size:8px}
-  #queueCard{order:5;padding:7px 9px;border:1px solid var(--rail-line,#c6ced5);background:var(--card,#fff)}
-  #queueCard .qHead{display:flex;justify-content:space-between;font-size:9px;color:var(--rail-muted,#65717c)}#queueCard .qHead b{font-size:10px;color:var(--rail-ink,#15202b)}
-  #queueStrip{display:flex;gap:4px;align-items:center;min-height:22px;margin-top:5px;overflow:hidden}
-  #queueStrip span{min-width:41px;padding:5px 4px;border-left:4px solid #4a6fa5;background:#eef2f5;font:700 8px/1 Consolas,monospace;color:#27333d;text-align:center}
-  #queueStrip em{font:9px/1 Consolas,monospace;color:#69717a}
   #axisHud{order:4;padding:7px 9px}#axisHud b{margin-bottom:3px}#axisHud .axis{margin:4px 0}
   #slotMapWrap{order:6;flex:1 1 180px;min-height:155px;padding:8px 9px 6px}
   #liveChartWrap{order:7;min-height:82px;padding:6px 8px 4px}#speed{height:58px;margin-top:2px}
@@ -203,7 +193,7 @@
   #targetBeacon b{font-size:12px}
   #sceneCaption{font-size:9px;letter-spacing:.1px}
   #queue{display:block;width:100%;height:38px;margin-top:4px}
-  @media(max-height:780px){#decisionWrap{padding:6px 8px}.funnel{display:none!important}#queueCard{padding:5px 7px}#queueStrip{min-height:18px;margin-top:3px}
+  @media(max-height:780px){#decisionWrap{padding:6px 8px}.funnel{display:none!important}
     #axisHud{padding:5px 8px}#slotMapWrap{min-height:126px}#liveChartWrap{min-height:63px}#speed{height:42px}#phaseRail{padding:4px 7px}}
 
   /* 0715 Task10：固定两列指挥台。上层回答“现在做什么/为何选”，下层回答“发生了什么”。 */
@@ -240,8 +230,6 @@
   #insightStack{grid-area:insight;min-width:0;min-height:0;display:grid;gap:5px;align-content:stretch;
     grid-template-rows:auto minmax(48px,.72fr) auto auto auto;overflow:visible}
   #insightStack>*{order:0}
-  #queueCard{padding:5px 6px;min-width:0}#queueCard .qHead{font-size:7px}#queueCard .qHead b{font-size:8px}
-  #queueStrip{min-height:16px;margin-top:3px;gap:3px}#queueStrip span{min-width:32px;padding:3px 2px;font-size:7px}#queueStrip em{font-size:7px}
   #liveChartWrap{min-width:0;min-height:0;padding:5px 6px 3px;display:grid;grid-template-rows:auto minmax(0,1fr)}
   #liveChartWrap .cap{font-size:7.5px}#speed{height:100%;min-height:0;margin-top:2px}
   #phaseRail{position:static;width:100%;min-width:0;padding:5px 6px;background:#fff}
@@ -266,14 +254,14 @@
   #decisionWrap .weightGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin-top:3px}
   #decisionWrap .weightGrid .metricHelp{padding:3px 2px;text-align:center}#decisionWrap .weightGrid .metricHelp b{font-size:8px}#decisionWrap .weightGrid .metricHelp small{font-size:6px}
   #decisionWrap .weightNote{margin-top:4px;padding:4px 5px;background:#eef2f5;color:#68747d;font:7.5px/1.25 "Microsoft YaHei",sans-serif}
-  #sceneCaption{left:calc(var(--rail-w) + 18px)}#cycleReset{left:var(--rail-w)}
+  #sceneCaption{left:calc(var(--rail-w) + 18px)}
   @media(max-height:700px){
     #workHud{padding:7px 9px 7px;gap:4px 6px}#railHead{min-height:31px;padding-bottom:4px}#railHead h1{font-size:15px}
     #runtimeControls{padding:4px 5px}#runtimeControls select{height:21px}#runtimeActions button{height:20px;padding:0 5px}
     #taskline{padding:6px 7px}#stepPurpose{margin-top:3px;padding:3px 5px}#taskline .metaRow{margin-top:3px}
     #decisionWrap{padding:5px 6px}#decisionWrap .proofLead{display:none}#axisHud{padding:5px 6px}#axisHud .axis{margin:3px 0}
     #slotMapWrap{padding:5px 6px 4px}#insightStack{gap:3px;grid-template-rows:auto minmax(36px,.6fr) auto auto auto}
-    #queueCard,#traceStats{padding:4px 5px}#liveChartWrap{padding:4px 5px 2px}#phaseRail{padding:4px 5px}#phaseSegments{height:15px}
+    #traceStats{padding:4px 5px}#liveChartWrap{padding:4px 5px 2px}#phaseRail{padding:4px 5px}#phaseSegments{height:15px}
     #traceStats .statsGrid{gap:2px}.metricHelp{padding:3px 2px}#railFacts div{padding:3px 2px}
   }
   @media(min-width:1600px) and (min-height:900px){
@@ -296,7 +284,6 @@
     #slotMapWrap .mapHead strong{font-size:18px}#slotMapWrap .mapRule{margin-top:7px;padding:5px 7px;font-size:8.5px}
     #slotMap{flex:none;height:auto;min-height:0;aspect-ratio:1/1;margin-top:7px}#slotMapWrap .mapKey{gap:8px;margin-top:6px;font-size:8px;line-height:1.25}
     #insightStack{gap:8px;grid-template-rows:auto 130px 170px auto auto;align-content:start}
-    #queueCard{padding:7px 8px}#queueCard .qHead{font-size:8px}#queueCard .qHead b{font-size:9px}#queueStrip{min-height:20px;margin-top:5px}
     #liveChartWrap{padding:7px 8px 5px}#liveChartWrap .cap{font-size:9px}
     #phaseRail{padding:8px 9px}#phaseRail .phaseTitle{font-size:9px;margin-bottom:6px}
     #phaseSegments{height:auto;grid-template-columns:1fr!important;gap:3px}.phaseSeg{justify-content:flex-start;gap:8px;min-height:17px;padding:3px 7px;font-size:8px}
@@ -361,8 +348,6 @@
   #slotMapWrap .mapKey{gap:6px;margin-top:4px;font-size:7px;line-height:1.15}
   #insightStack{grid-area:insight;min-width:0;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:6px;align-content:stretch;overflow:visible}
   #railFacts{order:1;margin:0;grid-template-columns:repeat(3,minmax(0,1fr))}#railFacts div{padding:6px 4px}#railFacts b{font-size:10px}#railFacts span{font-size:6.5px}
-  #queueCard{order:2;min-width:0;padding:6px 7px}#queueCard .qHead{font-size:7px}#queueCard .qHead b{font-size:8px}
-  #queueStrip{min-height:18px;margin-top:4px;gap:3px}#queueStrip span{min-width:34px;padding:4px 2px;font-size:7px}#queueStrip em{font-size:7px}
   #traceStats{order:3;min-width:0;min-height:0;padding:6px 7px;overflow:visible;display:flex;flex-direction:column}
   #traceStats .statsHead{margin-bottom:5px}#traceStats .statsHead b{font-size:8px}#traceStats .statsHead span{font-size:6.5px}
   #traceStats .statsGrid{flex:1;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:4px}
@@ -415,7 +400,7 @@
     #taskline{padding:5px 7px}#taskline .primary{font-size:10.5px}#stepPurpose{font-size:8px}#taskline .metaRow{margin-top:3px}
     #runtimeControls{padding:4px 6px}#runtimeControls select{height:21px}#runtimeActions button{height:21px}
     #decisionWrap{padding:4px 6px}#decisionWrap .weightNote{display:none}#slotMapWrap{padding:5px 6px 4px}#slotMap{min-height:82px}
-    #queueCard,#traceStats{padding:4px 5px}.metricHelp{padding:3px 2px}#phaseRail{padding:4px 6px}#phaseSegments{height:18px}
+    #traceStats{padding:4px 5px}.metricHelp{padding:3px 2px}#phaseRail{padding:4px 6px}#phaseSegments{height:18px}
     #sceneTelemetry{top:21px;width:238px;height:90px;padding:6px 7px}#speed{height:54px}#sceneCaption{bottom:13px}#sceneTools{bottom:13px}
   }
 
@@ -461,8 +446,6 @@
   #slotMap{min-height:110px;margin-top:5px}#slotMapWrap .mapKey{gap:7px;margin-top:5px;font-size:9px;line-height:1.25}
   #insightStack{gap:5px}
   #railFacts div{padding:6px 4px}#railFacts b{font-size:11px}#railFacts span{font-size:9px}
-  #queueCard{padding:6px 7px}#queueCard .qHead{font-size:9px}#queueCard .qHead b{font-size:9.5px}
-  #queueStrip{min-height:22px;margin-top:4px;gap:4px}#queueStrip span{min-width:44px;padding:5px 4px;font-size:9px}#queueStrip em{font-size:9px}
   #traceStats{padding:6px 7px}#traceStats .statsHead{margin-bottom:5px}#traceStats .statsHead b{font-size:9.5px}
   #traceStats .statsHead span{font-size:9px}#traceStats .statsGrid{gap:4px}
   .metricHelp{min-height:34px;padding:5px 4px}.metricHelp b{font-size:11px}.metricHelp small{font-size:9px}
@@ -494,7 +477,7 @@
     #decisionWrap{padding:4px 6px}#decisionWrap .proofLead{margin-top:3px;padding:3px 5px}
     #decisionWrap .decisionAdvanced{margin-top:3px}#decisionWrap .decisionAdvanced>summary{min-height:25px}
     #slotMapWrap{padding:5px 6px 4px}#slotMap{min-height:82px}
-    #queueCard,#traceStats{padding:4px 5px}.metricHelp{min-height:31px;padding:3px 2px}
+    #traceStats{padding:4px 5px}.metricHelp{min-height:31px;padding:3px 2px}
     #phaseRail{padding:4px 6px}#phaseSegments{height:21px}
     #sceneTelemetry{top:22px;width:268px;height:104px}#speed{height:68px}
     #sceneCaption{bottom:13px}#sceneTools{bottom:13px}
@@ -670,7 +653,7 @@
     #phaseTimeScale{height:8px}.phaseSeg{padding:3px 1px;font-size:9px}.phaseSeg .phaseName{font-size:8px}.phaseSeg .phaseDuration{font-size:8.5px}
   }
   @media(prefers-reduced-motion:reduce){
-    #taskPrimary,#actionBadge,#cycleReset,.tipBubble{transition:none!important}
+    #taskPrimary,#actionBadge,.tipBubble{transition:none!important}
   }
 
   /* 0716 恢复门 R02：顶部 taskline 与底部 sceneDock 曾重复显示同一作业。
@@ -685,8 +668,7 @@
 
   /* 0716 fill-only candidate: one visible job source, capacity bookmarks and Chinese-first evidence. */
   html[data-s3-mode="fill-only-candidate"] #comparisonMini,
-  html[data-s3-mode="fill-only-candidate"] #faultStateBanner,
-  html[data-s3-mode="fill-only-candidate"] #cycleReset{display:none!important}
+  html[data-s3-mode="fill-only-candidate"] #faultStateBanner{display:none!important}
   html[data-s3-mode="fill-only-candidate"] #workHud{grid-template-rows:auto auto auto auto minmax(0,1fr) auto;
     grid-template-areas:"head head" "controls controls" "decision decision" "bookmark bookmark" "map insight" "phase insight"}
   html[data-s3-mode="fill-only-candidate"] #insightStack{grid-row:5/7}
@@ -935,8 +917,6 @@
   html[data-s3-layout="A"] #topbarA #runtimeActions .btnSet+.btnSet{border-left:1px solid #d6dde2;padding-left:10px}
   html[data-s3-layout="A"] #topbarA #runtimeActions button{height:30px;min-height:30px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
   html[data-s3-layout="A"] #topbarA #runtimeActions button:hover{background:#17365d;color:#fff;border-color:#17365d}
-  html[data-s3-layout="A"] #topbarA #runtimeActions #pauseMotion{background:#17365d;color:#fff;border-color:#17365d;font-weight:700}
-  html[data-s3-layout="A"] #topbarA #runtimeActions #pauseMotion:hover{background:#0f2440;border-color:#0f2440}
   html[data-s3-layout="A"] #topbarA #traceLoadState{height:30px;display:flex;align-items:center;padding:0 9px;margin-left:4px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap;box-sizing:border-box;text-decoration:none}
   /* 情景配置组:算法 + 拟真档说明牌 + 货物画像,融为一个灰底单元(同 02 0719d 绿框) */
   #tierFixedTag{height:30px;padding:0 8px;box-sizing:border-box}
@@ -980,7 +960,6 @@
 
   /* -- 3D 区:让位给顶栏(进度轴已迁入右栏,不再占独立横条高度) -- */
   html[data-s3-layout="A"] #gl{left:var(--rail-w);top:var(--topbar-h)}
-  html[data-s3-layout="A"] #cycleReset{left:var(--rail-w);top:var(--topbar-h)}
   html[data-s3-layout="A"] #reserveBadgeAnchor{display:none}
 
   /* -- 块头统一:9px/700/#16191d,中文标签 letter-spacing .2px(右栏 + 底 dock 共用) -- */
@@ -1205,6 +1184,134 @@
     html[data-s3-layout="A"] #sceneCargoMeta{margin-top:2px;gap:3px 6px}
     html[data-s3-layout="A"] #sceneCargoMeta .cgChip{padding:1px 5px}
   }
+
+  /* ================================================================
+     0721 回灌 · 版A「算法赛马场」主版面(规格 docs/施工规格_回灌0721.md §1.2,变体
+     design_mock_0721/01_变体A_赛马场.html 已验证代码搬回;30-seed 分布带取自变体B)。
+     手法同变体注记:#workHud 实际是 display:flex;flex-direction:column(926 行),不是
+     grid 容器,重排靠 flex order,不靠 grid-template-areas;既有同选择器 order 规则
+     (735/926 行一带)specificity 与源码序都可能赢,故新 order/overflow 声明一律 !important。
+     ================================================================ */
+  html[data-s3-layout="A"]{--rail-w:60%}
+  html[data-s3-layout="A"] #workHud{overflow-y:auto!important;overflow-x:hidden!important}
+  #raceBanner{order:1!important}
+  html[data-s3-layout="A"] #progressAxisHost{order:2!important;position:static!important}
+  #raceGridsIntro{order:3!important}
+  /* 排错记录(0721 回灌实测):历史 #slotMapWrap{flex:1 1 180px}(无 html[data-s3-layout] 前缀,
+     见早期 Task 版式区)靠 per-property 层叠仍会赢过后续只设 order/min-height 的规则——flex-basis
+     不受 min-height 名义约束,实测三联画布被压扁至 ~30px。这里显式整条 flex 简写 + !important 锁定,
+     不靠 min-height 单项对赌。 */
+  html[data-s3-layout="A"] #slotMapWrap{order:4!important;flex:0 0 460px!important;min-height:460px!important}
+  /* 3D+dock 让位主区四图后仅余约 40% 宽,原 dock 三列 minmax 下限合计 830px 装不下——按新宽度预算收窄
+     下限(比例大致保留),仍在 1280/1600/1920 三档测试宽度下正确显示。 */
+  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(220px,1.92fr) minmax(120px,1fr) minmax(90px,.78fr)}
+  #raceScoreboard{order:5!important}
+  #raceFinalBoard{order:6!important}
+  #raceSeedBand{order:7!important}
+  html[data-s3-layout="A"] #decisionWrap{order:8!important}
+  html[data-s3-layout="A"] #insightStack{order:9!important}
+  html[data-s3-layout="A"] #phaseRail{order:10!important}
+  html[data-s3-layout="A"] #slotMap{aspect-ratio:2.3/1!important}
+  html[data-s3-layout="A"] #workHud #diffMapWrap{min-height:230px;margin-top:8px;padding-top:8px}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffHead span{display:block!important;font-size:8px!important;margin-top:2px}
+  html[data-s3-layout="A"] #workHud #diffMapWrap .diffKey span:last-child{display:inline-flex!important}
+  html[data-s3-layout="A"] #workHud #diffMap{max-height:220px}
+
+  /* -- 共享卡片壳(赛马场四区块 + 决策解剖 + 证据抽屉共用) -- */
+  .vPanel{border:1px solid var(--rail-line,#cbd2d8);background:var(--card,#fff);margin:8px 0;padding:9px 11px}
+  .vPanel .vHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px solid #e1e6e9;padding-bottom:5px;margin-bottom:7px}
+  .vPanel .vHead b{font:800 11px/1.2 "Microsoft YaHei",sans-serif;color:#17202b}
+  .vPanel .vHead span{font:8px/1.2 Consolas,monospace;color:#69717a;text-align:right}
+  .vPanel .note{font:8.5px/1.4 "Microsoft YaHei",sans-serif;color:#5d656d;margin-top:6px}
+  .spotCheck{margin-top:7px;padding:6px 8px;background:#eef2f5;border-left:3px solid #17365d;color:#3c4c5c;font:8.5px/1.4 Consolas,monospace}
+  #raceBanner.vPanel{border:0;border-left:4px solid #ff000f;background:#fff7f5;font:700 10.5px/1.5 "Microsoft YaHei",sans-serif;color:#5c1010;padding:8px 11px}
+
+  /* -- 赛段比分条:6 容量节点 × 三算法 -- */
+  .raceNode{display:grid;grid-template-columns:56px 1fr 1fr;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #eef1f3}
+  .raceNode:last-child{border-bottom:0}
+  .raceNode .nodeLabel{font:800 10px/1.25 Consolas,monospace;color:#17202b}
+  .raceNode .nodeLabel small{display:block;font:400 8px/1 "Microsoft YaHei",sans-serif;color:#8a939c;margin-top:2px}
+  .raceMetricLabel{display:block;font:700 8px/1.2 Consolas,monospace;color:#8a939c;margin-bottom:3px}
+  .raceBarRow{display:grid;grid-template-columns:34px 1fr 56px;gap:5px;align-items:center;font:8.5px/1 Consolas,monospace;margin-top:2px}
+  .raceBarRow span:first-child{color:#4c5963;font-weight:700}
+  .raceBarRow span:last-child{text-align:right;color:#3c4650}
+  .raceBarTrack{height:7px;background:#e7ebed;overflow:hidden}
+  .raceBarTrack i{display:block;height:100%}
+  .raceBarRow[data-algo="seq"] .raceBarTrack i{background:#8c969e}
+  .raceBarRow[data-algo="near"] .raceBarTrack i{background:#4a6fa5}
+  .raceBarRow[data-algo="score"] .raceBarTrack i{background:#ff000f}
+
+  /* -- 终态总分牌:三算法并排矩阵,SEQ 基线列;涨跌徽章沿用既有 .statsDelta/.better/.worse -- */
+  .finalMatrix{width:100%;border-collapse:collapse;font:9.5px/1.3 Consolas,monospace}
+  .finalMatrix th,.finalMatrix td{padding:5px 7px;border-bottom:1px solid #e7ebed;text-align:right}
+  .finalMatrix th:first-child,.finalMatrix td:first-child{text-align:left;font-family:"Microsoft YaHei",sans-serif;font-size:9.5px;color:#3c4650}
+  .finalMatrix thead th{color:#69717a;font-weight:700;border-bottom:2px solid #c9d0d5;font-size:8.5px}
+  .finalMatrix .baseCol{background:#f4f6f7}
+  .finalMatrix .statsDelta{position:static;margin-left:4px}
+
+  /* -- 30-seed 分布带(变体B 实现,置总分牌旁):min–max 条 + 均值竖线,非百分位 -- */
+  .seedRow{margin-top:8px}
+  .seedRow .sHead{font:700 8.5px/1.2 Consolas,monospace;color:#4c5963;margin-bottom:3px}
+  .seedBarLine{display:grid;grid-template-columns:38px 1fr 44px;gap:5px;align-items:center;font:8px/1 Consolas,monospace;margin-top:2px}
+  .seedBarLine span:first-child{color:#4c5963;font-weight:700}
+  .seedBarLine span:last-child{text-align:right;color:#3c4650}
+  .seedTrack{position:relative;height:8px;background:#eef1f3}
+  .seedTrack .seedRange{position:absolute;top:1px;bottom:1px;background:#c8d3da}
+  .seedTrack .seedMean{position:absolute;top:-1px;bottom:-1px;width:2px;background:#ff000f}
+
+  /* ================================================================
+     0721 回灌 · 决策解剖(变体B 实现)并入放大层 #s3MapOverlay 的 #scoreAnatomy;
+     评分瀑布 raw→f/t/w_norm→weighted→score_total + Top-3 候选对比表(含 tie_size)。
+     ================================================================ */
+  #scoreAnatomy{margin-top:12px;border-top:1px dashed #c9ced3;padding-top:10px}
+  .waterfallRow{margin-top:7px}
+  .waterfallRow .wHead{display:flex;justify-content:space-between;font:8.5px/1.2 Consolas,monospace;color:#4c5963}
+  .waterfallRow .wHead b{color:#17202b;font:700 9px/1.2 "Microsoft YaHei",sans-serif}
+  .waterfallTrack{height:9px;margin-top:3px;background:#e7ebed;overflow:hidden;position:relative}
+  .waterfallTrack i{display:block;height:100%;background:#17365d}
+  .waterfallRow[data-zero="true"] .waterfallTrack i{background:#c2c8cc;width:2px!important}
+  .normGauges{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed #d8dde1}
+  .normGauges div{text-align:center}
+  .normGauges b{display:block;font:800 12px/1.2 Consolas,monospace;color:#17365d}
+  .normGauges span{font:7.5px/1.2 "Microsoft YaHei",sans-serif;color:#8a939c}
+  .scoreTotalLine{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;padding-top:7px;border-top:1px solid #d8dde1}
+  .scoreTotalLine b{font:800 15px/1 Consolas,monospace;color:#ff000f}
+  table.top3Table{width:100%;border-collapse:collapse;font:9px/1.3 Consolas,monospace}
+  table.top3Table th,table.top3Table td{padding:4px 5px;border-bottom:1px solid #e7ebed;text-align:right}
+  table.top3Table th:first-child,table.top3Table td:first-child{text-align:left}
+  table.top3Table thead th{color:#69717a;font:700 8px/1.2 Consolas,monospace;border-bottom:2px solid #c9d0d5}
+  table.top3Table tr.selectedRow{background:#fff7cc}
+  table.top3Table tr.selectedRow td:first-child{font-weight:800;box-shadow:inset 3px 0 #e0b600}
+
+  /* ================================================================
+     0721 回灌 · 证据抽屉(变体C 内容 · validator.checks 18 项 + checkpoints 哈希链 6 节点 +
+     终态账本 + 口径与边界卡)——升级既有小浮层 #evidencePop 为右侧抽屉;沿用 .s3aPop 的
+     show/hide 与 Escape 机制,仅覆盖定位/尺寸为固定右栏抽屉,不再靠 placePop() 跟随触发点。
+     ================================================================ */
+  #evidencePop.evidenceDrawer{position:fixed;z-index:90;right:0;top:0;bottom:0;left:auto;width:min(440px,92vw);
+    max-width:none;border:0;border-left:3px solid var(--abb-red);box-shadow:-12px 0 34px #17202b40;
+    padding:16px 18px;overflow-y:auto;transform:translateX(100%);transition:transform .16s ease-out}
+  #evidencePop.evidenceDrawer.show{display:block;transform:translateX(0)}
+  .drawerSection{margin:0 0 14px;padding-bottom:12px;border-bottom:1px dashed #d8dde1}
+  .drawerSection:last-of-type{border-bottom:0}
+  .drawerSection>b{display:block;font:800 11px/1.2 "Microsoft YaHei",sans-serif;color:#17202b}
+  .drawerMeta{display:block;margin-top:2px;font:8px/1.3 Consolas,monospace;color:#69717a}
+  .checksGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px 10px;margin-top:7px}
+  .checkItem{display:flex;align-items:center;gap:6px;padding:4px 2px;border-bottom:1px solid #f0f2f4;font:9px/1.2 Consolas,monospace;color:#26343e}
+  .checkItem .ok{flex:none;width:13px;height:13px;border-radius:50%;background:#1d6b2e;color:#fff;font:800 9px/13px monospace;text-align:center}
+  .auditTimelineList{position:relative;padding-left:14px;margin-top:7px}
+  .auditTimelineList:before{content:"";position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:#c9d0d5}
+  .timelineNode{position:relative;padding:7px 0 7px 12px;border-bottom:1px solid #f0f2f4}
+  .timelineNode:last-child{border-bottom:0}
+  .timelineNode:before{content:"";position:absolute;left:-14px;top:11px;width:9px;height:9px;border-radius:50%;background:#17365d;border:2px solid #fff;box-shadow:0 0 0 1px #c9d0d5}
+  .timelineNode .tHead{display:flex;justify-content:space-between;font:800 9.5px/1.2 Consolas,monospace;color:#17202b}
+  .timelineNode .tMeta{margin-top:3px;font:8px/1.4 Consolas,monospace;color:#69717a;word-break:break-all}
+  .timelineNode .tMeta b{color:#3c4650}
+  .ledgerGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#dfe4e7;border:1px solid #dfe4e7;margin-top:7px}
+  .ledgerCell{background:#fff;padding:8px 6px;text-align:center}
+  .ledgerCell b{display:block;font:800 13px/1.2 Consolas,monospace;color:#17202b}
+  .ledgerCell span{display:block;margin-top:4px;font:7.5px/1.2 "Microsoft YaHei",sans-serif;color:#69717a}
+  .boundaryQuote{font:italic 9.5px/1.55 "Microsoft YaHei",sans-serif;color:#3c4650;padding:8px 10px;background:#f4f6f7;border-left:3px solid #17365d;margin:7px 0 8px}
 </style>
 <!-- V2 壳体共享语法(0719):01=连续入库保持 rail-left(data-first),不设 data-s3-rail 即缺省 left;
      文件内 rail-right 映射与 #cycleAxis 规则对本页零命中,link 仅作为后续侧向规则收拢的接口。 -->
@@ -1221,7 +1328,7 @@
           <label>算法<select id="strategySelect"><option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option></select></label>
           <label>拟真档<select id="tierSelect"><option value="1">档 1 · 数据模型</option><option value="2">档 2 · 加减速设计</option><option value="3" selected>档 3 · 综合情景</option></select></label>
           <label>货物画像<select id="profileSelect"><option value="uniform">均匀</option><option value="skew" selected>偏斜</option><option value="heavy">重货</option></select></label>
-          <div id="runtimeActions"><button id="pauseMotion" type="button" aria-pressed="false">暂停</button><button id="replayTrace" type="button">从头回放</button><button id="exp" type="button">导出3D帧</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
+          <div id="runtimeActions"><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
         <div id="axisHud" aria-label="轴状态 · 位置与速度；数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis axisFork"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
@@ -1235,7 +1342,6 @@
         <span class="sw"><i class="multi"></i>货物分级</span>
         <span class="sw"><i style="height:7px;background:#64717c"></i>预占封板</span>
       </div>
-      <div id="cycleReset" aria-hidden="true"><div class="resetCard"><b>演示循环重置</b><span>对象归位只发生在遮罩内，不计入运行 KPI</span></div></div>
     </section>
   </section>
 </main>

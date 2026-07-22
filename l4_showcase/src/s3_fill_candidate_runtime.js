@@ -733,6 +733,131 @@
     byId("insightStack").append(guide);
     byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回程</span><span class="blocked"><i></i>预占</span><span class="hotlid"><i style="background:#d9ad00"></i>金顶 = 热门前 20%</span>';
     byId("phaseNow").textContent = "入库进度 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
+
+    /* W7(0721 回灌,规格 docs/施工规格_回灌0721.md §1.2):赛马场主版面四区块——同源口径声明条 /
+       主区四图标题条 / 赛段比分条 / 终态总分牌 / 30-seed 分布带。全部直接读闭包内 payload/models
+       真实数据(数据渲染进 runtime);DOM 顺序不重要,可见次序完全由 html 内 order 样式决定(见
+       html[data-s3-layout="A"] 的 #raceBanner 等 order 规则)。 */
+    const LANES3 = ["seq", "near", "score"];
+    const sameInputSet = new Set(payload.online_lanes.map(lane => lane.shared_input_sha256));
+    const raceBanner = document.createElement("div");
+    raceBanner.id = "raceBanner"; raceBanner.className = "vPanel";
+    raceBanner.innerHTML = `三算法同一到达队列 · 同一数据门 · 单 seed ${payload.shared_input_provenance.profile.seed}` +
+      `(30-seed 佐证见证据 s3_fill_seed_sweep_${SCENARIO}_2026_2055.json)· SIM` +
+      `<span style="display:block;margin-top:4px;font:400 8.5px/1.3 Consolas,monospace;color:#8a6a55">数据抽查:三条在线 lane 的 shared_input_sha256 唯一值个数 = ${sameInputSet.size}(应为 1)← payload.online_lanes[].shared_input_sha256(数据源:./s3_fill_store.js)</span>`;
+
+    const raceGridsIntro = document.createElement("div");
+    raceGridsIntro.id = "raceGridsIntro"; raceGridsIntro.className = "vPanel";
+    raceGridsIntro.innerHTML = '<div class="vHead"><b>主区 · 算法赛马场四图</b><span>SEQ | NEAR | SCORE 同帧三联 + SCORE−SEQ 终态差异热力图</span></div>' +
+      '<div class="note">三算法共享同一到达队列与同一 20×20 / 133 预占容量契约(见上方声明);差异只来自放置策略本身,可直接横向对比。差异热力图见下方内嵌卡片。</div>';
+
+    const raceScoreboard = document.createElement("section");
+    raceScoreboard.id = "raceScoreboard"; raceScoreboard.className = "vPanel";
+    const raceMetrics = [
+      {key: "expected_retrieval_s", label: "期望取货 s", digits: 2},
+      {key: "round_trip_path_m", label: "累计行程 m", digits: 0}
+    ];
+    const raceMaxByMetric = {};
+    raceMetrics.forEach(m => {
+      const vals = [];
+      LANES3.forEach(id => models.get(id).lane.checkpoints.forEach(cp => vals.push(cp.metrics_to_date[m.key])));
+      raceMaxByMetric[m.key] = Math.max(...vals) || 1;
+    });
+    const raceRowsHtml = BOOKMARKS.map((count, index) => {
+      const cellsHtml = raceMetrics.map(m => {
+        const barsHtml = LANES3.map(algo => {
+          const cp = models.get(algo).lane.checkpoints.find(item => item.event_count === count);
+          const v = cp.metrics_to_date[m.key];
+          const pct = (v / raceMaxByMetric[m.key] * 100).toFixed(1);
+          return `<div class="raceBarRow" data-algo="${algo}"><span>${algo.toUpperCase()}</span>` +
+            `<span class="raceBarTrack"><i style="width:${pct}%"></i></span><span>${v.toFixed(m.digits)}</span></div>`;
+        }).join("");
+        return `<div><span class="raceMetricLabel">${m.label}</span>${barsHtml}</div>`;
+      }).join("");
+      return `<div class="raceNode"><span class="nodeLabel">${count} / 267<small>${["0%", "25%", "50%", "75%", "90%", "100%"][index]}</small></span>${cellsHtml}</div>`;
+    }).join("");
+    const raceViolLine = LANES3.map(id => `${id.toUpperCase()} ${models.get(id).lane.metrics.violations}`).join(" · ");
+    raceScoreboard.innerHTML = '<div class="vHead"><b>赛段比分条 · 6 节点 × 三算法</b><span>online_lanes[].checkpoints[].metrics_to_date</span></div>' +
+      raceRowsHtml +
+      `<div class="spotCheck">说明:violations(约束违规)在数据门中只有终态计数,checkpoint 未逐节点记录该字段,故未在此强行编造逐节点值——终态如实为 0(${raceViolLine}),而 violations 定义上只增不减,终态 0 即蕴含全程各节点亦为 0;完整违规值见下方终态总分牌。</div>`;
+
+    const raceFinalBoard = document.createElement("section");
+    raceFinalBoard.id = "raceFinalBoard"; raceFinalBoard.className = "vPanel";
+    const finalMetrics = [
+      {key: "hot20_retrieval_s", label: "热门取货 s", digits: 2, lowerBetter: true},
+      {key: "heavy20_mean_tier", label: "重货均层", digits: 2, lowerBetter: true},
+      {key: "lift_work_proxy_kgm", label: "能耗代理 kg·m", digits: 0, lowerBetter: true},
+      {key: "expected_retrieval_s", label: "期望取货 s", digits: 2, lowerBetter: true},
+      {key: "violations", label: "约束违规", digits: 0, lowerBetter: null},
+      {key: "makespan_s", label: "完工 s(三算法恒等)", digits: 0, lowerBetter: null},
+      {key: "round_trip_path_m", label: "行程 m(三算法恒等)", digits: 0, lowerBetter: null}
+    ];
+    const seqMetricsFinal = models.get("seq").lane.metrics;
+    const finalBodyRows = finalMetrics.map(m => {
+      const cells = LANES3.map(algo => {
+        const v = models.get(algo).lane.metrics[m.key];
+        const cls = algo === "seq" ? "baseCol" : "";
+        let badge = "";
+        if (algo !== "seq" && m.lowerBetter !== null && seqMetricsFinal[m.key] > 0) {
+          const pct = (v - seqMetricsFinal[m.key]) / seqMetricsFinal[m.key] * 100;
+          if (Math.abs(pct) >= .05) {
+            const better = m.lowerBetter ? pct < 0 : pct > 0;
+            /* 涨跌徽章沿用既有 .statsDelta/.better/.worse(governanceStyle 已定义,见上文);
+               表格单元格内需覆盖其绝对定位为随文,覆盖规则见 html 内 .finalMatrix .statsDelta。 */
+            badge = ` <em class="statsDelta ${better ? "better" : "worse"}">${pct < 0 ? "▼" : "▲"}${Math.abs(pct).toFixed(1)}%</em>`;
+          }
+        }
+        return `<td class="${cls}">${v.toFixed(m.digits)}${badge}</td>`;
+      }).join("");
+      return `<tr><td>${m.label}</td>${cells}</tr>`;
+    }).join("");
+    raceFinalBoard.innerHTML = '<div class="vHead"><b>终态总分牌 · 三算法并排</b><span>online_lanes[].metrics(终态)</span></div>' +
+      `<table class="finalMatrix"><thead><tr><th>指标</th><th class="baseCol">SEQ · 基线</th><th>NEAR</th><th>SCORE</th></tr></thead><tbody>${finalBodyRows}</tbody></table>` +
+      `<div class="spotCheck">数据抽查:屏上 SCORE 期望取货 = ${models.get("score").lane.metrics.expected_retrieval_s.toFixed(3)} s ← online_lanes[algorithm.id=score].metrics.expected_retrieval_s(数据源:./s3_fill_store.js)</div>`;
+
+    const seedBand = document.createElement("section");
+    seedBand.id = "raceSeedBand"; seedBand.className = "vPanel";
+    seedBand.innerHTML = '<div class="vHead"><b>30-seed 分布带 · 三算法稳健性</b><span>加载中…</span></div>';
+
+    bookmarks.after(raceBanner); raceBanner.after(raceGridsIntro); raceGridsIntro.after(raceScoreboard);
+    raceScoreboard.after(raceFinalBoard); raceFinalBoard.after(seedBand);
+
+    /* 治理 C2 两情景兼容:30-seed 证据文件按 SCENARIO 切换(skew/uniform),真 fetch 不编造。 */
+    fetch(`../evidence/s3_fill_seed_sweep_${SCENARIO}_2026_2055.json`).then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }).then(sweep => {
+      const seedMetrics = [
+        {key: "expected_retrieval_s", label: "期望取货 s", digits: 2},
+        {key: "hot20_retrieval_s", label: "热门取货 s", digits: 2},
+        {key: "heavy20_mean_tier", label: "重货均层", digits: 2},
+        {key: "lift_work_proxy_kgm", label: "能耗代理 kg·m", digits: 0}
+      ];
+      const seedRowsHtml = seedMetrics.map(m => {
+        const perMetric = sweep.summary.per_metric[m.key].stats;
+        const globalMax = Math.max(perMetric.seq.max, perMetric.near.max, perMetric.score.max);
+        const globalMin = Math.min(perMetric.seq.min, perMetric.near.min, perMetric.score.min);
+        const span = Math.max(1e-9, globalMax - globalMin);
+        const barsHtml = ["seq", "near", "score"].map(algo => {
+          const s = perMetric[algo];
+          const left = (s.min - globalMin) / span * 100, width = Math.max(1, (s.max - s.min) / span * 100);
+          const meanLeft = (s.mean - globalMin) / span * 100;
+          return `<div class="seedBarLine"><span>${algo.toUpperCase()}</span><span class="seedTrack">` +
+            `<i class="seedRange" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></i>` +
+            `<i class="seedMean" style="left:${meanLeft.toFixed(1)}%"></i></span><span>均值 ${s.mean.toFixed(m.digits)}</span></div>`;
+        }).join("");
+        return `<div class="seedRow"><div class="sHead">${m.label}</div>${barsHtml}</div>`;
+      }).join("");
+      seedBand.innerHTML = `<div class="vHead"><b>30-seed 分布带 · 三算法稳健性</b><span>seed ${sweep.seeds[0]}–${sweep.seeds[sweep.seeds.length - 1]} · case=${sweep.case}</span></div>` +
+        seedRowsHtml +
+        `<div class="note">条形范围 = min–max(数据文件字段,非 P50 分位数;文件未提供分位数,如实以 min/mean/max 呈现,竖线=均值);对应本页当前展示单 seed(${payload.shared_input_provenance.profile.seed})作为 30-seed 中的一个样本点。</div>` +
+        `<div class="spotCheck">数据抽查:SCORE 期望取货 30-seed 均值 = ${sweep.summary.per_metric.expected_retrieval_s.stats.score.mean.toFixed(3)} s(min ${sweep.summary.per_metric.expected_retrieval_s.stats.score.min.toFixed(2)} / max ${sweep.summary.per_metric.expected_retrieval_s.stats.score.max.toFixed(2)}) ← 真 fetch ../evidence/s3_fill_seed_sweep_${SCENARIO}_2026_2055.json summary.per_metric.expected_retrieval_s.stats.score</div>`;
+      root.__S3_FILL_SEED_BAND_READY__ = true;
+    }).catch(error => {
+      seedBand.innerHTML = `<div class="vHead"><b>30-seed 分布带</b><span style="color:#b71c1c">加载失败</span></div><div class="note">${String(error)}</div>`;
+      root.__S3_FILL_SEED_BAND_READY__ = "error";
+      console.error("[01] 30-seed fetch 失败", error);
+    });
   }
 
   configureDom();
@@ -824,6 +949,71 @@
       `<button class="metricHelp conservedCell" title="守恒量：填满口径下三种算法终态占据同一批 267 个货位，完工时长与总行程只取决于货位集合与同批货物，数学上必然三算法相等——能区分算法的是取货侧与分布侧指标"><b>${Math.round(metrics.makespan_s)} s · ${Math.round(metrics.round_trip_path_m)} m</b><small>完工/行程 · 三算法恒等 ⓘ</small></button></div>`;
   }
 
+  /* W7(0721 回灌 §1.3):决策解剖——评分瀑布 + Top-3 候选对比,固定读 SCORE lane(与右上角
+     算法下拉当前驱动 3D/2D 的算法各自独立;非 SCORE 算法没有 score_terms,解剖室口径固定拆 SCORE)。
+     并入放大层(#s3MapOverlay 内的 #scoreAnatomy,由 interactions.js 创建);该容器在本函数首次
+     调用时可能尚不存在(interactions.js 晚于本文件加载),故判空跳过,后续每帧重试。 */
+  function renderScoreAnatomy(frame) {
+    const host = byId("scoreAnatomy"); if (!host) return;
+    const scoreModel = models.get("score"), idx = frame.eventIndex;
+    const audit = scoreModel.decisionEvidence.events[idx], top1 = audit.top3[0], terms = top1.score_terms;
+    const scoreEvent = scoreModel.lane.events[idx], cargo = good(scoreEvent.gid);
+    const weights = payload.score_policy.weights;
+    const FACTORS = [
+      {key: "efficiency", label: "效率(频次×行程)"},
+      {key: "stability", label: "稳定(重量×层高)"},
+      {key: "energy_proxy", label: "能耗代理(重量×提升高度)"},
+      {key: "position_reservation", label: "位置保留(为后续热门货让位)"}
+    ];
+    const waterfallRows = FACTORS.map((f, index) => {
+      const raw = terms[`${f.key}_raw`], weighted = terms[`${f.key}_weighted`];
+      const pct = terms.score_total > 0 ? weighted / terms.score_total * 100 : 0;
+      return `<div class="waterfallRow" data-zero="${weighted <= 0}"><div class="wHead"><b>${f.label}</b>` +
+        `<span>raw ${raw.toFixed(4)} × w ${weights[index]} = ${weighted.toFixed(4)}</span></div>` +
+        `<div class="waterfallTrack"><i style="width:${Math.max(1.5, pct)}%"></i></div></div>`;
+    }).join("");
+    const top3Rows = audit.top3.map(item => {
+      const slot = `${String(item.slot[0]).padStart(2, "0")} / ${String(item.slot[1]).padStart(2, "0")}`;
+      return `<tr${item.selected ? ' class="selectedRow"' : ""}><td>第 ${item.rank} 名${item.selected ? " · 选中" : ""}</td><td>${slot}</td>` +
+        `<td>${Number(item.objective_value).toFixed(4)}</td><td>${Number(item.travel_time_s).toFixed(2)} s</td><td>${item.tie_size}</td></tr>`;
+    }).join("");
+    host.innerHTML = `<div class="vPanel"><div class="vHead"><b>当前件评分瀑布 · SCORE 算法</b><span>事件 ${idx + 1} / 267 · ${cargo.name}(${GRADE_LABEL[cargo.grade] || cargo.grade})</span></div>` +
+      waterfallRows +
+      `<div class="normGauges"><div><b>${Number(terms.f_norm).toFixed(3)}</b><span>f_norm 频次归一</span></div>` +
+      `<div><b>${Number(terms.t_norm).toFixed(3)}</b><span>t_norm 行程归一</span></div>` +
+      `<div><b>${Number(terms.w_norm).toFixed(3)}</b><span>w_norm 重量归一</span></div></div>` +
+      `<div class="scoreTotalLine"><span>score_total(四项加权和)</span><b>${Number(terms.score_total).toFixed(4)}</b></div>` +
+      `<div class="spotCheck">数据抽查:score_total = ${Number(terms.score_total).toFixed(6)} ← decision_evidence.lanes[score].events[${idx}].top3[0].score_terms.score_total(数据源:./s3_fill_store.js)</div></div>` +
+      `<div class="vPanel"><div class="vHead"><b>Top-3 候选对比 · SCORE 算法</b><span>legal ${audit.legal_count} · rejected ${audit.rejected_count}</span></div>` +
+      `<table class="top3Table"><thead><tr><th>名次</th><th>货位</th><th>总分</th><th>双轴时间</th><th>并列数</th></tr></thead><tbody>${top3Rows}</tbody></table>` +
+      `<div class="note">总分 = score_terms.score_total(经 objective_value 通用字段读出);并列数(tie_size)>1 表示该名次由多个货位并列,按结构化兜底键落位(等时区现象:垂直限速仅为水平 1/4)。</div></div>`;
+  }
+
+  /* W7(0721 回灌 §1.4):证据抽屉数据源——validator.checks 18 项 + 当前 lane 的 checkpoints 哈希链 6 节点
+     + 终态账本(不含 fixed_score_diagnostic_total) + 口径与边界卡。按需调用(抽屉展开时才算),
+     不是每帧轮询;interactions.js 的 toggleEvidence() 负责把这份结构化数据渲成抽屉 HTML。 */
+  function auditDetail() {
+    const laneId = state.laneId, lane = state.model.lane;
+    const checks = Object.keys(payload.validator.checks).map(name => ({name, pass: payload.validator.checks[name] === true}));
+    const checkpoints = lane.checkpoints.map(cp => ({
+      eventCount: cp.event_count, label: cp.label, phase: cp.phase,
+      auditPrefix12: cp.audit_prefix_sha256.slice(0, 12), totalUnavailable: cp.total_unavailable
+    }));
+    const m = lane.metrics, entry = payload.registry.active_entry, approval = entry.frontend_binding_approval;
+    return {
+      laneId, laneLabel: LANE_LABEL[laneId],
+      validatorModule: payload.validator.module, validatorScope: payload.validator.scope,
+      checks, checksPassCount: checks.filter(item => item.pass).length,
+      checkpoints,
+      ledger: {managedFillRatio: m.managed_fill_ratio, totalOccupancyRatio: m.total_occupancy_ratio,
+        placed: m.placed, violations: m.violations, makespanS: m.makespan_s},
+      boundary: {evidenceBoundary: entry.evidence_boundary, approvedAtUtc: approval.approved_at_utc,
+        registryStatus: entry.status, testPassed: approval.test_result.passed,
+        testTotal: approval.test_result.passed + approval.test_result.failed,
+        arrivalModel: payload.shared_input_provenance.arrival_model}
+    };
+  }
+
   function updatePhaseRail(frame) {
     const event = frame.event, host = byId("phaseSegments"), scale = byId("phaseTimeScale");
     if (!host.dataset.fillBuilt) {
@@ -913,14 +1103,14 @@
       targetFx.faceMat.opacity = live ? .72 + .26 * pulse : .95;
       if (live) targetFx.arrow.position.z = targetFx.arrow.userData.baseZ - targetFx.floatAmp * pulse;
     }
-    renderDecision(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
+    renderDecision(frame); renderScoreAnatomy(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
   }
 
   function currentFrame() { return state.idleCount === null ? activeFrame(state.model, state.elapsed) : idleFrame(state.model, state.idleCount); }
 
   function seekBookmark(count) {
     invariant(BOOKMARKS.includes(count), "非法入库进度书签"); state.idleCount = count; state.elapsed = state.model.eventStarts[count];
-    state.paused = true; state.lastNow = null; byId("pauseMotion").textContent = "继续"; byId("pauseMotion").setAttribute("aria-pressed", "true");
+    state.paused = true; state.lastNow = null;
     renderFrame(currentFrame()); return snapshot();
   }
 
@@ -934,12 +1124,13 @@
   }
 
   function togglePause() {
+    /* W7(0721 F1 底座清理):暂停/继续按钮 DOM 已删,函数保留作 __S3_FILL_QA 程序化钩子
+       (同 W6 resetCamera 先例)——不再写按钮文案。 */
     if (state.paused && state.idleCount !== null) {
       if (state.idleCount >= 267) { seekBookmark(0); }
       state.elapsed = state.model.eventStarts[state.idleCount]; state.idleCount = null;
     }
-    state.paused = !state.paused; state.lastNow = null; byId("pauseMotion").textContent = state.paused ? "继续" : "暂停";
-    byId("pauseMotion").setAttribute("aria-pressed", String(state.paused));
+    state.paused = !state.paused; state.lastNow = null;
   }
 
   function exportFrame() {
@@ -1059,11 +1250,13 @@
   }
 
   byId("strategySelect").addEventListener("change", event => setAlgorithm(event.target.value));
-  byId("pauseMotion").addEventListener("click", togglePause); byId("replayTrace").addEventListener("click", () => seekBookmark(0));
   /* W6(0720,拍板同 02 W1-8):「总览」相机复位按钮与其 DOM 一并删除;resetCamera() 仍留作
-     QA 程序化钩子(见下方公开 API,__S3_FILL_QA.resetCamera() 供脚本调用)。 */
+     QA 程序化钩子(见下方公开 API,__S3_FILL_QA.resetCamera() 供脚本调用)。
+     W7(0721 F1 底座清理):暂停/继续、从头回放、导出3D帧三按钮同法删除——DOM 与专属事件绑定一并去除,
+     togglePause()/exportFrame() 保留为 __S3_FILL_QA 程序化钩子;「从头回放」等价于 seekBookmark(0),
+     已由既有 fillBookmarkButtons 的 0/267 节点覆盖,不需要单独暴露。默认态维持 paused=true
+     (bookmark 0 冻结画面),与既有 QA 确定性快照假设一致;赛段/终态对比改为主交互路径。 */
   byId("playbackSpeed").addEventListener("input", event => { state.multiplier = normalizePlaybackMultiplier(event.target.value); byId("playbackValue").textContent = `${state.multiplier.toFixed(2)}×`; });
-  byId("exp").addEventListener("click", exportFrame);
   byId("fillBookmarkButtons").addEventListener("click", event => { const button = event.target.closest("button[data-count]"); if (button) seekBookmark(Number(button.dataset.count)); });
   controls.addEventListener("change", () => { if (lastFrame) { renderer.render(scene, camera); layoutTarget(lastFrame); } });
   root.addEventListener("resize", () => { resizeScene(); if (lastFrame) layoutTarget(lastFrame); });
@@ -1074,8 +1267,7 @@
       const delta = clamp((now - state.lastNow) / 1000, 0, .2); state.lastNow = now; controls.update();
       if (!state.paused && state.idleCount === null) {
         state.elapsed += delta * state.multiplier;
-        if (state.elapsed >= state.model.total) { state.elapsed = state.model.total; state.idleCount = 267; state.paused = true;
-          byId("pauseMotion").textContent = "继续"; byId("pauseMotion").setAttribute("aria-pressed", "true"); }
+        if (state.elapsed >= state.model.total) { state.elapsed = state.model.total; state.idleCount = 267; state.paused = true; }
       }
       renderFrame(currentFrame());
     } catch (error) {
@@ -1087,7 +1279,9 @@
   renderStats(); seekBookmark(0);
   root.__S3_FILL_QA = Object.freeze({
     version: "s3-fill-candidate-runtime-v1", snapshot,
-    seekBookmark, setAlgorithm,
+    seekBookmark, setAlgorithm, auditDetail,
+    /* W7:UI 按钮已删,togglePause/exportFrame 保留为程序化钩子(同 resetCamera 先例)。 */
+    togglePause, exportFrame,
     seekEvent(eventIndex, operation, progress) {
       invariant(Number.isInteger(eventIndex) && eventIndex >= 0 && eventIndex < 267 && STEP_ORDER.includes(operation), "seekEvent 参数非法");
       const segment = state.model.segments.find(item => item.eventIndex === eventIndex && item.phase.name === operation);

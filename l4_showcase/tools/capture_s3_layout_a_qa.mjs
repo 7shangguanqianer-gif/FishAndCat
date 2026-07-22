@@ -50,7 +50,10 @@ const liveFiles = {
   pointer: POINTER, registry: REGISTRY, manifest: MANIFEST,
   auditNear: join(RELEASE_DIR, 'candidate_audit_online_near.jsonl.gz'),
   auditScore: join(RELEASE_DIR, 'candidate_audit_online_score.jsonl.gz'),
-  auditSeq: join(RELEASE_DIR, 'candidate_audit_online_seq.jsonl.gz')
+  auditSeq: join(RELEASE_DIR, 'candidate_audit_online_seq.jsonl.gz'),
+  /* 0721 回灌:30-seed 分布带真 fetch ../evidence/s3_fill_seed_sweep_skew_2026_2055.json,
+     快照服务器需能就近提供该文件,否则页面控制台报 404(noRuntimeErrors 门连带失败)。 */
+  evidenceSeedSkew: join(SHOWCASE, 'evidence', 's3_fill_seed_sweep_skew_2026_2055.json')
 };
 const initialHashes = Object.fromEntries(Object.entries(liveFiles).map(([key, path]) => [key, hash(path)]));
 const snapshotId = createHash('sha256').update(JSON.stringify(initialHashes)).digest('hex').slice(0, 16);
@@ -68,7 +71,9 @@ const snapshotTargets = {
   manifest: join(SNAPSHOT, 'release_evidence', 's3_fill_data_gate.json'),
   auditNear: join(SNAPSHOT, 'release_evidence', 'candidate_audit_online_near.jsonl.gz'),
   auditScore: join(SNAPSHOT, 'release_evidence', 'candidate_audit_online_score.jsonl.gz'),
-  auditSeq: join(SNAPSHOT, 'release_evidence', 'candidate_audit_online_seq.jsonl.gz')
+  auditSeq: join(SNAPSHOT, 'release_evidence', 'candidate_audit_online_seq.jsonl.gz'),
+  /* 相对 src/01_连续填仓.html 的 ../evidence/ 必须解析到快照根下的 evidence/,与生产目录结构一致。 */
+  evidenceSeedSkew: join(SNAPSHOT, 'evidence', 's3_fill_seed_sweep_skew_2026_2055.json')
 };
 for (const [key, target] of Object.entries(snapshotTargets)) {
   mkdirSync(dirname(target), {recursive: true});
@@ -135,11 +140,14 @@ try {
       const mapKeyVisible = mapKeyEl && getComputedStyle(mapKeyEl).display !== 'none';
       const badge = document.getElementById('reserveRuleBadge').getBoundingClientRect();
       const phaseSegmentCount = document.querySelectorAll('#phaseSegments .phaseSeg').length;
+      /* 0721 回灌:赛马场四图+赛段比分条+终态总分牌+30-seed 分布带把 #workHud 内容撑高,
+         html[data-s3-layout="A"] #workHud 已改 overflow-y:auto——纵向"折叠以下"是设计内的可滚动
+         结果,不再是缺陷;仍要卡住的是横向溢出(真实裁切/意外横向滚动条)。故只查左右边界,
+         不再查 top/bottom(vertical 下限交给 out-of-fold 但仍可滚动到达)。 */
       const hudOverflow = [...document.querySelectorAll('#workHud > *,#insightStack > *')].filter(element => {
         const style = getComputedStyle(element), rect = element.getBoundingClientRect();
         if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false;
-        return rect.left < rail.left - .5 || rect.right > rail.right + .5 || rect.top < rail.top - .5 || rect.bottom > rail.bottom + .5 ||
-          rect.left < -.5 || rect.right > innerWidth + .5 || rect.top < -.5 || rect.bottom > innerHeight + .5;
+        return rect.left < rail.left - .5 || rect.right > rail.right + .5 || rect.left < -.5 || rect.right > innerWidth + .5;
       }).map(element => ({id: element.id || element.className, rect: {...element.getBoundingClientRect().toJSON()}}));
       const badgeAreaShare = (badge.width * badge.height) / Math.max(1, gl.width * gl.height);
       return {rail: {...rail.toJSON()}, dock: {...dock.toJSON()}, gl: {...gl.toJSON()}, topbar: {...topbar.toJSON()},
@@ -251,6 +259,13 @@ try {
   }
   await page.evaluate(() => window.__S3_FILL_QA.seekEvent(133, 'LADEN_TRAVEL', .5));
   for (const index of [0, 3, 6]) {
+    /* 0721 回灌:phaseRail 随赛马场新内容下移(order:10),默认滚动位置在折叠线以下——
+       先把目标段滚入视口再触发悬停浮层,断言语义不变(浮层仍须落在 viewport 内),
+       只是补上"可达"前提(#workHud 已声明 overflow-y:auto,可滚动到达是设计内行为)。 */
+    await page.evaluate(value => {
+      const segment = document.querySelectorAll('#phaseSegments .phaseSeg')[value];
+      if (segment) segment.scrollIntoView({block: 'center'});
+    }, index);
     const rect = await page.evaluate(value => window.__S3_LAYOUT_A.showSegPop(value).toJSON(), index);
     pops.push({kind: `seg_${index}`, rect, inside: inViewport(rect)});
     if (index === 3) await page.screenshot({path: join(OUT, 'pop_seg_playing.png'), fullPage: false});
@@ -342,6 +357,34 @@ try {
   });
   await page.screenshot({path: join(OUT, 'event001_score_reserve_note.png'), fullPage: false});
   report.laneStates = laneStates;
+
+  /* 0721 回灌 §1.6 新增断言的数据采集:同源口径声明条 / 赛段比分条节点数 / 终态总分牌三列 /
+     评分瀑布 score_total 与 payload 一致(此刻 state.laneId 已被上面的 firstEventState 设为 score)/
+     validator 清单 18 项 / 30-seed fetch 成功且三算法均值上屏。 */
+  await page.waitForFunction(() => window.__S3_FILL_SEED_BAND_READY__ !== undefined, {timeout: 15000}).catch(() => {});
+  report.raceExtras = await page.evaluate(() => {
+    const banner = document.getElementById('raceBanner');
+    const scoreboardNodes = document.querySelectorAll('#raceScoreboard .raceNode');
+    const finalHeaders = Array.from(document.querySelectorAll('#raceFinalBoard .finalMatrix thead th')).map(el => el.textContent.trim());
+    const anatomy = document.getElementById('scoreAnatomy');
+    const scoreTotalText = anatomy ? (anatomy.querySelector('.scoreTotalLine b')?.textContent || '') : '';
+    const seedBand = document.getElementById('raceSeedBand');
+    const seedBarCount = seedBand ? seedBand.querySelectorAll('.seedBarLine').length : 0;
+    const seedText = seedBand ? seedBand.textContent : '';
+    const snap = window.__S3_FILL_QA.snapshot();
+    return {
+      bannerText: banner ? banner.textContent : '',
+      scoreboardNodeCount: scoreboardNodes.length,
+      finalBoardHeaders: finalHeaders,
+      scoreAnatomyTotalText: scoreTotalText,
+      seedBandReady: window.__S3_FILL_SEED_BAND_READY__,
+      seedBandBarCount: seedBarCount,
+      seedBandHasAllAlgos: /SEQ/.test(seedText) && /NEAR/.test(seedText) && /SCORE/.test(seedText) && /均值/.test(seedText),
+      auditChecksLength: window.__S3_FILL_QA.auditDetail().checks.length,
+      snapshotLaneId: snap.laneId,
+      snapshotScoreTotal: snap.decisionEvidence.top3[0].score_terms ? snap.decisionEvidence.top3[0].score_terms.score_total : null
+    };
+  });
   await page.close();
 
   report.finalHashes = Object.fromEntries(Object.entries(liveFiles).map(([key, path]) => [key, hash(path)]));
@@ -353,8 +396,12 @@ try {
     localHashLockedSnapshot: sameHashes(initialHashes, snapshotHashes) && sameHashes(initialHashes, report.finalHashes),
     releaseEvidenceSnapshot: releaseEvidenceAudit.pass,
     noRuntimeErrors: report.runtimeErrors.length === 0 && report.consoleErrors.length === 0,
+    /* 0721 回灌:赛马场四区块把 #workHud 内容撑高于单屏,html[data-s3-layout="A"] #workHud 已改
+       overflow-y:auto——mapWrap/map 的"必须落在单屏高度内"是旧假设(内容原本一屏装完),现由
+       可滚动到达替代;仍保留的是 !clipped(3D 主视口本身不缩水)、!mapClipped(三联画布真落在
+       自己 wrapper 内,不是被压扁/溢出的缺陷)、hudOverflow(仅横向,见上方改动)、
+       bodyScroll(页面级不产生意外整体滚动,#workHud 内部滚动已被其自身 overflow 吸收)。 */
     viewportsInside: report.viewports.every(item => !item.clipped && !item.mapClipped && item.hudOverflow.length === 0 &&
-      item.mapWrap.bottom <= item.height + .5 && item.map.bottom <= item.height + .5 &&
       item.bodyScroll.height <= item.height + 1 && item.bodyScroll.width <= item.width + 1),
     zeroEndpoint: endpoint[0]?.inventorySize === 0 && endpoint[0]?.totalUnavailable === 133 && endpoint[0]?.cargo.visible === false,
     fullEndpoint: endpoint[267]?.inventorySize === 267 && endpoint[267]?.totalUnavailable === 400 && endpoint[267]?.target === null && endpoint[267]?.cargo.visible === false,
@@ -486,7 +533,18 @@ try {
       report.collapseAudit.after.dockH < report.collapseAudit.before.dockH - 40 &&
       report.collapseAudit.after.decisionH < report.collapseAudit.before.decisionH - 10 &&
       report.collapseAudit.after.audit.rail === true && report.collapseAudit.after.audit.dock === true &&
-      report.collapseAudit.after.audit.blocks.decisionWrap === true
+      report.collapseAudit.after.audit.blocks.decisionWrap === true,
+    /* --- 0721 回灌(docs/施工规格_回灌0721.md §1.6):赛马场主版面 + 决策解剖 + 证据抽屉新增门 --- */
+    raceBannerDisclosure: report.raceExtras.bannerText.includes('同一到达队列'),
+    raceScoreboardSixNodes: report.raceExtras.scoreboardNodeCount === 6,
+    raceFinalBoardThreeColumns: ['SEQ', 'NEAR', 'SCORE'].every(label =>
+      report.raceExtras.finalBoardHeaders.some(header => header.includes(label))),
+    scoreAnatomyTotalMatchesPayload: report.raceExtras.snapshotLaneId === 'score' &&
+      report.raceExtras.snapshotScoreTotal !== null &&
+      report.raceExtras.scoreAnatomyTotalText === report.raceExtras.snapshotScoreTotal.toFixed(4),
+    validatorChecksEighteen: report.raceExtras.auditChecksLength === 18,
+    seedBandFetchedAndMeansShown: report.raceExtras.seedBandReady === true && report.raceExtras.seedBandBarCount === 12 &&
+      report.raceExtras.seedBandHasAllAlgos
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);
