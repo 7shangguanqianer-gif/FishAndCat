@@ -121,12 +121,16 @@ const report = {schema: 's3-layout-a-qa-v1', source: SOURCE, expectedRelease: EX
 
 const pageUrl = `http://127.0.0.1:${port}/src/${encodeURIComponent(PAGE_NAME)}`;
 try {
-  for (const [width, height] of [[1280, 720], [1600, 900], [1920, 1080]]) {
+  /* 0722 施工规格_一屏返工0722.md §A.1/§B.6:设计基准 1920×1080;1280×800 允许收纳但仍零滚动。
+     1280×720/1600×900 是既有 v7/A 基线分辨率(契约回归留用),1280×800 是本轮新增的收纳验收档。 */
+  for (const [width, height] of [[1280, 720], [1280, 800], [1600, 900], [1920, 1080]]) {
     const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
     page.on('pageerror', error => report.runtimeErrors.push(`${width}x${height}: ${error.message}`));
     page.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(`${width}x${height}: ${message.text()}`); });
     await page.goto(pageUrl, {waitUntil: 'load'});
     await page.waitForFunction(expected => window.__S3_FILL_QA?.snapshot?.().releaseId === expected && window.__S3_LAYOUT_A, EXPECTED_RELEASE, {timeout: 30000});
+    /* §A.4 截图底座:document.fonts.ready 后再拍,语义就绪断言替代固定 sleep。 */
+    await page.evaluate(() => document.fonts.ready);
     const viewportAudit = await page.evaluate(() => {
       const rail = document.getElementById('workHud').getBoundingClientRect();
       const dock = document.getElementById('sceneDock').getBoundingClientRect();
@@ -140,34 +144,61 @@ try {
       const mapKeyVisible = mapKeyEl && getComputedStyle(mapKeyEl).display !== 'none';
       const badge = document.getElementById('reserveRuleBadge').getBoundingClientRect();
       const phaseSegmentCount = document.querySelectorAll('#phaseSegments .phaseSeg').length;
-      /* 0721 回灌:赛马场四图+赛段比分条+终态总分牌+30-seed 分布带把 #workHud 内容撑高,
-         html[data-s3-layout="A"] #workHud 已改 overflow-y:auto——纵向"折叠以下"是设计内的可滚动
-         结果,不再是缺陷;仍要卡住的是横向溢出(真实裁切/意外横向滚动条)。故只查左右边界,
-         不再查 top/bottom(vertical 下限交给 out-of-fold 但仍可滚动到达)。 */
-      const hudOverflow = [...document.querySelectorAll('#workHud > *,#insightStack > *')].filter(element => {
+      /* 0722 一屏返工:#workHud 已收窄为精华条(overflow:hidden,零滚动),不再是 0721 的
+         overflow-y:auto 大栏——横向+纵向都不该越界,四边都查。#insightStack 已 display:none
+         (空壳退役),不再需要单独查其子级。收纳钮(#railCollapseBtn)钉右上角,允许贴边。 */
+      const hudOverflow = [...document.querySelectorAll('#workHud > *')].filter(element => {
         const style = getComputedStyle(element), rect = element.getBoundingClientRect();
         if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false;
-        return rect.left < rail.left - .5 || rect.right > rail.right + .5 || rect.left < -.5 || rect.right > innerWidth + .5;
+        if (element.id === 'railCollapseBtn') return false;
+        return rect.left < rail.left - .5 || rect.right > rail.right + .5 ||
+          rect.top < rail.top - .5 || rect.bottom > rail.bottom + .5 ||
+          rect.left < -.5 || rect.right > innerWidth + .5;
       }).map(element => ({id: element.id || element.className, rect: {...element.getBoundingClientRect().toJSON()}}));
       const badgeAreaShare = (badge.width * badge.height) / Math.max(1, gl.width * gl.height);
+      /* 0722 §B.4 镜头不截顶代理断言:canvas 实际渲染高/宽 ≥ 容器(#gl)高/宽的 95%
+         (renderer.setSize 第三参传 false 跳过 canvas.style 赋值,历史上无兜底 CSS——
+         见 html 内新增的 #gl>canvas 规则)。 */
+      const canvasEl = document.querySelector('#gl canvas');
+      const canvasRect = canvasEl ? canvasEl.getBoundingClientRect() : {width: 0, height: 0};
+      const canvasFit = {glW: gl.width, glH: gl.height, canvasW: canvasRect.width, canvasH: canvasRect.height,
+        widthRatio: gl.width > 0 ? canvasRect.width / gl.width : 0, heightRatio: gl.height > 0 ? canvasRect.height / gl.height : 0};
+      /* 0722 §B.1「精华条存在」:四件常驻且可见、尺寸非零、落在 rail 边界内。 */
+      const raceStrip = (() => {
+        const ids = ['raceBanner', 'slotMapWrap', 'raceMicroBar', 'raceLeadBadge'];
+        const detail = ids.map(id => {
+          const element = document.getElementById(id);
+          if (!element) return {id, present: false, visible: false, insideRail: false};
+          const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
+          return {id, present: true, visible: style.display !== 'none' && rect.width > 4 && rect.height > 4,
+            insideRail: rect.left >= rail.left - .5 && rect.right <= rail.right + .5};
+        });
+        return {allPresent: detail.every(item => item.present), allVisible: detail.every(item => item.visible),
+          allInsideRail: detail.every(item => item.insideRail), detail};
+      })();
       return {rail: {...rail.toJSON()}, dock: {...dock.toJSON()}, gl: {...gl.toJSON()}, topbar: {...topbar.toJSON()},
         axis: {...axis.toJSON()}, bookmarks: {...bookmarks.toJSON()}, map: {...map.toJSON()}, mapWrap: {...mapWrap.toJSON()},
-        mapKeyVisible, badge: {...badge.toJSON()}, badgeAreaShare, phaseSegmentCount,
+        mapKeyVisible, badge: {...badge.toJSON()}, badgeAreaShare, phaseSegmentCount, canvasFit, raceStrip,
         bodyScroll: {width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight},
         clipped: rail.bottom > innerHeight + .5 || dock.bottom > innerHeight + .5 || gl.width < 300 || gl.height < 300,
         mapClipped: map.left < mapWrap.left - .5 || map.right > mapWrap.right + .5 || map.top < mapWrap.top - .5 || map.bottom > mapWrap.bottom + .5,
         hudOverflow,
-        /* W6(0720 照 02 语言重做):入库进度轴从"顶栏下独立横条"迁入右栏顶部(同 02 0720 版B),
-           axis 不再与 gl 上下堆叠,而是并列于 rail 内——axisAboveGl 的堆叠假设不再成立,
-           改核「轴在 rail 边界内」+「gl 紧贴 topbar 下缘(不留独立轴条空隙)」两项等价断言。 */
-        axisInsideRail: axis.left >= rail.left - .5 && axis.right <= rail.right + .5 && axis.top >= rail.top - .5,
-        glStartsAtTopbar: Math.abs(gl.top - topbar.bottom) <= .5};
+        /* 0722 一屏返工:进度轴(#progressAxisHost)DOM 父级已改挂 #viewport 直接子级(不再是
+           #workHud 内的 flex 子项),重新变回"顶部通栏细条"——从 rail 右缘通栏到视口右缘、
+           贴在 topbar 下缘;#gl 让出 axis 高度,起点紧贴 axis 下缘而非 topbar 下缘,两者不重叠
+           (0721 曾让 axis 塞回 rail、gl 紧贴 topbar,axis 与 gl 顶部因此重叠——见 html 内注记)。
+           旧 axisInsideRail/glStartsAtTopbar 语义随撤出项改写为 axisSpansTopBar/glStartsBelowAxis。 */
+        axisSpansTopBar: Math.abs(axis.left - rail.right) <= 1 && Math.abs(axis.right - innerWidth) <= 1 &&
+          Math.abs(axis.top - topbar.bottom) <= 1,
+        glStartsBelowAxis: Math.abs(gl.top - axis.bottom) <= .5};
     });
     report.viewports.push({width, height, ...viewportAudit});
     const layoutAudit = await page.evaluate(() => window.__S3_LAYOUT_A.audit());
     const placement = await page.evaluate(() => ({
-      traceStatsVisible: getComputedStyle(document.getElementById('traceStats')).display !== 'none' &&
-        document.getElementById('traceStats').getBoundingClientRect().height > 20,
+      /* 0722 一屏返工:批次KPI(traceStats)已永久搬入放大层(#s3MapOverlay),常驻区关闭时
+         其祖先 display:none,高度天然为 0——旧"height>20"断言语义反了。改核"已正确归属
+         放大层"(可见性由弹层开合两态断言单独覆盖,见下方 §B.6 zeroScroll/modal 相关断言)。 */
+      traceStatsInOverlay: document.getElementById('traceStats').closest('#s3MapOverlay') !== null,
       /* W6:railFacts(含 factQueue)整栏 display:none 退役——三格中两格(factQueue/factAlarm)恒硬编码
          "0"从未反映真实状态,第三格(factCycle/已入库)与 fillEvidence 的管理货计数完全重复
          (同 02 0719 删 railFacts 的理由:「等待/故障与统计块重复」)。改核同一信息的现役位置。 */
@@ -177,9 +208,10 @@ try {
       evidenceInAxis: document.getElementById('fillEvidence').closest('#axisRight') !== null,
       selectionReasonPresent: /固定四项权重|首个可用格|行程时间最短/.test(document.getElementById('decisionWrap').textContent),
       speedCanvasPresent: Boolean(document.getElementById('speed')),
-      /* W6(照 02 语言重做):phaseRail(七步条)迁回右栏,恢复 02 终态信息架构——不再并入 dock 的
-         「当前作业」格(旧 0717 #28 的收纳手法在 02 后续迭代中已被舍弃,01 跟进同一决定) */
-      phaseRailInRail: document.getElementById('phaseRail').closest('#workHud') !== null,
+      /* 0722 一屏返工:phaseRail(七步条)随决策依据/批次KPI一并永久搬入放大层——常驻区
+         只留 3D + 精华条,七步条不再是"必须常驻"的信息,sceneCaption 的当前步骤文字已
+         覆盖"现在做什么"的核心诉求(见 docs/施工规格_一屏返工0722.md §B.1)。 */
+      phaseRailInOverlay: document.getElementById('phaseRail').closest('#s3MapOverlay') !== null,
       controlsInTopbar: document.getElementById('runtimeControls').closest('#topbarA') !== null,
       retrievalNotePresent: /存取效率/.test(document.getElementById('retrievalNote')?.textContent || ''),
       /* 0717 #28 用户拍板:②拟真档换说明标签(非 select 且原下拉不复存在) */
@@ -258,10 +290,12 @@ try {
     await page.evaluate(() => window.__S3_LAYOUT_A.hidePops());
   }
   await page.evaluate(() => window.__S3_FILL_QA.seekEvent(133, 'LADEN_TRAVEL', .5));
+  /* 0722 一屏返工:phaseRail(七步条)随决策依据/批次KPI 永久搬入放大层——七步段默认不在常驻区,
+     悬停浮层前必须先开放大层(否则段落 0×0 不可达)。断言语义不变(浮层仍须落在 #viewport
+     边界内,因 #s3MapOverlay 本身 inset:0 于 #viewport,弹层内元素几何上仍属于 viewport 范围)。 */
+  await page.evaluate(() => window.__S3_LAYOUT_A.openMap());
+  await page.waitForTimeout(120);
   for (const index of [0, 3, 6]) {
-    /* 0721 回灌:phaseRail 随赛马场新内容下移(order:10),默认滚动位置在折叠线以下——
-       先把目标段滚入视口再触发悬停浮层,断言语义不变(浮层仍须落在 viewport 内),
-       只是补上"可达"前提(#workHud 已声明 overflow-y:auto,可滚动到达是设计内行为)。 */
     await page.evaluate(value => {
       const segment = document.querySelectorAll('#phaseSegments .phaseSeg')[value];
       if (segment) segment.scrollIntoView({block: 'center'});
@@ -271,31 +305,22 @@ try {
     if (index === 3) await page.screenshot({path: join(OUT, 'pop_seg_playing.png'), fullPage: false});
     await page.evaluate(() => window.__S3_LAYOUT_A.hidePops());
   }
+  await page.evaluate(() => window.__S3_LAYOUT_A.closeMap());
   {
     const rect = await page.evaluate(() => window.__S3_LAYOUT_A.showEvidence().toJSON());
     pops.push({kind: 'evidence', rect, inside: inViewport(rect)});
     await page.screenshot({path: join(OUT, 'pop_evidence.png'), fullPage: false});
     await page.evaluate(() => window.__S3_LAYOUT_A.hidePops());
   }
-  /* 0718 M1b:rail 态(未放大)差异热力图常驻左栏且已绘、非全零 */
+  /* 0722 一屏返工:差异热力图(#diffMapWrap)随赛段比分条等一并收入放大层,不再常驻左栏——
+     rail 态(未放大)现在应为"正确隐藏",而非 0718 M1b 时代的"常驻已绘"。改核隐藏语义,
+     overlay 内的图绘制状态由下方 diffZoom(已开放大层)覆盖,职责分离。 */
   await page.waitForTimeout(150);
-  report.railDiff = await page.evaluate(() => {
-    const rectOf = sel => { const el = document.querySelector(sel); if (!el) return null;
-      const cs = getComputedStyle(el); if (cs.display === 'none') return {hidden: true};
-      return el.getBoundingClientRect().toJSON(); };
-    return {
-      overlayOpen: document.getElementById('s3MapOverlay').classList.contains('open'),
-      display: getComputedStyle(document.getElementById('diffMapWrap')).display,
-      diffRect: document.getElementById('diffMap')?.getBoundingClientRect().toJSON() || null,
-      diffAudit: window.__S3_FILL_QA.snapshot().diffAudit,
-      /* 0718 M1b:堆叠顺序诊断(mapHead→mapRule→三联→mapKey→diffHead→diffMap,bottom 须单调递增不重叠) */
-      stack: {
-        mapHead: rectOf('#slotMapWrap .mapHead'), mapRule: rectOf('#slotMapWrap .mapRule'),
-        slotMap: rectOf('#slotMap'), mapKey: rectOf('#slotMapWrap .mapKey'),
-        diffHead: rectOf('#diffMapWrap .diffHead'), diffKey: rectOf('#diffMapWrap .diffKey')
-      }
-    };
-  });
+  report.railDiff = await page.evaluate(() => ({
+    overlayOpen: document.getElementById('s3MapOverlay').classList.contains('open'),
+    display: getComputedStyle(document.getElementById('diffMapWrap')).display,
+    rect: document.getElementById('diffMapWrap').getBoundingClientRect().toJSON()
+  }));
   let diffZoom = null;
   {
     await page.evaluate(() => window.__S3_LAYOUT_A.openMap());
@@ -317,31 +342,29 @@ try {
   report.popAudits = pops;
   report.diffZoom = diffZoom;
 
-  /* W6(0720 照 02 语言重做,拍板新增):折叠收纳自检——右栏整体收边、底 dock 整体收边、
-     决策卡单块收边,三者同时验证尺寸真的收缩且 __S3_LAYOUT_A.audit().collapse 如实反映态。
+  /* W6(0720 拍板)+0722 一屏返工:折叠收纳自检——右栏整体收边、底 dock 整体收边,验证尺寸真的
+     收缩且 __S3_LAYOUT_A.audit().collapse 如实反映态。逐块折叠(decisionWrap 等)机制已随
+     decisionWrap/traceStats/phaseRail 永久搬入放大层一并退役(RAIL_BLOCK_IDS 置空,精华条
+     四件本就够小,不再需要块级折叠)——不再调用/断言 toggleBlockCollapse。
      结束前原样切回展开,不残留态污染后续断言。 */
   const collapseBefore = await page.evaluate(() => ({
     railW: document.getElementById('workHud').getBoundingClientRect().width,
-    dockH: document.getElementById('sceneDock').getBoundingClientRect().height,
-    decisionH: document.getElementById('decisionWrap').getBoundingClientRect().height
+    dockH: document.getElementById('sceneDock').getBoundingClientRect().height
   }));
   await page.evaluate(() => {
     window.__S3_LAYOUT_A.toggleRailCollapse();
     window.__S3_LAYOUT_A.toggleDockCollapse();
-    window.__S3_LAYOUT_A.toggleBlockCollapse('decisionWrap');
   });
   await page.waitForTimeout(150);
   const collapseAfter = await page.evaluate(() => ({
     railW: document.getElementById('workHud').getBoundingClientRect().width,
     dockH: document.getElementById('sceneDock').getBoundingClientRect().height,
-    decisionH: document.getElementById('decisionWrap').getBoundingClientRect().height,
     audit: window.__S3_LAYOUT_A.audit().collapse
   }));
   await page.screenshot({ path: join(OUT, 'collapsed_state.png'), fullPage: false });
   await page.evaluate(() => {
     window.__S3_LAYOUT_A.toggleRailCollapse();
     window.__S3_LAYOUT_A.toggleDockCollapse();
-    window.__S3_LAYOUT_A.toggleBlockCollapse('decisionWrap');
   });
   await page.waitForTimeout(150);
   report.collapseAudit = { before: collapseBefore, after: collapseAfter };
@@ -387,6 +410,101 @@ try {
   });
   await page.close();
 
+  /* ================================================================
+     0722 一屏返工新增断言组(docs/施工规格_一屏返工0722.md §A.2/§B.3/§B.6)。
+     ================================================================ */
+
+  /* §A.2/§B.6:零滚动双分辨率(1920×1080 + 1280×800)× 弹层开合两态。document 与所有
+     overflow-y 容器 scrollHeight ≤ clientHeight+2;白名单=弹层内部(mapDock/evidenceDrawer,
+     90vh 内可滚)与显式横向带(本页无)。开态额外核 mapDock 尺寸不超 90vw/90vh。 */
+  report.zeroScroll = [];
+  for (const [width, height] of [[1920, 1080], [1280, 800]]) {
+    const zsPage = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
+    zsPage.on('pageerror', error => report.runtimeErrors.push(`zeroScroll ${width}x${height}: ${error.message}`));
+    zsPage.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(`zeroScroll ${width}x${height}: ${message.text()}`); });
+    await zsPage.goto(pageUrl, {waitUntil: 'load'});
+    await zsPage.waitForFunction(expected => window.__S3_FILL_QA?.snapshot?.().releaseId === expected && window.__S3_LAYOUT_A, EXPECTED_RELEASE, {timeout: 30000});
+    await zsPage.evaluate(() => document.fonts.ready);
+    const measure = whitelist => zsPage.evaluate(list => {
+      const offenders = Array.from(document.querySelectorAll('*')).filter(element => {
+        const style = getComputedStyle(element);
+        return (style.overflowY === 'auto' || style.overflowY === 'scroll') && element.scrollHeight > element.clientHeight + 2;
+      }).filter(element => !list.some(selector => element.closest(selector)));
+      return {
+        doc: {scrollH: document.documentElement.scrollHeight, clientH: document.documentElement.clientHeight},
+        offenders: offenders.map(element => ({id: element.id || element.className,
+          scrollH: element.scrollHeight, clientH: element.clientHeight}))
+      };
+    }, whitelist);
+    const closedState = await measure(['#s3MapOverlay', '.evidenceDrawer']);
+    await zsPage.evaluate(() => window.__S3_LAYOUT_A.openMap());
+    await zsPage.waitForTimeout(80);
+    const openState = await measure(['.mapDock', '.evidenceDrawer']);
+    const mapDockBox = await zsPage.evaluate(() => {
+      const element = document.querySelector('#s3MapOverlay .mapDock'), rect = element.getBoundingClientRect();
+      return {widthVw: rect.width / innerWidth, heightVh: rect.height / innerHeight};
+    });
+    await zsPage.evaluate(() => window.__S3_LAYOUT_A.closeMap());
+    await zsPage.close();
+    report.zeroScroll.push({width, height, closedState, openState, mapDockBox});
+  }
+
+  /* §B.3:自动播放已开始(simTime 增长)+ 暂停/继续双态钮(单钮双态,aria-pressed;文案
+     暂停⇄继续)。simTime 直接读 __S3_FILL_QA.snapshot().simTime(runtime.js 本轮新增字段)。 */
+  const apPage = await browser.newPage({viewport: {width: 1600, height: 900}, deviceScaleFactor: 1});
+  apPage.on('pageerror', error => report.runtimeErrors.push(`autoplay: ${error.message}`));
+  apPage.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(`autoplay: ${message.text()}`); });
+  await apPage.goto(pageUrl, {waitUntil: 'load'});
+  await apPage.waitForFunction(expected => window.__S3_FILL_QA?.snapshot?.().releaseId === expected, EXPECTED_RELEASE, {timeout: 30000});
+  const autoplay = {};
+  autoplay.pausedOnLoad = await apPage.evaluate(() => window.__S3_FILL_QA.snapshot().paused);
+  autoplay.t0 = await apPage.evaluate(() => window.__S3_FILL_QA.snapshot().simTime);
+  autoplay.btnOnLoad = await apPage.evaluate(() => ({text: document.getElementById('playPauseBtn').textContent,
+    pressed: document.getElementById('playPauseBtn').getAttribute('aria-pressed')}));
+  await apPage.waitForTimeout(400);
+  autoplay.t1 = await apPage.evaluate(() => window.__S3_FILL_QA.snapshot().simTime);
+  await apPage.click('#playPauseBtn');
+  await apPage.waitForTimeout(60);
+  autoplay.afterPauseClick = await apPage.evaluate(() => ({text: document.getElementById('playPauseBtn').textContent,
+    pressed: document.getElementById('playPauseBtn').getAttribute('aria-pressed'), paused: window.__S3_FILL_QA.snapshot().paused,
+    simTime: window.__S3_FILL_QA.snapshot().simTime}));
+  await apPage.waitForTimeout(400);
+  autoplay.tFrozen = await apPage.evaluate(() => window.__S3_FILL_QA.snapshot().simTime);
+  await apPage.click('#playPauseBtn');
+  await apPage.waitForTimeout(60);
+  autoplay.afterResumeClick = await apPage.evaluate(() => ({text: document.getElementById('playPauseBtn').textContent,
+    pressed: document.getElementById('playPauseBtn').getAttribute('aria-pressed'), paused: window.__S3_FILL_QA.snapshot().paused}));
+  await apPage.close();
+  report.autoplay = autoplay;
+
+  /* §B.1/§B.6「弹大层开合」:开合两态下,已永久搬入放大层的七件(三联大图+差异热力图/
+     赛段比分条/终态总分牌/30-seed 分布带/评分解剖/决策依据/批次KPI)全部可见非零,
+     关闭后整层重新隐藏。 */
+  const modalPage = await browser.newPage({viewport: {width: 1600, height: 900}, deviceScaleFactor: 1});
+  modalPage.on('pageerror', error => report.runtimeErrors.push(`modalToggle: ${error.message}`));
+  await modalPage.goto(pageUrl, {waitUntil: 'load'});
+  await modalPage.waitForFunction(expected => window.__S3_FILL_QA?.snapshot?.().releaseId === expected && window.__S3_LAYOUT_A, EXPECTED_RELEASE, {timeout: 30000});
+  const modalClosedVisible = await modalPage.evaluate(() => getComputedStyle(document.getElementById('s3MapOverlay')).display !== 'none' &&
+    document.getElementById('s3MapOverlay').getBoundingClientRect().height > 0);
+  await modalPage.evaluate(() => window.__S3_LAYOUT_A.openMap());
+  await modalPage.waitForTimeout(100);
+  const modalOpenCheck = await modalPage.evaluate(() => {
+    const ids = ['slotMapWrap', 'raceScoreboard', 'raceFinalBoard', 'raceSeedBand', 'scoreAnatomy', 'decisionWrap', 'traceStats', 'phaseRail'];
+    const detail = ids.map(id => {
+      const element = document.getElementById(id);
+      if (!element) return {id, present: false, visible: false};
+      const rect = element.getBoundingClientRect();
+      return {id, present: true, visible: rect.width > 4 && rect.height > 4};
+    });
+    return {isOpen: document.getElementById('s3MapOverlay').classList.contains('open'),
+      allPresent: detail.every(item => item.present), allVisible: detail.every(item => item.visible), detail};
+  });
+  await modalPage.evaluate(() => window.__S3_LAYOUT_A.closeMap());
+  await modalPage.waitForTimeout(80);
+  const modalClosedAfter = await modalPage.evaluate(() => document.getElementById('s3MapOverlay').classList.contains('open'));
+  await modalPage.close();
+  report.modalToggle = {modalClosedVisible, modalOpenCheck, modalClosedAfter};
+
   report.finalHashes = Object.fromEntries(Object.entries(liveFiles).map(([key, path]) => [key, hash(path)]));
   const endpoint = Object.fromEntries(report.states.filter(item => item.name.startsWith('bookmark_')).map(item => [item.snapshot.managedCount, item.snapshot]));
   const bookmarkOverlays = Object.fromEntries(report.states.filter(item => item.name.startsWith('bookmark_')).map(item => [item.snapshot.managedCount, item.overlay]));
@@ -426,7 +544,9 @@ try {
       laneStates.score.scorePolicyAudit.disclosureVisible === true,
     nonScoreDoesNotFakeScore: laneStates.seq.decisionEvidence.top3.every(item => !('score_terms' in item)) &&
       laneStates.near.decisionEvidence.top3.every(item => !('score_terms' in item)),
-    topologyTopReadable: report.topologyViewports.length === 3 && report.topologyViewports.every(item =>
+    /* 0722:主循环分辨率由 3 档扩为 4 档(新增 1280×800,§B.6 零滚动收纳档),topologyViewports
+       随之同步产出 4 条记录。 */
+    topologyTopReadable: report.topologyViewports.length === 4 && report.topologyViewports.every(item =>
       item.topologyProjection.allInside && item.topologyProjection.laneSeparationPx >= 30 &&
       item.topologyProjection.infeedLengthPx >= 80 && item.topologyProjection.outfeedLengthPx >= 80 &&
       item.topologyProjection.crossbarLengthPx >= 30),
@@ -439,9 +559,14 @@ try {
     stepPurposeNotResident: report.layoutAudits.every(item => item.stepPurposeVisibleHits === 0),
     processGuideHidden: report.layoutAudits.every(item => item.processGuideHidden && item.taskLineHidden),
     layoutSkeleton: report.layoutAudits.every(item => item.topbarPresent && item.axisNodeCount === 6 && item.segmentsFocusable) &&
-      report.viewports.every(item => item.axisInsideRail && item.glStartsAtTopbar),
+      report.viewports.every(item => item.axisSpansTopBar && item.glStartsBelowAxis),
     placementComplete: report.layoutAudits.every(item => Object.values(item.placement).every(Boolean)),
     reserveBadgeCompact: report.viewports.every(item => item.badgeAreaShare < .15 && item.badge.width < item.gl.width * .6),
+    /* 0722 §B.6 新增:精华条存在(四件常驻可见且落在 rail 内)。 */
+    raceStripPresent: report.viewports.every(item => item.raceStrip.allPresent && item.raceStrip.allVisible && item.raceStrip.allInsideRail),
+    /* 0722 §B.4/§B.6 新增:镜头不截顶代理断言——canvas 渲染尺寸 ≥ 容器(#gl)尺寸的 95%
+       (机器可测部分;另一半"人工图审"见 out/s3_layout_a_qa_0722/viewport_*_start.png 截图)。 */
+    cameraCanvasFit: report.viewports.every(item => item.canvasFit.widthRatio >= .95 && item.canvasFit.heightRatio >= .95),
     axisFillProgress: bookmarkOverlays[134]?.axisFill === '50.19%' && bookmarkOverlays[267]?.axisFill === '100%' && bookmarkOverlays[0]?.axisFill === '0%',
     popsInsideViewport: report.popAudits.every(item => item.inside),
     /* --- 治理 A+B 门(0716 深审获批,docs/S3算法深审与治理方案_0716.md) --- */
@@ -518,22 +643,20 @@ try {
     /* --- 0717 #26-3:冷门送远解说卡(score 首件 G001 出卡;热门件 G134 不出) --- */
     fx26ColdFarNote: firstEventState.reserveNotePresent === true &&
       report.states.filter(item => item.name.startsWith('event134_')).every(item => item.snapshot.reserveNotePresent === false),
-    /* --- 0717 #26-4 / 0718 M1b:终态差异热力图 overlay 内已绘+rail 内常驻(均非全零、图例齐) --- */
+    /* --- 0717 #26-4 终态差异热力图 overlay 内已绘(非全零、图例齐);0722 一屏返工:rail 态
+       (未放大)差异热力图撤出常驻区,改核"正确隐藏"(版面撤出项语义同步,§B.1/§B.6)。 --- */
     fx26DiffMap: Boolean(report.diffZoom) && report.diffZoom.open !== false &&
       Boolean(report.diffZoom.diffAudit) && report.diffZoom.diffAudit.nonZeroCells > 0 &&
       report.diffZoom.diffAudit.reservedCells === 133 &&
       report.diffZoom.diffRect && report.diffZoom.diffRect.width >= 200 &&
       /SCORE 放了更热门|更冷门/.test(report.diffZoom.diffKeyText) &&
       Boolean(report.railDiff) && report.railDiff.overlayOpen === false &&
-      report.railDiff.display !== 'none' &&
-      report.railDiff.diffRect && report.railDiff.diffRect.height > 2 && report.railDiff.diffRect.width > 2 &&
-      Boolean(report.railDiff.diffAudit) && report.railDiff.diffAudit.nonZeroCells > 0,
-    /* --- W6(0720 照 02 语言重做,拍板新增):折叠收纳三级(整栏/整 dock/单块)真实收缩 + 自检钩子如实 --- */
+      report.railDiff.display === 'none',
+    /* --- W6(0720 拍板)+0722 一屏返工:折叠收纳两级(整栏/整 dock)真实收缩 + 自检钩子如实;
+       逐块折叠(原 decisionWrap 等)随其永久搬入放大层一并退役,不再断言。 --- */
     collapseMechanismWorks: report.collapseAudit.after.railW < report.collapseAudit.before.railW - 100 &&
       report.collapseAudit.after.dockH < report.collapseAudit.before.dockH - 40 &&
-      report.collapseAudit.after.decisionH < report.collapseAudit.before.decisionH - 10 &&
-      report.collapseAudit.after.audit.rail === true && report.collapseAudit.after.audit.dock === true &&
-      report.collapseAudit.after.audit.blocks.decisionWrap === true,
+      report.collapseAudit.after.audit.rail === true && report.collapseAudit.after.audit.dock === true,
     /* --- 0721 回灌(docs/施工规格_回灌0721.md §1.6):赛马场主版面 + 决策解剖 + 证据抽屉新增门 --- */
     raceBannerDisclosure: report.raceExtras.bannerText.includes('同一到达队列'),
     raceScoreboardSixNodes: report.raceExtras.scoreboardNodeCount === 6,
@@ -544,7 +667,38 @@ try {
       report.raceExtras.scoreAnatomyTotalText === report.raceExtras.snapshotScoreTotal.toFixed(4),
     validatorChecksEighteen: report.raceExtras.auditChecksLength === 18,
     seedBandFetchedAndMeansShown: report.raceExtras.seedBandReady === true && report.raceExtras.seedBandBarCount === 12 &&
-      report.raceExtras.seedBandHasAllAlgos
+      report.raceExtras.seedBandHasAllAlgos,
+
+    /* ================================================================
+       0722 一屏返工新增断言组(docs/施工规格_一屏返工0722.md §A.2/§B.3/§B.6)。
+       ================================================================ */
+    /* §A.2/§B.6 零滚动双分辨率(1920×1080+1280×800)× 弹层白名单:关闭态 document 与所有
+       overflow-y 容器零溢出;打开态白名单 mapDock/evidenceDrawer 后其余容器仍零溢出,
+       且 mapDock 自身不超 90vw/90vh(max 90vw/90vh,§A.3)。 */
+    zeroScrollClosed: report.zeroScroll.every(item => item.closedState.doc.scrollH <= item.closedState.doc.clientH + 2 &&
+      item.closedState.offenders.length === 0),
+    zeroScrollOpenWhitelisted: report.zeroScroll.every(item => item.openState.doc.scrollH <= item.openState.doc.clientH + 2 &&
+      item.openState.offenders.length === 0),
+    modalWithin90vwvh: report.zeroScroll.every(item => item.mapDockBox.widthVw <= .91 && item.mapDockBox.heightVh <= .91),
+
+    /* §B.3 进页自动播放已开始(simTime 单调增长,与 02 行为对齐:paused 初值 false)。 */
+    autoplayStartsOnLoad: report.autoplay.pausedOnLoad === false && report.autoplay.t1 > report.autoplay.t0,
+    /* §B.3 顶栏暂停/继续双态钮:单钮双态(文案暂停⇄继续,aria-pressed 同步);暂停后 simTime
+       冻结(不再增长),再次点击恢复播放。 */
+    pauseResumeDualState: report.autoplay.btnOnLoad.text === '暂停' && report.autoplay.btnOnLoad.pressed === 'false' &&
+      report.autoplay.afterPauseClick.text === '继续' && report.autoplay.afterPauseClick.pressed === 'true' &&
+      report.autoplay.afterPauseClick.paused === true &&
+      Math.abs(report.autoplay.tFrozen - report.autoplay.afterPauseClick.simTime) < 1e-6 &&
+      report.autoplay.afterResumeClick.text === '暂停' && report.autoplay.afterResumeClick.pressed === 'false' &&
+      report.autoplay.afterResumeClick.paused === false,
+
+    /* §B.1/§B.6 弹大层开合:关闭态整层不可见;开启态七件已永久搬入的深内容全部存在且可见
+       (三联大图+差异热力图/赛段比分条/终态总分牌/30-seed 分布带/评分解剖/决策依据/批次KPI);
+       关闭后恢复不可见。 */
+    modalOpenClose: report.modalToggle.modalClosedVisible === false &&
+      report.modalToggle.modalOpenCheck.isOpen === true &&
+      report.modalToggle.modalOpenCheck.allPresent === true && report.modalToggle.modalOpenCheck.allVisible === true &&
+      report.modalToggle.modalClosedAfter === false
   };
   report.assertions = assertions; report.pass = Object.values(assertions).every(Boolean);
   report.errors = Object.entries(assertions).filter(([, value]) => !value).map(([key]) => key);

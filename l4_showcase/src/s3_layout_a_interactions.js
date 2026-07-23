@@ -26,7 +26,11 @@
      3D 视野增大)。#progressAxisHost 的 order:-1(见样式区)保证恒居 #workHud 首位。 ---------- */
   const axisHost = doc.createElement("div");
   axisHost.id = "progressAxisHost";
-  workHud.prepend(axisHost);
+  /* 0722 §B.1「进度轴保留(顶部细条)」:父级改挂 #viewport 直接子级(不再是 #workHud 的
+     flex 子项)——workHud 现已收窄为精华条,若轴条继续挂在其内,CSS left:var(--rail-w)
+     的包含块就是 workHud 自身(宽度恰为 rail-w),会与 right:0 折叠成零宽;挂在 viewport
+     下(与 #topbarA 同级)包含块是整个视口,轴条才能正确从 rail 右缘通栏到视口右缘。 */
+  viewport.append(axisHost);
   const bookmarks = byId("fillBookmarks");
   axisHost.append(bookmarks);
   /* 0720 命名总表 B4:标题简化为「入库进度」,「容量节点」语义降入副题小字(全页唯一出现处) */
@@ -234,14 +238,20 @@
   viewport.append(overlay);
   const mapDock = overlay.querySelector(".mapDock");
   const scoreAnatomy = overlay.querySelector("#scoreAnatomy");
+  /* 0722 §B.1/§B.2:赛段比分条全量表/差异热力图/评分解剖/终态总分牌/30-seed 分布带/
+     决策依据/批次KPI/七步条全部撤出常驻区,永久搬入放大层——不像 mapWrap 那样按
+     open/close 来回搬(它们在精华条里已无家可归,一次性搬完即可)。渲染逻辑(renderDecision/
+     renderStats/renderScoreAnatomy/updatePhaseRail 等)留在 runtime.js 不动,这里只管 DOM 归属。 */
+  const raceGridsIntroEl = byId("raceGridsIntro"), raceScoreboardEl = byId("raceScoreboard"),
+    raceFinalBoardEl = byId("raceFinalBoard"), raceSeedBandEl = byId("raceSeedBand"),
+    decisionWrapEl = byId("decisionWrap"), traceStatsEl = byId("traceStats"), phaseRailEl = byId("phaseRail");
+  mapDock.append(raceGridsIntroEl, raceScoreboardEl, raceFinalBoardEl, raceSeedBandEl,
+    scoreAnatomy, decisionWrapEl, traceStatsEl, phaseRailEl);
   const mapHome = { parent: mapWrap.parentElement, next: mapWrap.nextSibling };
   function openMap() {
     if (overlay.classList.contains("open")) return;
-    mapDock.append(mapWrap);
-    /* W7(0721 §1.3):决策解剖(评分瀑布+Top-3)并入放大视图——re-append 把 scoreAnatomy 排到
-       mapWrap 之后(mapDock 是普通 block 流,append 即定序);内容由 runtime.js 的
-       renderScoreAnatomy() 每帧写入 #scoreAnatomy,此处只管排位,不重复渲染。 */
-    mapDock.append(scoreAnatomy);
+    /* 三联大图+差异热力图排最前(mapDockClose 是 position:absolute,DOM 序不影响其右上角定位)。 */
+    mapDock.prepend(mapWrap);
     overlay.classList.add("open");
   }
   function closeMap() {
@@ -250,6 +260,14 @@
     mapHome.parent.insertBefore(mapWrap, mapHome.next);
   }
   mapWrap.addEventListener("click", () => { if (!overlay.classList.contains("open")) openMap(); });
+  /* 0722 §B.1「深内容=精华条点击弹大层」:整条精华条(#workHud)点击都唤起放大层,不止
+     三联缩略图一处;排除收纳钮(#railCollapseBtn 有自己的收展逻辑,见下方收纳节并已加
+     stopPropagation)。mapWrap 自身的监听器(上一行)与本监听器都会调用 openMap(),
+     openMap() 内部已有 open 态早退守卫,重复调用无副作用。 */
+  workHud.addEventListener("click", event => {
+    if (event.target.closest("#railCollapseBtn")) return;
+    if (!overlay.classList.contains("open")) openMap();
+  });
   overlay.addEventListener("click", event => { if (event.target === overlay || event.target.classList.contains("mapDockClose")) closeMap(); });
   root.addEventListener("keydown", event => {
     if (event.key === "Escape") { closeMap(); hidePops(); }
@@ -314,8 +332,12 @@
      phaseRail 悬浮说明取代,QA processGuideHidden 断言强制其隐藏),W6 不重开此决定——只重排
      "仍可见" 的块。 */
   const COLLAPSE_KEY = "s3_collapse_01_v1";
-  const RAIL_BLOCK_IDS = ["decisionWrap", "slotMapWrap", "traceStats", "phaseRail"];
-  const RAIL_BLOCK_HEADER_SELECTOR = "#decisionWrap .dHead,#slotMapWrap .mapHead,#traceStats .statsHead,#phaseRail .phaseTitle";
+  /* 0722 §B.1:decisionWrap/traceStats/phaseRail 已永久搬入放大层,不再是精华条的一部分;
+     slotMapWrap 缩为随点随开放大层的三联缩略图,其头部不再兼职"单块折叠"触发区(避免与
+     "点击缩略图开放大层"手势冲突)。逐块折叠机制随之整体退役,只留栏级(rail)与
+     dock 级(scene dock)两级收纳——RAIL_BLOCK_IDS 置空,下方处理逻辑对空数组安全跳过。 */
+  const RAIL_BLOCK_IDS = [];
+  const RAIL_BLOCK_HEADER_SELECTOR = RAIL_BLOCK_IDS.map(id => `#${id} .dHead,#${id} .mapHead,#${id} .statsHead,#${id} .phaseTitle`).join(",");
 
   function loadCollapseState() {
     try {
@@ -343,7 +365,10 @@
     railCollapseBtn.setAttribute("aria-expanded", String(!collapsed));
     railCollapseBtn.setAttribute("aria-label", collapsed ? "展开右栏" : "收起右栏");
   }
-  railCollapseBtn.addEventListener("click", () => {
+  railCollapseBtn.addEventListener("click", event => {
+    /* 0722:阻止冒泡到新增的 workHud 级"点击精华条开放大层"监听(见上方 §B.1 节),
+       否则收起/展开面板的同一次点击会连带把放大层也唤起。 */
+    event.stopPropagation();
     const collapsed = !workHud.classList.contains("is-collapsed");
     applyRailCollapsed(collapsed);
     collapseState.rail = collapsed; saveCollapseState();
@@ -379,6 +404,7 @@
     if (block && collapseState.blocks[id]) block.classList.add("railBlockCollapsed");
   });
   workHud.addEventListener("click", event => {
+    if (!RAIL_BLOCK_HEADER_SELECTOR) return; /* 0722:逐块折叠已退役(见上方 RAIL_BLOCK_IDS 注记) */
     const header = event.target.closest(RAIL_BLOCK_HEADER_SELECTOR);
     if (!header) return;
     const block = header.closest(RAIL_BLOCK_IDS.map(id => `#${id}`).join(","));

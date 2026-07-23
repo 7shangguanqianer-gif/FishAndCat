@@ -741,10 +741,33 @@
     const LANES3 = ["seq", "near", "score"];
     const sameInputSet = new Set(payload.online_lanes.map(lane => lane.shared_input_sha256));
     const raceBanner = document.createElement("div");
-    raceBanner.id = "raceBanner"; raceBanner.className = "vPanel";
-    raceBanner.innerHTML = `三算法同一到达队列 · 同一数据门 · 单 seed ${payload.shared_input_provenance.profile.seed}` +
-      `(30-seed 佐证见证据 s3_fill_seed_sweep_${SCENARIO}_2026_2055.json)· SIM` +
-      `<span style="display:block;margin-top:4px;font:400 8.5px/1.3 Consolas,monospace;color:#8a6a55">数据抽查:三条在线 lane 的 shared_input_sha256 唯一值个数 = ${sameInputSet.size}(应为 1)← payload.online_lanes[].shared_input_sha256(数据源:./s3_fill_store.js)</span>`;
+    raceBanner.id = "raceBanner"; raceBanner.className = "vPanel"; raceBanner.tabIndex = 0;
+    raceBanner.setAttribute("role", "note"); raceBanner.setAttribute("aria-label", "口径声明,聚焦或悬停展开全文");
+    /* 0722 §B.1:口径声明压缩为精华条头部一行小字,hover/focus 展开全文——拆成
+       raceBannerLine(常显单行)+ raceBannerFull(展开态全文,含原数据抽查子行);
+       两者都在 DOM 内,raceBanner.textContent 覆盖全部原文,QA 逐字断言不受影响。 */
+    const raceBannerLineText = `三算法同一到达队列 · 同一数据门 · 单 seed ${payload.shared_input_provenance.profile.seed}` +
+      `(30-seed 佐证见证据 s3_fill_seed_sweep_${SCENARIO}_2026_2055.json)· SIM`;
+    const raceBannerSubText = `数据抽查:三条在线 lane 的 shared_input_sha256 唯一值个数 = ${sameInputSet.size}(应为 1)← payload.online_lanes[].shared_input_sha256(数据源:./s3_fill_store.js)`;
+    raceBanner.innerHTML = `<span class="raceBannerLine">${raceBannerLineText}</span>` +
+      `<div class="raceBannerFull">${raceBannerLineText}<span style="display:block;margin-top:4px;font:400 8.5px/1.3 Consolas,monospace;color:#8a6a55">${raceBannerSubText}</span></div>`;
+
+    /* 0722 §B.1 新增:当前容量节点三算法关键指标微条(renderRaceMicro 每帧写入,见下方)。 */
+    const raceMicroBar = document.createElement("section");
+    raceMicroBar.id = "raceMicroBar"; raceMicroBar.setAttribute("aria-label", "当前容量节点三算法关键指标");
+
+    /* 0722 §B.1 新增:SCORE 相对 SEQ 领先徽章——终态数据,一次性计算,不随播放变化。
+       复用 expected_retrieval_s(全页反复强调的"回应赛题存取效率"headline 指标)。 */
+    const raceLeadBadge = document.createElement("section");
+    raceLeadBadge.id = "raceLeadBadge"; raceLeadBadge.setAttribute("aria-label", "SCORE 相对 SEQ 终态领先幅度");
+    {
+      const seqFinal = models.get("seq").lane.metrics, scoreFinal = models.get("score").lane.metrics;
+      const pct = seqFinal.expected_retrieval_s > 0 ?
+        (scoreFinal.expected_retrieval_s - seqFinal.expected_retrieval_s) / seqFinal.expected_retrieval_s * 100 : 0;
+      const better = pct < 0;
+      raceLeadBadge.innerHTML = `<span class="leadLabel">SCORE vs SEQ · 期望取货(终态)</span>` +
+        `<b class="leadValue ${better ? "better" : "worse"}">${better ? "▼" : "▲"}${Math.abs(pct).toFixed(1)}%</b>`;
+    }
 
     const raceGridsIntro = document.createElement("div");
     raceGridsIntro.id = "raceGridsIntro"; raceGridsIntro.className = "vPanel";
@@ -819,7 +842,8 @@
     seedBand.id = "raceSeedBand"; seedBand.className = "vPanel";
     seedBand.innerHTML = '<div class="vHead"><b>30-seed 分布带 · 三算法稳健性</b><span>加载中…</span></div>';
 
-    bookmarks.after(raceBanner); raceBanner.after(raceGridsIntro); raceGridsIntro.after(raceScoreboard);
+    bookmarks.after(raceBanner); raceBanner.after(raceMicroBar); raceMicroBar.after(raceLeadBadge);
+    raceLeadBadge.after(raceGridsIntro); raceGridsIntro.after(raceScoreboard);
     raceScoreboard.after(raceFinalBoard); raceFinalBoard.after(seedBand);
 
     /* 治理 C2 两情景兼容:30-seed 证据文件按 SCENARIO 切换(skew/uniform),真 fetch 不编造。 */
@@ -989,6 +1013,26 @@
       `<div class="note">总分 = score_terms.score_total(经 objective_value 通用字段读出);并列数(tie_size)>1 表示该名次由多个货位并列,按结构化兜底键落位(等时区现象:垂直限速仅为水平 1/4)。</div></div>`;
   }
 
+  /* 0722 §B.1:精华条「当前容量节点三算法关键指标微条」——找最近已过的容量节点(书签),
+     复用赛段比分条(raceScoreboard)同款 checkpoints.metrics_to_date 数据源与横条渲染手法,
+     只是把六节点压缩为当前一节点、只展示 expected_retrieval_s 一项(全页反复强调的
+     headline 指标),避免与放大层的完整赛段比分条重复。宿主 #raceMicroBar 不存在时安全跳过
+     (与 renderScoreAnatomy 的判空模式一致)。 */
+  function renderRaceMicro(frame) {
+    const host = byId("raceMicroBar"); if (!host) return;
+    const LANES3 = ["seq", "near", "score"];
+    const count = BOOKMARKS.filter(mark => mark <= frame.managedCount).pop() ?? 0;
+    const index = BOOKMARKS.indexOf(count);
+    const rows = LANES3.map(id => {
+      const checkpoint = models.get(id).lane.checkpoints.find(item => item.event_count === count);
+      return {id, v: checkpoint.metrics_to_date.expected_retrieval_s};
+    });
+    const max = Math.max(...rows.map(row => row.v)) || 1;
+    const barsHtml = rows.map(row => `<div class="raceBarRow" data-algo="${row.id}"><span>${row.id.toUpperCase()}</span>` +
+      `<span class="raceBarTrack"><i style="width:${(row.v / max * 100).toFixed(1)}%"></i></span><span>${row.v.toFixed(2)}</span></div>`).join("");
+    host.innerHTML = `<div class="microHead"><b>当前节点三算法 · 期望取货 s</b><span>${count} / 267 · ${["0%", "25%", "50%", "75%", "90%", "100%"][index]}</span></div>${barsHtml}`;
+  }
+
   /* W7(0721 回灌 §1.4):证据抽屉数据源——validator.checks 18 项 + 当前 lane 的 checkpoints 哈希链 6 节点
      + 终态账本(不含 fixed_score_diagnostic_total) + 口径与边界卡。按需调用(抽屉展开时才算),
      不是每帧轮询;interactions.js 的 toggleEvidence() 负责把这份结构化数据渲成抽屉 HTML。 */
@@ -1103,7 +1147,7 @@
       targetFx.faceMat.opacity = live ? .72 + .26 * pulse : .95;
       if (live) targetFx.arrow.position.z = targetFx.arrow.userData.baseZ - targetFx.floatAmp * pulse;
     }
-    renderDecision(frame); renderScoreAnatomy(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
+    renderDecision(frame); renderScoreAnatomy(frame); renderRaceMicro(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
   }
 
   function currentFrame() { return state.idleCount === null ? activeFrame(state.model, state.elapsed) : idleFrame(state.model, state.idleCount); }
@@ -1124,13 +1168,17 @@
   }
 
   function togglePause() {
-    /* W7(0721 F1 底座清理):暂停/继续按钮 DOM 已删,函数保留作 __S3_FILL_QA 程序化钩子
-       (同 W6 resetCamera 先例)——不再写按钮文案。 */
+    /* 0722 §B.3:「继续」播放钮系上轮(W7 0721 F1)误删——0720 否决单仅「从头回放/导出3D帧/
+       总览」三项,不含「继续」。本轮拍板改为进页自动播放 + 顶栏暂停/继续单钮双态(按钮 DOM
+       同 02 s3_ac_runtime.js 的 #pauseMotion 写法:textContent + aria-pressed 同步)。
+       idle→continuous 转换逻辑不变(0721 遗留,复用勿重写)。 */
     if (state.paused && state.idleCount !== null) {
       if (state.idleCount >= 267) { seekBookmark(0); }
       state.elapsed = state.model.eventStarts[state.idleCount]; state.idleCount = null;
     }
     state.paused = !state.paused; state.lastNow = null;
+    const button = byId("playPauseBtn");
+    if (button) { button.textContent = state.paused ? "继续" : "暂停"; button.setAttribute("aria-pressed", String(state.paused)); }
   }
 
   function exportFrame() {
@@ -1188,6 +1236,9 @@
     const frame = lastFrame || currentFrame();
     return {releaseId: payload.release.release_id, bundlePayloadSha256: payload.bundle_payload_sha256,
       requested: state.requested, laneId: state.laneId, paused: state.paused, multiplier: state.multiplier,
+      /* 0722 §B.3:自动播放 QA 断言需要一个随时间单调增长的读数;simTime 直接读现有 state.elapsed,
+         不新引入并行状态源。 */
+      simTime: state.elapsed,
       idle: frame.idle, managedCount: frame.managedCount, totalUnavailable: 133 + frame.managedCount,
       eventIndex: frame.event.event_index, operation: frame.operation, target: frame.slot && frame.slot.slice(),
       inventorySize: frame.rows.length, inventoryGids: frame.rows.map(row => row.gid),
@@ -1250,6 +1301,7 @@
   }
 
   byId("strategySelect").addEventListener("change", event => setAlgorithm(event.target.value));
+  byId("playPauseBtn").addEventListener("click", togglePause);
   /* W6(0720,拍板同 02 W1-8):「总览」相机复位按钮与其 DOM 一并删除;resetCamera() 仍留作
      QA 程序化钩子(见下方公开 API,__S3_FILL_QA.resetCamera() 供脚本调用)。
      W7(0721 F1 底座清理):暂停/继续、从头回放、导出3D帧三按钮同法删除——DOM 与专属事件绑定一并去除,
@@ -1277,6 +1329,11 @@
   }
 
   renderStats(); seekBookmark(0);
+  /* 0722 §B.3:进页自动播放(就绪后自动 play,与 02 行为对齐)——复用 togglePause() 既有的
+     idle→continuous 转换,不新写播放状态机。此刻 state.paused=true/idleCount=0
+     (seekBookmark(0) 刚设),togglePause() 调一次即完成"冻结书签→连续播放"且同步顶栏
+     按钮文案/aria-pressed。 */
+  togglePause();
   root.__S3_FILL_QA = Object.freeze({
     version: "s3-fill-candidate-runtime-v1", snapshot,
     seekBookmark, setAlgorithm, auditDetail,

@@ -1312,6 +1312,166 @@
   .ledgerCell b{display:block;font:800 13px/1.2 Consolas,monospace;color:#17202b}
   .ledgerCell span{display:block;margin-top:4px;font:7.5px/1.2 "Microsoft YaHei",sans-serif;color:#69717a}
   .boundaryQuote{font:italic 9.5px/1.55 "Microsoft YaHei",sans-serif;color:#3c4650;padding:8px 10px;background:#f4f6f7;border-left:3px solid #17365d;margin:7px 0 8px}
+
+  /* ================================================================
+     0722 一屏返工(规格 docs/施工规格_一屏返工0722.md §A 一屏纪律 + §B 01 页)。
+     根治三问题:①#workHud overflow-y:auto(1196 行,0721 遗留)是竖向滚动主因——赛段比分条/
+     终态总分牌/评分解剖/决策依据/批次KPI/七步条全部由 interactions.js 永久搬入放大层
+     #s3MapOverlay,常驻区只留 3D + 本节新定义的「赛马精华条」四件;②进页自动播放+顶栏
+     暂停/继续双态钮(runtime.js/interactions.js 联动,html 只加 #playPauseBtn 一个按钮);
+     ③3D 全景自适应(镜头拉距函数已在上方 inline script 内实现,此处只需把 3D 让出的宽度
+     还给它——rail-w 从 0721 的 60% 收窄回 ~300px)。
+     #progressAxisHost 的 DOM 父级已由 interactions.js 改为 #viewport 直接子级(不再是
+     #workHud 内的 flex 子项),此处用同选择器同 !important 力度把 0721 误设的
+     order:2!important;position:static!important 复位回顶部通栏细条。
+     ================================================================ */
+  html[data-s3-layout="A"]{--rail-w:clamp(266px,17vw,332px)}
+
+  html[data-s3-layout="A"] #progressAxisHost{position:absolute!important;z-index:8;
+    top:var(--topbar-h);left:var(--rail-w);right:0;height:var(--axis-h);width:auto}
+  /* 962 行"进度轴已迁入右栏,不再占独立横条高度"是本次要撤销的 0721 决定本身——轴条现恢复
+     独立通栏,#gl 必须让出 axis-h 高度,否则轴条(z-index:8)会盖住 3D 画布顶部一条,
+     变成另一种"截顶"。 */
+  html[data-s3-layout="A"] #gl{left:var(--rail-w);top:calc(var(--topbar-h) + var(--axis-h))}
+
+  /* -- 精华条本体:#workHud 收窄为单条常驻,零滚动。历史 order/flex-basis 声明对已撤出的
+     decisionWrap/traceStats/phaseRail/raceGridsIntro/raceScoreboard/raceFinalBoard/
+     raceSeedBand 不再生效(DOM 已不在本容器内,搬运见 interactions.js);仍常驻的四件
+     依次为 raceBanner(口径头)/slotMapWrap(三联缩略图)/raceMicroBar(当前节点三算法
+     微条,runtime.js 新增)/raceLeadBadge(SCORE-SEQ 领先徽章,runtime.js 新增)。 -- */
+  html[data-s3-layout="A"] #workHud{overflow:hidden!important;display:flex!important;
+    flex-direction:column!important;gap:7px!important;padding:10px 11px 9px!important;
+    justify-content:flex-start!important}
+  /* #insightStack 原装 railFacts(早已 display:none 的死块)+ traceStats(本轮已搬入放大层);
+     两个子级搬空后它是个空壳,但自身仍带一份 Task10 时代的 grid-template-rows 多轨定义,
+     在本节新引入的 1280 断点(#workHud 改 display:grid)下会被自动布局占出一整块空轨道
+     ——实测吃掉 213px 高。empty 壳没有 QA 依赖,直接隐藏。 */
+  html[data-s3-layout="A"] #workHud #insightStack{display:none!important}
+  #raceBanner{order:1!important}
+  /* 0721 遗留 html[data-s3-layout="A"] #slotMapWrap{flex:0 0 460px!important} 比选择器
+     specificity 更高(多一层 [data-s3-layout] 属性选择器),同 !important 下光靠源码序赢不了它
+     ——这里必须同规格选择器才能覆盖,单独 order 之类无冲突属性可以留裸选择器。 */
+  html[data-s3-layout="A"] #slotMapWrap{order:2!important;flex:0 0 auto!important;min-height:0!important}
+  #raceMicroBar{order:3!important}
+  #raceLeadBadge{order:4!important}
+
+  /* -- 口径声明压缩为头部一行小字,hover/focus 展开全文(独立实现,不复用 .metricHelp
+     类名以免误改其既有断言);raceBanner.textContent 仍含全部原文,QA 逐字断言不受影响。 -- */
+  #raceBanner.vPanel{position:relative;cursor:help;padding:7px 9px;margin:0}
+  #raceBanner .raceBannerLine{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #raceBanner .raceBannerFull{display:none}
+  #raceBanner:hover .raceBannerLine,#raceBanner:focus-within .raceBannerLine{visibility:hidden}
+  #raceBanner:hover .raceBannerFull,#raceBanner:focus-within .raceBannerFull{
+    display:block;position:absolute;left:0;right:0;top:0;z-index:24;padding:8px 10px;
+    background:#fff7f5;border:1px solid #f0b8ae;box-shadow:0 8px 20px #17202b26;white-space:normal}
+
+  /* -- 三联缩略图:小、可点(既有 mapWrap 点击开 s3MapOverlay 机制不变,见 interactions.js);
+     弹大层内部恢复原尺寸与图例/规则说明。 -- */
+  html[data-s3-layout="A"] #workHud #slotMapWrap{padding:7px 8px 6px;cursor:zoom-in}
+  html[data-s3-layout="A"] #workHud #slotMapWrap .mapHead b{font-size:9.5px}
+  html[data-s3-layout="A"] #workHud #slotMapWrap .mapHead span{font-size:7px}
+  html[data-s3-layout="A"] #workHud #slotMapWrap .mapHead strong{font-size:13px}
+  html[data-s3-layout="A"] #workHud #slotMapWrap .mapRule{display:none}
+  html[data-s3-layout="A"] #workHud #slotMap{min-height:0;aspect-ratio:2.3/1;margin-top:4px}
+  /* 1004 行 html[data-s3-layout="A"] #slotMapWrap .mapKey{display:flex!important} 是历史遗留
+     的 !important——非 !important declaration 无论 specificity 多高都赢不了 !important,
+     这里必须同挂 !important 才能覆盖(specificity 上 #workHud #slotMapWrap 两个 id 已更高,
+     只是之前漏了 !important 这一步)。diffMapWrap 同理:607 行 html[data-s3-layout="A"]
+     #workHud #diffMapWrap{display:grid} 是"差异热力图曾常驻左栏"的历史设计,现全部收入
+     放大层,rail 内必须强制隐藏。 */
+  html[data-s3-layout="A"] #workHud #slotMapWrap .mapKey{display:none!important}
+  html[data-s3-layout="A"] #workHud #diffMapWrap{display:none!important}
+  html[data-s3-layout="A"] #s3MapOverlay #slotMapWrap{cursor:default}
+
+  /* -- 当前容量节点三算法关键指标微条(runtime.js renderRaceMicro 写入) -- */
+  #raceMicroBar{border:1px solid var(--rail-line,#cbd2d8);background:var(--card,#fff);padding:6px 8px;margin:0}
+  #raceMicroBar .microHead{display:flex;justify-content:space-between;gap:6px;font:700 8.5px/1.2 Consolas,monospace;color:#69717a;margin-bottom:4px}
+  #raceMicroBar .raceBarRow{margin-top:2px}
+
+  /* -- SCORE 相对 SEQ 领先徽章(runtime.js configureDom 一次性写入,终态数据不随播放变化) -- */
+  #raceLeadBadge{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;margin:0;
+    border:1px solid var(--rail-line,#cbd2d8);background:#fff7f5;border-left:3px solid #ff000f}
+  #raceLeadBadge .leadLabel{font:700 8.5px/1.25 "Microsoft YaHei",sans-serif;color:#5c1010}
+  #raceLeadBadge .leadValue{font:800 13px/1 Consolas,monospace;white-space:nowrap}
+  #raceLeadBadge .leadValue.better{color:#1d6b2e}
+  #raceLeadBadge .leadValue.worse{color:#b71c1c}
+
+  /* -- 暂停/继续双态钮(顶栏,单钮双态,aria-pressed;文案由 runtime.js togglePause() 同步) -- */
+  html[data-s3-layout="A"] #topbarA #playPauseBtn{order:-1;min-width:52px;height:27px}
+  #playPauseBtn[aria-pressed="true"]{background:#17365d;color:#fff;border-color:#17365d}
+
+  /* -- 弹大层扩容(§A.3 max 90vw/90vh):容纳赛段比分条/终态总分牌/30-seed 分布带/评分解剖/
+     决策依据/批次KPI/七步条,内部可滚(白名单),遮罩+居中不变,Esc/点遮罩关闭不变。 -- */
+  html[data-s3-layout="A"] #s3MapOverlay .mapDock{width:min(94vw,980px);max-width:90vw;max-height:90vh;overflow-y:auto}
+  html[data-s3-layout="A"] #s3MapOverlay #raceGridsIntro,
+  html[data-s3-layout="A"] #s3MapOverlay #raceScoreboard,
+  html[data-s3-layout="A"] #s3MapOverlay #raceFinalBoard,
+  html[data-s3-layout="A"] #s3MapOverlay #raceSeedBand,
+  html[data-s3-layout="A"] #s3MapOverlay #decisionWrap,
+  html[data-s3-layout="A"] #s3MapOverlay #traceStats{
+    order:initial!important;position:static!important;width:auto!important;flex:none!important;
+    min-height:0!important;height:auto!important;overflow:visible!important;
+    border:1px solid var(--rail-line,#cbd2d8);background:#fff;margin:8px 0;padding:9px 11px}
+  html[data-s3-layout="A"] #s3MapOverlay #traceStats .statsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+  html[data-s3-layout="A"] #s3MapOverlay #phaseRail{position:static!important;width:auto!important;
+    margin:8px 0;padding:9px 11px;border:1px solid var(--rail-line,#cbd2d8);background:#fff}
+  html[data-s3-layout="A"] #s3MapOverlay #phaseSegments{grid-template-columns:repeat(7,1fr)!important;height:26px}
+  html[data-s3-layout="A"] #s3MapOverlay .vHead{margin-top:0}
+
+  /* -- 3D 主角让位:精华条已收窄至约 300px,1920 宽下 3D ≥84%,1280 宽下 ≥75%,
+     均高于 §B.1/§B.5 的 ≥65%/≥55% 门槛;sceneDock 四列宽度按新的宽裕 3D 区回调。 -- */
+  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(320px,1.6fr) minmax(230px,1fr) minmax(160px,.8fr) minmax(190px,.9fr)}
+
+  /* -- 3D 画布显式铺满容器,防 devicePixelRatio 与 CSS 尺寸不同步导致的渲染缺口
+     (renderer.setSize 第三参传 false 跳过 style 赋值,历史上无此兜底规则)。 -- */
+  #gl>canvas{display:block!important;width:100%!important;height:100%!important}
+
+  /* -- 1280×800 收纳(§B.5):精华条降单行、顶栏元素合并,3D 不小于 55% 宽,零滚动。
+     改用 CSS grid 显式列宽,不用 flex 百分比分配——实测 flex:1 1 0 配合 slotMap 的
+     aspect-ratio 子项在窄行内会互相反馈震荡(算出的 flex-basis far below 意图值),
+     grid 显式轨道尺寸更可控、可预测。 -- */
+  @media(max-width:1350px){
+    /* 显式 grid-column/grid-row 逐一指定,不吃 order/auto-placement——两列方块(缩略图/微条)
+       占满两行高度,右侧 1fr 列内口径头与徽章各占半行上下堆叠,整条只有两行文字高,
+       彻底绕开 flex-basis 与 aspect-ratio 子项的反馈震荡问题(实测曾把整条撑到 694px 高)。 */
+    /* 672 行 html[data-s3-mode="fill-only-candidate"] #workHud{grid-template-areas:"head head"...
+       "phase insight"}(6 行模板区域)选择器优先级与本规则相同(都是 1 attr+1 id),源码序也
+       赢不过面积模板——grid-template-areas 隐含的行数会与 grid-template-rows 叠加,凑出 6 行
+       而非 2 行(此为实测根因)。这里必须显式清空 grid-template-areas 才能让 auto auto 真正
+       只有两行。 */
+    /* auto auto 仍会被 stretch 子项的循环尺寸依赖撑到 360px+/行(实测)——改显式定高
+       两行,彻底绕开 auto 轨道尺寸算法在"跨行 stretch 子项"下的不收敛问题。 */
+    html[data-s3-layout="A"] #workHud{display:grid!important;grid-template-areas:none!important;
+      grid-template-columns:78px 78px 1fr;grid-template-rows:44px 44px!important;
+      align-items:start;gap:4px 6px!important;padding:20px 8px 6px}
+    /* 收纳钮(#railCollapseBtn)基础态是 flex 子项(order:-2),display:grid 下若不给显式坐标
+       会被自动布局塞进隐式新轨道、拖高整条——改绝对定位钉在精华条右上角,退出 grid 流。 */
+    html[data-s3-layout="A"] #workHud #railCollapseBtn{position:absolute!important;top:2px;right:4px;
+      height:16px!important;padding:0 4px!important;font-size:7px;z-index:5}
+    html[data-s3-layout="A"] #workHud #railCollapseBtn .edgeLabel{display:none}
+    html[data-s3-layout="A"] #workHud #slotMapWrap{grid-column:1;grid-row:1/3;min-width:0;min-height:0;padding:3px 4px}
+    html[data-s3-layout="A"] #workHud #raceMicroBar{grid-column:2;grid-row:1/3;min-width:0;display:flex;flex-direction:column}
+    html[data-s3-layout="A"] #workHud #raceBanner{grid-column:3;grid-row:1;min-width:0;min-height:0;padding:4px 6px}
+    /* flex-wrap:wrap(基础规则,两项并排放不下时各占一行)在窄列下让 justify-content:
+       space-between 把两条"各自的行"再拉开一大截空当——这里强制改列向堆叠,彻底不依赖
+       wrap 的多行分布算法。 */
+    html[data-s3-layout="A"] #workHud #raceLeadBadge{grid-column:3;grid-row:2;min-width:0;min-height:0;
+      display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;
+      justify-content:center;align-items:flex-start;gap:1px}
+    #raceBanner .raceBannerLine{font-size:8px}
+    #raceBanner .raceBannerFull{width:240px;left:auto;right:0}
+    #raceLeadBadge .leadLabel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    html[data-s3-layout="A"] #workHud #slotMapWrap .mapHead{display:none}
+    html[data-s3-layout="A"] #workHud #slotMap{aspect-ratio:1/1!important;width:100%;height:auto;min-height:0!important;margin-top:0}
+    html[data-s3-layout="A"] #topbarA{gap:8px;padding:0 10px}
+    html[data-s3-layout="A"] #topbarA #runtimeControls{gap:6px}
+    html[data-s3-layout="A"] #topbarA #runtimeControls label{font-size:7.5px}
+    html[data-s3-layout="A"] #topbarA #runtimeControls select{min-width:76px;font-size:8.5px}
+    html[data-s3-layout="A"] #topbarA #railHead h1,html[data-s3-layout="A"] #topbarA #railHead .eyebrow{display:none}
+    #raceMicroBar .microHead span{display:none}
+    #raceLeadBadge .leadLabel{font-size:7px}
+    #raceLeadBadge .leadValue{font-size:11px}
+  }
 </style>
 <!-- V2 壳体共享语法(0719):01=连续入库保持 rail-left(data-first),不设 data-s3-rail 即缺省 left;
      文件内 rail-right 映射与 #cycleAxis 规则对本页零命中,link 仅作为后续侧向规则收拢的接口。 -->
@@ -1328,7 +1488,7 @@
           <label>算法<select id="strategySelect"><option value="AUTO" selected>默认策略 SCORE</option><option value="score">多目标评分 SCORE</option><option value="near">就近放置 NEAR</option><option value="seq">顺序放置 SEQ</option></select></label>
           <label>拟真档<select id="tierSelect"><option value="1">档 1 · 数据模型</option><option value="2">档 2 · 加减速设计</option><option value="3" selected>档 3 · 综合情景</option></select></label>
           <label>货物画像<select id="profileSelect"><option value="uniform">均匀</option><option value="skew" selected>偏斜</option><option value="heavy">重货</option></select></label>
-          <div id="runtimeActions"><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
+          <div id="runtimeActions"><button id="playPauseBtn" type="button" aria-pressed="false">暂停</button><span id="traceLoadState" role="status" aria-live="polite" aria-atomic="true">准备加载</span></div>
           <div id="traceErrorHost" role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
         </section>
         <div id="axisHud" aria-label="轴状态 · 位置与速度；数值随演示连续变化" aria-live="off"><b>轴状态 · 位置与速度</b><div class="axis"><span>X(行走)</span><i id="xFill"></i><span id="xValue">0.00 m</span><i class="velTrack" id="xVelTrack" aria-hidden="true"></i><span class="velNum" id="xVel">0.00 m/s</span></div><div class="axis"><span>Y(升降)</span><i id="zFill"></i><span id="zValue">0.00 m</span><i class="velTrack" id="zVelTrack" aria-hidden="true"></i><span class="velNum" id="zVel">0.00 m/s</span></div><div class="axis axisFork"><span>F</span><i id="forkFill"></i><span id="forkValue">0.00 m</span><i class="velTrack" aria-hidden="true"></i><span class="velNum">—</span></div></div>
@@ -1774,6 +1934,33 @@ const FOCAL=new THREE.Vector3(...VISUAL.look);
 /* 允许检查纵深，但禁止 90° 侧视把 20×20 信息压成一条线。 */
 controls.minAzimuthAngle=THREE.MathUtils.degToRad(-65);controls.maxAzimuthAngle=THREE.MathUtils.degToRad(65);
 const CAMERA_LIMITS=Object.freeze({x:[-1.5,N+1.5],y:[FLOOR.y0+.6,RACK.backY-.12],z:[.8,N-.8]});
+
+/* 0722 一屏返工 §B.4:3D 全景自适应——镜头按容器宽高比 + 货架包围盒自动拉距,保证货架全高 +
+   入库口入镜,任何容器尺寸不截顶。FRAME_BOUNDS 只含货架实体 + 入库/出库装载工位(不含长队列
+   传送带包络,理由同 VISUAL 校准注记:潜在队列不应虚增主体占比)。距离沿"默认取景方向"
+   (DEFAULT_DIR,来自既有 VISUAL.pos→FOCAL 手调角度)伸缩,不改变镜头角度,只改变拉距远近——
+   restoreDefaultCamera()/setCamera() 复位到默认角度;resizeScene() 保留用户当前 orbit 角度,
+   只重算距离,故折叠/窗口变化 resize 后镜头不回中但绝不截顶。 */
+const FRAME_BOUNDS=new THREE.Box3(
+  new THREE.Vector3(Math.min(INFEED.x,OUTFEED.x)-1.3,INFEED.loadY-1.15,Z0),
+  new THREE.Vector3(N+.8,RACK.backY+.5,N+.9));
+const FRAME_RADIUS=(function(){
+  const corners=[];
+  [FRAME_BOUNDS.min.x,FRAME_BOUNDS.max.x].forEach(x=>[FRAME_BOUNDS.min.y,FRAME_BOUNDS.max.y].forEach(y=>
+    [FRAME_BOUNDS.min.z,FRAME_BOUNDS.max.z].forEach(z=>corners.push(new THREE.Vector3(x,y,z)))));
+  return Math.max(...corners.map(corner=>corner.distanceTo(FOCAL)));
+})();
+const DEFAULT_DIR=new THREE.Vector3(...VISUAL.pos).sub(FOCAL).normalize();
+function currentAspect(){
+  const r=mount.getBoundingClientRect();
+  return (r.width>0&&r.height>0)?r.width/r.height:(camera.aspect||1.6);
+}
+function fitDistanceForAspect(aspect){
+  const vFov=THREE.MathUtils.degToRad(camera.fov),safeAspect=Math.max(aspect,.2);
+  const hFov=2*Math.atan(Math.tan(vFov/2)*safeAspect);
+  const distV=FRAME_RADIUS/Math.sin(vFov/2),distH=FRAME_RADIUS/Math.sin(Math.min(hFov/2,1.55));
+  return THREE.MathUtils.clamp(Math.max(distV,distH)*1.06,controls.minDistance,controls.maxDistance);
+}
 let cameraGuard=false;
 function cameraSnapshot(){
   const dx=camera.position.x-controls.target.x,dy=camera.position.y-controls.target.y,planar=Math.max(.0001,Math.hypot(dx,dy));
@@ -1791,15 +1978,34 @@ function constrainCamera(){
 }
 function setCamera(){
   /* OrbitControls 的阻尼会保留上一帧旋转/平移增量；复位前以无阻尼 update 清空残量，
-     否则按钮写入预设后，下一 RAF 仍会把镜头从预设位置继续推走。 */
+     否则按钮写入预设后，下一 RAF 仍会把镜头从预设位置继续推走。
+     0722:距离不再取 VISUAL.pos 的固定长度,改为沿 DEFAULT_DIR 按当前容器宽高比重新拉距
+     (fitDistanceForAspect),角度仍是 VISUAL.pos 校准的默认视角——容器再窄再宽都保证
+     FRAME_BOUNDS(货架全高+入库口)入镜,不截顶。 */
   const damping=controls.enableDamping;controls.enableDamping=false;controls.update();
-  camera.position.set(...VISUAL.pos);controls.target.copy(FOCAL);camera.fov=VISUAL.fov;camera.zoom=1;
+  camera.aspect=currentAspect();
+  const distance=fitDistanceForAspect(camera.aspect);
+  camera.position.copy(FOCAL).addScaledVector(DEFAULT_DIR,distance);controls.target.copy(FOCAL);camera.fov=VISUAL.fov;camera.zoom=1;
   camera.updateProjectionMatrix();camera.lookAt(FOCAL);controls.update();controls.enableDamping=damping;
   constrainCamera();return cameraSnapshot();}
 controls.addEventListener('change',constrainCamera);
 setCamera();controls.enabled=true;controls.saveState();
 
-function resizeScene(){const r=mount.getBoundingClientRect();if(r.width>0&&r.height>0){renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}}
+function resizeScene(){
+  const r=mount.getBoundingClientRect();
+  if(r.width>0&&r.height>0){
+    renderer.setSize(r.width,r.height,false);
+    camera.aspect=r.width/r.height;
+    /* 0722:折叠/窗口变化后必须重算镜头——保留用户当前 orbit 方向(不打断手动取景),
+       只按新宽高比重算拉距,确保 FRAME_BOUNDS 任何容器尺寸下都不截顶。 */
+    const dir=new THREE.Vector3().subVectors(camera.position,controls.target);
+    if(dir.lengthSq()>1e-6){
+      dir.normalize();
+      camera.position.copy(controls.target).addScaledVector(dir,fitDistanceForAspect(camera.aspect));
+    }
+    camera.updateProjectionMatrix();controls.update();constrainCamera();
+  }
+}
 resizeScene();
 
 </script>
