@@ -9,20 +9,33 @@
   :root{--abb:#e2001a;--ink:#17202b;--dim:#5e6a73;--line:#c9d0d6;--bg:#f2f4f5;--card:#fff;
     --ok:#1d6b2e;--warn:#8a6d00;--warn-bg:#fff6d8;--stop:#8a1a1a;--stop-bg:#fde8e8;--ok-bg:#e6f2e8;--debug-bg:#eceef0;--debug-fg:#5e6a73}
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{background:var(--bg);color:var(--ink);font:14px/1.55 "Microsoft YaHei","Segoe UI",sans-serif}
+  html,body{background:var(--bg);color:var(--ink);font:14px/1.5 "Microsoft YaHei","Segoe UI",sans-serif}
   a{color:#17365d}
-  #brand{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#111;border-bottom:3px solid var(--abb)}
+  #brand{display:flex;align-items:center;gap:14px;padding:8px 20px;background:#111;border-bottom:3px solid var(--abb)}
   #brand .logo{color:var(--abb);font-weight:900;font-size:22px;font-family:Arial;letter-spacing:1px}
   #brand h1{color:#fff;font-size:16px;font-weight:600}
   #brand .tag{margin-left:auto;color:#ffd23d;font-size:12px;font-weight:600}
-  #scopeBand{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-    padding:8px 20px;background:#17202b;color:#fff;font-size:12.5px;border-bottom:2px solid var(--abb)}
+  /* 口径带:0722 一屏纪律要求压缩单行;显式横向带兜底(白名单,§A.2),正常情况下应整行可见无需滚动 */
+  #scopeBand{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;overflow-y:hidden;
+    padding:6px 20px;background:#17202b;color:#fff;font-size:12px;border-bottom:2px solid var(--abb)}
   #scopeBand b{color:#ffd23d}
   #scopeBand .sep{color:#8a94a0}
-  main{max-width:1560px;margin:0 auto;padding:16px 20px 40px;display:flex;flex-direction:column;gap:18px}
-  section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
-  section>h2{font-size:15px;margin-bottom:4px;padding-left:9px;border-left:4px solid var(--abb)}
-  section>.sub{font-size:12px;color:var(--dim);margin-bottom:10px}
+
+  /* 顶部 4 Tab 分区条(0722 一屏返工 §C) */
+  #pageTabs{display:flex;gap:6px;align-items:flex-end;padding:7px 20px 0;background:#fff;border-bottom:1px solid var(--line)}
+  #pageTabs button{appearance:none;border:1px solid var(--line);border-bottom:none;background:#eef1f3;color:var(--ink);
+    font:700 12.5px "Microsoft YaHei",sans-serif;padding:8px 16px;cursor:pointer;border-radius:5px 5px 0 0;
+    position:relative;top:1px}
+  #pageTabs button[aria-selected="true"]{background:#fff;border-color:var(--line);border-bottom:1px solid #fff;color:var(--abb)}
+  #pageTabs button:hover{background:#fff}
+  #pageTabs button:focus-visible{outline:3px solid #ffd23d;outline-offset:1px;z-index:1}
+
+  main{max-width:1560px;margin:0 auto;padding:10px 20px 14px;display:block}
+  .tabPanel{flex-direction:column;gap:10px}
+  .tabPanel:not([hidden]){display:flex}
+  section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 14px}
+  section>h2{font-size:14.5px;margin-bottom:3px;padding-left:9px;border-left:4px solid var(--abb)}
+  section>.sub{font-size:11.5px;color:var(--dim);margin-bottom:8px}
   .path{font-family:Consolas,monospace;font-size:11.5px;word-break:break-all;color:#17365d}
   .mono{font-family:Consolas,monospace}
   .st{display:inline-block;padding:1px 8px;border-radius:2px;font-weight:700;font-size:12px;white-space:nowrap}
@@ -32,111 +45,174 @@
   details{margin-top:6px}
   summary{cursor:pointer;font-size:12.5px;color:#17365d;font-weight:600}
   details[open] summary{margin-bottom:6px}
-  footer{max-width:1560px;margin:0 auto;padding:0 20px 30px;font-size:11.5px;color:var(--dim)}
+  footer{max-width:1560px;margin:0 auto;padding:0 20px 12px;font-size:11px;color:var(--dim)}
   button:focus-visible,summary:focus-visible{outline:3px solid #ffd23d;outline-offset:1px}
 
-  /* 证据画面(§2 沿用) */
-  #views{display:grid;grid-template-columns:170px 1fr;gap:14px}
-  #viewTabs{display:flex;flex-direction:column;gap:6px}
-  #viewTabs button{padding:9px;border:1px solid var(--line);background:#f7f8f9;text-align:left;cursor:pointer;
-    font:600 12.5px "Microsoft YaHei",sans-serif;border-radius:3px}
+  /* 页面定位:四问,折叠收纳(默认关闭,不占常驻空间;内容零删) */
+  #pageIntro{border:1px solid var(--line);border-radius:4px;background:#fafbfc;padding:0 12px}
+  #pageIntro summary{padding:7px 0;font-size:12.5px}
+  #pageIntro[open] summary{margin-bottom:2px}
+  #pageIntro ol{padding-bottom:8px}
+
+  /* 证据画面 Tab:三视图 + 元数据卡 + 底部横向带(视频+40帧) */
+  #views{display:grid;grid-template-columns:150px 1fr;gap:10px}
+  #viewTabs{display:flex;flex-direction:column;gap:5px}
+  #viewTabs button{padding:7px 8px;border:1px solid var(--line);background:#f7f8f9;text-align:left;cursor:pointer;
+    font:600 12px "Microsoft YaHei",sans-serif;border-radius:3px}
   #viewTabs button[aria-selected="true"]{border-color:var(--abb);background:#fff;box-shadow:inset 3px 0 var(--abb)}
-  #viewTabs button small{display:block;font-weight:400;color:var(--dim);font-size:11px;margin-top:2px}
-  #viewStage img{width:100%;max-height:300px;object-fit:contain;background:#e9ecee;border:1px solid var(--line);cursor:zoom-in}
-  #viewMeta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px}
-  #viewMeta .cell{padding:7px 9px;border:1px solid var(--line);background:#fafbfc}
-  #viewMeta .cell b{display:block;font-size:10.5px;color:var(--dim);margin-bottom:2px}
+  #viewTabs button small{display:block;font-weight:400;color:var(--dim);font-size:10.5px;margin-top:1px}
+  #viewStage img{width:100%;max-height:230px;object-fit:contain;background:#e9ecee;border:1px solid var(--line);cursor:zoom-in}
+  #viewMeta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;font-size:11.5px}
+  #viewMeta .cell{padding:5px 8px;border:1px solid var(--line);background:#fafbfc}
+  #viewMeta .cell b{display:block;font-size:10px;color:var(--dim);margin-bottom:1px}
   #viewMeta .prove{border-left:3px solid var(--ok)}
   #viewMeta .notprove{border-left:3px solid var(--stop)}
 
-  /* 主/侧双栏 */
-  .split{display:grid;grid-template-columns:1fr 400px;gap:18px;align-items:start}
-  .colMain{display:flex;flex-direction:column;gap:18px;min-width:0}
-  .colSide{position:sticky;top:52px}
-  @media(max-width:1180px){.split{grid-template-columns:1fr}.colSide{position:static}}
+  .bottomStrip{margin-top:2px;padding-top:6px;border-top:1px dashed var(--line)}
+  .bottomStripRow{display:flex;gap:5px;overflow-x:auto;padding:2px 0 4px;align-items:stretch}
+  .bottomStripRow .stripVideo{flex:none;display:flex}
+  .bottomStripRow video{height:96px;width:auto;max-width:210px;background:#000;display:block;border-radius:2px}
+  .bottomStripRow #frameStrip{display:flex;gap:5px;flex:none}
+  .bottomStripRow img{height:96px;width:auto;object-fit:cover;cursor:zoom-in;border:1px solid var(--line);flex:0 0 auto;border-radius:2px}
+  .bottomStripRow img:hover{border-color:var(--abb)}
+  #frameCount{font-size:11px;color:var(--dim)}
 
-  /* 证据链卡片流(主轴) */
-  #chainFlow{counter-reset:chain}
-  .chainCard{border:1px solid var(--line);border-radius:6px;background:#fff;margin-bottom:12px;overflow:hidden;position:relative}
-  .chainCard::before{counter-increment:chain;content:counter(chain);position:absolute;left:0;top:0;width:26px;height:26px;
-    background:var(--abb);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;
-    border-bottom-right-radius:6px}
-  .chHead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 14px 9px 38px;border-bottom:1px solid var(--line);background:#fafbfc}
-  .chHead h3{font-size:13.5px;line-height:1.4}
-  .chBody{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:12px 14px}
-  .chThumb{width:150px;height:104px;object-fit:cover;background:#e9ecee;border:1px solid var(--line);cursor:zoom-in;border-radius:3px;display:block}
-  .chThumb.none{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:11px;cursor:default;text-align:center;padding:6px}
-  .chMeta .row{margin-bottom:6px;font-size:12.5px}
-  .chMeta .row b{color:var(--dim);font-size:10.5px;display:block;margin-bottom:1px;font-weight:600}
-  .chMeta .limit{background:#fafbfc;border:1px solid var(--line);padding:6px 8px;border-radius:3px}
+  /* 证据链 Tab:3×3 紧凑网格(主张+缩略图+路径一行+徽章),点卡弹大层看全档 */
+  #chainGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;counter-reset:chain}
+  .chainCard{border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden;position:relative;
+    display:flex;flex-direction:column;text-align:left;font:inherit;color:inherit;cursor:pointer}
+  .chainCard::before{counter-increment:chain;content:counter(chain);position:absolute;left:0;top:0;width:18px;height:18px;
+    background:var(--abb);color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;
+    border-bottom-right-radius:6px;z-index:1}
+  .chainCard:hover{border-color:var(--abb)}
+  .chainCard:focus-visible{outline:3px solid #ffd23d;outline-offset:-2px}
+  .chainCard .chHead{display:flex;flex-direction:column;gap:2px;padding:6px 8px 5px 24px;border-bottom:1px solid var(--line);background:#fafbfc}
+  .chainCard .chHead h3{font-size:11.5px;line-height:1.32;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .chainCard .chHead .st{align-self:flex-start;font-size:10px;padding:0 6px}
+  .chainCard .chBody{display:flex;gap:7px;padding:7px 8px;align-items:center}
+  .chainCard .chThumb{width:60px;height:44px;flex:none;object-fit:cover;background:#e9ecee;border:1px solid var(--line);border-radius:3px;display:block}
+  .chainCard .chThumb.none{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:8px;text-align:center;padding:2px;line-height:1.15}
+  .chainCard .chMeta{min-width:0;flex:1}
+  .chainCard .chMeta .rowPath{font-size:10.5px}
+  .chainCard .chMeta .rowPath b{display:none}
+  .chainCard .chMeta .rowPath .path{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chainCard .chMeta .rowTime,.chainCard .chMeta .limit{display:none}
 
-  /* 素材库(视频+40帧) */
-  #assetLib video{width:100%;max-height:420px;background:#000;display:block}
-  .frameStrip{display:flex;gap:4px;overflow-x:auto;padding:10px 0 4px;border-top:1px dashed var(--line);margin-top:10px}
-  .frameStrip img{height:84px;width:auto;object-fit:cover;cursor:zoom-in;border:1px solid var(--line);flex:0 0 auto;border-radius:2px}
-  .frameStrip img:hover{border-color:var(--abb)}
-  #frameCount{font-size:11.5px;color:var(--dim);margin-top:4px}
+  /* 通用弹大层(§A.3):遮罩+居中大层,max 90vw/90vh,内部可滚(白名单) */
+  #bigModal{position:fixed;inset:0;background:rgba(10,14,18,.72);display:flex;align-items:center;justify-content:center;z-index:210;padding:22px}
+  #bigModal[hidden]{display:none}
+  #bigModal .modalPanel{background:#fff;max-width:90vw;max-height:90vh;overflow:auto;border-radius:6px;padding:20px 22px;position:relative;box-shadow:0 12px 44px rgba(0,0,0,.42)}
+  #bigModal .modalClose{position:absolute;top:8px;right:10px;background:none;border:2px solid var(--line);color:var(--ink);font-size:18px;
+    width:32px;height:32px;border-radius:50%;cursor:pointer;line-height:1}
+  #bigModal .modalClose:hover{border-color:var(--abb);color:var(--abb)}
 
-  /* 矩阵仪表 */
-  #matrixSummary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
-  #matrixSummary .stat{border:1px solid var(--line);background:#fafbfc;padding:8px 10px;text-align:center;border-radius:3px}
-  #matrixSummary .stat .n{font-size:20px;font-weight:800;font-family:Consolas,monospace}
-  #matrixSummary .stat .l{font-size:10.5px;color:var(--dim);margin-top:2px}
+  /* 证据链详情(弹层内,全档:完整路径/采集时间/限制) */
+  .modalChainDetail{min-width:min(640px,80vw)}
+  .modalChainDetail .chHead{padding:0 0 8px;border-bottom:1px solid var(--line);margin-bottom:10px;background:none;display:flex;align-items:center;gap:10px}
+  .modalChainDetail .chHead h3{font-size:16px;line-height:1.4}
+  .modalChainDetail .chBody{display:grid;grid-template-columns:200px 1fr;gap:16px;padding:0}
+  .modalChainDetail .chThumb{width:200px;height:auto;max-height:48vh;object-fit:contain}
+  .modalChainDetail .chThumb.none{width:200px;height:140px;font-size:12px}
+  .modalChainDetail .chMeta .row{font-size:13px;margin-bottom:10px}
+  .modalChainDetail .chMeta .row b{display:block;color:var(--dim);font-size:11px;margin-bottom:2px;font-weight:600}
+  .modalChainDetail .chMeta .path{white-space:normal}
+  .modalChainDetail .chMeta .limit{background:#fafbfc;border:1px solid var(--line);padding:7px 9px;border-radius:3px}
+
+  /* 六站点详情(弹层内) */
+  .modalStation{display:grid;grid-template-columns:1fr 220px;gap:16px;min-width:min(680px,82vw)}
+  .modalStation h3{font-size:14.5px;margin-bottom:6px}
+  .modalStation table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  .modalStation th,.modalStation td{border:1px solid var(--line);padding:5px 7px;text-align:left;background:#fff}
+  .modalStation th{background:#eef1f3;font-size:11px}
+  .modalStation .sem{margin-top:6px;padding:7px 9px;background:var(--warn-bg);border-left:3px solid #d9a800;font-size:12px}
+  .modalStation .imgSlot img{width:100%;max-height:240px;object-fit:cover;border:1px solid var(--line);cursor:zoom-in;border-radius:2px}
+  .modalStation .imgSlot .none{height:140px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:11px;border:1px dashed var(--line);text-align:center;padding:6px}
+  .modalStation .imgSlot .cap{font-size:10.5px;color:var(--dim);margin-top:4px}
+
+  /* I/O 矩阵 Tab */
+  #matrixSummary{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:7px}
+  #matrixSummary .stat{border:1px solid var(--line);background:#fafbfc;padding:5px 8px;text-align:center;border-radius:3px}
+  #matrixSummary .stat .n{font-size:16px;font-weight:800;font-family:Consolas,monospace}
+  #matrixSummary .stat .l{font-size:9.5px;color:var(--dim);margin-top:1px;line-height:1.2}
   #matrixSummary .stat.chain .n{color:var(--ok)}
   #matrixSummary .stat.debug .n{color:var(--debug-fg)}
 
-  .legend{display:flex;gap:14px;align-items:center;font-size:11.5px;margin-bottom:8px;flex-wrap:wrap}
-  .legend .sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .legend{display:flex;gap:12px;align-items:center;font-size:11px;margin-bottom:6px;flex-wrap:wrap}
+  .legend .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 
-  table#matrixTable{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-  table#matrixTable th,table#matrixTable td{border:1px solid var(--line);padding:4px 5px;text-align:center;vertical-align:middle}
-  table#matrixTable thead th{background:#eef1f3;font-size:10.5px;padding:6px 4px}
-  table#matrixTable td.rowMeta{text-align:left;font-size:11px;background:#fafbfc;white-space:nowrap}
+  table#matrixTable{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed}
+  table#matrixTable th,table#matrixTable td{border:1px solid var(--line);padding:3px 4px;text-align:center;vertical-align:middle}
+  table#matrixTable thead th{background:#eef1f3;font-size:10px;padding:4px 3px}
+  table#matrixTable td.rowMeta{text-align:left;font-size:10.5px;background:#fafbfc;white-space:nowrap}
   table#matrixTable td.rowMeta b{font-family:Consolas,monospace}
-  .cellBtn{width:100%;border:none;background:var(--ok-bg);color:var(--ok);font:700 10.5px Consolas,monospace;
-    padding:6px 2px;cursor:pointer;border-radius:2px}
+  .cellBtn{width:100%;border:none;background:var(--ok-bg);color:var(--ok);font:700 10px Consolas,monospace;
+    padding:4px 2px;cursor:pointer;border-radius:2px}
   .cellBtn.debugCell{background:var(--debug-bg);color:var(--debug-fg)}
   .cellBtn:hover{outline:2px solid var(--abb)}
   .rowChain{background:#fff}
   .rowDebug td.rowMeta{opacity:.85}
 
-  #cellDetail{margin-top:10px;border:1px solid var(--line);background:#fafbfc;padding:10px 12px;font-size:12px;min-height:34px}
+  #cellDetail{margin-top:7px;border:1px solid var(--line);background:#fafbfc;padding:6px 9px;font-size:11px;min-height:26px}
   #cellDetail b{font-family:Consolas,monospace}
 
-  details.method{border:1px dashed var(--line);border-radius:3px;padding:8px 10px;margin-top:8px;background:#fafbfc}
-  details.method .kv{display:grid;grid-template-columns:150px 1fr;gap:4px;font-size:11.5px;margin:3px 0}
-  details.method .gapline{font-family:Consolas,monospace;font-size:10.5px;color:var(--dim)}
+  details.method{border:1px dashed var(--line);border-radius:3px;padding:6px 9px;margin-top:6px;background:#fafbfc}
+  details.method .kv{display:grid;grid-template-columns:140px 1fr;gap:3px;font-size:11px;margin:2px 0}
+  details.method .gapline{font-family:Consolas,monospace;font-size:10px;color:var(--dim)}
 
-  /* 六站点表 */
-  #chain{display:flex;gap:5px;flex-wrap:wrap}
-  #chain button{flex:1;min-width:105px;padding:8px 6px;border:1px solid var(--line);background:#f7f8f9;
-    cursor:pointer;border-radius:3px;font:600 12px "Microsoft YaHei",sans-serif}
-  #chain button small{display:block;font-weight:400;font-size:9.5px;color:var(--dim);margin-top:2px}
+  /* 六站点表(按钮行常驻,详情弹大层) */
+  #chain{display:flex;gap:4px;flex-wrap:wrap}
+  #chain button{flex:1;min-width:100px;padding:6px 6px;border:1px solid var(--line);background:#f7f8f9;
+    cursor:pointer;border-radius:3px;font:600 11.5px "Microsoft YaHei",sans-serif}
+  #chain button small{display:block;font-weight:400;font-size:9px;color:var(--dim);margin-top:1px}
   #chain button[aria-selected="true"]{border-color:var(--abb);background:#fff;box-shadow:inset 0 3px 0 var(--abb)}
   #chain .arrow{align-self:center;color:var(--dim);flex:0}
-  #stationDetail{margin-top:10px;border:1px solid var(--line);background:#fafbfc;padding:10px;display:grid;grid-template-columns:1fr 160px;gap:12px}
-  #stationDetail .txt h3{font-size:12.5px;margin-bottom:5px}
-  #stationDetail table{width:100%;border-collapse:collapse;font-size:11px;margin:5px 0}
-  #stationDetail th,#stationDetail td{border:1px solid var(--line);padding:4px 6px;text-align:left;background:#fff}
-  #stationDetail th{background:#eef1f3;font-size:10px}
-  #stationDetail .sem{margin-top:5px;padding:6px 8px;background:var(--warn-bg);border-left:3px solid #d9a800;font-size:11px}
-  #stationDetail .imgSlot img{width:100%;height:120px;object-fit:cover;border:1px solid var(--line);cursor:zoom-in;border-radius:2px}
-  #stationDetail .imgSlot .none{height:120px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:10.5px;border:1px dashed var(--line);text-align:center;padding:4px}
-  #stationDetail .imgSlot .cap{font-size:10px;color:var(--dim);margin-top:3px}
+  #stationHint{margin-top:6px;font-size:11px;color:var(--dim)}
 
-  /* 负结果侧栏(升格) */
-  #neg .item{border:1px solid var(--line);border-left:4px solid var(--stop);background:#fff;padding:10px 12px;margin-bottom:8px;border-radius:0 3px 3px 0}
-  #neg .item h3{font-size:12.5px;margin-bottom:4px;display:flex;justify-content:space-between;gap:6px}
-  #neg .item p{font-size:12px;color:#333}
-  #neg .item img{width:100%;max-height:130px;object-fit:cover;margin-top:6px;border:1px solid var(--line);cursor:zoom-in;border-radius:2px}
+  /* 边界与负结果 Tab:七条双列网格(措辞一字不改红线) */
+  .negGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
+  .negGrid .item{border:1px solid var(--line);border-left:4px solid var(--stop);background:#fff;padding:7px 9px;border-radius:0 3px 3px 0}
+  .negGrid .item h3{font-size:11.5px;margin-bottom:3px;display:flex;justify-content:space-between;gap:6px}
+  .negGrid .item p{font-size:11px;color:#333;line-height:1.42}
+  .negGrid .item img{width:100%;max-height:76px;object-fit:cover;margin-top:5px;border:1px solid var(--line);cursor:zoom-in;border-radius:2px}
 
-  /* Lightbox */
-  #lightbox{position:fixed;inset:0;background:rgba(10,14,18,.88);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:10px}
+  /* Lightbox(图片放大,§A.3 同规格 max 90vw/90vh) */
+  #lightbox{position:fixed;inset:0;background:rgba(10,14,18,.88);display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:10px}
   #lightbox[hidden]{display:none}
-  #lightbox img{max-width:92vw;max-height:84vh;border:2px solid #fff;background:#000}
+  #lightbox img{max-width:90vw;max-height:90vh;border:2px solid #fff;background:#000}
   #lightboxCaption{color:#e7ecef;font-size:12.5px;font-family:Consolas,monospace;max-width:88vw;text-align:center}
   #lightboxClose{position:absolute;top:18px;right:26px;background:none;border:2px solid #fff;color:#fff;font-size:20px;
     width:38px;height:38px;border-radius:50%;cursor:pointer;line-height:1}
+
+  /* 1280×800 收纳(§A.1:允许块收纳但仍零滚动) */
+  @media(max-width:1366px){
+    .tabPanel{gap:6px}
+    section{padding:6px 12px}
+    section>h2{margin-bottom:2px}
+    section>.sub{margin-bottom:5px}
+    #views{grid-template-columns:120px 1fr;gap:8px}
+    #viewStage img{max-height:150px}
+    #viewMeta{font-size:10.5px;gap:5px;margin-top:5px}
+    #viewMeta .cell{padding:4px 7px}
+    .bottomStripRow video,.bottomStripRow img{height:72px}
+    #matrixSummary{gap:5px;margin-bottom:4px}
+    #matrixSummary .stat{padding:2px 6px}
+    #matrixSummary .stat .n{font-size:13px}
+    #matrixSummary .stat .l{font-size:9px}
+    .legend{margin-bottom:3px;gap:9px;font-size:10.5px}
+    table#matrixTable{font-size:9px}
+    table#matrixTable th,table#matrixTable td{padding:1px 3px}
+    table#matrixTable thead th{padding:2px 1px}
+    #cellDetail{margin-top:4px;padding:3px 7px;font-size:10.5px;min-height:18px}
+    details.method{padding:3px 8px;margin-top:4px}
+    details.method summary{font-size:11px}
+    #chain button{padding:3px 5px;min-width:88px}
+    #chain button small{font-size:8.5px}
+    #stationHint{margin-top:3px;font-size:10px}
+    .negGrid{gap:5px 10px}
+    .negGrid .item{padding:5px 8px}
+    .negGrid .item p{font-size:10.3px;line-height:1.36}
+    .negGrid .item img{max-height:56px}
+  }
 </style>
 </head>
 <body>
@@ -152,147 +228,173 @@
   <span><b>非</b> 20×20 几何孪生</span><span class="sep">|</span>
   <span><b>不宣称</b>完整现场闭环(9/9=运行成功计数,0714 独立复核降级口径)</span>
 </div>
+
+<div id="pageTabs" role="tablist" aria-label="页面分区" aria-orientation="horizontal">
+  <button type="button" role="tab" id="tab-views" aria-selected="true" aria-controls="panel-views">证据画面</button>
+  <button type="button" role="tab" id="tab-chain" aria-selected="false" aria-controls="panel-chain" tabindex="-1">证据链</button>
+  <button type="button" role="tab" id="tab-matrix" aria-selected="false" aria-controls="panel-matrix" tabindex="-1">I/O 矩阵</button>
+  <button type="button" role="tab" id="tab-neg" aria-selected="false" aria-controls="panel-neg" tabindex="-1">边界与负结果</button>
+</div>
+
 <main>
 
-<section aria-label="页面定位">
-  <h2>本页回答四个问题</h2>
-  <div class="sub">环境:Factory I/O v2.5.10 Ultimate · Automated Warehouse 场景(54 原生货位) · Modbus TCP/IP Server 127.0.0.1:502(Factory I/O 为 server,Python pymodbus 为 client,Slave ID 1)</div>
-  <ol style="font-size:13px;padding-left:22px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">
-    <li>54 格实际证明了哪些设备与站点?(§真实证据画面 / §I/O 与动作链)</li>
-    <li>Entry → Load → 叉臂/Lift → Rack → Unload → Exit 的 I/O 和动作如何对应?(§I/O 与动作链 / §六站点点表)</li>
-    <li>有哪些真实截图、点表、运行记录和负结果?(本页证据链 / 边界负结果)</li>
-    <li>它明确<b>没有</b>证明什么?(口径带 / 证据链「限制条件」列 / 边界负结果)</li>
-  </ol>
-</section>
+<section id="panel-views" class="tabPanel" role="tabpanel" aria-labelledby="tab-views" tabindex="0">
 
-<section aria-label="真实证据画面">
-  <h2>真实证据画面(全部为 Factory I/O 现场截图,无重建 3D)</h2>
-  <div class="sub">三视图各答一题;点击图片可放大。点击左侧切换。</div>
-  <div id="views">
-    <div id="viewTabs" role="tablist" aria-label="证据视图"></div>
-    <div id="viewStage">
-      <img id="viewImg" src="" alt="">
-      <div id="viewMeta">
-        <div class="cell"><b>来源文件(项目内真实路径)</b><span class="path" id="viewSrc"></span></div>
-        <div class="cell"><b>采集阶段</b><span id="viewStage2"></span></div>
-        <div class="cell prove"><b>它证明什么</b><span id="viewProve"></span></div>
-        <div class="cell notprove"><b>它不证明什么</b><span id="viewNot"></span></div>
+  <details id="pageIntro">
+    <summary>本页回答四个问题(点开)</summary>
+    <div class="sub">环境:Factory I/O v2.5.10 Ultimate · Automated Warehouse 场景(54 原生货位) · Modbus TCP/IP Server 127.0.0.1:502(Factory I/O 为 server,Python pymodbus 为 client,Slave ID 1)</div>
+    <ol style="font-size:13px;padding-left:22px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">
+      <li>54 格实际证明了哪些设备与站点?(§真实证据画面 / §I/O 与动作链)</li>
+      <li>Entry → Load → 叉臂/Lift → Rack → Unload → Exit 的 I/O 和动作如何对应?(§I/O 与动作链 / §六站点点表)</li>
+      <li>有哪些真实截图、点表、运行记录和负结果?(本页证据链 / 边界负结果)</li>
+      <li>它明确<b>没有</b>证明什么?(口径带 / 证据链「限制条件」列 / 边界负结果)</li>
+    </ol>
+  </details>
+
+  <section aria-label="真实证据画面">
+    <h2>真实证据画面(全部为 Factory I/O 现场截图,无重建 3D)</h2>
+    <div class="sub">三视图各答一题;点击图片可放大。点击左侧切换。</div>
+    <div id="views">
+      <div id="viewTabs" role="tablist" aria-label="证据视图"></div>
+      <div id="viewStage">
+        <img id="viewImg" src="" alt="">
+        <div id="viewMeta">
+          <div class="cell"><b>来源文件(项目内真实路径)</b><span class="path" id="viewSrc"></span></div>
+          <div class="cell"><b>采集阶段</b><span id="viewStage2"></span></div>
+          <div class="cell prove"><b>它证明什么</b><span id="viewProve"></span></div>
+          <div class="cell notprove"><b>它不证明什么</b><span id="viewNot"></span></div>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section id="assetLib" class="bottomStrip" aria-label="物理素材库">
+    <h2>物理素材库:cell 30 全链视频与 40 帧序列(素材库存激活,C5)</h2>
+    <div class="sub">来源:<span class="path">l2_factoryio/media/F3_素材_cell30全链_0713/</span>;此前仅被矩阵表文字提及,从未真正嵌入。视频与逐帧同源,拍摄于 2026-07-13 19:22–19:24。底部为横向素材带(可横向滚动,§A.2 白名单)。</div>
+    <div id="frameCount">视频 + 40 帧缩略带(f_001.png – f_040.png,懒加载;点击任意帧放大)</div>
+    <div class="bottomStripRow" aria-label="cell30 全链视频与40帧横向带">
+      <div class="stripVideo">
+        <video controls preload="metadata" poster="../../l2_factoryio/media/F3_素材_cell30全链_0713/f_001.png">
+          <source src="../../l2_factoryio/media/F3_素材_cell30全链_0713/F3_cell30_全链素材.mp4" type="video/mp4">
+          当前浏览器不支持内嵌视频播放,请直接打开源文件:l2_factoryio/media/F3_素材_cell30全链_0713/F3_cell30_全链素材.mp4
+        </video>
+      </div>
+      <div class="frameStrip" id="frameStrip" aria-label="cell30 全链 40 帧缩略带"></div>
+    </div>
+  </section>
+
 </section>
 
-<div class="split">
-  <div class="colMain">
+<section id="panel-chain" class="tabPanel" role="tabpanel" aria-labelledby="tab-chain" tabindex="0" hidden>
 
-    <section aria-label="证据链卡片流">
-      <h2>证据链卡片流(主张 → 缩略图 → 原始文件路径 → 采集时间 → 限制条件)</h2>
-      <div class="sub">由原「证据矩阵」9 行逐条重构;类比法证/审计追踪惯例逐链呈现(呈现形式为自主设计,见 docs/升级设计依据_0721.md §4:可类比「实验室级可追溯性」,不称符合 ISO/IEC 17025)。无图证据的行如实留白,不强配无关图。</div>
-      <div id="chainFlow">
+    <section aria-label="证据链网格">
+      <h2>证据链(主张 → 缩略图 → 原始文件路径 → 采集时间 → 限制条件)</h2>
+      <div class="sub">由原「证据矩阵」9 行逐条重构,压缩为 3×3 网格;类比法证/审计追踪惯例逐链呈现(呈现形式为自主设计,见 docs/升级设计依据_0721.md §4:可类比「实验室级可追溯性」,不称符合 ISO/IEC 17025)。无图证据的行如实留白,不强配无关图。点卡弹层看完整档案(原始路径全文/采集时间/限制条件)。</div>
+      <div id="chainGrid">
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>Modbus 直控链路可用(点表 15 DI / 10 Coil / 1 HR 全量映射)</h3><span class="st ok">✅ 已证实</span></div>
           <div class="chBody">
             <img class="chThumb" src="../../l2_factoryio/img/F2_modbus_server_default_mapping_0712.png" data-full="../../l2_factoryio/img/F2_modbus_server_default_mapping_0712.png" alt="Modbus Server 默认映射截图" loading="lazy">
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/img/F2_modbus_server_default_mapping_0712.png;l2_factoryio/img/F2_ultimate_edition_scene_loaded_0712.png;l2_factoryio/io_map.md</span></div>
-              <div class="row"><b>采集时间</b>2026-07-12 22:03(文件 mtime,与文件名 _0712 后缀一致)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/img/F2_modbus_server_default_mapping_0712.png;l2_factoryio/img/F2_ultimate_edition_scene_loaded_0712.png;l2_factoryio/io_map.md</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-12 22:03(文件 mtime,与文件名 _0712 后缀一致)</div>
               <div class="row limit"><b>限制条件</b>仅本机回环(Software Loopback);网卡曾默认落 Clash 虚拟网卡(已修,见 io_map 头注)</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>全链取放 9/9 运行成功(cell 1/30/54 各三轮,六相位完整)</h3><span class="st ok">✅ 已证实</span></div>
           <div class="chBody">
             <img class="chThumb" src="../../l2_factoryio/media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png" data-full="../../l2_factoryio/media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png" alt="H5 9/9 终验三格齐放" loading="lazy">
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/F3_H5证据保全_0716.md(epoch 3085b352…,revision 292,2026-07-13 19:09–19:22);l2_factoryio/logs/F3_diagnose_20260713_19*.log(54 份=9 链×6 相位,见下方「I/O 与动作链」矩阵逐份核验);l2_factoryio/media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png</span></div>
-              <div class="row"><b>采集时间</b>2026-07-13 19:09:13–19:22:40(H5 验收轮;本图 mtime 19:18)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/F3_H5证据保全_0716.md(epoch 3085b352…,revision 292,2026-07-13 19:09–19:22);l2_factoryio/logs/F3_diagnose_20260713_19*.log(54 份=9 链×6 相位,见下方「I/O 与动作链」矩阵逐份核验);l2_factoryio/media/g4_evidence_0713/H5_9of9_终验_三格齐放第三轮.png</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-13 19:09:13–19:22:40(H5 验收轮;本图 mtime 19:18)</div>
               <div class="row limit"><b>限制条件</b><b style="display:inline">运行成功计数,不等同"完全安全闭环"</b>(0714 独立复核降级,_通信/codex_out/0714_F3独立复核.md);单日单环境</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>叉臂取箱真实承载(非只看限位信号)</h3><span class="st ok">✅ 已证实</span></div>
           <div class="chBody">
             <img class="chThumb" src="../../l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png" data-full="../../l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png" alt="G2 取箱带载确认" loading="lazy">
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png</span></div>
-              <div class="row"><b>采集时间</b>2026-07-13 14:58:04(文件名时间戳,mtime 一致)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/media/g4_evidence_0713/G2_pick_带载确认_145804.png</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-13 14:58:04(文件名时间戳,mtime 一致)</div>
               <div class="row limit"><b>限制条件</b>0713 现场纠错后才达成:此前"到限位即撤销"逻辑会把货拉回(保持型命令契约,见 I/O 链「叉臂/Lift」站)</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>放箱后货物留在格内(入架成立)</h3><span class="st ok">✅ 已证实</span></div>
           <div class="chBody">
             <img class="chThumb" src="../../l2_factoryio/media/g4_evidence_0713/P3_官方原版放箱成功_货留格内_155815.png" data-full="../../l2_factoryio/media/g4_evidence_0713/P3_官方原版放箱成功_货留格内_155815.png" alt="P3 放箱成功货留格内" loading="lazy">
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/media/g4_evidence_0713/P3_官方原版放箱成功_货留格内_155815.png;l2_factoryio/media/F3_素材_cell30全链_0713/(cell 30 全链帧序列 f_001~f_040.png + F3_cell30_全链素材.mp4,见下方「物理素材库」)</span></div>
-              <div class="row"><b>采集时间</b>2026-07-13 15:58:15(本图);全链素材 19:22–19:24(见下方素材库)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/media/g4_evidence_0713/P3_官方原版放箱成功_货留格内_155815.png;l2_factoryio/media/F3_素材_cell30全链_0713/(cell 30 全链帧序列 f_001~f_040.png + F3_cell30_全链素材.mp4,见下方「物理素材库」)</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-13 15:58:15(本图);全链素材 19:22–19:24(见下方素材库)</div>
               <div class="row limit"><b>限制条件</b>代表性仓位(1/30/54),未逐一验证 54 格全部</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>传感器语义正确解读(At Entry/Load/Unload/Exit 为 active-low)</h3><span class="st ok">✅ 已证实</span></div>
           <div class="chBody">
             <div class="chThumb none">无对应截图<br>(文字/点表证据)</div>
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/io_map.md「0713 实物极性复核」节</span></div>
-              <div class="row"><b>采集时间</b>2026-07-13(复核记录日期)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/io_map.md「0713 实物极性复核」节</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-13(复核记录日期)</div>
               <div class="row limit"><b>限制条件</b>曾凭 At Load=False 误判空载,该结论已作废(见右栏边界负结果 ③)</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>故障事件账本连续可追溯</h3><span class="st warn">⚠️ 部分证实</span></div>
           <div class="chBody">
             <div class="chThumb none">无对应截图<br>(机读账本抄录)</div>
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/F3_H5证据保全_0716.md(fault_events.jsonl 287 行抄录;原件为运行时账本按设计不入库,l2_factoryio/.gitignore 排除)</span></div>
-              <div class="row"><b>采集时间</b>2026-07-16(抄录固化时点)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/F3_H5证据保全_0716.md(fault_events.jsonl 287 行抄录;原件为运行时账本按设计不入库,l2_factoryio/.gitignore 排除)</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-16(抄录固化时点)</div>
               <div class="row limit"><b>限制条件</b>入库的是关键字段抄录;人类可读收口回执 records/F3_collision_closure_0713.md 待报告周补写(#11)</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>完全安全闭环(碰撞/掉落/交接全域防护)</h3><span class="st stop">⛔ 未证实</span></div>
           <div class="chBody">
             <div class="chThumb none">— 无证据<br>(明确不宣称)</div>
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">— (0714 独立复核明确降级;完整清单见右栏「边界与负结果」)</span></div>
-              <div class="row"><b>采集时间</b>2026-07-14(独立复核降级口径确立日)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">— (0714 独立复核明确降级;完整清单见右栏「边界与负结果」)</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-14(独立复核降级口径确立日)</div>
               <div class="row limit"><b>限制条件</b>不得在任何材料中宣称;9/9 是运行成功计数</div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>20×20=400 格物理实现 / 几何孪生</h3><span class="st stop">⛔ 未证实</span></div>
           <div class="chBody">
             <div class="chThumb none">— 无证据<br>(No-Go 裁决)</div>
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">l2_factoryio/0713_F3碰撞闭环与20x20边界设计.md §1.3(No-Go 裁决,含厂商一手来源五条)</span></div>
-              <div class="row"><b>采集时间</b>2026-07-13(裁决文档日期)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">l2_factoryio/0713_F3碰撞闭环与20x20边界设计.md §1.3(No-Go 裁决,含厂商一手来源五条)</span></div>
+              <div class="row rowTime"><b>采集时间</b>2026-07-13(裁决文档日期)</div>
               <div class="row limit"><b>限制条件</b>Stacker Crane Numerical 目标固定 1..54(0=停,55=rest/load);单 Rack 18 格;行程 10.5 m/6.625 m;SDK 不开放自定义三维部件(厂商 2025 答复)——<b style="display:inline">几何与运动学是瓶颈,与地址容量无关</b></div>
             </div>
           </div>
         </article>
 
-        <article class="chainCard">
+        <article class="chainCard" role="button" tabindex="0" aria-haspopup="dialog" title="点击查看完整档案(原始路径全文/采集时间/限制条件)">
           <div class="chHead"><h3>与 AC500/PLC 在线联动</h3><span class="st stop">⛔ 未证实</span></div>
           <div class="chBody">
             <div class="chThumb none">— 无证据<br>(未互联)</div>
             <div class="chMeta">
-              <div class="row"><b>原始文件完整路径</b><span class="path">—</span></div>
-              <div class="row"><b>采集时间</b>—(从未采集,因两侧未在线互联)</div>
+              <div class="row rowPath"><b>原始文件完整路径</b><span class="path">—</span></div>
+              <div class="row rowTime"><b>采集时间</b>—(从未采集,因两侧未在线互联)</div>
               <div class="row limit"><b>限制条件</b>本页全部证据为 Python 直控技术预演;AC500 证据在 AB 工程线(77/0 自检),两者未在线互联</div>
             </div>
           </div>
@@ -301,16 +403,9 @@
       </div>
     </section>
 
-    <section id="assetLib" aria-label="物理素材库">
-      <h2>物理素材库:cell 30 全链视频与 40 帧序列(素材库存激活,C5)</h2>
-      <div class="sub">来源:<span class="path">l2_factoryio/media/F3_素材_cell30全链_0713/</span>;此前仅被矩阵表文字提及,从未真正嵌入。视频与逐帧同源,拍摄于 2026-07-13 19:22–19:24。</div>
-      <video controls preload="metadata" poster="../../l2_factoryio/media/F3_素材_cell30全链_0713/f_001.png">
-        <source src="../../l2_factoryio/media/F3_素材_cell30全链_0713/F3_cell30_全链素材.mp4" type="video/mp4">
-        当前浏览器不支持内嵌视频播放,请直接打开源文件:l2_factoryio/media/F3_素材_cell30全链_0713/F3_cell30_全链素材.mp4
-      </video>
-      <div id="frameCount">40 帧缩略带(f_001.png – f_040.png,懒加载;点击任意帧放大)</div>
-      <div class="frameStrip" id="frameStrip" aria-label="cell30 全链 40 帧缩略带"></div>
-    </section>
+</section>
+
+<section id="panel-matrix" class="tabPanel" role="tabpanel" aria-labelledby="tab-matrix" tabindex="0" hidden>
 
     <section aria-label="I/O 矩阵仪表">
       <h2>I/O 与动作链:11 组×6 相位矩阵热格</h2>
@@ -339,19 +434,20 @@
     </section>
 
     <section aria-label="六站点表">
-      <h2>六站点点表(强化:每站配已有站点图,无图站位不硬配)</h2>
+      <h2>六站点点表(强化:每站配已有站点图,无图站位不硬配;点站弹层看点表与图证)</h2>
       <div class="sub">六站中文状态链;点表来源 <span class="path">l2_factoryio/io_map.md</span>(F2 侦察产物+0713 现场纠错)。传感器 15 DI / 执行器 10 Coil / 目标位 1 Holding Register。每站配已有站点图,无图站位不强配。</div>
       <div id="chain" role="tablist" aria-label="动作链站点"></div>
-      <div id="stationDetail" role="tabpanel"></div>
+      <div id="stationHint">点击上方任意站点,弹层查看该站点表、语义要点与图证。</div>
     </section>
 
-  </div>
+</section>
 
-  <aside class="colSide">
+<section id="panel-neg" class="tabPanel" role="tabpanel" aria-labelledby="tab-neg" tabindex="0" hidden>
     <section id="neg" aria-label="边界与负结果">
       <h2>边界与负结果(升格专区 · 如实列出,未只展示成功)</h2>
-      <div class="sub">措辞与原页一字不改(C8 红线);仅呈现位置升格为常驻侧栏,并按有则配图原则关联已有截图。</div>
+      <div class="sub">措辞与原页一字不改(C8 红线);呈现位置升格为独立 Tab 分区(双列网格),并按有则配图原则关联已有截图。</div>
 
+      <div class="negGrid">
       <div class="item">
         <h3>① 托盘侧翻,"命令完成"≠物理成功(0712)</h3>
         <p>动作序列日志完整结束(<span class="path">logs/F3_probe_20260712_233238.log</span>),但现场截图托盘已在装载口护栏附近侧翻——上一轮宽视角"成功"判断被撤销。此后立规:<b>物理验收只认画面证据,不认命令返回</b>。</p>
@@ -381,14 +477,21 @@
         <h3>⑦ 能力边界:为什么不做 400 格物理(No-Go 裁决摘要)</h3>
         <p>Factory I/O 原生堆垛机目标位固定 1..54;Analog X/Z 只能在固定行程(10.5 m/6.625 m)内连续定位,No-Go 反证计算:若强行铺满 20×20 中心点,格距被压到约 0.553 m×0.349 m 且未扣端部余量;SDK/Web API 只开放 I/O tag,不开放自定义三维部件与碰撞体(厂商 2025 明确答复)。<b>结论:v2.5.10 内严格 400 格物理方案 No-Go——瓶颈是几何与运动学,不是地址容量。</b>一手来源五条见 <span class="path">l2_factoryio/0713_F3碰撞闭环与20x20边界设计.md §1.3</span>。</p>
       </div>
+      </div>
     </section>
-  </aside>
-</div>
+</section>
 
 </main>
 <footer>
   证据边界:本页所有素材为 Factory I/O v2.5.10 Ultimate 本机技术预演;"20×20"仅在"非孪生/不等同"边界说明中出现;不宣称完全闭环、数字孪生、400 格物理实现或在线实测完成。素材与日志路径均为项目内真实文件,可回源核验。
 </footer>
+
+<div id="bigModal" hidden role="dialog" aria-modal="true" aria-label="详情">
+  <div class="modalPanel" role="document">
+    <button type="button" class="modalClose" aria-label="关闭">×</button>
+    <div id="bigModalBody"></div>
+  </div>
+</div>
 
 <div id="lightbox" hidden role="dialog" aria-modal="true" aria-label="放大预览">
   <button id="lightboxClose" aria-label="关闭">×</button>
@@ -1206,29 +1309,88 @@ const STATIONS = [
    sem:"面板类:Input 9/10/11 Start/Reset/Stop(Stop 常闭静态 True)、Input 12 急停(常闭)、Input 13 Auto;Coil 7/8/9 为面板灯。",
    ev:"io_map.md 默认映射表;img/F2_modbus_server_default_mapping_0712.png"}
 ];
-function renderChain(active){
+/* ---- 通用弹大层(§A.3:遮罩+居中大层,max 90vw/90vh,Esc/点遮罩关闭,内部可滚) ---- */
+const bigModal = byId("bigModal"), bigModalBody = byId("bigModalBody");
+const bigModalClose = bigModal.querySelector(".modalClose");
+let modalLastTrigger = null;
+function openModal(node, triggerEl, label){
+  bigModalBody.replaceChildren(node);
+  bigModal.setAttribute("aria-label", label || "详情");
+  bigModal.hidden = false;
+  modalLastTrigger = triggerEl || null;
+  bigModalClose.focus();
+}
+function closeModal(){
+  if(bigModal.hidden) return;
+  bigModal.hidden = true;
+  bigModalBody.replaceChildren();
+  if(modalLastTrigger && document.contains(modalLastTrigger)) modalLastTrigger.focus();
+  modalLastTrigger = null;
+}
+bigModalClose.addEventListener("click", closeModal);
+bigModal.addEventListener("click", (e)=>{ if(e.target === bigModal) closeModal(); });
+
+/* ---- 六站点表:按钮行常驻 + 点站弹层看点表/语义/图证 ---- */
+function renderChainButtons(active){
   const chain=byId("chain");chain.replaceChildren();
   STATIONS.forEach((s,i)=>{
     if(i){const a=document.createElement("span");a.className="arrow";a.textContent="→";a.setAttribute("aria-hidden","true");chain.append(a);}
     const b=document.createElement("button");b.type="button";b.role="tab";
     b.setAttribute("aria-selected",String(s.key===active));
     b.innerHTML=`${esc(s.label)}<small>${esc(s.small)}</small>`;
-    b.addEventListener("click",()=>renderChain(s.key));chain.append(b);
+    b.addEventListener("click",()=>{ renderChainButtons(s.key); openStationModal(s.key, b); });
+    chain.append(b);
   });
-  const s=STATIONS.find(x=>x.key===active);
+}
+function stationDetailNode(s){
   const rows=t=>t.map(r=>`<tr><td class="path">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("");
   const img = STATION_IMG[s.key];
-  byId("stationDetail").innerHTML =
+  const wrap = document.createElement("div");
+  wrap.className = "modalStation";
+  wrap.innerHTML =
     `<div class="txt"><h3>${esc(s.label)} · 点表与语义</h3>`+
     `<table><thead><tr><th style="width:16%">地址</th><th style="width:26%">点名</th><th>含义</th></tr></thead><tbody>`+
     rows(s.sensors)+rows(s.coils)+`</tbody></table>`+
     `<div class="sem"><b>保持式/语义要点:</b>${esc(s.sem)}</div>`+
     `<details><summary>查看证据来源</summary><span class="path">${esc(s.ev)}</span></details></div>`+
     `<div class="imgSlot">${img
-      ? `<img src="${img.src}" data-full="${img.src}" alt="${esc(img.cap)}" loading="lazy"><div class="cap">${esc(img.cap)}</div>`
+      ? `<img src="${img.src}" data-full="${img.src}" alt="${esc(img.cap)}" loading="eager"><div class="cap">${esc(img.cap)}</div>`
       : `<div class="none">无对应站位图<br>(不强配)</div>`}</div>`;
+  return wrap;
 }
-renderViews("overview");renderChain("forks");
+function openStationModal(key, triggerEl){
+  const s = STATIONS.find(x=>x.key===key);
+  openModal(stationDetailNode(s), triggerEl || byId("chain"), `${s.label} · 点表详情`);
+}
+
+/* ---- 证据链 3×3 网格:点卡弹层看完整档案(原始路径全文/采集时间/限制) ---- */
+function openChainModal(cardEl){
+  const h3html = cardEl.querySelector(".chHead h3").innerHTML;
+  const badgeHtml = cardEl.querySelector(".chHead .st").outerHTML;
+  const bodyClone = cardEl.querySelector(".chBody").cloneNode(true);
+  bodyClone.querySelectorAll("img").forEach(img=>{ img.loading = "eager"; });
+  const wrap = document.createElement("div");
+  wrap.className = "modalChainDetail";
+  const head = document.createElement("div");
+  head.className = "chHead";
+  head.innerHTML = `<h3>${h3html}</h3>${badgeHtml}`;
+  wrap.append(head, bodyClone);
+  openModal(wrap, cardEl, "证据链详情");
+}
+const chainGrid = byId("chainGrid");
+chainGrid.addEventListener("click", (e)=>{
+  const card = e.target.closest(".chainCard");
+  if(card) openChainModal(card);
+});
+chainGrid.addEventListener("keydown", (e)=>{
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const card = e.target.closest(".chainCard");
+  if(!card) return;
+  e.preventDefault();
+  openChainModal(card);
+});
+
+renderViews("overview"); renderChainButtons("forks");
 
 /* 40 帧缩略带:逐帧生成,避免手工 40 行重复出错 */
 const strip = byId("frameStrip");
@@ -1242,7 +1404,7 @@ for(let i=1;i<=40;i++){
   strip.append(img);
 }
 
-/* Lightbox:证据卡缩略图 + 负结果配图 + 帧带,统一委托点击 */
+/* Lightbox:证据卡缩略图 + 负结果配图 + 帧带,统一委托点击(证据链网格内的缩略图改由卡片弹层承接,见上) */
 const lightbox = byId("lightbox"), lightboxImg = byId("lightboxImg"), lightboxCaption = byId("lightboxCaption");
 function openLightbox(src, alt){
   lightboxImg.src = src; lightboxImg.alt = alt || "";
@@ -1251,13 +1413,45 @@ function openLightbox(src, alt){
 }
 document.addEventListener("click", (e)=>{
   const t = e.target;
-  if(t && t.tagName === "IMG" && t.dataset && t.dataset.full){
+  if(t && t.tagName === "IMG" && t.dataset && t.dataset.full && !t.closest("#chainGrid")){
     openLightbox(t.dataset.full, t.alt);
   }
 });
 byId("lightboxClose").addEventListener("click", ()=> lightbox.hidden = true);
 lightbox.addEventListener("click", (e)=>{ if(e.target === lightbox) lightbox.hidden = true; });
-document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") lightbox.hidden = true; });
+document.addEventListener("keydown", (e)=>{
+  if(e.key !== "Escape") return;
+  if(!lightbox.hidden){ lightbox.hidden = true; return; }
+  if(!bigModal.hidden){ closeModal(); }
+});
+
+/* ---- 顶部 4 Tab(0722 一屏返工 §C):点击切换 + 左右键/Home/End 移动,Tab 键在选中项与面板间聚焦 ---- */
+const TAB_KEYS = ["views","chain","matrix","neg"];
+function activateTab(key){
+  TAB_KEYS.forEach(k=>{
+    const btn = byId("tab-"+k), panel = byId("panel-"+k);
+    const active = k===key;
+    btn.setAttribute("aria-selected", String(active));
+    btn.tabIndex = active ? 0 : -1;
+    panel.hidden = !active;
+  });
+}
+TAB_KEYS.forEach(k=> byId("tab-"+k).addEventListener("click", ()=>activateTab(k)));
+byId("pageTabs").addEventListener("keydown",(e)=>{
+  if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+  const cur = document.activeElement.id.replace("tab-","");
+  const idx = TAB_KEYS.indexOf(cur);
+  if(idx === -1) return;
+  let next = idx;
+  if(e.key==="ArrowRight") next=(idx+1)%TAB_KEYS.length;
+  else if(e.key==="ArrowLeft") next=(idx-1+TAB_KEYS.length)%TAB_KEYS.length;
+  else if(e.key==="Home") next=0;
+  else if(e.key==="End") next=TAB_KEYS.length-1;
+  e.preventDefault();
+  activateTab(TAB_KEYS[next]);
+  byId("tab-"+TAB_KEYS[next]).focus();
+});
+activateTab("views");
 </script>
 </body>
 </html>
