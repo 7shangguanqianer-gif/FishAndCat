@@ -316,17 +316,37 @@
   }));
   const lidMesh = new THREE.InstancedMesh(stockLidGeometry, M.lid, stockCapacity);
   lidMesh.count = 0; stockGroup.add(lidMesh);
-  /* 0717 #26-2 热门货 3D 视觉通道:hot20(freq 前 1/5)货箱换金顶盖——SCORE「热门放近」的胜利从隐形变可见。 */
-  const hotLidMaterial = M.lid.clone(); hotLidMaterial.color.set(0xd9ad00);
-  if (hotLidMaterial.emissive) hotLidMaterial.emissive.set(0x3a2e00);
-  const hotLidMesh = new THREE.InstancedMesh(stockLidGeometry, hotLidMaterial, stockCapacity);
-  hotLidMesh.count = 0; stockGroup.add(hotLidMesh);
+  /* 0722c 过时审计 P1:金顶盖(0717 #26-2)清除——0718b 用户已否 gold-cap(「逐箱装饰把聚集拆成
+     孤立点」),02 现行=货位色阶热力(instanceColor 按 freq 秩归一连续上色)+3D/2D 开关。01 对齐:
+     热力罩盖于箱盖上方,白基色 Basic 平涂(不受光,热度色如实),opacity 同 02 实测口径 .78;
+     色阶同 02:冷灰 #aeb8c0 → 琥珀 #e7b800 → 热红 #c0392b(冷端不用蓝,防与等级蓝系撞色)。
+     instanceColor 必须按容量预分配(02 踩坑注:setColorAt 首调按当时 count 分配,count=0 时写入虚空)。 */
+  const heatLidMesh = new THREE.InstancedMesh(
+    stockLidGeometry,
+    new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: .78, depthWrite: false}),
+    stockCapacity);
+  heatLidMesh.count = 0; heatLidMesh.castShadow = false; heatLidMesh.receiveShadow = false;
+  heatLidMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(stockCapacity * 3).fill(1), 3);
+  stockGroup.add(heatLidMesh);
+  const HEAT_COLD = new THREE.Color(0xaeb8c0), HEAT_MID = new THREE.Color(0xe7b800), HEAT_HOT = new THREE.Color(0xc0392b);
+  const heatColorFor = (function(){
+    const scratch = new THREE.Color();
+    return function(gid) {
+      const rank = freqRankByGid.get(gid);
+      const t = rank ? 1 - (rank - 1) / 266 : 0;   /* rank 1(最热)→t=1;rank 267→t=0 */
+      if (t <= .5) scratch.copy(HEAT_COLD).lerp(HEAT_MID, t * 2);
+      else scratch.copy(HEAT_MID).lerp(HEAT_HOT, (t - .5) * 2);
+      return scratch;
+    };
+  })();
+  let heat3DOn = true;   /* 默认开:SCORE 热门聚集是本页论证卖点;关=等级完整视图(02 双视图哲学) */
+  let heat2DOn = true;
   if (cargo.parent) cargo.parent.remove(cargo); scene.add(cargo); cargo.visible = false;
 
   const activeMaterials = Object.fromEntries(Object.entries(gradeMaterial).map(([grade, material]) => {
     const clone = material.clone(); clone.transparent = true; clone.opacity = 1; return [grade, clone];
   }));
-  let stockSignature = "", pathSignature = "", livePaths = [], lastFrame = null, runtimeErrors = 0, lastBeaconAudit = null;
+  let stockSignature = "", pathSignature = "", livePaths = [], lastFrame = null, runtimeErrors = 0, lastBeaconAudit = null, lastHeatAudit = null;
   /* 0717 #28:目标格发光壳+格口箭头实体由 01 页母版创建并挂 __S3_TARGET_FX;候选页无此全局,判空跳过。 */
   const targetFx = root.__S3_TARGET_FX || null;
 
@@ -334,19 +354,26 @@
     const signature = `${laneId}:${managedCount}`;
     if (signature === stockSignature) return;
     stockSignature = signature;
-    const counts = {heavy: 0, mid: 0, light: 0}; let lidCount = 0, hotLidCount = 0;
+    const counts = {heavy: 0, mid: 0, light: 0}; let lidCount = 0, heatCount = 0;
     rows.forEach(row => {
       const grade = good(row.gid).grade;
       stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .46); stockDummy.updateMatrix();
       stockMeshes[grade].setMatrixAt(counts[grade]++, stockDummy.matrix);
       stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .84); stockDummy.updateMatrix();
-      /* #26-2:热门货金顶盖,普通货灰顶盖 */
-      if (hotGids.has(row.gid)) hotLidMesh.setMatrixAt(hotLidCount++, stockDummy.matrix);
-      else lidMesh.setMatrixAt(lidCount++, stockDummy.matrix);
+      /* 0722c:全部货箱统一灰顶盖;热力罩(freq 秩归一连续色)叠于其上,开关可关(关=等级完整视图) */
+      lidMesh.setMatrixAt(lidCount++, stockDummy.matrix);
+      if (heat3DOn) {
+        stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .845); stockDummy.updateMatrix();
+        heatLidMesh.setMatrixAt(heatCount, stockDummy.matrix);
+        heatLidMesh.setColorAt(heatCount, heatColorFor(row.gid));
+        heatCount += 1;
+      }
     });
     Object.entries(stockMeshes).forEach(([grade, mesh]) => { mesh.count = counts[grade]; mesh.instanceMatrix.needsUpdate = true; });
     lidMesh.count = lidCount; lidMesh.instanceMatrix.needsUpdate = true;
-    hotLidMesh.count = hotLidCount; hotLidMesh.instanceMatrix.needsUpdate = true;
+    heatLidMesh.count = heatCount; heatLidMesh.instanceMatrix.needsUpdate = true;
+    if (heatLidMesh.instanceColor) heatLidMesh.instanceColor.needsUpdate = true;
+    lastHeatAudit = {heat3DOn, heat2DOn, heatCount, hotSetSize: hotGids.size};
   }
 
   function disposePaths() {
@@ -465,7 +492,7 @@
   function setTarget(frame) {
     const visible = Array.isArray(frame.slot);
     targetBox.visible = targetPad.visible = visible; byId("targetBeacon").hidden = !visible;
-    if (targetFx && !visible) { targetFx.glow.visible = targetFx.arrow.visible = targetFx.face.visible = false; }
+    if (targetFx && !visible) { targetFx.glow.visible = targetFx.face.visible = false; }
     const card = byId("targetCard");
     if (card && !visible) {
       card.classList.add("done"); byId("targetCardState").textContent = "已填满";
@@ -475,15 +502,12 @@
     const [col, tier] = frame.slot;
     targetBox.position.set(col + .5, RACK.loadY, tier + .5); targetPad.position.set(col + .5, RACK.loadY, tier + .075);
     const beacon = byId("targetBeacon"), completed = !frame.idle && frame.cargoOwner === "RACK";
-    /* 0717 #28 用户拍板:目标格自身强高亮——发光壳(入库完成转绿常亮)+ 大头针箭头(完成后收起)。 */
+    /* 0717 #28 强高亮;0722c 对齐 02 现行 FX:箭头淘汰(过时审计 P2),发光壳+格口面承担全部目标语义,完成转绿。 */
     if (targetFx) {
       targetFx.glow.visible = true; targetFx.glow.position.set(col + .5, RACK.loadY, tier + .5);
       targetFx.face.visible = true; targetFx.face.position.set(col + .5, RACK.frontY - .012, tier + .5);
       targetFx.glowMat.color.copy(completed ? targetFx.done : targetFx.amber);
       targetFx.faceMat.color.copy(completed ? targetFx.done : targetFx.amber);
-      targetFx.arrow.visible = !completed;
-      targetFx.arrow.position.set(col + .5, targetFx.arrowY, tier + targetFx.arrowZGap);
-      targetFx.arrow.userData.baseZ = tier + targetFx.arrowZGap;
     }
     beacon.querySelector("b").textContent = `${completed ? "已入库货位" : "入库目标"} ${String(col).padStart(2, "0")} / ${String(tier).padStart(2, "0")}`;
     beacon.querySelector("span").textContent = `第 ${String(col).padStart(2, "0")} 列 · 第 ${String(tier).padStart(2, "0")} 层`;
@@ -559,12 +583,10 @@
         for (let d = -cell; d < cell * 2; d += Math.max(2.8, cell * .48)) { g.beginPath(); g.moveTo(x + d, y + cell); g.lineTo(x + d + cell, y); g.stroke(); }
         g.restore();
       } else if (value > 0) {
-        g.fillStyle = GRADE_CSS[good(value).grade]; g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
-        if (hotGids.has(value)) {
-          const notch = Math.max(2.2, cell * .42);
-          g.fillStyle = "#ffd400"; g.beginPath(); g.moveTo(x + cell - .5, y + .5);
-          g.lineTo(x + cell - .5, y + notch); g.lineTo(x + cell - notch, y + .5); g.closePath(); g.fill();
-        }
+        /* 0722c 过时审计 P5:2D 金色角标(金顶家族)清除;heat2DOn 时格色=访问频率色阶
+           (同 3D 热力罩一个色阶与秩归一口径),关=等级完整视图——与 02 的 2D 热力层双视图哲学一致。 */
+        g.fillStyle = heat2DOn ? heatColorFor(value).getStyle() : GRADE_CSS[good(value).grade];
+        g.fillRect(x + .5, y + .5, cell - 1, cell - 1);
       }
       if (cell >= 8) { g.strokeStyle = "#c7d0d6"; g.lineWidth = .55; g.strokeRect(x, y, cell, cell); }
     }
@@ -716,7 +738,9 @@
         '<option value="skew" selected>偏斜货流 · 可复现样本</option>';
       byId("profileSelect").disabled = true;
     }
-    byId("traceLoadState").textContent = "数据链已验证";
+    /* 0722c 过时审计 P3:「数据链已验证」状态签当按钮 → 02 现行语言「证据中心」单键(A14);
+       验证状态是抽屉内容里的事实行,不是按钮皮肤。 */
+    byId("traceLoadState").textContent = "证据中心";
     byId("railHead").querySelector(".matrix").innerHTML = "20 × 20<br>SIM / 填满";
     /* 0717 #26-1:单图升三联同帧对比 */
     const mapHead = byId("slotMapWrap").querySelector(".mapHead"); mapHead.querySelector("b").textContent = "三算法同帧对比 · 20 × 20";
@@ -724,9 +748,11 @@
     /* 热门图例只在决赛 01 页(target-card 模式)追加:候选页(冻结观感)加此项会把 1600×900
        下的 slotMapWrap 撑出视口 1.3px(candidate QA viewportsInside 实测),角点绘制不受影响。 */
     const mapKey = byId("slotMapWrap").querySelector(".mapKey");
-    if (targetCardMode && mapKey && !mapKey.querySelector(".hotKey")) {
-      const hotKey = document.createElement("span"); hotKey.className = "hotKey";
-      hotKey.innerHTML = '<i style="background:#ffd400"></i>★ 热门前 20%'; mapKey.append(hotKey);
+    if (targetCardMode && mapKey && !mapKey.querySelector(".heatKey")) {
+      /* 0722c P1/P5:金色热门图例 → 访问频率色带(A7 词根「访问频率:低→高」,色阶同 3D/2D 实绘) */
+      const heatKey = document.createElement("span"); heatKey.className = "heatKey";
+      heatKey.innerHTML = '<i style="background:linear-gradient(90deg,#aeb8c0,#e7b800,#c0392b);width:26px"></i>访问频率:低→高';
+      mapKey.append(heatKey);
     }
     byId("slotMapWrap").querySelector(".mapRule span").textContent = "sum 规则：预占 133 格，不属于管理容量";
     const facts = Array.from(byId("railFacts").children); facts[0].querySelector("span").textContent = "已入库 / 267";
@@ -746,7 +772,18 @@
     DISPLAY_STEPS.forEach((step, index) => { const row = document.createElement("div"); row.className = "processGuideRow"; row.dataset.step = String(index);
       row.innerHTML = `<i>${index + 1}</i><b>${step.label}</b><span>${step.purpose}</span>`; guide.querySelector("#processGuideRows").append(row); });
     byId("insightStack").append(guide);
-    byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回程</span><span class="blocked"><i></i>预占</span><span class="hotlid"><i style="background:#d9ad00"></i>金顶 = 热门前 20%</span>';
+    /* 0722c P1:dock 图例「金顶 = 热门前 20%」清除 → 访问频率色带 + 3D/2D 热力开关(02 现行双开关语言)。 */
+    byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回程</span><span class="blocked"><i></i>预占</span>' +
+      '<span class="heatKey"><i style="background:linear-gradient(90deg,#aeb8c0,#e7b800,#c0392b);width:26px"></i>访问频率:低→高</span>' +
+      '<label class="heatToggle"><input type="checkbox" id="heat3dToggle" checked>3D 热力</label>' +
+      '<label class="heatToggle"><input type="checkbox" id="heat2dToggle" checked>2D 热力</label>';
+    const heat3DBox = byId("heat3dToggle"), heat2DBox = byId("heat2dToggle");
+    if (heat3DBox) heat3DBox.addEventListener("change", () => {
+      heat3DOn = !!heat3DBox.checked; stockSignature = ""; renderFrame(currentFrame());
+    });
+    if (heat2DBox) heat2DBox.addEventListener("change", () => {
+      heat2DOn = !!heat2DBox.checked; renderFrame(currentFrame());
+    });
     byId("phaseNow").textContent = "入库进度 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
 
     /* W7(0721 回灌,规格 docs/施工规格_回灌0721.md §1.2):赛马场主版面四区块——同源口径声明条 /
@@ -1165,12 +1202,13 @@
     if (frame.idle && frame.managedCount === 267) { disposePaths(); pathSignature = ""; }
     else setPaths(frame.event, state.laneId, frame.idle ? null : frame.operation);
     const machineWorld = setMachine(frame); setCargo(frame, machineWorld); setTarget(frame); drawSlotMap(frame); drawSpeed(frame); drawDiffMap();
-    /* #28 发光壳呼吸+箭头竖直浮动:相位取演示时钟 state.elapsed(seek 后固定,截图可复现),不用挂钟。 */
+    /* #28 发光壳呼吸(0722c 箭头已淘汰):行进段呼吸提示、就位(转绿)后收敛为常亮。
+       相位取演示时钟 state.elapsed(seek 后固定,截图可复现),不用挂钟。 */
     if (targetFx && targetFx.glow.visible) {
-      const pulse = (Math.sin(state.elapsed * 2.4) + 1) / 2, live = targetFx.arrow.visible;
+      const pulse = (Math.sin(state.elapsed * 2.4) + 1) / 2;
+      const live = !lastFrame.idle && lastFrame.cargoOwner !== "RACK";
       targetFx.glowMat.opacity = live ? .30 + .22 * pulse : .48;
       targetFx.faceMat.opacity = live ? .72 + .26 * pulse : .95;
-      if (live) targetFx.arrow.position.z = targetFx.arrow.userData.baseZ - targetFx.floatAmp * pulse;
     }
     renderDecision(frame); renderScoreAnatomy(frame); renderRaceMicro(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
   }
@@ -1276,7 +1314,7 @@
         disclosureVisible: state.laneId !== "score" || Boolean(document.querySelector(".scoreFactorNote")?.textContent.includes("共用“载重×层高”原始因子"))},
       runtimeErrors, duplicateAudit: visibleTextDuplicateAudit(),
       beaconAudit: lastBeaconAudit,
-      targetFx: targetFx ? {glowVisible: targetFx.glow.visible, arrowVisible: targetFx.arrow.visible,
+      targetFx: targetFx ? {glowVisible: targetFx.glow.visible, arrowRetired: true,
         faceVisible: targetFx.face.visible, glowColor: `#${targetFx.glowMat.color.getHexString()}`,
         glowOpacity: Number(targetFx.glowMat.opacity.toFixed(3)),
         glowPosition: targetFx.glow.position.toArray()} : null,
@@ -1290,9 +1328,12 @@
         slotText: byId("targetCardSlot").textContent, detail: byId("targetCardDetail").textContent,
         done: byId("targetCard").classList.contains("done")} : null,
       mapAudit: lastMapAudit, diffAudit: lastDiffAudit,
-      hotVisual: {hotLidCount: hotLidMesh.count,
+      /* 0722c:金顶探针退役,热力探针接任——goldRetired 恒真供 QA 断言「金色装饰家族已清除」 */
+      inventoryCount: lastFrame ? lastFrame.rows.length : 0,
+      hotVisual: {goldRetired: true, heatAudit: lastHeatAudit,
+        heatLidCount: heatLidMesh.count,
         hotInventoryCount: lastFrame ? lastFrame.rows.filter(row => hotGids.has(row.gid)).length : 0,
-        legendPresent: /热门前 20%/.test(byId("reserveRuleBadge").textContent)},
+        legendPresent: /访问频率/.test(byId("reserveRuleBadge").textContent)},
       reserveNotePresent: Boolean(document.querySelector("#decisionWrap .reserveNote")),
       narrativeAudit: {
         scenario: SCENARIO,

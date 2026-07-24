@@ -600,13 +600,15 @@ try {
       }
       return audit.leaderVisible === true && audit.dist < 480;
     }),
-    /* --- 0717 #28 用户拍板门:①目标格发光壳(amber 呼吸,入库完成转绿常亮)+格口箭头(完成收起) --- */
+    /* --- 0717 #28 强高亮门,0722c 过时审计 P2 改版:大头针箭头淘汰(02 现行 FX 无箭头),
+       发光壳+格口面承担目标语义(amber 呼吸、完成转绿);arrowRetired 恒真=箭头确已退役。 --- */
     fx28TargetGlowArrow: report.states.every(item => {
       const fx = item.snapshot.targetFx;
       if (!fx) return false;
-      if (item.snapshot.target === null) return !fx.glowVisible && !fx.arrowVisible;
+      if (fx.arrowRetired !== true) return false;
+      if (item.snapshot.target === null) return !fx.glowVisible;
       const done = !item.name.startsWith('bookmark_') && item.snapshot.cargo.owner === 'RACK';
-      return fx.glowVisible && fx.arrowVisible === !done &&
+      return fx.glowVisible &&
         fx.glowColor === (done ? '#2f9e4f' : '#e7b800') && fx.glowOpacity > .05 &&
         Math.abs(fx.glowPosition[0] - (item.snapshot.target[0] + .5)) < 1e-6 &&
         Math.abs(fx.glowPosition[2] - (item.snapshot.target[1] + .5)) < 1e-6;
@@ -637,8 +639,11 @@ try {
         (item.snapshot.target === null ? audit.targets[audit.activeLane] === null :
           JSON.stringify(audit.targets[audit.activeLane]) === JSON.stringify(item.snapshot.target));
     }) && laneStates.seq.mapAudit.activeLane === 'seq' && laneStates.score.mapAudit.activeLane === 'score',
-    /* --- 0717 #26-2:热门货视觉通道(3D 金顶数=在库热门数;2D/3D 图例在位;集合口径 53) --- */
-    fx26HotVisual: report.states.every(item => item.snapshot.hotVisual.hotLidCount === item.snapshot.hotVisual.hotInventoryCount &&
+    /* --- 0717 #26-2 → 0722c 过时审计 P1 改版:金顶淘汰(0718b 用户否),热门视觉=货位色阶热力
+       (02 现行):goldRetired 恒真、默认 heat3DOn 时热力罩数=在库总数、图例改「访问频率」。 --- */
+    fx26HotVisual: report.states.every(item => item.snapshot.hotVisual.goldRetired === true &&
+      item.snapshot.hotVisual.heatAudit && item.snapshot.hotVisual.heatAudit.heat3DOn === true &&
+      item.snapshot.hotVisual.heatLidCount === item.snapshot.inventoryCount &&
       item.snapshot.hotVisual.legendPresent),
     /* --- 0717 #26-3:冷门送远解说卡(score 首件 G001 出卡;热门件 G134 不出) --- */
     fx26ColdFarNote: firstEventState.reserveNotePresent === true &&

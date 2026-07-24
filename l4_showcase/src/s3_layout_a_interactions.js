@@ -212,7 +212,7 @@
     const checksHtml = detail.checks.map(item => `<div class="checkItem"><span class="ok">${item.pass ? "✓" : "✕"}</span><span>${item.name}</span></div>`).join("");
     const timelineHtml = detail.checkpoints.map(cp => `<div class="timelineNode"><div class="tHead"><span>${cp.eventCount} / 267 · ${cp.label}</span><span>${cp.phase}</span></div>` +
       `<div class="tMeta">audit_prefix_sha256 <b>${cp.auditPrefix12}…</b> · total_unavailable ${cp.totalUnavailable} / 400</div></div>`).join("");
-    evidencePop.innerHTML = `<h4>数据链已验证 · 证据抽屉 · ${detail.laneLabel}</h4>` +
+    evidencePop.innerHTML = `<h4>证据中心 · ${detail.laneLabel}<span class="evVerified">数据链已验证</span></h4>` +
       `<div class="drawerSection"><b>独立验证器清单 · validator.checks</b><span class="drawerMeta">${detail.checks.length} 项 · ${detail.checksPassCount === detail.checks.length ? "全部通过" : "存在未通过"} · module=${detail.validatorModule}</span><div class="checksGrid">${checksHtml}</div></div>` +
       `<div class="drawerSection"><b>checkpoints 哈希链时间线 · ${detail.laneLabel}</b><span class="drawerMeta">切换右上角「算法」下拉可看其余两条链</span><div class="auditTimelineList">${timelineHtml}</div></div>` +
       '<div class="drawerSection"><b>终态账本</b><div class="ledgerGrid">' +

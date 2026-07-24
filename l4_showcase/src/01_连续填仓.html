@@ -917,7 +917,15 @@
   html[data-s3-layout="A"] #topbarA #runtimeActions .btnSet+.btnSet{border-left:1px solid #d6dde2;padding-left:10px}
   html[data-s3-layout="A"] #topbarA #runtimeActions button{height:30px;min-height:30px;border:1px solid #33404a;background:#fff;color:#1d2b34;font-size:9px;padding:0 10px;cursor:pointer}
   html[data-s3-layout="A"] #topbarA #runtimeActions button:hover{background:#17365d;color:#fff;border-color:#17365d}
-  html[data-s3-layout="A"] #topbarA #traceLoadState{height:30px;display:flex;align-items:center;padding:0 9px;margin-left:4px;background:#eef6ee;color:#1c6b34;font-weight:700;font-size:8.5px;white-space:nowrap;box-sizing:border-box;text-decoration:none}
+  /* 0722c 过时审计 P3:绿底状态签皮肤清除——「证据中心」单键按 02 顶栏按钮语言(白底细边,学术工程风);
+     验证态是抽屉内容的事实行,不做按钮配色。 */
+  html[data-s3-layout="A"] #topbarA #traceLoadState{height:30px;display:flex;align-items:center;padding:0 10px;margin-left:4px;
+    background:#fff;color:#17202b;border:1px solid #aeb8bf;font-weight:700;font-size:9px;white-space:nowrap;box-sizing:border-box;text-decoration:none;cursor:pointer}
+  html[data-s3-layout="A"] #topbarA #traceLoadState:hover{background:#eef1f3}
+  .evidenceDrawer h4 .evVerified{margin-left:8px;padding:2px 6px;background:#eef6ee;color:#1c6b34;font:700 8px/1.2 "Microsoft YaHei",sans-serif;vertical-align:middle}
+  #reserveRuleBadge .heatKey i,#slotMapWrap .mapKey .heatKey i{display:inline-block;height:8px;margin-right:3px;vertical-align:middle}
+  #reserveRuleBadge .heatToggle{margin-left:6px;color:#52616c;font-size:8px;white-space:nowrap;cursor:pointer}
+  #reserveRuleBadge .heatToggle input{vertical-align:middle;margin:0 2px 0 0}
   /* 情景配置组:算法 + 拟真档说明牌 + 货物画像,融为一个灰底单元(同 02 0719d 绿框) */
   #tierFixedTag{height:30px;padding:0 8px;box-sizing:border-box}
   #tierFixedTag b{font-size:9px}#tierFixedTag small{font-size:6.5px}
@@ -1858,9 +1866,9 @@ const targetBox=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeom
 targetBox.visible=false;scene.add(targetBox);
 const targetPadMat=new THREE.MeshStandardMaterial({color:C.amber,roughness:.72,metalness:.02,emissive:new THREE.Color(C.amber).multiplyScalar(.18),transparent:true,opacity:.52,depthWrite:false});
 const targetPad=addBox(.82,.76,.028,0,0,0,targetPadMat,false,false);targetPad.visible=false;
-/* 0717 #28 用户拍板:目标格自身强高亮——发光壳 + 大头针式竖直箭头。实体归母版,
-   runtime 经 window.__S3_TARGET_FX 驱动(共享 runtime 的候选页无此全局,判空跳过)。
-   箭头必须沿 z(层高)竖直向下:镜头视线大致沿 +y,沿 y 的几何投影后近似一个点(首版教训)。 */
+/* 0717 #28 拍板目标格强高亮;0722c 对齐 02 现行 FX 语言(0718b 重构):大头针箭头淘汰
+   (02 早已无箭头实体,01 属过时残留,用户 0722 审计令清除),保留发光壳+格口面框——
+   目标语义由格位自身高亮承担,行进段显示、就位收敛,无悬空装饰物。 */
 const targetGlowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide});
 const targetGlow=new THREE.Mesh(new THREE.BoxGeometry(1.0,.96,1.0),targetGlowMat);
 targetGlow.visible=false;targetGlow.renderOrder=3;scene.add(targetGlow);
@@ -1874,18 +1882,8 @@ const targetFaceMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,
 const targetFace=new THREE.Mesh(new THREE.ShapeGeometry(targetFaceShape),targetFaceMat);
 targetFace.rotation.x=Math.PI/2;/* shape xy 面 → 法线 -y(朝巷道),shape y → 世界 z(层高) */
 targetFace.visible=false;targetFace.renderOrder=5;scene.add(targetFace);
-const targetArrowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.96,depthWrite:false});
-const targetArrow=new THREE.Group();
-/* group 原点=箭头尖端;cone 默认尖朝 +y,rotateX(-90°) 后尖朝 -z(竖直向下)。 */
-const targetArrowHead=new THREE.Mesh(new THREE.ConeGeometry(.50,1.1,14),targetArrowMat);
-targetArrowHead.rotation.x=-Math.PI/2;targetArrowHead.position.z=.55;
-const targetArrowTail=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.66,10),targetArrowMat);
-targetArrowTail.rotation.x=-Math.PI/2;targetArrowTail.position.z=1.43;
-targetArrow.add(targetArrowHead,targetArrowTail);
-targetArrow.visible=false;targetArrow.renderOrder=4;scene.add(targetArrow);
 window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
-  arrow:targetArrow,arrowMat:targetArrowMat,
-  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f),arrowY:-.45,arrowZGap:1.34,floatAmp:.22});
+  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f)});
 /* 堆垛机：黄金单桅杆不变；功能细节随同一个 world X 组移动。 */
 const mast=addBox(.24,.24,N+.5,IO.x,IO.y,(N+Z0)/2,M.mast,true,false);
 const machineParts=[
