@@ -555,7 +555,9 @@
   #viewport{--scene-dock-h:76px;--scene-dock-bottom:10px;--scene-dock-gap:8px}
   #gl{bottom:calc(var(--scene-dock-h) + var(--scene-dock-bottom) + var(--scene-dock-gap))}
   #sceneDock{position:absolute;z-index:9;left:calc(var(--rail-w) + 14px);right:14px;bottom:var(--scene-dock-bottom);height:var(--scene-dock-h);
-    display:grid;grid-template-columns:minmax(260px,1.38fr) minmax(220px,1fr) minmax(180px,.82fr);align-items:stretch;
+    /* 0722d 双向取中:dock 增列(赛段走势回迁)——五列全显式定义(原三显式+隐式列结构,
+       加列必须全显式,否则第五子换行横跨底部,0722d 自查实测) */
+    display:grid;grid-template-columns:minmax(225px,1.12fr) minmax(195px,.95fr) minmax(160px,.78fr) minmax(150px,.74fr) minmax(150px,.82fr);align-items:stretch;
     overflow:hidden;background:#f9fafbeF;border:1px solid #9ea9b1;border-top:3px solid var(--abb-red);box-shadow:0 8px 24px #17202b2b;color:#1c2932}
   #sceneDock>*{min-width:0;min-height:0;height:100%;overflow:hidden;border:0;border-left:1px solid #c7cfd5;border-radius:0;box-shadow:none}
   #sceneDock>*:first-child{border-left:0}
@@ -587,11 +589,11 @@
   #sceneTools button{height:26px;padding:0 8px;font-size:9px}#sceneTools input[type="range"]{min-height:24px}#playbackValue{font-size:9px}
   #sceneTools .scaleEnds{display:none}#sceneTools .toolNote{display:block;margin:1px 0 0;color:#65717a;font-size:7px;line-height:1.05;white-space:nowrap}
   @media(max-width:1380px){
-    #sceneDock{left:calc(var(--rail-w) + 10px);right:10px;grid-template-columns:minmax(240px,1.32fr) minmax(205px,1fr) minmax(170px,.8fr)}
+    #sceneDock{left:calc(var(--rail-w) + 10px);right:10px;grid-template-columns:minmax(215px,1.12fr) minmax(185px,.95fr) minmax(150px,.78fr) minmax(140px,.74fr) minmax(140px,.82fr)}
     #sceneCaption{padding:7px 9px}#sceneCaption #sceneActionText{font-size:10px}#sceneTelemetry{padding:6px 7px;gap:7px}
     #sceneTools{padding:6px 7px}#sceneTools .toolRow{gap:5px}#sceneTools button{padding:0 6px}
   }
-  @media(max-width:1180px){#sceneDock{grid-template-columns:minmax(220px,1.2fr) minmax(190px,1fr) minmax(160px,.8fr)}
+  @media(max-width:1180px){#sceneDock{grid-template-columns:minmax(200px,1.15fr) minmax(175px,.95fr) minmax(145px,.78fr) minmax(135px,.74fr) minmax(135px,.8fr)}
     #reserveRuleBadge{gap:4px}#reserveRuleBadge i{width:11px}#reserveRuleBadge span{font-size:6.5px}}
   @media(max-height:780px){#viewport{--scene-dock-h:70px;--scene-dock-bottom:8px}#sceneCaption{padding-top:4px;padding-bottom:4px}#speed{height:36px}}
 
@@ -923,6 +925,18 @@
     background:#fff;color:#17202b;border:1px solid #aeb8bf;font-weight:700;font-size:9px;white-space:nowrap;box-sizing:border-box;text-decoration:none;cursor:pointer}
   html[data-s3-layout="A"] #topbarA #traceLoadState:hover{background:#eef1f3}
   .evidenceDrawer h4 .evVerified{margin-left:8px;padding:2px 6px;background:#eef6ee;color:#1c6b34;font:700 8px/1.2 "Microsoft YaHei",sans-serif;vertical-align:middle}
+  /* 0722d 回迁组件:dock 赛段走势列 + 顶栏终态总分一行(压缩空区+内容回迁,双向取中拍板) */
+  #dockRaceTrend{padding:6px 9px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:3px}
+  #dockRaceTrend .trendHead{display:flex;justify-content:space-between;font:700 8.5px/1.2 Consolas,monospace;color:#69717a}
+  #dockRaceTrend svg{width:100%;height:100%;min-height:0;display:block}
+  #dockRaceTrend .trendFoot{color:#7a8590;font:7.5px/1.2 Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* order:1 与 runtimeControls 平级且 DOM 在前→落于 logo 与右控件群之间的中段空白;auto margin 吃左空 */
+  #topbarRaceSummary{display:flex;align-items:center;gap:7px;order:1;margin-left:auto;margin-right:8px;padding:0 10px;white-space:nowrap}
+  #topbarRaceSummary .rsLabel{color:#6a747d;font:700 8px/1.2 Consolas,monospace}
+  #topbarRaceSummary .rsItem{display:flex;align-items:center;gap:3px;font:700 9.5px/1 Consolas,monospace;color:#3c4750}
+  #topbarRaceSummary .rsItem i{width:9px;height:9px;display:inline-block}
+  #topbarRaceSummary .rsItem.seq i{background:#8b919a}#topbarRaceSummary .rsItem.near i{background:#5b7a94}#topbarRaceSummary .rsItem.score i{background:var(--abb-red,#ff000f)}
+  #topbarRaceSummary .rsLead{padding:3px 7px;background:#fff7f5;border-left:3px solid #ff000f;color:#5c1010;font:800 9.5px/1 Consolas,monospace}
   #reserveRuleBadge .heatKey i,#slotMapWrap .mapKey .heatKey i{display:inline-block;height:8px;margin-right:3px;vertical-align:middle}
   #reserveRuleBadge .heatToggle{margin-left:6px;color:#52616c;font-size:8px;white-space:nowrap;cursor:pointer}
   #reserveRuleBadge .heatToggle input{vertical-align:middle;margin:0 2px 0 0}
@@ -1021,7 +1035,9 @@
   html[data-s3-layout="A"] #railCollapseBtn:hover{background:#eef1f4}
   html[data-s3-layout="A"] #railCollapseBtn .edgeArrow{display:inline-block;font-size:10px;transition:transform .15s}
   html[data-s3-layout="A"] #workHud.is-collapsed{width:26px!important;min-width:26px;padding:6px 2px;overflow:visible}
-  html[data-s3-layout="A"] #workHud.is-collapsed>*:not(#railCollapseBtn){display:none}
+  /* 0722d 用户报 bug:收起后文字残留——0722b 各显示规则带 !important(slotMapWrap 的
+     display:flex!important 等)压过本条非 important 的 none;同挂 !important 终结军备竞赛。 */
+  html[data-s3-layout="A"] #workHud.is-collapsed>*:not(#railCollapseBtn){display:none!important}
   html[data-s3-layout="A"] #workHud.is-collapsed #railCollapseBtn{flex-direction:column;height:auto;width:100%;margin:0;
     padding:10px 2px;gap:8px;writing-mode:vertical-rl;text-orientation:upright}
   html[data-s3-layout="A"] #workHud.is-collapsed #railCollapseBtn .edgeArrow{transform:rotate(180deg);writing-mode:horizontal-tb}
@@ -1349,8 +1365,9 @@
      raceSeedBand 不再生效(DOM 已不在本容器内,搬运见 interactions.js);仍常驻的四件
      依次为 raceBanner(口径头)/slotMapWrap(三联缩略图)/raceMicroBar(当前节点三算法
      微条,runtime.js 新增)/raceLeadBadge(SCORE-SEQ 领先徽章,runtime.js 新增)。 -- */
+  /* 0722d 双向取中(左半):左栏摊开一档——gap 7→11、padding 放宽,呼吸感向全局靠拢 */
   html[data-s3-layout="A"] #workHud{overflow:hidden!important;display:flex!important;
-    flex-direction:column!important;gap:7px!important;padding:10px 11px 9px!important;
+    flex-direction:column!important;gap:11px!important;padding:12px 13px 11px!important;
     justify-content:flex-start!important}
   /* #insightStack 原装 railFacts(早已 display:none 的死块)+ traceStats(本轮已搬入放大层);
      两个子级搬空后它是个空壳,但自身仍带一份 Task10 时代的 grid-template-rows 多轨定义,
@@ -1439,7 +1456,8 @@
 
   /* -- 3D 主角让位:精华条已收窄至约 300px,1920 宽下 3D ≥84%,1280 宽下 ≥75%,
      均高于 §B.1/§B.5 的 ≥65%/≥55% 门槛;sceneDock 四列宽度按新的宽裕 3D 区回调。 -- */
-  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(320px,1.6fr) minmax(230px,1fr) minmax(160px,.8fr) minmax(190px,.9fr)}
+  /* 0722d:五列(赛段走势回迁列);此为 A 布局现行生效层(probe 实测),裸 #sceneDock 定义改了无效 */
+  html[data-s3-layout="A"] #sceneDock{grid-template-columns:minmax(300px,1.35fr) minmax(210px,.95fr) minmax(165px,.85fr) minmax(150px,.72fr) minmax(165px,.85fr)}
 
   /* -- 3D 画布显式铺满容器,防 devicePixelRatio 与 CSS 尺寸不同步导致的渲染缺口
      (renderer.setSize 第三参传 false 跳过 style 赋值,历史上无此兜底规则)。 -- */

@@ -219,7 +219,9 @@ try {
         return Boolean(tag) && tag.tagName !== 'SELECT' && /SIM 数据门/.test(tag.textContent) &&
           !document.getElementById('tierSelect'); })(),
       /* W6:dock 四分列(当前作业 | 轴状态 | 目标货位卡 | 2D 图例),不再靠"phaseRail 在 caption 内"判定 */
-      dockColumnsComplete: Array.from(document.getElementById('sceneDock').children).filter(c => c.id !== 'dockCollapseBtn').length === 4,
+      /* 0722d:dock 四列→五列(赛段走势回迁列,用户「压缩空区+内容回迁」拍板) */
+      dockColumnsComplete: Array.from(document.getElementById('sceneDock').children).filter(c => c.id !== 'dockCollapseBtn').length === 5 &&
+        Boolean(document.getElementById('dockRaceTrend')),
       /* W6:「当前作业」格不再需要容纳七段微条,不再要求约占半幅——仍要求它是 dock 内最宽的信息列
          且货物行为大字(fontSize>=13,同旧门槛,未随 02 blueprint 的 12px 松动——见改动清单说明) */
       cargoHeadlineDominant: (() => {
@@ -227,13 +229,14 @@ try {
         const dock = document.getElementById('sceneDock').getBoundingClientRect();
         const fontSize = parseFloat(getComputedStyle(document.getElementById('sceneActionText')).fontSize);
         const share = caption.width / dock.width;
-        return share > .28 && share < .55 && fontSize >= 13; })(),
+        /* 0722d 五列后当前作业列占比下限 .28→.22(仍须为最宽信息列由列定义 1.15fr 保证) */
+        return share > .22 && share < .55 && fontSize >= 13; })(),
       /* W6:镜头/演示倍率迁到 3D 区右下角悬浮小卡(同 02 0720 版B),不再挂进度轴行尾 */
       toolsFloating: document.getElementById('sceneTools').closest('#viewport') !== null &&
         document.getElementById('sceneTools').closest('#fillBookmarks') === null,
       targetCardInDock: (() => { const card = document.getElementById('targetCard');
         return Boolean(card) && card.closest('#sceneDock') !== null &&
-          Array.from(document.getElementById('sceneDock').children).filter(c => c.id !== 'dockCollapseBtn').length === 4; })(),
+          Array.from(document.getElementById('sceneDock').children).filter(c => c.id !== 'dockCollapseBtn').length === 5; })(),
       beaconRetired: getComputedStyle(document.getElementById('targetBeacon')).display === 'none' &&
         getComputedStyle(document.getElementById('labelLeaders')).display === 'none'
     }));

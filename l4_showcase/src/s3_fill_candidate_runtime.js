@@ -786,6 +786,39 @@
     });
     byId("phaseNow").textContent = "入库进度 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
 
+    /* 0722d 回迁(双向取中拍板):①dock 第五列「赛段走势」——6 容量节点三算法期望取货 SVG 折线,
+       弹层全表的精简常驻版;②顶栏中段「终态总分一行」——填顶栏空白。数据全部 checkpoints/metrics 真读。 */
+    const LANES3D = ["seq", "near", "score"];
+    const trendData = LANES3D.map(id => ({id, values: models.get(id).lane.checkpoints.map(cp => cp.metrics_to_date.expected_retrieval_s)}));
+    const trendMax = Math.max(...trendData.flatMap(row => row.values)) || 1;
+    const TREND_W = 150, TREND_H = 44, TREND_COLOR = {seq: "#8b919a", near: "#5b7a94", score: "#ff000f"};
+    const trendPoints = values => values.map((value, index) =>
+      `${(index / (BOOKMARKS.length - 1) * TREND_W).toFixed(1)},${(TREND_H - 3 - (value / trendMax) * (TREND_H - 8)).toFixed(1)}`).join(" ");
+    const dockTrend = document.createElement("div"); dockTrend.id = "dockRaceTrend";
+    dockTrend.innerHTML = `<div class="trendHead"><b>赛段走势 · 期望取货 s</b><span>6 节点</span></div>` +
+      `<svg viewBox="0 0 ${TREND_W} ${TREND_H}" preserveAspectRatio="none" aria-label="三算法期望取货随容量节点走势">` +
+      trendData.map(row => `<polyline points="${trendPoints(row.values)}" fill="none" stroke="${TREND_COLOR[row.id]}" stroke-width="${row.id === "score" ? 2 : 1.2}"/>`).join("") +
+      `<line id="trendCursor" x1="0" y1="2" x2="0" y2="${TREND_H - 2}" stroke="#e7b800" stroke-width="1.4"/></svg>` +
+      `<div class="trendFoot">SCORE 红 · 全表见放大层</div>`;
+    const dockHost = byId("sceneCaption") ? byId("sceneCaption").parentElement : null;
+    if (dockHost) dockHost.append(dockTrend);
+    /* 0722d 自查纠错:首版误用 expected_retrieval_s 造出「SCORE ▲-7.2%」假优势——该口径 SCORE
+       本就劣于 SEQ(raceLeadBadge 已诚实披露该劣化)。顶栏按「同数字一主位」换 hot20_retrieval_s
+       (SCORE 真正领先项):badge 披露劣项、顶栏披露优项,两口径并存=多目标权衡的完整叙事。 */
+    const finals = LANES3D.map(id => ({id, v: models.get(id).lane.metrics.hot20_retrieval_s}));
+    const leadPct = ((finals[0].v - finals[2].v) / finals[0].v * 100).toFixed(1);
+    const topSummary = document.createElement("div"); topSummary.id = "topbarRaceSummary";
+    topSummary.innerHTML = `<span class="rsLabel">终态 热门取货 s</span>` +
+      finals.map(row => `<span class="rsItem ${row.id}"><i></i>${row.id.toUpperCase()} ${row.v.toFixed(2)}${row.id === "seq" ? " 基线" : ""}</span>`).join("") +
+      `<span class="rsLead">SCORE 快 ${leadPct}%</span>`;
+    /* 0722d 自查修正:锚「证据中心」钮(顶栏右组首件)前插+CSS margin-left:auto——
+       总分条落在中段空白右缘;此前锚 playPauseBtn(order:-1 排最左)导致挤到 logo 左侧。 */
+    const topbarHost = document.getElementById("topbarA");
+    if (topbarHost) {
+      const anchor = topbarHost.querySelector("#traceLoadState");
+      topbarHost.insertBefore(topSummary, anchor || null);
+    }
+
     /* W7(0721 回灌,规格 docs/施工规格_回灌0721.md §1.2):赛马场主版面四区块——同源口径声明条 /
        主区四图标题条 / 赛段比分条 / 终态总分牌 / 30-seed 分布带。全部直接读闭包内 payload/models
        真实数据(数据渲染进 runtime);DOM 顺序不重要,可见次序完全由 html 内 order 样式决定(见
@@ -1093,6 +1126,12 @@
         `<span>${count} / 267 · ${["0%", "25%", "50%", "75%", "90%", "100%"][index]}</span></div>${barsHtml}</div>`;
     }).join("");
     host.innerHTML = groupsHtml;
+    /* 0722d:dock 赛段走势游标随当前容量节点移动(与微条同一 count 口径) */
+    const cursor = document.getElementById("trendCursor");
+    if (cursor) {
+      const x = (index / (BOOKMARKS.length - 1) * 150).toFixed(1);
+      cursor.setAttribute("x1", x); cursor.setAttribute("x2", x);
+    }
   }
 
   /* W7(0721 回灌 §1.4):证据抽屉数据源——validator.checks 18 项 + 当前 lane 的 checkpoints 哈希链 6 节点
