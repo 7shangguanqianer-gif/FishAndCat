@@ -924,7 +924,7 @@
   html[data-s3-layout="A"] #topbarA #traceLoadState{height:30px;display:flex;align-items:center;padding:0 10px;margin-left:4px;
     background:#fff;color:#17202b;border:1px solid #aeb8bf;font-weight:700;font-size:9px;white-space:nowrap;box-sizing:border-box;text-decoration:none;cursor:pointer}
   html[data-s3-layout="A"] #topbarA #traceLoadState:hover{background:#eef1f3}
-  .evidenceDrawer h4 .evVerified{margin-left:8px;padding:2px 6px;background:#eef6ee;color:#1c6b34;font:700 8px/1.2 "Microsoft YaHei",sans-serif;vertical-align:middle}
+  #evidencePop .evVerified{margin-left:8px;padding:2px 7px;background:#eef6ee;color:#1c6b34;font:700 9px/1.4 "Microsoft YaHei",sans-serif;vertical-align:middle;white-space:nowrap}
   /* 0722d 回迁组件:dock 赛段走势列 + 顶栏终态总分一行(压缩空区+内容回迁,双向取中拍板) */
   #dockRaceTrend{padding:6px 9px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:3px}
   #dockRaceTrend .trendHead{display:flex;justify-content:space-between;font:700 8.5px/1.2 Consolas,monospace;color:#69717a}
@@ -1312,10 +1312,22 @@
      终态账本 + 口径与边界卡)——升级既有小浮层 #evidencePop 为右侧抽屉;沿用 .s3aPop 的
      show/hide 与 Escape 机制,仅覆盖定位/尺寸为固定右栏抽屉,不再靠 placePop() 跟随触发点。
      ================================================================ */
-  #evidencePop.evidenceDrawer{position:fixed;z-index:90;right:0;top:0;bottom:0;left:auto;width:min(440px,92vw);
-    max-width:none;border:0;border-left:3px solid var(--abb-red);box-shadow:-12px 0 34px #17202b40;
-    padding:16px 18px;overflow-y:auto;transform:translateX(100%);transition:transform .16s ease-out}
-  #evidencePop.evidenceDrawer.show{display:block;transform:translateX(0)}
+  /* 0722e 用户打回「打开无法关闭 + 与 02 形式不一」:右侧抽屉 → 02 同款证据中心模态
+     (全屏遮罩 + 居中卡 + × 钮 + 点遮罩关 + Esc 关);evidencePop 挂 body(避 workHud 层叠
+     上下文困住,同 02:2202 教训);.show 显隐沿用(Esc/hidePops 自动兼容)。内容 class
+     (drawerSection/checksGrid/timelineNode/ledgerGrid…)不改,样式继续生效,只换外层容器。 */
+  #evidencePop.evidenceModal{position:fixed;z-index:200;inset:0;display:none;width:auto;max-width:none;
+    align-items:center;justify-content:center;background:#17202b73;padding:0;border:0;box-shadow:none;transform:none}
+  #evidencePop.evidenceModal.show{display:flex}
+  #evidencePop.evidenceModal .evPanel{width:min(760px,92vw);max-height:86vh;overflow-y:auto;background:#fff;
+    border-top:4px solid var(--abb-red);box-shadow:0 18px 50px #17202b4d}
+  #evidencePop.evidenceModal .evHead{position:sticky;top:0;z-index:2;display:flex;align-items:center;
+    justify-content:space-between;gap:10px;padding:13px 16px;background:#fff;border-bottom:1px solid #dfe4e7}
+  #evidencePop.evidenceModal .evHead h4{margin:0;font:800 16px/1.25 "Microsoft YaHei",sans-serif;color:#16191d}
+  #evidencePop.evidenceModal .evClose{flex:none;width:30px;height:30px;border:1px solid #18232c;background:#fff;
+    font:400 19px/1 Consolas,monospace;color:#18232c;cursor:pointer}
+  #evidencePop.evidenceModal .evClose:hover{background:#18232c;color:#fff}
+  #evidencePop.evidenceModal .evBody{padding:14px 16px}
   .drawerSection{margin:0 0 14px;padding-bottom:12px;border-bottom:1px dashed #d8dde1}
   .drawerSection:last-of-type{border-bottom:0}
   .drawerSection>b{display:block;font:800 11px/1.2 "Microsoft YaHei",sans-serif;color:#17202b}

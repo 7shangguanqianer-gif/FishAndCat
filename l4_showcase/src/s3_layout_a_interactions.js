@@ -126,9 +126,11 @@
   const nodePop = makePop("axisNodePop");
   const segPop = makePop("segPop");
   const evidencePop = makePop("evidencePop");
-  /* W7(0721 §1.4):证据浮层由小提示卡升级为抽屉——专属 CSS(见 html 内 #evidencePop.evidenceDrawer)
-     覆盖 .s3aPop 的定位/宽度,固定一次即可,不随每次 toggle 重复加类。 */
-  evidencePop.classList.add("evidenceDrawer");
+  /* 0722e:证据浮层由右侧抽屉改 02 同款模态(全屏遮罩+居中卡+×钮+点遮罩关+Esc关);
+     专属 CSS 见 html 内 #evidencePop.evidenceModal。挂 body(移出 viewport)——同 02:2202
+     教训,避免困在 workHud/viewport 的层叠上下文里被顶栏盖住;fixed inset:0 相对视口铺满。 */
+  evidencePop.classList.add("evidenceModal");
+  doc.body.append(evidencePop);
 
   function placePop(pop, anchor, prefer = "below") {
     const viewportRect = viewport.getBoundingClientRect();
@@ -212,7 +214,7 @@
     const checksHtml = detail.checks.map(item => `<div class="checkItem"><span class="ok">${item.pass ? "✓" : "✕"}</span><span>${item.name}</span></div>`).join("");
     const timelineHtml = detail.checkpoints.map(cp => `<div class="timelineNode"><div class="tHead"><span>${cp.eventCount} / 267 · ${cp.label}</span><span>${cp.phase}</span></div>` +
       `<div class="tMeta">audit_prefix_sha256 <b>${cp.auditPrefix12}…</b> · total_unavailable ${cp.totalUnavailable} / 400</div></div>`).join("");
-    evidencePop.innerHTML = `<h4>证据中心 · ${detail.laneLabel}<span class="evVerified">数据链已验证</span></h4>` +
+    evidencePop.innerHTML = `<div class="evPanel"><header class="evHead"><h4>证据中心 · ${detail.laneLabel}<span class="evVerified">数据链已验证</span></h4><button type="button" class="evClose" aria-label="关闭证据中心">×</button></header><div class="evBody">` +
       `<div class="drawerSection"><b>独立验证器清单 · validator.checks</b><span class="drawerMeta">${detail.checks.length} 项 · ${detail.checksPassCount === detail.checks.length ? "全部通过" : "存在未通过"} · module=${detail.validatorModule}</span><div class="checksGrid">${checksHtml}</div></div>` +
       `<div class="drawerSection"><b>checkpoints 哈希链时间线 · ${detail.laneLabel}</b><span class="drawerMeta">切换右上角「算法」下拉可看其余两条链</span><div class="auditTimelineList">${timelineHtml}</div></div>` +
       '<div class="drawerSection"><b>终态账本</b><div class="ledgerGrid">' +
@@ -224,11 +226,17 @@
       `<div class="drawerSection"><b>口径与边界卡</b><div class="boundaryQuote">"${detail.boundary.evidenceBoundary}"</div>` +
       `<div class="note">binding_approval:${detail.boundary.approvedAtUtc} · release ${detail.boundary.registryStatus} · 独立测试 ${detail.boundary.testPassed}/${detail.boundary.testTotal} 通过</div>` +
       `<div class="note">到达模型口径:arrival_model = <code>${detail.boundary.arrivalModel}</code> —— 即到即处理 · 单机 · 无队列(与 02_入出闭环 页的排队场景形成口径对照;本页仿真假设如此,非功能疏漏)。</div></div>` +
-      `<div class="note">release ${snapshot.releaseId} · bundle payload SHA-256 <code>${snapshot.bundlePayloadSha256}</code><br>${snapshot.timingAudit.mapping}。本地哈希锁定的可复现证据快照,不是加密签名。三条在线算法 × 各 267 件,SIM 证据边界。</div>`;
+      `<div class="note">release ${snapshot.releaseId} · bundle payload SHA-256 <code>${snapshot.bundlePayloadSha256}</code><br>${snapshot.timingAudit.mapping}。本地哈希锁定的可复现证据快照,不是加密签名。三条在线算法 × 各 267 件,SIM 证据边界。</div>` +
+      `</div></div>`;
     evidencePop.classList.add("show");
   }
   loadState.addEventListener("click", toggleEvidence);
   loadState.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleEvidence(); } });
+  /* 0722e 模态关闭:点遮罩(target===evidencePop 本体=遮罩空白)或 × 钮 → 关;委托绑定一次
+     (innerHTML 每次重建但 evidencePop 元素持久)。Esc 由 hidePops(§5)覆盖,再点顶栏钮由 toggle 覆盖。 */
+  evidencePop.addEventListener("click", event => {
+    if (event.target === evidencePop || event.target.closest(".evClose")) evidencePop.classList.remove("show");
+  });
 
   /* ---------- 6. 2D 放大覆盖层(DOM 搬运,canvas 自适应重画) ---------- */
   const overlay = doc.createElement("div");
@@ -457,7 +465,9 @@
     openMap, closeMap,
     showNodePop(index) { renderNodePop(nodeButtons[index]); return nodePop.getBoundingClientRect(); },
     showSegPop(index) { renderSegPop(segments[index], index); return segPop.getBoundingClientRect(); },
-    showEvidence() { if (!evidencePop.classList.contains("show")) toggleEvidence(); return evidencePop.getBoundingClientRect(); },
+    showEvidence() { if (!evidencePop.classList.contains("show")) toggleEvidence();
+      return (evidencePop.querySelector(".evPanel") || evidencePop).getBoundingClientRect(); },
+    closeEvidence() { evidencePop.classList.remove("show"); return evidencePop.classList.contains("show"); },
     hidePops,
     toggleRailCollapse() { railCollapseBtn.click(); return workHud.classList.contains("is-collapsed"); },
     toggleDockCollapse() { if (dockCollapseBtn) dockCollapseBtn.click(); return Boolean(sceneDock && sceneDock.classList.contains("is-collapsed")); },

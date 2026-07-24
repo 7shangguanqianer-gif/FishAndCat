@@ -418,7 +418,7 @@ try {
      ================================================================ */
 
   /* §A.2/§B.6:零滚动双分辨率(1920×1080 + 1280×800)× 弹层开合两态。document 与所有
-     overflow-y 容器 scrollHeight ≤ clientHeight+2;白名单=弹层内部(mapDock/evidenceDrawer,
+     overflow-y 容器 scrollHeight ≤ clientHeight+2;白名单=弹层内部(mapDock/evPanel,
      90vh 内可滚)与显式横向带(本页无)。开态额外核 mapDock 尺寸不超 90vw/90vh。 */
   report.zeroScroll = [];
   for (const [width, height] of [[1920, 1080], [1280, 800]]) {
@@ -439,10 +439,10 @@ try {
           scrollH: element.scrollHeight, clientH: element.clientHeight}))
       };
     }, whitelist);
-    const closedState = await measure(['#s3MapOverlay', '.evidenceDrawer']);
+    const closedState = await measure(['#s3MapOverlay', '.evPanel']);
     await zsPage.evaluate(() => window.__S3_LAYOUT_A.openMap());
     await zsPage.waitForTimeout(80);
-    const openState = await measure(['.mapDock', '.evidenceDrawer']);
+    const openState = await measure(['.mapDock', '.evPanel']);
     const mapDockBox = await zsPage.evaluate(() => {
       const element = document.querySelector('#s3MapOverlay .mapDock'), rect = element.getBoundingClientRect();
       return {widthVw: rect.width / innerWidth, heightVh: rect.height / innerHeight};
@@ -681,7 +681,7 @@ try {
        0722 一屏返工新增断言组(docs/施工规格_一屏返工0722.md §A.2/§B.3/§B.6)。
        ================================================================ */
     /* §A.2/§B.6 零滚动双分辨率(1920×1080+1280×800)× 弹层白名单:关闭态 document 与所有
-       overflow-y 容器零溢出;打开态白名单 mapDock/evidenceDrawer 后其余容器仍零溢出,
+       overflow-y 容器零溢出;打开态白名单 mapDock/evPanel 后其余容器仍零溢出,
        且 mapDock 自身不超 90vw/90vh(max 90vw/90vh,§A.3)。 */
     zeroScrollClosed: report.zeroScroll.every(item => item.closedState.doc.scrollH <= item.closedState.doc.clientH + 2 &&
       item.closedState.offenders.length === 0),
