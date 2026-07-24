@@ -1325,7 +1325,9 @@
      #workHud 内的 flex 子项),此处用同选择器同 !important 力度把 0721 误设的
      order:2!important;position:static!important 复位回顶部通栏细条。
      ================================================================ */
-  html[data-s3-layout="A"]{--rail-w:clamp(266px,17vw,332px)}
+  /* 0722b:rail 由 clamp(266,17vw,332) 加宽——用户打回「精华条下半 500px+ 空白」:
+     窄栏装不下有质量的内容;加宽后三联竖排大图+双指标微条撑满全高(gl 仍 ≥74% 视口宽)。 */
+  html[data-s3-layout="A"]{--rail-w:clamp(300px,19vw,400px)}
 
   html[data-s3-layout="A"] #progressAxisHost{position:absolute!important;z-index:8;
     top:var(--topbar-h);left:var(--rail-w);right:0;height:var(--axis-h);width:auto}
@@ -1351,7 +1353,10 @@
   /* 0721 遗留 html[data-s3-layout="A"] #slotMapWrap{flex:0 0 460px!important} 比选择器
      specificity 更高(多一层 [data-s3-layout] 属性选择器),同 !important 下光靠源码序赢不了它
      ——这里必须同规格选择器才能覆盖,单独 order 之类无冲突属性可以留裸选择器。 */
-  html[data-s3-layout="A"] #slotMapWrap{order:2!important;flex:0 0 auto!important;min-height:0!important}
+  /* 0722b:flex 0 0 auto→1 1 auto,三联缩略吃掉 rail 全部富余高度(与 drawSlotMap 竖排分支联动:
+     容器高>宽×1.15 时 canvas 自动纵向排三张大网格) */
+  html[data-s3-layout="A"] #slotMapWrap{order:2!important;flex:1 1 auto!important;min-height:0!important;
+    display:flex!important;flex-direction:column!important}
   #raceMicroBar{order:3!important}
   #raceLeadBadge{order:4!important}
 
@@ -1372,19 +1377,25 @@
   html[data-s3-layout="A"] #workHud #slotMapWrap .mapHead span{font-size:7px}
   html[data-s3-layout="A"] #workHud #slotMapWrap .mapHead strong{font-size:13px}
   html[data-s3-layout="A"] #workHud #slotMapWrap .mapRule{display:none}
-  html[data-s3-layout="A"] #workHud #slotMap{min-height:0;aspect-ratio:2.3/1;margin-top:4px}
+  /* 0722b:去 aspect-ratio 锁定,slotMap 撑满 wrap 剩余高(flex:1),竖排由 canvas 侧自适应。
+     604 行裸 #slotMap 带 !important(flex:none/height:auto/aspect-ratio 2.55)——必须同挂
+     !important 才能赢(!important 冲突比 specificity,本选择器 1 属性+2 id 更高)。 */
+  html[data-s3-layout="A"] #workHud #slotMap{min-height:0!important;flex:1 1 auto!important;
+    height:auto!important;aspect-ratio:auto!important;margin-top:4px}
   /* 1004 行 html[data-s3-layout="A"] #slotMapWrap .mapKey{display:flex!important} 是历史遗留
      的 !important——非 !important declaration 无论 specificity 多高都赢不了 !important,
      这里必须同挂 !important 才能覆盖(specificity 上 #workHud #slotMapWrap 两个 id 已更高,
      只是之前漏了 !important 这一步)。diffMapWrap 同理:607 行 html[data-s3-layout="A"]
      #workHud #diffMapWrap{display:grid} 是"差异热力图曾常驻左栏"的历史设计,现全部收入
      放大层,rail 内必须强制隐藏。 */
-  html[data-s3-layout="A"] #workHud #slotMapWrap .mapKey{display:none!important}
+  /* 0722b:图例恢复显示(rail 加宽撑满后空间富余;0722a 藏图例是窄栏时代的妥协) */
+  html[data-s3-layout="A"] #workHud #slotMapWrap .mapKey{display:flex!important;flex:none}
   html[data-s3-layout="A"] #workHud #diffMapWrap{display:none!important}
   html[data-s3-layout="A"] #s3MapOverlay #slotMapWrap{cursor:default}
 
   /* -- 当前容量节点三算法关键指标微条(runtime.js renderRaceMicro 写入) -- */
   #raceMicroBar{border:1px solid var(--rail-line,#cbd2d8);background:var(--card,#fff);padding:6px 8px;margin:0}
+  #raceMicroBar .microGroup+.microGroup{margin-top:7px;padding-top:6px;border-top:1px dashed #dbe1e6}
   #raceMicroBar .microHead{display:flex;justify-content:space-between;gap:6px;font:700 8.5px/1.2 Consolas,monospace;color:#69717a;margin-bottom:4px}
   #raceMicroBar .raceBarRow{margin-top:2px}
 
@@ -1944,11 +1955,22 @@ const CAMERA_LIMITS=Object.freeze({x:[-1.5,N+1.5],y:[FLOOR.y0+.6,RACK.backY-.12]
 const FRAME_BOUNDS=new THREE.Box3(
   new THREE.Vector3(Math.min(INFEED.x,OUTFEED.x)-1.3,INFEED.loadY-1.15,Z0),
   new THREE.Vector3(N+.8,RACK.backY+.5,N+.9));
-const FRAME_RADIUS=(function(){
+/* 0722b 构图修正(用户打回「3D 偏右+左侧大片空白」):旧实现以 FOCAL(手调看点,偏入库口)为
+   球心包 8 角——球心偏心一边把半径撑大(拉距过远显小),一边让画面中心落在偏心点(货架挤向
+   另一侧)。改为以包围盒几何中心 FRAME_CENTER 取景:半径收紧、构图居中;镜头角度(DEFAULT_DIR)
+   仍沿 VISUAL.pos→FOCAL 的手调方向不变。FRAME_CENTER 夹进 CAMERA_LIMITS,保证 orbit 合法。 */
+const FRAME_CENTER=(function(){
+  const center=FRAME_BOUNDS.getCenter(new THREE.Vector3());
+  center.x=THREE.MathUtils.clamp(center.x,...CAMERA_LIMITS.x);
+  center.y=THREE.MathUtils.clamp(center.y,...CAMERA_LIMITS.y);
+  center.z=THREE.MathUtils.clamp(center.z,...CAMERA_LIMITS.z);
+  return center;
+})();
+const FRAME_CORNERS=(function(){
   const corners=[];
   [FRAME_BOUNDS.min.x,FRAME_BOUNDS.max.x].forEach(x=>[FRAME_BOUNDS.min.y,FRAME_BOUNDS.max.y].forEach(y=>
     [FRAME_BOUNDS.min.z,FRAME_BOUNDS.max.z].forEach(z=>corners.push(new THREE.Vector3(x,y,z)))));
-  return Math.max(...corners.map(corner=>corner.distanceTo(FOCAL)));
+  return corners;
 })();
 const DEFAULT_DIR=new THREE.Vector3(...VISUAL.pos).sub(FOCAL).normalize();
 function currentAspect(){
@@ -1956,10 +1978,19 @@ function currentAspect(){
   return (r.width>0&&r.height>0)?r.width/r.height:(camera.aspect||1.6);
 }
 function fitDistanceForAspect(aspect){
+  /* 0722b 紧拟合(用户打回「3D 显小四周大片地板」):球面半径对薄板状包围盒(货架宽高大、
+     纵深小)过保守——球半径≈对角线半径,拉距虚远。改逐角投影:相机坐标系(视轴=-DEFAULT_DIR,
+     up=camera.up)下每角所需距离 = 角深度 + max(|x|/tanH, |y|/tanV),取 8 角最大,×1.06 呼吸边。 */
   const vFov=THREE.MathUtils.degToRad(camera.fov),safeAspect=Math.max(aspect,.2);
-  const hFov=2*Math.atan(Math.tan(vFov/2)*safeAspect);
-  const distV=FRAME_RADIUS/Math.sin(vFov/2),distH=FRAME_RADIUS/Math.sin(Math.min(hFov/2,1.55));
-  return THREE.MathUtils.clamp(Math.max(distV,distH)*1.06,controls.minDistance,controls.maxDistance);
+  const tanV=Math.tan(vFov/2),tanH=tanV*safeAspect;
+  const toCam=new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0),DEFAULT_DIR.clone().negate(),camera.up).invert();
+  let need=controls.minDistance;
+  FRAME_CORNERS.forEach(corner=>{
+    const p=corner.clone().sub(FRAME_CENTER).applyMatrix4(toCam);
+    const d=(-p.z)+Math.max(Math.abs(p.x)/tanH,Math.abs(p.y)/tanV);
+    if(d>need)need=d;
+  });
+  return THREE.MathUtils.clamp(need*1.06,controls.minDistance,controls.maxDistance);
 }
 let cameraGuard=false;
 function cameraSnapshot(){
@@ -1985,8 +2016,8 @@ function setCamera(){
   const damping=controls.enableDamping;controls.enableDamping=false;controls.update();
   camera.aspect=currentAspect();
   const distance=fitDistanceForAspect(camera.aspect);
-  camera.position.copy(FOCAL).addScaledVector(DEFAULT_DIR,distance);controls.target.copy(FOCAL);camera.fov=VISUAL.fov;camera.zoom=1;
-  camera.updateProjectionMatrix();camera.lookAt(FOCAL);controls.update();controls.enableDamping=damping;
+  camera.position.copy(FRAME_CENTER).addScaledVector(DEFAULT_DIR,distance);controls.target.copy(FRAME_CENTER);camera.fov=VISUAL.fov;camera.zoom=1;
+  camera.updateProjectionMatrix();camera.lookAt(FRAME_CENTER);controls.update();controls.enableDamping=damping;
   constrainCamera();return cameraSnapshot();}
 controls.addEventListener('change',constrainCamera);
 setCamera();controls.enabled=true;controls.saveState();

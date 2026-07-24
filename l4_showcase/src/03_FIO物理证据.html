@@ -61,8 +61,11 @@
     font:600 12px "Microsoft YaHei",sans-serif;border-radius:3px}
   #viewTabs button[aria-selected="true"]{border-color:var(--abb);background:#fff;box-shadow:inset 3px 0 var(--abb)}
   #viewTabs button small{display:block;font-weight:400;color:var(--dim);font-size:10.5px;margin-top:1px}
-  #viewStage img{width:100%;max-height:230px;object-fit:contain;background:#e9ecee;border:1px solid var(--line);cursor:zoom-in}
-  #viewMeta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;font-size:11.5px}
+  /* 0722b 排版返修(用户打回「图小盒扁、左右大片空白」):viewStage 改左右分栏——左大图
+     (撑满可用高,contain),右元数据四卡竖排;横向空间吃满,contain 空白消失。 */
+  #viewStage{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(250px,1fr);gap:10px;align-items:stretch}
+  #viewStage img{width:100%;height:100%;min-height:400px;max-height:540px;object-fit:contain;background:#e9ecee;border:1px solid var(--line);cursor:zoom-in}
+  #viewMeta{display:grid;grid-template-columns:1fr;gap:6px;margin-top:0;font-size:11.5px;align-content:space-between}
   #viewMeta .cell{padding:5px 8px;border:1px solid var(--line);background:#fafbfc}
   #viewMeta .cell b{display:block;font-size:10px;color:var(--dim);margin-bottom:1px}
   #viewMeta .prove{border-left:3px solid var(--ok)}
@@ -190,8 +193,10 @@
     section>h2{margin-bottom:2px}
     section>.sub{margin-bottom:5px}
     #views{grid-template-columns:120px 1fr;gap:8px}
-    #viewStage img{max-height:150px}
-    #viewMeta{font-size:10.5px;gap:5px;margin-top:5px}
+    /* 0722b:1280×800 断点同样左右分栏,图高降档(300-360px)仍远大于旧 150 扁盒 */
+    #viewStage{grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr);gap:8px}
+    #viewStage img{min-height:272px;max-height:320px}
+    #viewMeta{font-size:10.5px;gap:5px;margin-top:0}
     #viewMeta .cell{padding:4px 7px}
     .bottomStripRow video,.bottomStripRow img{height:72px}
     #matrixSummary{gap:5px;margin-bottom:4px}

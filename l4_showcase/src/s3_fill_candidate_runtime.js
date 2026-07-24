@@ -587,17 +587,32 @@
     const surface = canvasSurface("slotMap"); if (!surface) return;
     const {context: g, width, height} = surface;
     const gap = 9, labelH = 13;
-    const panel = Math.min((width - gap * 2 - 4) / 3, height - labelH - 3);
-    const x0 = (width - panel * 3 - gap * 2) / 2, y0 = labelH + 1;
+    /* 0722b:容器窄高(精华条撑满全高)时改纵向排——三张网格各占 ~rail 宽,可读性远高于
+       横排三小图;宽扁容器(放大层/低窗)仍横排。mode 字面保持 "tri"(QA 兼容),新增 orientation。 */
+    const vertical = height > width * 1.15;
     const targets = {};
-    ["seq", "near", "score"].forEach((laneId, index) => {
-      const px = x0 + index * (panel + gap), active = laneId === state.laneId;
-      g.font = `${active ? "800" : "700"} 9px "Microsoft YaHei"`; g.textAlign = "left";
-      g.fillStyle = active ? "#8a6a00" : "#5d6972";
-      g.fillText(`${laneId.toUpperCase()}${active ? " · 当前" : ""}`, px + 1, y0 - 4);
-      targets[laneId] = drawGridPanel(g, frame, laneId, px, y0, panel);
-    });
-    lastMapAudit = {mode: "tri", managedCount: frame.managedCount,
+    if (vertical) {
+      const panel = Math.min(width - 4, (height - (labelH + gap) * 3 - 3) / 3);
+      const x0 = (width - panel) / 2;
+      ["seq", "near", "score"].forEach((laneId, index) => {
+        const py = labelH + 1 + index * (panel + labelH + gap), active = laneId === state.laneId;
+        g.font = `${active ? "800" : "700"} 9px "Microsoft YaHei"`; g.textAlign = "left";
+        g.fillStyle = active ? "#8a6a00" : "#5d6972";
+        g.fillText(`${laneId.toUpperCase()}${active ? " · 当前" : ""}`, x0 + 1, py - 4);
+        targets[laneId] = drawGridPanel(g, frame, laneId, x0, py, panel);
+      });
+    } else {
+      const panel = Math.min((width - gap * 2 - 4) / 3, height - labelH - 3);
+      const x0 = (width - panel * 3 - gap * 2) / 2, y0 = labelH + 1;
+      ["seq", "near", "score"].forEach((laneId, index) => {
+        const px = x0 + index * (panel + gap), active = laneId === state.laneId;
+        g.font = `${active ? "800" : "700"} 9px "Microsoft YaHei"`; g.textAlign = "left";
+        g.fillStyle = active ? "#8a6a00" : "#5d6972";
+        g.fillText(`${laneId.toUpperCase()}${active ? " · 当前" : ""}`, px + 1, y0 - 4);
+        targets[laneId] = drawGridPanel(g, frame, laneId, px, y0, panel);
+      });
+    }
+    lastMapAudit = {mode: "tri", orientation: vertical ? "v" : "h", managedCount: frame.managedCount,
       activeLane: state.laneId, targets, hotSetSize: hotGids.size};
   }
 
@@ -1023,14 +1038,24 @@
     const LANES3 = ["seq", "near", "score"];
     const count = BOOKMARKS.filter(mark => mark <= frame.managedCount).pop() ?? 0;
     const index = BOOKMARKS.indexOf(count);
-    const rows = LANES3.map(id => {
-      const checkpoint = models.get(id).lane.checkpoints.find(item => item.event_count === count);
-      return {id, v: checkpoint.metrics_to_date.expected_retrieval_s};
-    });
-    const max = Math.max(...rows.map(row => row.v)) || 1;
-    const barsHtml = rows.map(row => `<div class="raceBarRow" data-algo="${row.id}"><span>${row.id.toUpperCase()}</span>` +
-      `<span class="raceBarTrack"><i style="width:${(row.v / max * 100).toFixed(1)}%"></i></span><span>${row.v.toFixed(2)}</span></div>`).join("");
-    host.innerHTML = `<div class="microHead"><b>当前节点三算法 · 期望取货 s</b><span>${count} / 267 · ${["0%", "25%", "50%", "75%", "90%", "100%"][index]}</span></div>${barsHtml}`;
+    /* 0722b:恢复双指标(期望取货 + 累计行程)——rail 撑满后空间富余,单指标显空;
+       两组各自独立归一化,口径与赛段比分全表(弹层)一致。 */
+    const METRICS2 = [
+      {key: "expected_retrieval_s", label: "期望取货 s", digits: 2},
+      {key: "round_trip_path_m", label: "累计行程 m", digits: 0}
+    ];
+    const groupsHtml = METRICS2.map(metric => {
+      const rows = LANES3.map(id => {
+        const checkpoint = models.get(id).lane.checkpoints.find(item => item.event_count === count);
+        return {id, v: checkpoint.metrics_to_date[metric.key]};
+      });
+      const max = Math.max(...rows.map(row => row.v)) || 1;
+      const barsHtml = rows.map(row => `<div class="raceBarRow" data-algo="${row.id}"><span>${row.id.toUpperCase()}</span>` +
+        `<span class="raceBarTrack"><i style="width:${(row.v / max * 100).toFixed(1)}%"></i></span><span>${row.v.toFixed(metric.digits)}</span></div>`).join("");
+      return `<div class="microGroup"><div class="microHead"><b>当前节点三算法 · ${metric.label}</b>` +
+        `<span>${count} / 267 · ${["0%", "25%", "50%", "75%", "90%", "100%"][index]}</span></div>${barsHtml}</div>`;
+    }).join("");
+    host.innerHTML = groupsHtml;
   }
 
   /* W7(0721 回灌 §1.4):证据抽屉数据源——validator.checks 18 项 + 当前 lane 的 checkpoints 哈希链 6 节点
