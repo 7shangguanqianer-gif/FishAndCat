@@ -234,6 +234,8 @@
 .s3SpeedProfile .spHead span{font:400 7px/1.25 Consolas,monospace;color:#7c868e;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 .s3SpeedProfile canvas{display:block;width:100%;height:94px;margin-top:5px}
+.s3SpeedProfile .spFoot{margin-top:3px;padding-top:3px;border-top:1px dashed #dfe4e7;
+  font:400 7px/1.4 "Microsoft YaHei",sans-serif;color:#6a747d}
 .s3SpeedProfile .spKey{display:flex;gap:9px;margin-top:1px;font:400 7px/1.3 Consolas,monospace;color:#6a747d}
 .s3SpeedProfile .spKey i{display:inline-block;width:9px;height:2px;vertical-align:middle;margin-right:3px}
 @media(max-width:1200px){.s3SpeedProfile{width:198px}.s3SpeedProfile canvas{height:78px}}`;
@@ -255,6 +257,14 @@
     head.querySelector("span").textContent = o.hint || "";
     const canvas = doc.createElement("canvas");
     card.append(head, canvas);
+    /* 0728 用户拍板「两页剖面图加对页速度差异一句」:两页升降轴的额定速度标注(01=0.40、
+       02=0.50)本身就是「同倍速下两页速度显示不同」的直接对照,但只有对照过两页才看得出来。
+       在卡片底部写死一句指向对页的说明,让评委不悬停、不切页也能当场读懂那个差异从哪来。 */
+    let foot = null;
+    if (o.foot) {
+      foot = doc.createElement("div"); foot.className = "spFoot";
+      foot.textContent = o.foot; card.appendChild(foot);
+    }
     if (o.keys && o.keys.length) {
       const key = doc.createElement("div"); key.className = "spKey";
       o.keys.forEach(item => {

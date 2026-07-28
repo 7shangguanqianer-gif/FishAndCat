@@ -2231,6 +2231,8 @@
       speedProfile = root.S3SpeedProfile.mount({
         host: speedHost, doc, id: "speedProfile02",
         title: "行程速度剖面", hint: "梯形加减速 · 双轴独立到位",
+        /* 对页差异一句(用户 0728 拍板),与 01 页那句互相指认。 */
+        foot: "本页升降 0.50 为额定值,trace 不含满载折减;01 连续填仓页载货腿折减后标 0.40,故同倍速下两页升降快慢不同。",
         place: {top: "50px", left: "10px"}
       });
       if (speedProfile) speedProfile.setVisible(false);

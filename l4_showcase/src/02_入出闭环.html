@@ -1193,7 +1193,7 @@ const reserveRuleBadge=document.createElement('div');reserveRuleBadge.id='reserv
 reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="empty"><i></i>空载</span><span class="out"><i></i>出库</span><span class="blocked"><i></i>预占</span>';sceneCaption.append(reserveRuleBadge);
 /* 0718 #26-2 货位热度色阶图例 + 近 I/O 热区说明(替代逐箱金顶)。 */
 const heatLegend=document.createElement('div');heatLegend.id='heatLegend';heatLegend.setAttribute('aria-label','货位热度色阶与近 I/O 热区图例');
-heatLegend.innerHTML='<div class="hlRow"><b>货位访问频率</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlToggles"><label><input type="checkbox" id="heat3dToggle" checked><span>3D 货位</span></label><label><input type="checkbox" id="heat2dToggle" checked><span>2D 图</span></label></div><div class="hlZone"><i></i><span>热门货聚集区 · 近存取口（P&D）</span></div>';
+heatLegend.innerHTML='<div class="hlRow"><b>货位访问频率</b><span>freq_true</span></div><div class="hlBar"></div><div class="hlScale"><span>低频(冷)</span><span>高频(热)</span></div><div class="hlToggles"><label><input type="checkbox" id="heat3dToggle" checked><span>3D 货位</span></label><label><input type="checkbox" id="heat2dToggle" checked><span>2D 图</span></label></div><div class="hlZone"><i></i><span>热门货包络 · freq_true 前 20% 所在格</span></div>';
 viewportEl.append(heatLegend);
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
 sceneTelemetry.append(document.getElementById('axisHud'));sceneDock.append(sceneTelemetry);
