@@ -500,7 +500,7 @@
   function setTarget(frame) {
     const visible = Array.isArray(frame.slot);
     targetBox.visible = targetPad.visible = visible; byId("targetBeacon").hidden = !visible;
-    if (targetFx && !visible) { targetFx.glow.visible = targetFx.face.visible = false; }
+    if (targetFx && !visible) { targetFx.glow.visible = targetFx.face.visible = targetFx.arrow.visible = false; }
     const card = byId("targetCard");
     if (card && !visible) {
       card.classList.add("done"); byId("targetCardState").textContent = "已填满";
@@ -510,12 +510,19 @@
     const [col, tier] = frame.slot;
     targetBox.position.set(col + .5, RACK.loadY, tier + .5); targetPad.position.set(col + .5, RACK.loadY, tier + .075);
     const beacon = byId("targetBeacon"), completed = !frame.idle && frame.cargoOwner === "RACK";
-    /* 0717 #28 强高亮;0722c 对齐 02 现行 FX:箭头淘汰(过时审计 P2),发光壳+格口面承担全部目标语义,完成转绿。 */
+    /* 0717 #28 强高亮:发光壳 + 格口面框 + 大头针箭头,完成转绿。
+       0722c 我曾按「02 早已无箭头实体」这一**错误前提**删掉箭头,用户 0728 拍板两页都保留,已恢复;
+       实体与遮挡守卫都在 s3_scene_core.js,与 02 同一份实现。
+       箭头收起条件:①货已交给货架(completed,再指就是指着已完成的事)②箭头会插进堆垛机机身。 */
     if (targetFx) {
       targetFx.glow.visible = true; targetFx.glow.position.set(col + .5, RACK.loadY, tier + .5);
       targetFx.face.visible = true; targetFx.face.position.set(col + .5, RACK.frontY - .012, tier + .5);
       targetFx.glowMat.color.copy(completed ? targetFx.done : targetFx.amber);
       targetFx.faceMat.color.copy(completed ? targetFx.done : targetFx.amber);
+      /* 先落位再判遮挡,最后才写可见性 */
+      targetFx.arrow.position.set(col + .5, targetFx.arrowY, tier + targetFx.arrowZGap);
+      targetFx.arrow.userData.baseZ = tier + targetFx.arrowZGap;
+      targetFx.arrow.visible = !completed && !(targetFx.blocked ? targetFx.blocked() : false);
     }
     beacon.querySelector("b").textContent = `${completed ? "已入库货位" : "入库目标"} ${String(col).padStart(2, "0")} / ${String(tier).padStart(2, "0")}`;
     beacon.querySelector("span").textContent = `第 ${String(col).padStart(2, "0")} 列 · 第 ${String(tier).padStart(2, "0")} 层`;
@@ -1268,13 +1275,17 @@
     if (frame.idle && frame.managedCount === 267) { disposePaths(); pathSignature = ""; }
     else setPaths(frame.event, state.laneId, frame.idle ? null : frame.operation);
     const machineWorld = setMachine(frame); setCargo(frame, machineWorld); setTarget(frame); drawSlotMap(frame); drawSpeed(frame); drawDiffMap();
-    /* #28 发光壳呼吸(0722c 箭头已淘汰):行进段呼吸提示、就位(转绿)后收敛为常亮。
-       相位取演示时钟 state.elapsed(seek 后固定,截图可复现),不用挂钟。 */
+    /* #28 发光壳呼吸 + 箭头悬浮:行进段呼吸提示、就位(转绿)后收敛为常亮、箭头收起。
+       相位取演示时钟 state.elapsed(seek 后固定,截图可复现),不用挂钟——与 02 取 frame.simTime
+       同理,都是「可 seek 可复现的演示时钟」,不是 performance.now()。 */
     if (targetFx && targetFx.glow.visible) {
       const pulse = (Math.sin(state.elapsed * 2.4) + 1) / 2;
       const live = !lastFrame.idle && lastFrame.cargoOwner !== "RACK";
       targetFx.glowMat.opacity = live ? .30 + .22 * pulse : .48;
       targetFx.faceMat.opacity = live ? .72 + .26 * pulse : .95;
+      if (targetFx.arrow.visible && targetFx.arrow.userData.baseZ != null) {
+        targetFx.arrow.position.z = targetFx.arrow.userData.baseZ - targetFx.floatAmp * pulse;
+      }
     }
     renderDecision(frame); renderScoreAnatomy(frame); renderRaceMicro(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
   }
@@ -1380,7 +1391,10 @@
         disclosureVisible: state.laneId !== "score" || Boolean(document.querySelector(".scoreFactorNote")?.textContent.includes("共用“载重×层高”原始因子"))},
       runtimeErrors, duplicateAudit: visibleTextDuplicateAudit(),
       beaconAudit: lastBeaconAudit,
-      targetFx: targetFx ? {glowVisible: targetFx.glow.visible, arrowRetired: true,
+      /* 0728:arrowRetired 探针退役——用户拍板两页都保留箭头,改报箭头真实状态供 QA 断言 */
+      targetFx: targetFx ? {glowVisible: targetFx.glow.visible,
+        arrowVisible: targetFx.arrow.visible, arrowBlocked: targetFx.blocked ? targetFx.blocked() : null,
+        arrowPosition: targetFx.arrow.position.toArray().map(v => Number(v.toFixed(3))),
         faceVisible: targetFx.face.visible, glowColor: `#${targetFx.glowMat.color.getHexString()}`,
         glowOpacity: Number(targetFx.glowMat.opacity.toFixed(3)),
         glowPosition: targetFx.glow.position.toArray()} : null,

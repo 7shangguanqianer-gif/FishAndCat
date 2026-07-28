@@ -1666,11 +1666,9 @@ addTransferBridge({x:IO.x,y:CROSSBAR.y},TRANSFER_ANCHOR,M.amber,.44,.30);
 addFloorFlowLabel('入库  ↑',INFEED.x,(INFEED.entryY+INFEED.loadY)/2,'#214e78');
 addFloorFlowLabel('出库  ↓',OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,'#0084a8');
 
-/* 0717 #28 拍板目标格强高亮;0722c 对齐 02 现行 FX 语言(0718b 重构):大头针箭头淘汰
-   (01 属过时残留,用户 0722 审计令清除),保留发光壳 + 格口面框——目标语义由格位自身高亮承担,
-   行进段显示、就位收敛,无悬空装饰物。实体在公共内核,这里只组装本页的 FX 契约。 */
-window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
-  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f)});
+/* 0728 抽离步2:目标 FX(发光壳 + 格口面框 + 大头针箭头)实体与 __S3_TARGET_FX 契约统一由
+   s3_scene_core.js 提供,两页共用——此前两页各自在页尾组装、内容还不一致。
+   本页 0722 曾按错误前提(「02 早已无箭头实体」)删掉箭头,用户 0728 拍板两页都保留,已随内核恢复。 */
 
 /* 0722 一屏返工 §B.4:3D 全景自适应——镜头按容器宽高比 + 货架包围盒自动拉距,保证货架全高 +
    入库口入镜,任何容器尺寸不截顶。FRAME_BOUNDS 只含货架实体 + 入库/出库装载工位(不含长队列

@@ -308,6 +308,40 @@ const targetFaceMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,
 const targetFace=new THREE.Mesh(new THREE.ShapeGeometry(targetFaceShape),targetFaceMat);
 targetFace.rotation.x=Math.PI/2;/* shape xy 面 → 法线 -y(朝巷道),shape y → 世界 z(层高) */
 targetFace.visible=false;targetFace.renderOrder=5;scene.add(targetFace);
+/* 0717 #28 用户拍板的大头针式竖直箭头(0728 抽离步2 收进公共内核,两页共用同一实体与同一守卫;
+   此前 02 有、01 被我按错误前提删掉,用户 0728 拍板「两页都保留」)。
+   箭头必须沿 z(层高)竖直向下:镜头视线大致沿 +y,沿 y 的几何投影后近似一个点(首版教训)。 */
+const targetArrowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.96,depthWrite:false});
+const targetArrow=new THREE.Group();
+/* group 原点=箭头尖端;cone 默认尖朝 +y,rotateX(-90°) 后尖朝 -z(竖直向下)。 */
+const targetArrowHead=new THREE.Mesh(new THREE.ConeGeometry(.50,1.1,14),targetArrowMat);
+targetArrowHead.rotation.x=-Math.PI/2;targetArrowHead.position.z=.55;
+const targetArrowTail=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.66,10),targetArrowMat);
+targetArrowTail.rotation.x=-Math.PI/2;targetArrowTail.position.z=1.43;
+targetArrow.add(targetArrowHead,targetArrowTail);
+targetArrow.visible=false;targetArrow.renderOrder=4;scene.add(targetArrow);
+/* 箭头遮挡守卫(0728 实测修缺陷):旧实现只按水平距离判「已到位就收起」——
+     const arrived = Math.abs(frame.machine.x - col) < .60
+   实测(scratchpad/arrowsweep.mjs,168 帧采样)漏 4 帧:箭头插进载货台的条件是**三维**的——
+   水平接近目标列 **且** 升降高度恰好扫过目标层,单看 x 判不出来。典型漏例:
+     cyc2 LINK_TRAVEL p=.6,箭头世界 x=1.5、桅杆 x=2.14,载货台包络 x[1.72,2.56] z[1.36,3.04],
+     箭头包络 x[1.01,1.99] z[2.31,4.07] → 三轴全重叠,而水平距离 0.64 > 阈值,守卫放行。
+   改为对箭头包围盒与桅杆/载货台包围盒做真实相交判定,阈值不用猜、升降维度不再漏。
+   注意:必须先写 arrow.position 再调本函数,最后才写 arrow.visible。 */
+const __arrowBox=new THREE.Box3(),__partBox=new THREE.Box3();
+function targetArrowBlocked(){
+  targetArrow.updateMatrixWorld(true);__arrowBox.setFromObject(targetArrow);
+  for(const part of [carrier,mast]){
+    if(!part)continue;
+    part.updateMatrixWorld(true);__partBox.setFromObject(part);
+    if(!__partBox.isEmpty()&&__partBox.intersectsBox(__arrowBox))return true;
+  }
+  return false;
+}
+/* 目标 FX 契约:两页共用同一份(此前两页各自在页尾组装,内容不一致=同源分叉的又一处)。 */
+window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
+  arrow:targetArrow,arrowMat:targetArrowMat,blocked:targetArrowBlocked,
+  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f),arrowY:-.45,arrowZGap:1.34,floatAmp:.22});
 
 /* 堆垛机：黄金单桅杆不变；功能细节随同一个 world X 组移动。 */
 const mast=addBox(.24,.24,N+.5,IO.x,IO.y,(N+Z0)/2,M.mast,true,false);

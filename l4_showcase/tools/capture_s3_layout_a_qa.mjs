@@ -610,18 +610,28 @@ try {
       }
       return audit.leaderVisible === true && audit.dist < 480;
     }),
-    /* --- 0717 #28 强高亮门,0722c 过时审计 P2 改版:大头针箭头淘汰(02 现行 FX 无箭头),
-       发光壳+格口面承担目标语义(amber 呼吸、完成转绿);arrowRetired 恒真=箭头确已退役。 --- */
+    /* --- 0717 #28 强高亮门。0722c 我曾按错误前提(「02 现行 FX 无箭头」)判箭头淘汰并断言
+       arrowRetired 恒真;实测 02 一直有箭头,用户 0728 拍板两页都保留,该断言随之作废。
+       现行门:发光壳+格口面(amber 呼吸、完成转绿)+ 箭头落在目标列正上方且完成后收起。 --- */
     fx28TargetGlowArrow: report.states.every(item => {
       const fx = item.snapshot.targetFx;
       if (!fx) return false;
-      if (fx.arrowRetired !== true) return false;
-      if (item.snapshot.target === null) return !fx.glowVisible;
+      if (item.snapshot.target === null) return !fx.glowVisible && !fx.arrowVisible;
       const done = !item.name.startsWith('bookmark_') && item.snapshot.cargo.owner === 'RACK';
       return fx.glowVisible &&
         fx.glowColor === (done ? '#2f9e4f' : '#e7b800') && fx.glowOpacity > .05 &&
         Math.abs(fx.glowPosition[0] - (item.snapshot.target[0] + .5)) < 1e-6 &&
-        Math.abs(fx.glowPosition[2] - (item.snapshot.target[1] + .5)) < 1e-6;
+        Math.abs(fx.glowPosition[2] - (item.snapshot.target[1] + .5)) < 1e-6 &&
+        /* 箭头 x 必须对准目标列中心;完成态或被机身遮挡时必须收起 */
+        Math.abs(fx.arrowPosition[0] - (item.snapshot.target[0] + .5)) < 1e-6 &&
+        (done ? fx.arrowVisible === false : true) &&
+        (fx.arrowBlocked === true ? fx.arrowVisible === false : true);
+    }),
+    /* --- 0728 新增:箭头遮挡守卫必须真的在起作用——采样中不得出现「箭头可见 且 判定被遮挡」。
+       旧守卫只按水平距离 .60 判,实测漏 4 帧(箭头插进载货台),故此门按三维相交结果断言。 --- */
+    fx28ArrowNeverSwallowed: report.states.every(item => {
+      const fx = item.snapshot.targetFx;
+      return !fx || !(fx.arrowVisible === true && fx.arrowBlocked === true);
     }),
     /* --- 0717 #28:②拟真档说明标签替换锁死下拉 --- */
     fx28TierTagLabel: report.layoutAudits.every(item => item.placement.tierTagPresent),

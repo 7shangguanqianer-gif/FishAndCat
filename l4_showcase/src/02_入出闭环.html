@@ -1293,21 +1293,8 @@ addTransferBridge(TRANSFER_ANCHOR,{x:OUTFEED.x,y:OUTFEED.startY},M.outfeedRail);
 addFloorFlowLabel('入库  ↑',INFEED.x,(INFEED.entryY+INFEED.loadY)/2,'#17365d');
 addFloorFlowLabel('↓  出库',OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,'#2f7895');
 
-/* 0717 #28 用户拍板:目标格自身强高亮——发光壳 + 格口面框(实体在公共内核)+ 大头针式竖直箭头。
-   runtime 经 window.__S3_TARGET_FX 驱动(共享 runtime 的候选页无此全局,判空跳过)。
-   箭头必须沿 z(层高)竖直向下:镜头视线大致沿 +y,沿 y 的几何投影后近似一个点(首版教训)。 */
-const targetArrowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.96,depthWrite:false});
-const targetArrow=new THREE.Group();
-/* group 原点=箭头尖端;cone 默认尖朝 +y,rotateX(-90°) 后尖朝 -z(竖直向下)。 */
-const targetArrowHead=new THREE.Mesh(new THREE.ConeGeometry(.50,1.1,14),targetArrowMat);
-targetArrowHead.rotation.x=-Math.PI/2;targetArrowHead.position.z=.55;
-const targetArrowTail=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.66,10),targetArrowMat);
-targetArrowTail.rotation.x=-Math.PI/2;targetArrowTail.position.z=1.43;
-targetArrow.add(targetArrowHead,targetArrowTail);
-targetArrow.visible=false;targetArrow.renderOrder=4;scene.add(targetArrow);
-window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
-  arrow:targetArrow,arrowMat:targetArrowMat,
-  amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f),arrowY:-.45,arrowZGap:1.34,floatAmp:.22});
+/* 0728 抽离步2:目标 FX(发光壳 + 格口面框 + 0717 #28 拍板的大头针式竖直箭头)实体与
+   __S3_TARGET_FX 契约统一由 s3_scene_core.js 提供,两页共用;箭头遮挡守卫也在那里(见 blocked())。 */
 
 function setCamera(){
   /* OrbitControls 的阻尼会保留上一帧旋转/平移增量；复位前以无阻尼 update 清空残量，
