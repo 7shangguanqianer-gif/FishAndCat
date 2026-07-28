@@ -14,6 +14,10 @@ const htmlPath = path.join(projectRoot, "l4_showcase", "src", "archive_候选历
 const traceRoot = path.join(projectRoot, "l4_showcase", "out", "s3_traces");
 const comparisonEvidencePath = path.join(projectRoot, "l4_showcase", "out", "s1_comparison_evidence.js");
 const comparisonCanonicalPath = path.join(projectRoot, "l4_showcase", "out", "s1_comparison_evidence.canonical.json");
+/* 0728 抽离步3:运动学移入 src/s3_motion.js。runtime 在浏览器里靠全局 S3Motion 解析,
+   在 Node 契约测试里必须先把该模块挂上 globalThis(它的 UMD 尾巴会自己挂),否则
+   runtime.motionPoint(...) 直接 ReferenceError。顺序不能反。 */
+require(path.join(projectRoot, "l4_showcase", "src", "s3_motion.js"));
 const runtime = require(runtimePath);
 
 function sha256File(filename) {

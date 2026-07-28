@@ -1236,30 +1236,10 @@ const S3_SCENE_CONFIG=Object.freeze({
 <script src="./s3_scene_core.js"></script>
 <script>
 if(IO_X!==IO.x||IO_Y!==IO.y)throw new Error('I/O 锚点与 s3_scene_core.js 不一致');
-/* 运动学曲线属抽离步3 范围,本步不动:两页默认分支逐字数学等价,改动会牵连速度口径(红线)。
-   本页 trace 的 motion 模型为 trapezoid_accel(不含满载升降折减),与 01 的差异属 sim 口径差。 */
-function axisT(d,vmax,acc){
-  if(d<=0)return 0;
-  return d>=vmax*vmax/acc ? d/vmax+vmax/acc : 2*Math.sqrt(d/acc);
-}
-function axisPos(t,d,vmax,acc){
-  if(d<=0)return 0;
-  const T=axisT(d,vmax,acc);t=Math.min(Math.max(t,0),T);
-  if(d>=vmax*vmax/acc){
-    const ta=vmax/acc;
-    if(t<ta)return .5*acc*t*t;
-    if(t<=T-ta)return .5*acc*ta*ta+vmax*(t-ta);
-    return d-.5*acc*(T-t)*(T-t);
-  }
-  const ta=Math.sqrt(d/acc);
-  return t<ta ? .5*acc*t*t : d-.5*acc*(T-t)*(T-t);
-}
-function axisV(t,d,vmax,acc){
-  if(d<=0)return 0;
-  const T=axisT(d,vmax,acc);if(t<0||t>T)return 0;
-  const vpk=d>=vmax*vmax/acc?vmax:acc*Math.sqrt(d/acc),ta=vpk/acc;
-  if(t<ta)return acc*t;if(t<=T-ta)return vpk;return acc*(T-t);
-}
+/* 0728 抽离步3:本页原有的页内 axisT/axisPos/axisV 是**从未被调用的死代码**(本页 runtime 用的是
+   自己那套带 motion 参数的实现),随抽离一并清除;曲线实现现在统一在 src/s3_motion.js,两页共用。
+   本页 trace 的 meta.motion 决定档位(含 constant_speed 匀速档),且**不含**满载升降折减——
+   与 01 的速度差异是 sim 口径差,不是渲染 bug。 */
 
 /* ===== 以下为 02 页专属拓扑:I/O 交接台 + 并行双线 ===== */
 /* 0719 紫框整修:IO 交接台从「纯黄躺块」改设备形态——钢灰台体+两条黄警示边条(位置/占地不变) */
@@ -1315,6 +1295,7 @@ resizeScene();
 <script src="../out/s3_mixed_dispatch_sweep.js"></script>
 <script src="./s3_trace_store.js"></script>
 <script src="./s3_heat_layer.js"></script>
+<script src="./s3_motion.js"></script>
 <script src="./s3_ac_runtime.js"></script>
 <script src="./s3_mixed_layout_a_interactions.js"></script>
 </body>

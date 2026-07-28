@@ -650,49 +650,16 @@
     return Math.max(0, Number(checkpoint.loop) || 0) * timeline.total + local;
   }
 
-  function axisTime(distance, vmax, accel, motion) {
-    if (distance <= 0) return 0;
-    if (motion === "constant_speed") return distance / vmax;
-    return distance >= vmax * vmax / accel ? distance / vmax + vmax / accel : 2 * Math.sqrt(distance / accel);
-  }
-
-  function axisPosition(time, distance, vmax, accel, motion) {
-    if (distance <= 0) return 0;
-    const total = axisTime(distance, vmax, accel, motion), t = clamp(time, 0, total);
-    if (motion === "constant_speed") return Math.min(distance, vmax * t);
-    if (distance >= vmax * vmax / accel) {
-      const ramp = vmax / accel;
-      if (t < ramp) return 0.5 * accel * t * t;
-      if (t <= total - ramp) return 0.5 * accel * ramp * ramp + vmax * (t - ramp);
-      return distance - 0.5 * accel * (total - t) * (total - t);
-    }
-    const ramp = Math.sqrt(distance / accel);
-    return t < ramp ? 0.5 * accel * t * t : distance - 0.5 * accel * (total - t) * (total - t);
-  }
-
-  function axisVelocity(time, distance, vmax, accel, motion) {
-    if (distance <= 0) return 0;
-    const total = axisTime(distance, vmax, accel, motion), t = clamp(time, 0, total);
-    if (motion === "constant_speed") return t >= total ? 0 : vmax;
-    const peak = distance >= vmax * vmax / accel ? vmax : accel * Math.sqrt(distance / accel);
-    const ramp = peak / accel;
-    if (t < ramp) return accel * t;
-    if (t <= total - ramp) return peak;
-    return Math.max(0, accel * (total - t));
-  }
+  /* 0728 抽离步3:曲线实现搬进 src/s3_motion.js 与 01 共用;**数值口径一位不改**,
+     由 tools/test_s3_motion_parity.mjs 用抽离前的原始实现逐点 Object.is 比对锁死。
+     本页 trace 的 meta.motion 决定档位(trapezoid_accel / constant_speed 匀速档=档1 LOD);
+     本页**不含**满载升降折减(那是 01 页 sim 模型的口径),故两页同倍速下升降速度本就不同。 */
+  const axisTime = (distance, vmax, accel, motion) => S3Motion.axisTime(distance, vmax, accel, motion);
+  const axisPosition = (time, distance, vmax, accel, motion) => S3Motion.axisPosition(time, distance, vmax, accel, motion);
+  const axisVelocity = (time, distance, vmax, accel, motion) => S3Motion.axisVelocity(time, distance, vmax, accel, motion);
 
   function motionPoint(trace, from, to, u) {
-    const dx = Math.abs(to[0] - from[0]), dz = Math.abs(to[1] - from[1]);
-    const motion = trace.meta.motion;
-    const tx = axisTime(dx, VX, AX, motion), tz = axisTime(dz, VZ, AZ, motion), total = Math.max(tx, tz);
-    const t = clamp(u, 0, 1) * total;
-    const sx = Math.sign(to[0] - from[0]), sz = Math.sign(to[1] - from[1]);
-    return {
-      x: from[0] + sx * axisPosition(t, dx, VX, AX, motion),
-      z: from[1] + sz * axisPosition(t, dz, VZ, AZ, motion),
-      vx: sx * axisVelocity(t, dx, VX, AX, motion),
-      vz: sz * axisVelocity(t, dz, VZ, AZ, motion), total
-    };
+    return S3Motion.point(from, to, u, {vx: VX, vz: VZ, ax: AX, az: AZ, motion: trace.meta.motion});
   }
 
   /* 七步路径计划与 cargoWorldPosition 共用坐标真相源。

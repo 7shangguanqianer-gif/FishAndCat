@@ -1613,30 +1613,9 @@ const S3_SCENE_CONFIG=Object.freeze({
 </script>
 <script src="./s3_scene_core.js"></script>
 <script>
-/* 运动学曲线属抽离步3 范围,本步不动:两页默认分支逐字数学等价,改动会牵连速度口径(红线)。
-   本页的满载升降折减 laden_vy_factor 在 s3_fill_candidate_runtime.js 内,不在这里。 */
-function axisT(d,vmax,acc){
-  if(d<=0)return 0;
-  return d>=vmax*vmax/acc ? d/vmax+vmax/acc : 2*Math.sqrt(d/acc);
-}
-function axisPos(t,d,vmax,acc){
-  if(d<=0)return 0;
-  const T=axisT(d,vmax,acc);t=Math.min(Math.max(t,0),T);
-  if(d>=vmax*vmax/acc){
-    const ta=vmax/acc;
-    if(t<ta)return .5*acc*t*t;
-    if(t<=T-ta)return .5*acc*ta*ta+vmax*(t-ta);
-    return d-.5*acc*(T-t)*(T-t);
-  }
-  const ta=Math.sqrt(d/acc);
-  return t<ta ? .5*acc*t*t : d-.5*acc*(T-t)*(T-t);
-}
-function axisV(t,d,vmax,acc){
-  if(d<=0)return 0;
-  const T=axisT(d,vmax,acc);if(t<0||t>T)return 0;
-  const vpk=d>=vmax*vmax/acc?vmax:acc*Math.sqrt(d/acc),ta=vpk/acc;
-  if(t<ta)return acc*t;if(t<=T-ta)return vpk;return acc*(T-t);
-}
+/* 0728 抽离步3:运动学曲线(axisT/axisPos/axisV)已搬进 src/s3_motion.js 与 02 共用;
+   本页 runtime 经 S3Motion.point() 调用并传入满载升降折减。数值口径一位未改,由
+   tools/test_s3_motion_parity.mjs 拿抽离前的原始实现逐点 Object.is 比对锁死。 */
 
 /* ===== 以下为 01 页专属拓扑:T 形互锁交接台 + 同侧并行双链 ===== */
 const CROSSBAR=Object.freeze({xMin:INFEED.x,xMax:OUTFEED.x,y:INFEED.loadY,z:.55});
@@ -1760,6 +1739,7 @@ resizeScene();
 })();
 </script>
 <script src="./s3_heat_layer.js"></script>
+<script src="./s3_motion.js"></script>
 <script src="./s3_fill_candidate_runtime.js"></script>
 <script src="./s3_layout_a_interactions.js"></script>
 </body>

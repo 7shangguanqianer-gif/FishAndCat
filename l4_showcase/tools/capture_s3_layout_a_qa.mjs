@@ -18,6 +18,8 @@ const RUNTIME = join(SHOWCASE, 'src', 's3_fill_candidate_runtime.js');
 const SCENE_CORE = join(SHOWCASE, 'src', 's3_scene_core.js');
 /* 0728 3D 抽离步2:货位热度层同样外提为两页共用模块,一并进快照。 */
 const HEAT_LAYER = join(SHOWCASE, 'src', 's3_heat_layer.js');
+/* 0728 3D 抽离步3:双轴运动学同样外提为两页共用模块(口径由 test_s3_motion_parity.mjs 锁死)。 */
+const MOTION = join(SHOWCASE, 'src', 's3_motion.js');
 const STORE = join(SHOWCASE, 'src', 's3_fill_store.js');
 const INTERACTIONS = join(SHOWCASE, 'src', 's3_layout_a_interactions.js');
 const DATA_GATE = join(SHOWCASE, 'out', 's3_fill_data_gate');
@@ -48,7 +50,7 @@ const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; char
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 mkdirSync(OUT, {recursive: true});
 const liveFiles = {
-  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, store: STORE, interactions: INTERACTIONS,
+  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, motion: MOTION, store: STORE, interactions: INTERACTIONS,
   shellCss: join(SHOWCASE, 'src', 's3_shell_v2.css'), /* 0719 V2 壳体共享语法 */
   three: join(SHOWCASE, 'src', 'lib', 'three.min.js'),
   orbit: join(SHOWCASE, 'src', 'lib', 'OrbitControls.js'),
@@ -68,6 +70,7 @@ const snapshotTargets = {
   runtime: join(SNAPSHOT, 'src', 's3_fill_candidate_runtime.js'),
   sceneCore: join(SNAPSHOT, 'src', 's3_scene_core.js'),
   heatLayer: join(SNAPSHOT, 'src', 's3_heat_layer.js'),
+  motion: join(SNAPSHOT, 'src', 's3_motion.js'),
   store: join(SNAPSHOT, 'src', 's3_fill_store.js'),
   interactions: join(SNAPSHOT, 'src', 's3_layout_a_interactions.js'),
   shellCss: join(SNAPSHOT, 'src', 's3_shell_v2.css'),

@@ -202,21 +202,20 @@
     return {segment, progress: clamp((value - segment.d0) / segment.duration, 0, 1)};
   }
 
+  /* 0728 抽离步3:曲线实现搬进 src/s3_motion.js 与 02 共用;**数值口径一位不改**,
+     由 tools/test_s3_motion_parity.mjs 用抽离前的原始实现逐点 Object.is 比对锁死。
+     满载升降折减是本页 sim 模型的一部分(payload.shared_input_provenance.motion.model =
+     trapezoid_accel_plus_laden_vertical_factor),不是渲染选择;02 页 trace 无此项,故两页
+     同倍速下升降速度本就不同——那不是 bug,改任一边都会让显示与该页 trace 时刻脱节。 */
+  const LADEN_VY_FACTOR = 0.8;   /* 来源 sim/warehouse_sim.py:78(行业依据 Mecalux .818 / Muvro .667 取 .80) */
+
   function motionAxis(time, distance, vmax, accel) {
-    if (distance <= 0) return {position: 0, velocity: 0, total: 0};
-    const total = axisT(distance, vmax, accel), t = clamp(time, 0, total);
-    const position = axisPos(t, distance, vmax, accel), velocity = axisV(t, distance, vmax, accel);
-    return {position, velocity, total};
+    return S3Motion.axisState(time, distance, vmax, accel);
   }
 
   function motionPoint(from, to, progress, loaded) {
-    const dx = Math.abs(to[0] - from[0]), dz = Math.abs(to[1] - from[1]);
-    const tx = axisT(dx, VX, AX), vz = loaded ? VZ * 0.8 : VZ, tz = axisT(dz, vz, AZ), total = Math.max(tx, tz);
-    const t = clamp(progress, 0, 1) * total;
-    const mx = motionAxis(t, dx, VX, AX), mz = motionAxis(t, dz, vz, AZ);
-    return {x: from[0] + Math.sign(to[0] - from[0]) * mx.position,
-      z: from[1] + Math.sign(to[1] - from[1]) * mz.position,
-      vx: Math.sign(to[0] - from[0]) * mx.velocity, vz: Math.sign(to[1] - from[1]) * mz.velocity, total};
+    return S3Motion.point(from, to, progress,
+      {vx: VX, vz: VZ, ax: AX, az: AZ, ladenVzFactor: loaded ? LADEN_VY_FACTOR : 1});
   }
 
   function pointOnPolyline(points, progress) {
