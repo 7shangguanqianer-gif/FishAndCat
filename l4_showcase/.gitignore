@@ -1,0 +1,8 @@
+# 0724:QA 依赖本地化(codex 清空共享 pnpm 缓存导致全部 Playwright 脚本崩溃后的加固)。
+# playwright 依赖记入 package.json,node_modules 不入库——环境再坏时 `npm i` 即可恢复。
+node_modules/
+
+# 设计档案与截图存档(体量大、非交付物;out/ 不整体忽略——内含 02 页真读的数据文件)
+design_mock_0721/
+design_reviews/screenshots_0716/
+design_reviews/screenshots_0716_incremental/
