@@ -1595,31 +1595,26 @@ const labelLeaders=document.createElementNS('http://www.w3.org/2000/svg','svg');
 const targetBeacon=document.createElement('div');targetBeacon.id='targetBeacon';targetBeacon.innerHTML='<b>目标货位 -- / --</b><span>等待轨迹</span>';targetBeacon.hidden=true;viewportEl.append(targetBeacon);
 const faultStateBanner=document.createElement('div');faultStateBanner.id='faultStateBanner';faultStateBanner.hidden=true;faultStateBanner.setAttribute('role','status');faultStateBanner.setAttribute('aria-live','polite');faultStateBanner.innerHTML='<b>SIM 故障恢复</b><span>模型故障 · 设备保持</span>';viewportEl.append(faultStateBanner);
 
-/* 黄金参照常量：tools/anim3d_formal.py:44-60,64-125,194-237,418-428 */
-const N=20, Z0=-0.5;
-const VX=2.0,VZ=0.5,AX=0.5,AZ=0.3,T_LOAD=4.0,T_DWELL=4.0;
-/* canonical 仍只有一个逻辑 I/O=(0,0)。两条物理链仅在展示层映射该锚点，不进入 sim/KPI。 */
-const IO={x:0.5,y:-0.75,z:0.5};
-/* 同侧并行双链：两条链沿 y 轴垂直货架，横向 T 形转接台只做互锁交接。 */
-const INFEED=Object.freeze({x:-0.45,entryY:-5.55,loadY:-1.55,z:.55,width:1.02,direction:'toward-rack'});
-const OUTFEED=Object.freeze({x:1.45,startY:-1.55,scanY:-2.75,maskY:-3.95,endY:-5.55,z:.55,width:1.02,direction:'away-from-rack'});
-const CROSSBAR=Object.freeze({xMin:INFEED.x,xMax:OUTFEED.x,y:INFEED.loadY,z:.55});
-const TRANSFER_ANCHOR=Object.freeze({x:IO.x,y:IO.y,z:.55});
-const CONVEYOR_ENVELOPES=Object.freeze({
-  infeed:Object.freeze({xMin:INFEED.x-.59,xMax:INFEED.x+.59,yMin:INFEED.entryY-.05,yMax:INFEED.loadY+.05}),
-  outfeed:Object.freeze({xMin:OUTFEED.x-.59,xMax:OUTFEED.x+.59,yMin:OUTFEED.endY-.05,yMax:OUTFEED.startY+.05})
+/* 0728 3D 抽离步1(docs/任务规划_0728_3D抽离与悬浮.md 阶段一):公共几何 + 材质 + 货架 / 堆垛机 /
+   工位实体已迁往 src/s3_scene_core.js,与 02 页共用同一份实现——两页三维长期同源分叉、各自内联
+   演化是热力与 FX 代差的根因。本页在公共内核之前只声明拓扑差异配置,之后再补本页专属的
+   T 形互锁交接台、同侧并行双链走线与自适应取景。 */
+const S3_SCENE_CONFIG=Object.freeze({
+  /* 同侧并行双链：两条链沿 y 轴垂直货架，横向 T 形转接台只做互锁交接。 */
+  infeed:{x:-0.45,entryY:-5.55,loadY:-1.55,z:.55,width:1.02,direction:'toward-rack'},
+  outfeed:{x:1.45,startY:-1.55,scanY:-2.75,maskY:-3.95,endY:-5.55,z:.55,width:1.02,direction:'away-from-rack'},
+  topology:{logicalOrigin:[0,0],visualOnly:true,singleAisle:true,singleRackFace:true,
+    parallel:true,parallelAxis:'y',sharedBelt:false,sameSide:true,tJunction:true,rackFrontY:0},
+  /* 到位传感器贴装载工位中心(无 y 偏移);防撞柱 -.24 且柱身仍是纯琥珀(02 用黄黑警示环纹)。 */
+  station:{sensorYOffset:0,bollardYOffset:-.24,bollardStyle:'amber'},
+  /* 动态轨迹段至少 1 个箭头(02 允许虚线段显式 0 箭头)。 */
+  path:{arrowCountMin:1}
 });
-const TRANSFER_TOPOLOGY=Object.freeze({logicalOrigin:[0,0],visualOnly:true,singleAisle:true,singleRackFace:true,
-  parallel:true,parallelAxis:'y',sharedBelt:false,sameSide:true,tJunction:true,rackFrontY:0});
-/* 纵深严格回源 tools/anim3d_formal.py:201-213：单深位 0.95 m，不增加第二存储面。 */
-const RACK=Object.freeze({frontY:0,backY:.95,backPanelY:1.005,depth:.95,loadY:.50,baseY:.40});
-const C={bg:0xe7ecef,floor:0xcbd3d9,seam:0x8f9da7,pad:0xc1cbd1,body:0x526471,
-  inner:0x3f4f5b,edge:0xc8d2d8,plinth:0x465761,cap:0x75848f,digit:'#4d5962',
-  /* 仍是正式脚本的蓝色分级角色，但扩大明度/饱和度间隔，避免货物与货架、桅杆混成一片。 */
-  heavy:0x102a43,mid:0x006bb6,light:0x42c7e6,lid:0x0b1f33,alarm:0xb71c1c,
-  amber:0xe7b800,path:0xff6a00,returnPath:0x0084a8,rail:0x64717c,mast:0x123b62,carriage:0x376e9b,
-  infeed:0x214e78,outfeed:0x0084a8};
-
+</script>
+<script src="./s3_scene_core.js"></script>
+<script>
+/* 运动学曲线属抽离步3 范围,本步不动:两页默认分支逐字数学等价,改动会牵连速度口径(红线)。
+   本页的满载升降折减 laden_vy_factor 在 s3_fill_candidate_runtime.js 内,不在这里。 */
 function axisT(d,vmax,acc){
   if(d<=0)return 0;
   return d>=vmax*vmax/acc ? d/vmax+vmax/acc : 2*Math.sqrt(d/acc);
@@ -1642,174 +1637,12 @@ function axisV(t,d,vmax,acc){
   const vpk=d>=vmax*vmax/acc?vmax:acc*Math.sqrt(d/acc),ta=vpk/acc;
   if(t<ta)return acc*t;if(t<=T-ta)return vpk;return acc*(T-t);
 }
-const mount=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,alpha:false});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.78;
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.setClearColor(VISUAL.bg);mount.appendChild(renderer.domElement);
-const scene=new THREE.Scene();scene.background=new THREE.Color(VISUAL.bg);
-const camera=new THREE.PerspectiveCamera(32,1,.1,180);camera.up.set(0,0,1);
-const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.055;
-controls.target.set(N/2,.5,8);
-/* 总览预设是统一起点；允许受限 Orbit/Pan/Zoom 供评委检查，不允许钻入模型或落到地面下。 */
-controls.enablePan=true;controls.screenSpacePanning=true;controls.minDistance=15;controls.maxDistance=56;
-controls.minPolarAngle=THREE.MathUtils.degToRad(34);controls.maxPolarAngle=THREE.MathUtils.degToRad(86);
 
-/* 不增加灯数量：按部件调节同色 emissive，拉开层板/阴影/前缘的明度角色。 */
-const mat=(color,rough=.72,metal=.08,glow=.055)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal,
-  emissive:new THREE.Color(color).multiplyScalar(glow)});
-const M={floor:mat(C.floor,.9,0,.018),pad:mat(C.pad,.82,.02,.025),body:mat(C.body,.68,.24,.03),inner:mat(C.inner,.88,.04,.01),
-  edge:mat(C.edge,.55,.18,.08),major:mat(0x536572,.54,.32,.05),plinth:mat(C.plinth,.58,.34,.025),cap:mat(C.cap,.62,.26,.035),
-  heavy:mat(C.heavy,.7,.06,.045),mid:mat(C.mid,.73,.05,.055),light:mat(C.light,.76,.04,.065),lid:mat(C.lid,.58,.16,.045),
-  amber:mat(C.amber,.56,.04,.12),rail:mat(C.rail,.5,.5,.035),mast:mat(C.mast,.42,.5,.045),carriage:mat(C.carriage,.5,.35,.055)};
-M.alarm=mat(C.alarm,.46,.05,.16);
-M.floorRack=mat(0xb6c2ca,.91,0,.018);M.floorAisle=mat(0xa6b4bd,.92,0,.016);
-M.floorIO=new THREE.MeshStandardMaterial({color:C.amber,roughness:.92,metalness:0,transparent:true,opacity:.14,depthWrite:false});
-M.floorStripe=mat(0xf3f5f6,.88,0,.04);
-M.deck=mat(0x6f7c87,.70,.24,.028);M.cavity=mat(0x35424e,.94,.02,.008);
-M.rubber=mat(0x202830,.82,.08,.015);M.wood=mat(0x9b6a3c,.82,.02,.035);M.sensor=mat(0x26333e,.54,.28,.045);
-M.rackBack=mat(0x33434f,.86,.10,.018);M.rackBrace=mat(0x667781,.60,.28,.035);M.foot=mat(0x53636e,.58,.30,.028);
-M.scanFrame=mat(0x1f6f96,.48,.22,.095);
-M.infeedRail=mat(C.infeed,.54,.30,.065);M.outfeedRail=mat(C.outfeed,.50,.26,.085);
-M.scanBeam=new THREE.MeshBasicMaterial({color:0x41b6e6,transparent:true,opacity:.78,depthWrite:false});
-M.exitCurtain=new THREE.MeshBasicMaterial({color:0x9fc7d8,transparent:true,opacity:.20,depthWrite:false,side:THREE.DoubleSide});
-const reservedCanvas=document.createElement('canvas');reservedCanvas.width=128;reservedCanvas.height=128;const reserved2d=reservedCanvas.getContext('2d');
-reserved2d.fillStyle='#65727d';reserved2d.fillRect(0,0,128,128);reserved2d.strokeStyle='#aeb8bf';reserved2d.lineWidth=8;
-for(let i=-128;i<256;i+=28){reserved2d.beginPath();reserved2d.moveTo(i,128);reserved2d.lineTo(i+128,0);reserved2d.stroke();}
-reserved2d.strokeStyle='#46535e';reserved2d.lineWidth=7;reserved2d.strokeRect(4,4,120,120);
-const reservedTexture=new THREE.CanvasTexture(reservedCanvas);reservedTexture.anisotropy=renderer.capabilities.getMaxAnisotropy();
-M.reserved=new THREE.MeshStandardMaterial({map:reservedTexture,color:0xffffff,roughness:.78,metalness:.04,emissive:new THREE.Color(0x182028).multiplyScalar(.05)});M.reservedMark=mat(0xcbd2d7,.62,.18,.07);
-M.activeCargo=mat(0x42a5f5,.48,.10,.13);
-function addBox(sx,sy,sz,x,y,z,material,cast=true,receive=true){
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);mesh.position.set(x,y,z);
-  mesh.castShadow=cast;mesh.receiveShadow=receive;scene.add(mesh);return mesh;
-}
-function addInstances(sx,sy,sz,positions,material,cast=true,receive=true){
-  const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(sx,sy,sz),material,positions.length),dummy=new THREE.Object3D();
-  positions.forEach((p,i)=>{dummy.position.set(p[0],p[1],p[2]);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
-  mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=cast;mesh.receiveShadow=receive;scene.add(mesh);return mesh;
-}
-const INSTANCE_BOUNDS_EPS=1e-7;
-function deriveInstanceBounds(mesh,expectedMinY,expectedMaxY){
-  mesh.geometry.computeBoundingBox();const local=mesh.geometry.boundingBox.clone(),matrix=new THREE.Matrix4(),box=new THREE.Box3(),bounds=new THREE.Box3().makeEmpty();
-  const depths=[],failedIndices=[];let maxFrontError=0,maxBackError=0;
-  for(let index=0;index<mesh.count;index++){
-    mesh.getMatrixAt(index,matrix);box.copy(local).applyMatrix4(matrix);bounds.union(box);
-    const depth=box.max.y-box.min.y,frontError=Math.abs(box.min.y-expectedMinY),backError=Math.abs(box.max.y-expectedMaxY);
-    depths.push(depth);maxFrontError=Math.max(maxFrontError,frontError);maxBackError=Math.max(maxBackError,backError);
-    if(frontError>INSTANCE_BOUNDS_EPS||backError>INSTANCE_BOUNDS_EPS||Math.abs(depth-(expectedMaxY-expectedMinY))>INSTANCE_BOUNDS_EPS)failedIndices.push(index);
-  }
-  const perInstance=Object.freeze({count:depths.length,minDepth:Math.min(...depths),maxDepth:Math.max(...depths),
-    maxFrontError,maxBackError,failedIndices:Object.freeze(failedIndices),scannedFromInstanceMatrices:true});
-  return Object.freeze({min:Object.freeze(bounds.min.toArray()),max:Object.freeze(bounds.max.toArray()),
-    size:Object.freeze(bounds.getSize(new THREE.Vector3()).toArray()),count:mesh.count,perInstance,derivedFromInstanceMatrices:true});
-}
-function addSegmentInstances(segments,r,material){
-  const mesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(r,r,1,8),material,segments.length),dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0);
-  segments.forEach(([a,b],i)=>{const d=b.clone().sub(a),len=d.length();dummy.position.copy(a).add(b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(up,d.normalize());dummy.scale.set(1,len,1);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
-  mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);return mesh;
-}
-function partBox(parent,sx,sy,sz,x,y,z,material,cast=true,receive=true){
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);mesh.position.set(x,y,z);
-  mesh.castShadow=cast;mesh.receiveShadow=receive;parent.add(mesh);return mesh;
-}
-function partCylinder(parent,r,depth,x,y,z,material,segments=16){
-  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,depth,segments),material);mesh.position.set(x,y,z);
-  mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
-}
-function partFaceLabel(parent,text,x,y,z,w=.30,h=.12){
-  const cv=document.createElement('canvas');cv.width=256;cv.height=96;const g=cv.getContext('2d');
-  g.fillStyle='#edf1f4';g.fillRect(0,0,256,96);g.strokeStyle='#17365d';g.lineWidth=8;g.strokeRect(4,4,248,88);
-  g.fillStyle='#17365d';g.font='700 46px "Microsoft YaHei", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(text,128,50);
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:false}));
-  mesh.rotation.x=Math.PI/2;mesh.position.set(x,y,z);parent.add(mesh);return mesh;
-}
-function addFloorFlowLabel(text,x,y,color='#17365d'){
-  const cv=document.createElement('canvas');cv.width=512;cv.height=128;const g=cv.getContext('2d');
-  g.clearRect(0,0,512,128);g.fillStyle='rgba(247,249,250,.88)';g.fillRect(0,12,512,104);
-  g.strokeStyle=color;g.lineWidth=7;g.strokeRect(4,16,504,96);g.fillStyle=color;
-  g.font='800 54px "Microsoft YaHei", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(text,256,65);
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(2.20,.55),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));
-  mesh.position.set(x,y,Z0+.026);mesh.renderOrder=2;scene.add(mesh);return mesh;
-}
-
-/* T3 空间基底：x 围绕货架中心 10、y 围绕单巷道中心 IO.y=-.75 对称展开。 */
-const FLOOR={x0:-7.5,x1:N+3,y0:-8.65,y1:7.15};
-addBox(FLOOR.x1-FLOOR.x0,FLOOR.y1-FLOOR.y0,.08,(FLOOR.x0+FLOOR.x1)/2,(FLOOR.y0+FLOOR.y1)/2,Z0-.04,M.floor,false,true);
-/* 货架基础区 / 设备轨道区 / I/O 交接区，均稍离地避免 Z-fighting。 */
-addBox(N+1.4,1.9,.012,N/2,.50,Z0+.006,M.floorRack,false,true);
-addBox(N+1.4,1.45,.014,N/2,IO.y-.01,Z0+.007,M.floorAisle,false,true);
-/* 同侧并行双链各自有独立设备基底；T 形横向交接台与逻辑 I/O 另设连续净空区。 */
-addBox(1.55,Math.abs(INFEED.loadY-INFEED.entryY)+.55,.016,INFEED.x,(INFEED.entryY+INFEED.loadY)/2,Z0+.009,M.floorIO,false,true);
-addBox(1.55,Math.abs(OUTFEED.startY-OUTFEED.endY)+.55,.016,OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,Z0+.009,M.floorIO,false,true);
+/* ===== 以下为 01 页专属拓扑:T 形互锁交接台 + 同侧并行双链 ===== */
+const CROSSBAR=Object.freeze({xMin:INFEED.x,xMax:OUTFEED.x,y:INFEED.loadY,z:.55});
+/* T 形横向交接台与逻辑 I/O 另设连续净空区(公共内核只铺两条链各自的设备基底)。 */
 addBox(Math.abs(CROSSBAR.xMax-CROSSBAR.xMin)+1.20,1.40,.017,IO.x,CROSSBAR.y,Z0+.010,M.floorIO,false,true);
 addBox(1.20,Math.abs(CROSSBAR.y-IO.y)+.70,.017,IO.x,(CROSSBAR.y+IO.y)/2,Z0+.011,M.floorIO,false,true);
-const seams=new THREE.Group();
-function seamLine(a,b){const g=new THREE.BufferGeometry().setFromPoints([a,b]);seams.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:C.seam})));}
-for(let x=FLOOR.x0+1;x<FLOOR.x1;x+=2)seamLine(new THREE.Vector3(x,FLOOR.y0,Z0+.022),new THREE.Vector3(x,FLOOR.y1,Z0+.022));
-for(let y=IO.y-6;y<=IO.y+6;y+=2)seamLine(new THREE.Vector3(FLOOR.x0,y,Z0+.022),new THREE.Vector3(FLOOR.x1,y,Z0+.022));
-const floorOutline=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
-  new THREE.Vector3(FLOOR.x0,FLOOR.y0,Z0+.024),new THREE.Vector3(FLOOR.x1,FLOOR.y0,Z0+.024),
-  new THREE.Vector3(FLOOR.x1,FLOOR.y1,Z0+.024),new THREE.Vector3(FLOOR.x0,FLOOR.y1,Z0+.024)
-]),new THREE.LineBasicMaterial({color:0x7d8992}));scene.add(floorOutline);
-scene.add(seams);
-/* 轨道安全边界与端部停止线；中性白线不消费报警红或目标琥珀语义。 */
-[IO.y-.79,IO.y+.79].forEach(y=>addBox(N+1.4,.035,.018,N/2,y,Z0+.022,M.floorStripe,false,false));
-[-.70,N+.70].forEach(x=>addBox(.035,1.61,.018,x,IO.y,Z0+.022,M.floorStripe,false,false));
-
-/* I/O 站与单深位货架：恢复正式脚本的 0.95 m 纵深；同材质重复件继续实例化。 */
-addBox(1.4,1.7,.02,IO.x,IO.y-1.00,Z0+.01,M.pad,false,true);
-/* 正式参照：底座 y=-.30..1.10；后背 y=.95..1.06；层板/立柱贯穿 y=0..95。 */
-addBox(N+.6,1.40,.50,N/2,RACK.baseY,Z0+.25,M.plinth,true,true);
-addBox(N,.11,N,N/2,RACK.backPanelY,N/2,M.rackBack,true,true);
-  const CELL_FACE=.94,CELL_BACK_FRONT=.925,availableCellBacks=[],reservedCellVolumes=[];
-  for(let x=0;x<N;x++)for(let z=0;z<N;z++){
-    const reserved=(x+z)%3===0;
-    (reserved?reservedCellVolumes:availableCellBacks).push([x+.5,reserved?RACK.depth/2:.9375,z+.5]);
-  }
-  if(reservedCellVolumes.length!==133)throw new Error(`预占格数量异常 ${reservedCellVolumes.length}`);
-  /* 可用格仍是后腔；预占格改为 0..0.95 m 的完整封闭体。0.94 m 正好贴合 0.06 m 梁内缘，
-     133 个封闭体前表面统一齐平 RACK.frontY，后表面统一齐平 RACK.backY，不是贴在格底/格后的薄片。 */
-  addInstances(CELL_FACE,.025,CELL_FACE,availableCellBacks,M.inner,false,true);
-  const reservedVolumeMesh=addInstances(CELL_FACE,RACK.depth,CELL_FACE,reservedCellVolumes,M.reserved,false,true),
-    reservedBounds=deriveInstanceBounds(reservedVolumeMesh,RACK.frontY,RACK.backY);
-  const reservedMinY=reservedBounds.min[1],reservedMaxY=reservedBounds.max[1],beamInnerInset=(1-CELL_FACE)/2;
-  window.__S3_GEOMETRY_AUDIT=Object.freeze({rackDepth:RACK.depth,rackLoadY:RACK.loadY,beamWidth:.06,cellFace:CELL_FACE,
-    availableFrontY:CELL_BACK_FRONT,reservedMinY,reservedMaxY,reservedDepth:reservedMaxY-reservedMinY,
-    reservedCount:reservedVolumeMesh.count,availableCount:availableCellBacks.length,reservedBounds,reservedInstanceAudit:reservedBounds.perInstance,
-    frontFlushError:Math.abs(reservedMinY-RACK.frontY),backFlushError:Math.abs(reservedMaxY-RACK.backY),
-    beamInnerInset,beamInnerFitError:Math.abs(beamInnerInset-.03),actualBoundsDerived:reservedBounds.derivedFromInstanceMatrices});
-addInstances(N,RACK.depth,.06,Array.from({length:N+1},(_,z)=>[N/2,RACK.depth/2,z]),M.body,true,true);
-addInstances(.06,RACK.depth,N,Array.from({length:N+1},(_,x)=>[x,RACK.depth/2,N/2]),M.body,true,true);
-/* 前缘保持浅色以读清 20×20，后框/腔体更暗，纵深由真实几何和阴影产生。 */
-addInstances(N,.064,.072,Array.from({length:N+1},(_,z)=>[N/2,.01,z]),M.edge,true,true);
-addInstances(.072,.064,N,Array.from({length:N+1},(_,x)=>[x,.01,N/2]),M.edge,true,true);
-addInstances(N,.052,.052,Array.from({length:N+1},(_,z)=>[N/2,.93,z]),M.rackBrace,true,true);
-const majorXs=Array.from({length:6},(_,index)=>index*4),majorPosts=[];
-majorXs.forEach(x=>{majorPosts.push([x,.04,N/2],[x,.91,N/2]);});
-addInstances(.10,.10,N+.16,majorPosts,M.major,true,true);
-const depthTies=[];majorXs.forEach(x=>{for(let z=0;z<=N;z+=4)depthTies.push([x,RACK.depth/2,z]);});
-addInstances(.10,RACK.depth,.10,depthTies,M.rackBrace,true,true);
-const braceSegments=[];[0,N].forEach(x=>{for(let z=0;z<N;z+=4){const top=Math.min(N,z+4);
-  braceSegments.push([new THREE.Vector3(x,.08,z+.14),new THREE.Vector3(x,.87,top-.14)]);
-  braceSegments.push([new THREE.Vector3(x,.87,z+.14),new THREE.Vector3(x,.08,top-.14)]);
-}});addSegmentInstances(braceSegments,.026,M.rackBrace);
-const feet=[];majorXs.forEach(x=>{feet.push([x,.03,Z0+.025],[x,.92,Z0+.025]);});
-addInstances(.30,.28,.05,feet,M.foot,true,true);
-addBox(N+.6,1.28,.16,N/2,.46,N+.08,M.cap,true,true);
-
-function makeLabel(text,x,z,scale=.9){
-  const cv=document.createElement('canvas');cv.width=128;cv.height=64;const g=cv.getContext('2d');
-  g.clearRect(0,0,128,64);g.font='700 36px Arial';g.textAlign='center';g.textBaseline='middle';g.fillStyle=C.digit;g.fillText(text,64,32);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:true}));
-  sp.scale.set(scale,scale*.5,1);sp.position.set(x,-.34,z);scene.add(sp);
-}
-/* 数字坐标不再贴在三维背景上；目标坐标由清晰 DOM 信标承担。 */
-
-/* 官方 sum 规则预占封板已作为背板单元嵌入货架，不再在货架前表面叠放灰片。 */
-/* 单巷道轨道 + 同侧并行双链。两条链与货架垂直，在 T 形互锁台映射到唯一逻辑 I/O。 */
-addBox(N+1,.14,.08,N/2,IO.y,Z0+.04,M.rail,true,true);
 addBox(2.36,.88,.16,IO.x,CROSSBAR.y,Z0+.10,M.major,true,true);
 addBox(.92,.84,.16,IO.x,(CROSSBAR.y+IO.y)/2,Z0+.10,M.amber,true,true);
 
@@ -1825,165 +1658,26 @@ function addTransferBridge(from,to,material,width=.62,trimFrom=0,thickness=.09,z
   bridge.position.set(from.x+ux*(trimFrom+len/2),from.y+uy*(trimFrom+len/2),zTop-thickness/2);
   bridge.rotation.z=angle;bridge.castShadow=true;bridge.receiveShadow=true;scene.add(bridge);return bridge;
 }
-/* 结构件统一为 Factory I/O 式中性钢灰；方向只由地贴、工位与动态路径编码。 */
-M.infeedRail=M.outfeedRail=mat(0x6f7c87,.56,.34,.035);
-function addConveyorRollerY(x,y){const r=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.92,12),M.edge);r.rotation.z=Math.PI/2;r.position.set(x,y,.15);r.castShadow=true;scene.add(r);}
-function addConveyorLaneY(lane,nearY,farY,laneMaterial){
-  const center=(nearY+farY)/2,len=Math.abs(nearY-farY),direction=Math.sign(farY-nearY)||1;
-  [-.54,.54].forEach(dx=>addBox(.10,len+.10,.18,lane.x+dx,center,.08,laneMaterial,true,true));
-  [nearY,center,farY].forEach(y=>[-.54,.54].forEach(dx=>addBox(.12,.12,.58,lane.x+dx,y,Z0+.29,laneMaterial,true,true)));
-  for(let y=nearY;direction>0?y<=farY:y>=farY;y+=direction*.28)addConveyorRollerY(lane.x,y);addConveyorRollerY(lane.x,farY);
-}
-addConveyorLaneY(INFEED,INFEED.entryY,INFEED.loadY,M.infeedRail);
-addConveyorLaneY(OUTFEED,OUTFEED.startY,OUTFEED.endY,M.outfeedRail);
+addConveyorLane(INFEED,INFEED.entryY,INFEED.loadY,M.infeedRail);
+addConveyorLane(OUTFEED,OUTFEED.startY,OUTFEED.endY,M.outfeedRail);
 addTransferBridge({x:CROSSBAR.xMin,y:CROSSBAR.y},{x:CROSSBAR.xMax,y:CROSSBAR.y},M.major,.56);
 /* 支线 trimFrom .30 = 横杆半宽(.28)+ 余量,自横杆外缘起算,消除 T 形接头处的全厚度互穿。 */
 addTransferBridge({x:IO.x,y:CROSSBAR.y},TRANSFER_ANCHOR,M.amber,.44,.30);
 addFloorFlowLabel('入库  ↑',INFEED.x,(INFEED.entryY+INFEED.loadY)/2,'#214e78');
 addFloorFlowLabel('出库  ↓',OUTFEED.x,(OUTFEED.startY+OUTFEED.endY)/2,'#0084a8');
 
-/* 入→装 与 卸→扫→出工位沿 y 轴布置；工位横梁跨 x，避免与货物流向混淆。 */
-const stationCollisionSolids=[];
-function stationSolid(mesh,label){mesh.userData.collisionLabel=label;stationCollisionSolids.push(mesh);return mesh;}
-const entryGate=new THREE.Group();entryGate.name='entryGate';scene.add(entryGate);
-[-.62,.62].forEach((dx,index)=>stationSolid(partBox(entryGate,.08,.08,.74,INFEED.x+dx,INFEED.entryY,.24,M.sensor),`ENTRY_POST_${index}`));
-stationSolid(partBox(entryGate,1.30,.08,.10,INFEED.x,INFEED.entryY,1.04,M.body),'ENTRY_BEAM');partFaceLabel(entryGate,'入',INFEED.x,INFEED.entryY-.045,1.14,.34,.20);
-const loadSign=new THREE.Group();loadSign.name='loadStation';scene.add(loadSign);partFaceLabel(loadSign,'装',INFEED.x,INFEED.loadY-.04,.245,.34,.16);
-const unloadSign=new THREE.Group();unloadSign.name='unloadStation';scene.add(unloadSign);partFaceLabel(unloadSign,'卸',OUTFEED.x,OUTFEED.startY-.04,.245,.34,.16);
-
-const scannerGate=new THREE.Group();scannerGate.name='scannerGate';scene.add(scannerGate);
-[-.64,.64].forEach((dx,index)=>stationSolid(partBox(scannerGate,.09,.09,1.58,OUTFEED.x+dx,OUTFEED.scanY,.29,M.scanFrame),`SCAN_POST_${index}`));
-stationSolid(partBox(scannerGate,1.37,.10,.12,OUTFEED.x,OUTFEED.scanY,1.04,M.scanFrame),'SCAN_BEAM');
-[-.57,.57].forEach((dx,index)=>stationSolid(partBox(scannerGate,.13,.13,.13,OUTFEED.x+dx,OUTFEED.scanY-.055,.55,M.scanBeam,false,false),`SCAN_HEAD_${index}`));
-partBox(scannerGate,1.05,.018,.026,OUTFEED.x,OUTFEED.scanY,.55,M.scanBeam,false,false);
-addBox(1.35,.055,.016,OUTFEED.x,OUTFEED.scanY,Z0+.030,M.scanBeam,false,false);
-partFaceLabel(scannerGate,'扫',OUTFEED.x,OUTFEED.scanY-.045,1.14,.34,.20);
-const exitCurtain=new THREE.Group();exitCurtain.name='exitCurtain';scene.add(exitCurtain);
-[-.64,.64].forEach((dx,index)=>stationSolid(partBox(exitCurtain,.09,.09,1.58,OUTFEED.x+dx,OUTFEED.maskY,.29,M.body),`EXIT_POST_${index}`));
-stationSolid(partBox(exitCurtain,1.37,.10,.12,OUTFEED.x,OUTFEED.maskY,1.04,M.body),'EXIT_BEAM');
-for(let dx=-.48;dx<=.481;dx+=.16)partBox(exitCurtain,.055,.018,1.00,OUTFEED.x+dx,OUTFEED.maskY,.50,M.exitCurtain,false,false);
-partFaceLabel(exitCurtain,'出',OUTFEED.x,OUTFEED.maskY-.045,1.14,.34,.20);
-
-/* 传感器与防撞柱只放在两条链的外缘；T 形横向交接区保持净空。 */
-[[INFEED.x,INFEED.loadY,0],[OUTFEED.x,OUTFEED.startY,1]].forEach(([x,y,index])=>[-.62,.62].forEach(dx=>{
-  stationSolid(addBox(.07,.07,.64,x+dx,y,Z0+.32,M.sensor,true,true),`STATION_SENSOR_${index}_${dx}`);
-  stationSolid(addBox(.12,.12,.10,x+dx,y,Z0+.64,M.amber,true,true),`STATION_CAP_${index}_${dx}`);
-}));
-[{x:INFEED.x-.78,y:INFEED.loadY-.24},{x:OUTFEED.x+.78,y:OUTFEED.startY-.24}].forEach((point,index)=>{
-  stationSolid(addBox(.14,.14,.88,point.x,point.y,Z0+.44,M.amber,true,true),`BOLLARD_${index}`);
-  stationSolid(addBox(.19,.19,.08,point.x,point.y,Z0+.04,M.rubber,true,true),`BOLLARD_BASE_${index}`);
-});
-
-/* 运行时只根据当前 event 的 from/to 生成轨迹；分段线性 curve 保留物理拐折，不做样条平滑。 */
-class PiecewiseLinearCurve extends THREE.Curve{
-  constructor(points){super();this.points=points;}
-  getPoint(t,target=new THREE.Vector3()){const f=Math.min(1,Math.max(0,t))*(this.points.length-1),i=Math.min(this.points.length-2,Math.floor(f));
-    return target.copy(this.points[i]).lerp(this.points[i+1],f-i);}
-}
-function addPath(points,options={}){const group=new THREE.Group(),material=new THREE.MeshBasicMaterial({
-    color:options.color??C.path,transparent:true,opacity:options.opacity??.2,depthWrite:false,depthTest:true}),
-    haloMaterial=new THREE.MeshBasicMaterial({color:0xf7fbff,transparent:true,opacity:0,depthWrite:false,depthTest:false});
-  const clean=points.filter((point,index)=>index===0||point.distanceTo(points[index-1])>1e-6);
-  if(clean.length===1){const halo=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),haloMaterial),marker=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),material);
-    halo.position.copy(clean[0]);marker.position.copy(clean[0]);group.add(halo,marker);}
-  else{const curve=new PiecewiseLinearCurve(clean),segments=Math.max(12,clean.length-1);
-    const halo=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.haloRadius??.25,8,false),haloMaterial),
-      mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.radius??.16,8,false),material);group.add(halo,mesh);
-    const arrowCount=Math.max(1,Math.min(3,options.arrowCount??2));
-    Array.from({length:arrowCount},(_,index)=>(index+1)/(arrowCount+1)).forEach(fr=>{const p=curve.getPoint(fr),p2=curve.getPoint(Math.min(1,fr+.02)),dir=p2.clone().sub(p);
-      if(dir.lengthSq()<1e-8)return;dir.normalize();const arrow=new THREE.Mesh(new THREE.ConeGeometry(.15,.36,10),material);
-      arrow.position.copy(p);arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);group.add(arrow);});}
-  group.userData={operationKey:options.operationKey||null,kind:options.kind||null};scene.add(group);return {group,material,haloMaterial};}
-/* 目标位线框。 */
-const targetMat=new THREE.LineBasicMaterial({color:C.amber,transparent:true,opacity:.9});
-const targetBox=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.92,.92,.92)),targetMat);
-targetBox.visible=false;scene.add(targetBox);
-const targetPadMat=new THREE.MeshStandardMaterial({color:C.amber,roughness:.72,metalness:.02,emissive:new THREE.Color(C.amber).multiplyScalar(.18),transparent:true,opacity:.52,depthWrite:false});
-const targetPad=addBox(.82,.76,.028,0,0,0,targetPadMat,false,false);targetPad.visible=false;
 /* 0717 #28 拍板目标格强高亮;0722c 对齐 02 现行 FX 语言(0718b 重构):大头针箭头淘汰
-   (02 早已无箭头实体,01 属过时残留,用户 0722 审计令清除),保留发光壳+格口面框——
-   目标语义由格位自身高亮承担,行进段显示、就位收敛,无悬空装饰物。 */
-const targetGlowMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide});
-const targetGlow=new THREE.Mesh(new THREE.BoxGeometry(1.0,.96,1.0),targetGlowMat);
-targetGlow.visible=false;targetGlow.renderOrder=3;scene.add(targetGlow);
-/* 格口面框:贴货架前表面的方框(外 1.0 / 内 .72),不受格内体积遮挡,正对镜头最醒目。 */
-const targetFaceShape=new THREE.Shape();
-targetFaceShape.moveTo(-.5,-.5);targetFaceShape.lineTo(.5,-.5);targetFaceShape.lineTo(.5,.5);targetFaceShape.lineTo(-.5,.5);targetFaceShape.closePath();
-const targetFaceHole=new THREE.Path();
-targetFaceHole.moveTo(-.36,-.36);targetFaceHole.lineTo(.36,-.36);targetFaceHole.lineTo(.36,.36);targetFaceHole.lineTo(-.36,.36);targetFaceHole.closePath();
-targetFaceShape.holes.push(targetFaceHole);
-const targetFaceMat=new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.92,depthWrite:false,side:THREE.DoubleSide});
-const targetFace=new THREE.Mesh(new THREE.ShapeGeometry(targetFaceShape),targetFaceMat);
-targetFace.rotation.x=Math.PI/2;/* shape xy 面 → 法线 -y(朝巷道),shape y → 世界 z(层高) */
-targetFace.visible=false;targetFace.renderOrder=5;scene.add(targetFace);
+   (01 属过时残留,用户 0722 审计令清除),保留发光壳 + 格口面框——目标语义由格位自身高亮承担,
+   行进段显示、就位收敛,无悬空装饰物。实体在公共内核,这里只组装本页的 FX 契约。 */
 window.__S3_TARGET_FX=Object.freeze({glow:targetGlow,glowMat:targetGlowMat,face:targetFace,faceMat:targetFaceMat,
   amber:new THREE.Color(C.amber),done:new THREE.Color(0x2f9e4f)});
-/* 堆垛机：黄金单桅杆不变；功能细节随同一个 world X 组移动。 */
-const mast=addBox(.24,.24,N+.5,IO.x,IO.y,(N+Z0)/2,M.mast,true,false);
-const machineParts=[
-  addBox(1.05,.86,.22,IO.x,IO.y,Z0+.17,M.carriage,true,true),
-  addBox(.82,.48,.18,IO.x,IO.y,N-.02,M.mast,true,true),
-  addBox(.46,.44,.42,IO.x,IO.y-.30,Z0+.44,M.lid,true,true)
-];
-const baseDetails=new THREE.Group();baseDetails.position.set(IO.x,IO.y,0);scene.add(baseDetails);machineParts.push(baseDetails);
-[-.36,.36].forEach(x=>partCylinder(baseDetails,.15,.18,x,0,Z0+.15,M.rubber,20));
-[-.58,.58].forEach(x=>partBox(baseDetails,.16,.48,.24,x,0,Z0+.24,M.rubber));
-/* 驱动柜置于桅杆右侧、载货台包络之外；门缝、状态条与铭牌只增强功能识别，不进入碰撞体。 */
-partBox(baseDetails,.26,.36,.58,.60,0,Z0+.48,M.lid);
-partBox(baseDetails,.19,.010,.43,.60,-.185,Z0+.48,M.body,false,false);
-partBox(baseDetails,.16,.012,.045,.60,-.192,Z0+.62,M.alarm,false,false);
-partFaceLabel(baseDetails,'ABB',.60,-.194,Z0+.43,.15,.055);
-const topDetails=new THREE.Group();topDetails.position.set(IO.x,IO.y,0);scene.add(topDetails);machineParts.push(topDetails);
-partCylinder(topDetails,.20,.22,0,0,N-.04,M.rubber,24);partBox(topDetails,.78,.38,.12,0,0,N+.12,M.mast);
-const beltGroup=new THREE.Group();beltGroup.position.set(IO.x,IO.y,0);scene.add(beltGroup);machineParts.push(beltGroup);
-const liftBelts=[-.16,.16].map(x=>partBox(beltGroup,.035,.045,1,x,.02,N/2,M.lid,false,false));
-/* 桅杆导轨、线缆链和维护横档：全部随 mast X 同步，仅补足设备尺度与功能细节。 */
-const mastDetails=new THREE.Group();mastDetails.position.set(IO.x,IO.y,0);scene.add(mastDetails);machineParts.push(mastDetails);
-[-.13,.13].forEach(x=>partBox(mastDetails,.035,.045,N+.10,x,-.13,(N+Z0)/2,M.edge,true,false));
-partBox(mastDetails,.045,.052,N-.30,.19,.07,(N+Z0)/2,M.lid,false,false);
-for(let z=.6;z<N;z+=2)partBox(mastDetails,.29,.038,.035,0,-.13,z,M.carriage,false,false);
-const carrier=new THREE.Group();scene.add(carrier);
-/* 载货台采用开式 U 型承载架；旧实心块会与木托盘/双叉占据同一体积，已删除。 */
-const carriage=new THREE.Group();carrier.add(carriage);
-[-.32,.32].forEach(x=>partBox(carriage,.08,.10,.78,x,-.38,.02,M.carriage));
-partBox(carriage,.72,.10,.08,0,-.38,-.34,M.carriage);partBox(carriage,.72,.10,.08,0,-.38,.40,M.carriage);
-[-.36,.36].forEach(x=>partBox(carrier,.08,.84,.07,x,.02,-.34,M.major));
-[-.36,.36].forEach(x=>[-.31,.31].forEach(y=>partBox(carrier,.08,.10,.34,x,y,-.05,M.edge)));
-/* 载货台护栏、提升导向与可动伸缩货叉。 */
-[-.39,.39].forEach(x=>{partBox(carrier,.055,.055,.72,x,-.34,.08,M.edge);partBox(carrier,.055,.055,.72,x,.34,.08,M.edge);});
-partBox(carrier,.84,.055,.055,0,-.34,.42,M.edge);[-.39,.39].forEach(x=>partBox(carrier,.055,.68,.055,x,0,.42,M.edge));
-const forkGroup=new THREE.Group();carrier.add(forkGroup);const forks=[];
-[-.18,.18].forEach(x=>forks.push(partBox(forkGroup,.12,1.10,.075,x,.30,-.28,M.lid)));
-[-.18,.18].forEach(x=>partBox(forkGroup,.13,.055,.09,x,.83,-.28,M.amber,false,false));
-/* 两个后置叉驱动座位于叉道外侧，既可见又不与叉体相交。 */
-[-.35,.35].forEach(x=>partBox(carrier,.06,.14,.08,x,-.29,-.27,M.sensor));
-const cargo=new THREE.Mesh(new THREE.BoxGeometry(.56,.54,.58),M.activeCargo);cargo.position.set(0,0,.05);cargo.castShadow=true;carrier.add(cargo);
-const cargoOutline=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.575,.555,.595)),new THREE.LineBasicMaterial({color:C.amber,transparent:true,opacity:1}));cargoOutline.name='activeCargoAmberOutline';cargo.add(cargoOutline);
-let forkExtension=0,forkDrop=0;
-/* 货叉最大伸出 .80 m：叉尖距 y=.95 的货架背板前表面保留 50 mm，同时完整承托深 .60 m 的木托盘。 */
-const FORK_MAX=.80,CARGO_REACH=RACK.loadY-TRANSFER_ANCHOR.y,CARGO_Z_OFFSET=.05,CARGO_DROP=.055,DROP_END=.55,TRANSFER_SPLIT=2.0,RETRACT_END=3.4;
-if(Math.abs(TRANSFER_ANCHOR.y+CARGO_REACH-RACK.loadY)>1e-9)throw new Error('货物入架纵深锚点不连续');
-cargo.visible=false;
-
-/* 候选版多位置打光：环境填充 + 前上主光 + 背侧轮廓光 + 低强度相机补光。 */
-const hemi=new THREE.HemisphereLight(0xf7fbff,0x8e9ba5,.48);scene.add(hemi);
-const sun=new THREE.DirectionalLight(VISUAL.key,1.02);sun.position.set(12,-18,24);sun.target.position.set(10,0,10);scene.add(sun.target);
-sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.00035;sun.shadow.normalBias=.018;sun.shadow.radius=4;
-Object.assign(sun.shadow.camera,{left:-34,right:34,top:30,bottom:-16,near:1,far:120});sun.shadow.camera.updateProjectionMatrix();scene.add(sun);
-const rim=new THREE.DirectionalLight(VISUAL.rim,.36);rim.position.set(24,8,17);rim.target.position.set(10,.5,10);scene.add(rim.target);scene.add(rim);
-const headlight=new THREE.DirectionalLight(0xffffff,.08);headlight.target.position.copy(controls.target);scene.add(headlight.target);scene.add(headlight);
-
-const FOCAL=new THREE.Vector3(...VISUAL.look);
-/* 允许检查纵深，但禁止 90° 侧视把 20×20 信息压成一条线。 */
-controls.minAzimuthAngle=THREE.MathUtils.degToRad(-65);controls.maxAzimuthAngle=THREE.MathUtils.degToRad(65);
-const CAMERA_LIMITS=Object.freeze({x:[-1.5,N+1.5],y:[FLOOR.y0+.6,RACK.backY-.12],z:[.8,N-.8]});
 
 /* 0722 一屏返工 §B.4:3D 全景自适应——镜头按容器宽高比 + 货架包围盒自动拉距,保证货架全高 +
    入库口入镜,任何容器尺寸不截顶。FRAME_BOUNDS 只含货架实体 + 入库/出库装载工位(不含长队列
    传送带包络,理由同 VISUAL 校准注记:潜在队列不应虚增主体占比)。距离沿"默认取景方向"
    (DEFAULT_DIR,来自既有 VISUAL.pos→FOCAL 手调角度)伸缩,不改变镜头角度,只改变拉距远近——
    restoreDefaultCamera()/setCamera() 复位到默认角度;resizeScene() 保留用户当前 orbit 角度,
-   只重算距离,故折叠/窗口变化 resize 后镜头不回中但绝不截顶。 */
+   只重算距离,故折叠/窗口变化 resize 后镜头不回中但绝不截顶。02 页仍用固定机位,故本段是 01 专属。 */
 const FRAME_BOUNDS=new THREE.Box3(
   new THREE.Vector3(Math.min(INFEED.x,OUTFEED.x)-1.3,INFEED.loadY-1.15,Z0),
   new THREE.Vector3(N+.8,RACK.backY+.5,N+.9));
@@ -2023,21 +1717,6 @@ function fitDistanceForAspect(aspect){
     if(d>need)need=d;
   });
   return THREE.MathUtils.clamp(need*1.06,controls.minDistance,controls.maxDistance);
-}
-let cameraGuard=false;
-function cameraSnapshot(){
-  const dx=camera.position.x-controls.target.x,dy=camera.position.y-controls.target.y,planar=Math.max(.0001,Math.hypot(dx,dy));
-  return {position:camera.position.toArray(),target:controls.target.toArray(),fov:camera.fov,zoom:camera.zoom,
-    azimuth:controls.getAzimuthalAngle(),polar:controls.getPolarAngle(),frontality:-dy/planar,
-    azimuthLimit:[controls.minAzimuthAngle,controls.maxAzimuthAngle]};
-}
-function constrainCamera(){
-  if(cameraGuard)return;cameraGuard=true;
-  controls.target.x=THREE.MathUtils.clamp(controls.target.x,...CAMERA_LIMITS.x);
-  controls.target.y=THREE.MathUtils.clamp(controls.target.y,...CAMERA_LIMITS.y);
-  controls.target.z=THREE.MathUtils.clamp(controls.target.z,...CAMERA_LIMITS.z);
-  camera.position.z=Math.max(camera.position.z,Z0+.8);
-  headlight.position.copy(camera.position);headlight.target.position.copy(controls.target);headlight.target.updateMatrixWorld();cameraGuard=false;
 }
 function setCamera(){
   /* OrbitControls 的阻尼会保留上一帧旋转/平移增量；复位前以无阻尼 update 清空残量，

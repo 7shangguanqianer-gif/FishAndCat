@@ -13,6 +13,9 @@ const SHOWCASE = resolve(HERE, '..');
 const PAGE_NAME = '01_连续填仓.html';
 const SOURCE = join(SHOWCASE, 'src', PAGE_NAME);
 const RUNTIME = join(SHOWCASE, 'src', 's3_fill_candidate_runtime.js');
+/* 0728 3D 抽离步1:公共三维内核已从页面内联外提为独立文件,与 runtime 同属页面一等依赖,
+   必须一起进哈希快照,否则快照目录缺文件 → 页面 3D 起不来 → 全部断言归零(FAIL 0/0)。 */
+const SCENE_CORE = join(SHOWCASE, 'src', 's3_scene_core.js');
 const STORE = join(SHOWCASE, 'src', 's3_fill_store.js');
 const INTERACTIONS = join(SHOWCASE, 'src', 's3_layout_a_interactions.js');
 const DATA_GATE = join(SHOWCASE, 'out', 's3_fill_data_gate');
@@ -43,7 +46,7 @@ const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; char
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 mkdirSync(OUT, {recursive: true});
 const liveFiles = {
-  source: SOURCE, runtime: RUNTIME, store: STORE, interactions: INTERACTIONS,
+  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, store: STORE, interactions: INTERACTIONS,
   shellCss: join(SHOWCASE, 'src', 's3_shell_v2.css'), /* 0719 V2 壳体共享语法 */
   three: join(SHOWCASE, 'src', 'lib', 'three.min.js'),
   orbit: join(SHOWCASE, 'src', 'lib', 'OrbitControls.js'),
@@ -61,6 +64,7 @@ const SNAPSHOT = join(OUT, `_local_hash_snapshot_${snapshotId}`);
 const snapshotTargets = {
   source: join(SNAPSHOT, 'src', PAGE_NAME),
   runtime: join(SNAPSHOT, 'src', 's3_fill_candidate_runtime.js'),
+  sceneCore: join(SNAPSHOT, 'src', 's3_scene_core.js'),
   store: join(SNAPSHOT, 'src', 's3_fill_store.js'),
   interactions: join(SNAPSHOT, 'src', 's3_layout_a_interactions.js'),
   shellCss: join(SNAPSHOT, 'src', 's3_shell_v2.css'),
