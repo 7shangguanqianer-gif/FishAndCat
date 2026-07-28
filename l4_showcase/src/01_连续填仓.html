@@ -1445,8 +1445,12 @@
   #raceLeadBadge .leadValue.worse{color:#b71c1c}
 
   /* -- 暂停/继续双态钮(顶栏,单钮双态,aria-pressed;文案由 runtime.js togglePause() 同步) -- */
-  html[data-s3-layout="A"] #topbarA #playPauseBtn{order:-1;min-width:52px;height:27px}
-  #playPauseBtn[aria-pressed="true"]{background:#17365d;color:#fff;border-color:#17365d}
+  /* 0724 任务B:播放控制对齐 02 顶栏规范(02_入出闭环.html:713「暂停/继续为主按钮深蓝实底」)——
+     01 原为常态白底、仅 aria-pressed 时深蓝,与 02 视觉不一致;改为常态即主按钮深蓝实底、
+     高度 30px 与 02 #runtimeActions button 一致。双态语义仍由文案+aria-pressed 承担(QA 断言不变)。 */
+  html[data-s3-layout="A"] #topbarA #runtimeActions #playPauseBtn{order:-1;min-width:52px;height:30px;
+    background:#17365d;color:#fff;border:1px solid #17365d;font-weight:700}
+  html[data-s3-layout="A"] #topbarA #runtimeActions #playPauseBtn:hover{background:#0f2440;border-color:#0f2440;color:#fff}
 
   /* -- 弹大层扩容(§A.3 max 90vw/90vh):容纳赛段比分条/终态总分牌/30-seed 分布带/评分解剖/
      决策依据/批次KPI/七步条,内部可滚(白名单),遮罩+居中不变,Esc/点遮罩关闭不变。 -- */
