@@ -99,15 +99,23 @@ const ASSET_PATHS = [
 const TABS = ["views", "chain", "matrix", "neg"];
 const VIEWPORTS = [[1920, 1080], [1280, 800]]; // §A.1/§A.4:设计基准+收纳基准,不再用 1440×900/1280×720
 
-function tabStateAssert() {
-  // 页面内 evaluate:断言点击后 4 个 tab 的 aria-selected/hidden 是否与预期一致(§A.4 状态断言)
-  return `(function(activeKey){
-    const tabs=["views","chain","matrix","neg"];
-    return tabs.every(function(k){
-      const btn=document.getElementById("tab-"+k), panel=document.getElementById("panel-"+k);
-      const shouldBeActive = (k===activeKey);
-      return btn.getAttribute("aria-selected")===String(shouldBeActive) && panel.hidden===!shouldBeActive;
+function sectionStateAssert() {
+  /* 0724 任务C:4-Tab 互斥切换 → 滚动式四节常显。旧断言(aria-selected/hidden 互斥)整体废弃,
+     改断言:四节全部常显且有实际高度(无 hidden 面板)、四个锚点导航链接齐备、
+     当前滚到的节被 data-current 高亮(IntersectionObserver 驱动)。 */
+  return `(function(currentKey){
+    const keys=["views","chain","matrix","neg"];
+    const allVisible = keys.every(function(k){
+      const p=document.getElementById("panel-"+k);
+      return !!p && p.hidden===false && p.getBoundingClientRect().height > 40;
     });
+    const allLinks = keys.every(function(k){
+      const a=document.getElementById("tab-"+k);
+      return !!a && a.tagName==="A" && (a.getAttribute("href")||"")==="#panel-"+k;
+    });
+    const cur=document.getElementById("tab-"+currentKey);
+    const curOk = !!cur && cur.getAttribute("data-current")==="1";
+    return allVisible && allLinks && curOk;
   })`;
 }
 
@@ -124,7 +132,8 @@ try {
     await page.waitForFunction(() =>
       document.querySelectorAll('#matrixBody tr').length === 11 &&
       document.querySelectorAll('.frameStrip img').length === 40 &&
-      document.querySelectorAll('#pageTabs [role="tab"]').length === 4
+      /* 0724:Tab 按钮 → 锚点导航链接 */
+      document.querySelectorAll('#pageTabs a').length === 4
     );
     await page.evaluate(() => document.fonts.ready);
 
@@ -133,8 +142,14 @@ try {
     let modalChainOk = false, modalStationOk = false, modalLightboxOk = false;
 
     for (const tabKey of TABS) {
-      await page.click(`#tab-${tabKey}`);
-      const stateOk = await page.evaluate(tabStateAssert() + `("${tabKey}")`);
+      /* 0724:滚动式——不再点 Tab 切换,改为滚到该节(锚点导航的等效动作),
+         等 IntersectionObserver 更新 data-current 后再断言。 */
+      await page.evaluate(k => {
+        const el = document.getElementById('panel-' + k);
+        if (el) el.scrollIntoView({block: 'start', behavior: 'instant'});
+      }, tabKey);
+      await page.waitForTimeout(450);
+      const stateOk = await page.evaluate(sectionStateAssert() + `("${tabKey}")`);
 
       // 该 tab 可见后强制 lazy->eager 触发加载并等待就绪(逐 tab 访问确保每张图都曾"可见"过)
       await page.evaluate(async () => {
@@ -151,7 +166,7 @@ try {
       await page.evaluate(() => document.fonts.ready);
 
       // 截图底座(§A.4):animations disabled + caret hide;Tab 四区切换各拍
-      await page.screenshot({path: join(OUT, `tab_${tabKey}_${w}x${h}.png`), animations: 'disabled', caret: 'hide'});
+      await page.screenshot({path: join(OUT, `section_${tabKey}_${w}x${h}.png`), animations: 'disabled', caret: 'hide'});
 
       const audit = await page.evaluate(() => {
         const docEl = document.documentElement;
@@ -163,7 +178,9 @@ try {
         const imgs = [...document.images].filter(i => !!i.getAttribute('src')).map(i => ({src: i.getAttribute('src'), ok: i.complete && i.naturalWidth > 0}));
         return {
           docScrollH: docEl.scrollHeight, clientH: docEl.clientHeight, innerH: window.innerHeight,
-          zeroScrollOk: docEl.scrollHeight <= docEl.clientHeight + 2,
+          /* 0724 任务C:一屏零竖滚断言整体废弃(滚动式下纵向滚动即设计本身)。
+             改断言:①页面确有滚动内容(舒展留白落地,非塌成一屏)②横向仍禁溢出。 */
+          scrollableOk: docEl.scrollHeight > docEl.clientHeight,
           hScroll: docEl.scrollWidth > window.innerWidth + 1,
           overflowViolations,
           bodyText: document.body.innerText,
@@ -175,13 +192,15 @@ try {
       report.scrollTable.push({
         w, h, tab: tabKey, stateOk,
         docScrollH: audit.docScrollH, clientH: audit.clientH, innerH: audit.innerH,
-        zeroScrollOk: audit.zeroScrollOk, hScroll: audit.hScroll,
+        scrollableOk: audit.scrollableOk, hScroll: audit.hScroll,
         overflowViolations: audit.overflowViolations
       });
 
       // 弹大层开合(§A.3/§C.3):证据链卡片详情层(chain tab)、六站点详情层(matrix tab)、图片 lightbox(views tab)
       if (tabKey === 'chain') {
-        await page.click('#chainGrid .chainCard:nth-child(1)');
+        /* 0724:滚动式下粘性头部(顶栏+口径带+导航≈130px)会让 Playwright 判定元素被遮挡而 click 超时;
+           改用 DOM 直接派发 click,同时避开位置选择器(取第一张卡用 querySelector 而非 nth-child)。 */
+        await page.evaluate(() => document.querySelector('#chainGrid .chainCard').click());
         const openedOk = await page.evaluate(() => {
           const m = document.getElementById('bigModal');
           return m.hidden === false && document.getElementById('bigModalBody').innerText.length > 20;
@@ -193,7 +212,10 @@ try {
       }
       if (tabKey === 'matrix') {
         // 按文本定位「叉臂 / Lift」站点按钮(不用位置类选择器,禁 nth-of-type 纪律同样适用于测试脚本)
-        await page.getByRole('tab', {name: /叉臂/}).click();
+        await page.evaluate(() => {
+          const btn = [...document.querySelectorAll('#chain button')].find(b => /叉臂/.test(b.textContent));
+          if (btn) btn.click();
+        });
         const openedOk = await page.evaluate(() => {
           const m = document.getElementById('bigModal');
           return m.hidden === false && !!document.querySelector('#bigModalBody .modalStation table');
@@ -204,7 +226,7 @@ try {
         modalStationOk = openedOk && closedOk;
       }
       if (tabKey === 'views') {
-        await page.click('#viewImg');
+        await page.evaluate(() => document.getElementById('viewImg').click());
         const openedOk = await page.evaluate(() => document.getElementById('lightbox').hidden === false);
         await page.screenshot({path: join(OUT, `modal_lightbox_open_${w}x${h}.png`), animations: 'disabled', caret: 'hide'});
         await page.keyboard.press('Escape');
@@ -213,18 +235,21 @@ try {
       }
     }
 
-    // Tab 键盘可达:左右键在 4 个 tab 间移动并激活;Home/End 跳首尾(§C 要点⑥)
-    await page.click('#tab-views');
-    await page.focus('#tab-views');
-    await page.keyboard.press('ArrowRight');
-    const kbRightOk = await page.evaluate(() => document.activeElement.id === 'tab-chain' && document.getElementById('tab-chain').getAttribute('aria-selected') === 'true' && document.getElementById('panel-chain').hidden === false);
-    await page.keyboard.press('ArrowLeft');
-    const kbLeftOk = await page.evaluate(() => document.activeElement.id === 'tab-views' && document.getElementById('tab-views').getAttribute('aria-selected') === 'true');
-    await page.keyboard.press('End');
-    const kbEndOk = await page.evaluate(() => document.activeElement.id === 'tab-neg' && document.getElementById('panel-neg').hidden === false);
-    await page.keyboard.press('Home');
-    const kbHomeOk = await page.evaluate(() => document.activeElement.id === 'tab-views' && document.getElementById('panel-views').hidden === false);
-    const tabKeyboardNavOk = kbRightOk && kbLeftOk && kbEndOk && kbHomeOk;
+    /* 0724 任务C:Tab 互斥键盘导航(左右/Home/End)整体废弃 → 锚点导航断言:
+       ①点导航链接能滚到对应节 ②滚动后 data-current 高亮跟随(IntersectionObserver)
+       ③链接键盘可聚焦(原生 <a href> 天然 Tab 可达)。 */
+    await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+    await page.waitForTimeout(350);
+    await page.click('#tab-matrix');
+    await page.waitForTimeout(1100);   // scroll-behavior:smooth 到位
+    const anchorJumpOk = await page.evaluate(() => {
+      const r = document.getElementById('panel-matrix').getBoundingClientRect();
+      const cur = document.querySelector('#pageTabs a[data-current="1"]');
+      return r.top < 360 && r.top > -280 && !!cur && cur.id === 'tab-matrix';
+    });
+    await page.evaluate(() => document.getElementById('tab-neg').focus());
+    const linkFocusOk = await page.evaluate(() => document.activeElement.id === 'tab-neg');
+    const tabKeyboardNavOk = anchorJumpOk && linkFocusOk;
 
     // 全页拼接文本(4 tab 依次采集后拼接,语义等价于回灌前"扫整页 innerText")
     const fullText = tabTexts.join('\n');
@@ -303,8 +328,9 @@ try {
       w, h,
       imgs, bandVisible: band.visible, bandSingleLine: band.height > 0 && band.height < 40,
       hScroll: report.scrollTable.filter(r => r.w === w && r.h === h).some(r => r.hScroll),
-      zeroScrollAllTabsOk: report.scrollTable.filter(r => r.w === w && r.h === h).every(r => r.zeroScrollOk && r.overflowViolations.length === 0),
-      tabStateAllOk: report.scrollTable.filter(r => r.w === w && r.h === h).every(r => r.stateOk),
+      /* 0724:零竖滚 → 滚动式语义(页面确有滚动内容 + 内部 overflow 容器不溢出) */
+      scrollLayoutOk: report.scrollTable.filter(r => r.w === w && r.h === h).every(r => r.scrollableOk && r.overflowViolations.length === 0),
+      sectionStateAllOk: report.scrollTable.filter(r => r.w === w && r.h === h).every(r => r.stateOk),
       ctx2020: ctxs, ctx2020AllBounded: ctxs.length > 0 && ctxs.every(c => boundaryWords.test(c)),
       riskyViolations, forbiddenHit: riskyViolations.length > 0,
       blindCheck: /54 格/.test(fullText) && /物理 I\/O/.test(fullText) && band.text.includes('技术预演'),
@@ -335,10 +361,11 @@ try {
     caliberSentencePresent: report.viewports.every(v => v.caliberOk),
     strayLabelsRemoved: report.viewports.every(v => v.strayOk),
     // 0722 一屏返工新增 4 项(§A+§C.3)
-    tabSwitchAllCaptured: report.viewports.every(v => v.tabStateAllOk),
-    zeroScrollAllTabsBothViewports: report.viewports.every(v => v.zeroScrollAllTabsOk),
+    /* 0724 任务C 断言改名与语义更新:四节常显+导航齐备+当前节高亮;滚动式版面(可滚、无内部溢出) */
+    fourSectionsScrollable: report.viewports.every(v => v.sectionStateAllOk),
+    scrollLayoutBothViewports: report.viewports.every(v => v.scrollLayoutOk),
     modalOpenCloseWorks: report.viewports.every(v => v.modalChainOk && v.modalStationOk && v.modalLightboxOk),
-    tabKeyboardNav: report.viewports.every(v => v.tabKeyboardNavOk)
+    anchorNavWorks: report.viewports.every(v => v.tabKeyboardNavOk)
   };
   report.pass = Object.values(a).every(Boolean);
   report.errors = Object.entries(a).filter(([, v]) => !v).map(([k]) => k);

@@ -6,34 +6,48 @@
 <title>Factory I/O · 54 格物理 I/O 证据浏览器 · 工作站 · 物理实证</title>
 <link rel="icon" href="data:,">
 <style>
-  :root{--abb:#e2001a;--ink:#17202b;--dim:#5e6a73;--line:#c9d0d6;--bg:#f2f4f5;--card:#fff;
+  /* 0724 任务C:红线色值统一到 #ff000f(01/02 实测在用的 ABB 官方红),原 #e2001a 退役 */
+  :root{--abb:#ff000f;--ink:#17202b;--dim:#5e6a73;--line:#c9d0d6;--line-soft:#dfe4e7;--bg:#f2f4f5;--card:#fff;
     --ok:#1d6b2e;--warn:#8a6d00;--warn-bg:#fff6d8;--stop:#8a1a1a;--stop-bg:#fde8e8;--ok-bg:#e6f2e8;--debug-bg:#eceef0;--debug-fg:#5e6a73}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--bg);color:var(--ink);font:14px/1.5 "Microsoft YaHei","Segoe UI",sans-serif}
   a{color:#17365d}
-  #brand{display:flex;align-items:center;gap:14px;padding:8px 20px;background:#111;border-bottom:3px solid var(--abb)}
+  /* 0724 任务C 顶栏白红工程风:对齐 01/02 的 #topbarA 语言(白底 + 底部 3px ABB 红线 + 深墨页名),
+     消除 0717 时代的深色 #111 顶栏;滚动页故 sticky 常驻,评委滚到任何位置都能看到品牌与页名。 */
+  #brand{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:14px;padding:0 20px;height:48px;
+    background:var(--card);border-bottom:3px solid var(--abb);box-shadow:0 2px 10px #17202b12}
   #brand .logo{color:var(--abb);font-weight:900;font-size:22px;font-family:Arial;letter-spacing:1px}
-  #brand h1{color:#fff;font-size:16px;font-weight:600}
-  #brand .tag{margin-left:auto;color:#ffd23d;font-size:12px;font-weight:600}
-  /* 口径带:0722 一屏纪律要求压缩单行;显式横向带兜底(白名单,§A.2),正常情况下应整行可见无需滚动 */
-  #scopeBand{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;overflow-y:hidden;
-    padding:6px 20px;background:#17202b;color:#fff;font-size:12px;border-bottom:2px solid var(--abb)}
-  #scopeBand b{color:#ffd23d}
-  #scopeBand .sep{color:#8a94a0}
+  #brand h1{color:#16191d;font-size:16px;font-weight:700}
+  #brand .tag{margin-left:auto;color:var(--dim);font-size:12px;font-weight:700;letter-spacing:.3px}
+  /* 口径带:随顶栏 sticky 常驻(紧贴其下),白底浅框、红左条——与 01 口径条语言一致,替代旧深色底。
+     单行不换行(QA scopeBandSingleLine);显式横向带兜底(白名单,§A.2)。 */
+  #scopeBand{position:sticky;top:48px;z-index:59;display:flex;gap:8px;align-items:center;flex-wrap:nowrap;white-space:nowrap;
+    overflow-x:auto;overflow-y:hidden;padding:7px 20px;background:#fff7f5;color:var(--ink);font-size:12px;
+    border-bottom:1px solid var(--line-soft);border-left:4px solid var(--abb)}
+  #scopeBand b{color:#8a1a1a}
+  #scopeBand .sep{color:#c2c9cf}
 
   /* 顶部 4 Tab 分区条(0722 一屏返工 §C) */
-  #pageTabs{display:flex;gap:6px;align-items:flex-end;padding:7px 20px 0;background:#fff;border-bottom:1px solid var(--line)}
-  #pageTabs button{appearance:none;border:1px solid var(--line);border-bottom:none;background:#eef1f3;color:var(--ink);
-    font:700 12.5px "Microsoft YaHei",sans-serif;padding:8px 16px;cursor:pointer;border-radius:5px 5px 0 0;
-    position:relative;top:1px}
-  #pageTabs button[aria-selected="true"]{background:#fff;border-color:var(--line);border-bottom:1px solid #fff;color:var(--abb)}
-  #pageTabs button:hover{background:#fff}
-  #pageTabs button:focus-visible{outline:3px solid #ffd23d;outline-offset:1px;z-index:1}
+  /* 0724 任务C:Tab 条 → 粘性锚点导航(滚动式)。四块顺序不变,点击平滑滚到对应节;
+     当前节由 IntersectionObserver 高亮(data-current),不再有 aria-selected 的互斥 Tab 语义。 */
+  #pageTabs{position:sticky;top:83px;z-index:58;display:flex;gap:4px;align-items:center;
+    padding:7px 20px;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line-soft)}
+  #pageTabs a{text-decoration:none;color:var(--dim);font:700 12.5px "Microsoft YaHei",sans-serif;
+    padding:7px 15px;border-radius:3px;border:1px solid transparent;transition:background .12s,color .12s}
+  #pageTabs a:hover{background:#f2f5f7;color:var(--ink)}
+  #pageTabs a[data-current="1"]{background:#fff2f1;color:#b3000b;border-color:#ffd0cc}
+  #pageTabs a:focus-visible{outline:3px solid #ffd23d;outline-offset:1px;z-index:1}
 
-  main{max-width:1560px;margin:0 auto;padding:10px 20px 14px;display:block}
-  .tabPanel{flex-direction:column;gap:10px}
-  .tabPanel:not([hidden]){display:flex}
-  section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 14px}
+  /* 滚动式版面:舒展留白、大图沉浸。节与节之间大间距,每节内部再分卡片。 */
+  html{scroll-behavior:smooth}
+  main{max-width:1560px;margin:0 auto;padding:24px 20px 60px;display:flex;flex-direction:column;gap:56px}
+  .tabPanel{display:flex;flex-direction:column;gap:18px;scroll-margin-top:130px}
+  /* 节首:大号标题 + 序号,建立展陈节奏 */
+  .sectionLead{display:flex;align-items:baseline;gap:14px;padding:0 2px 4px}
+  .sectionLead .idx{font:900 34px/1 Consolas,monospace;color:#ffd0cc;letter-spacing:-1px}
+  .sectionLead h2{font-size:23px;font-weight:800;letter-spacing:-.3px;border:0;padding:0;margin:0}
+  .sectionLead .lead{margin-left:auto;color:var(--dim);font-size:12px;max-width:46%;text-align:right;line-height:1.5}
+  section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 18px}
   section>h2{font-size:14.5px;margin-bottom:3px;padding-left:9px;border-left:4px solid var(--abb)}
   section>.sub{font-size:11.5px;color:var(--dim);margin-bottom:8px}
   .path{font-family:Consolas,monospace;font-size:11.5px;word-break:break-all;color:#17365d}
@@ -65,7 +79,10 @@
      (撑满可用高,contain),右元数据四卡竖排;横向空间吃满,contain 空白消失。 */
   #viewStage{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(250px,1fr);gap:10px;align-items:stretch}
   #viewStage img{width:100%;height:100%;min-height:400px;max-height:540px;object-fit:contain;background:#e9ecee;border:1px solid var(--line);cursor:zoom-in}
-  #viewMeta{display:grid;grid-template-columns:1fr;gap:6px;margin-top:0;font-size:11.5px;align-content:space-between}
+  /* 0724 任务C:滚动式下图更高,space-between 会把四张元数据卡拉得过散 → 改顶部对齐 + 舒适间距 */
+  #viewMeta{display:grid;grid-template-columns:1fr;gap:10px;margin-top:0;font-size:11.5px;align-content:start}
+  #viewMeta .cell{padding:9px 11px;line-height:1.5}
+  #viewMeta .cell b{font-size:10px;margin-bottom:3px}
   #viewMeta .cell{padding:5px 8px;border:1px solid var(--line);background:#fafbfc}
   #viewMeta .cell b{display:block;font-size:10px;color:var(--dim);margin-bottom:1px}
   #viewMeta .prove{border-left:3px solid var(--ok)}
@@ -81,7 +98,8 @@
   #frameCount{font-size:11px;color:var(--dim)}
 
   /* 证据链 Tab:3×3 紧凑网格(主张+缩略图+路径一行+徽章),点卡弹大层看全档 */
-  #chainGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;counter-reset:chain}
+  /* 0724 任务C:3×3 紧凑网格(Tab 时代为塞进一屏的压缩)→ 2 列舒展证据卡流 */
+  #chainGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;counter-reset:chain}
   .chainCard{border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden;position:relative;
     display:flex;flex-direction:column;text-align:left;font:inherit;color:inherit;cursor:pointer}
   .chainCard::before{counter-increment:chain;content:counter(chain);position:absolute;left:0;top:0;width:18px;height:18px;
@@ -89,17 +107,23 @@
     border-bottom-right-radius:6px;z-index:1}
   .chainCard:hover{border-color:var(--abb)}
   .chainCard:focus-visible{outline:3px solid #ffd23d;outline-offset:-2px}
-  .chainCard .chHead{display:flex;flex-direction:column;gap:2px;padding:6px 8px 5px 24px;border-bottom:1px solid var(--line);background:#fafbfc}
-  .chainCard .chHead h3{font-size:11.5px;line-height:1.32;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .chainCard .chHead .st{align-self:flex-start;font-size:10px;padding:0 6px}
-  .chainCard .chBody{display:flex;gap:7px;padding:7px 8px;align-items:center}
-  .chainCard .chThumb{width:60px;height:44px;flex:none;object-fit:cover;background:#e9ecee;border:1px solid var(--line);border-radius:3px;display:block}
-  .chainCard .chThumb.none{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:8px;text-align:center;padding:2px;line-height:1.15}
+  .chainCard .chHead{display:flex;flex-direction:column;gap:5px;padding:11px 13px 10px 32px;border-bottom:1px solid var(--line-soft);background:#fafbfc}
+  /* 舒展态:标题不再两行截断,完整可读 */
+  .chainCard .chHead h3{font-size:13.5px;line-height:1.4;display:block;overflow:visible}
+  .chainCard .chHead .st{align-self:flex-start;font-size:10.5px;padding:1px 7px}
+  .chainCard .chBody{display:flex;gap:13px;padding:13px;align-items:flex-start}
+  .chainCard .chThumb{width:150px;height:108px;flex:none;object-fit:cover;background:#e9ecee;border:1px solid var(--line);border-radius:3px;display:block}
+  .chainCard .chThumb.none{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:9.5px;text-align:center;padding:6px;line-height:1.3}
   .chainCard .chMeta{min-width:0;flex:1}
-  .chainCard .chMeta .rowPath{font-size:10.5px}
-  .chainCard .chMeta .rowPath b{display:none}
-  .chainCard .chMeta .rowPath .path{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .chainCard .chMeta .rowTime,.chainCard .chMeta .limit{display:none}
+  /* 舒展态:路径全文换行可见 + 采集时间/限制条件恢复显示(Tab 时代为省高度而 display:none) */
+  .chainCard .chMeta .rowPath{font-size:11px}
+  .chainCard .chMeta .rowPath b{display:block;font-size:9.5px;color:var(--dim);font-weight:700;margin-bottom:2px}
+  .chainCard .chMeta .rowPath .path{display:block;white-space:normal;word-break:break-all;line-height:1.45}
+  .chainCard .chMeta .rowTime{display:block;margin-top:7px;font-size:10.5px;color:var(--dim)}
+  .chainCard .chMeta .rowTime b{font-size:9.5px;font-weight:700;margin-right:4px}
+  .chainCard .chMeta .limit{display:block;margin-top:8px;padding:7px 9px;background:#fbfcfc;border:1px solid var(--line-soft);
+    border-left:3px solid #c9a227;border-radius:2px;font-size:10.5px;line-height:1.5;color:#4a5560}
+  .chainCard .chMeta .limit b{display:block;font-size:9.5px;color:var(--dim);font-weight:700;margin-bottom:2px}
 
   /* 通用弹大层(§A.3):遮罩+居中大层,max 90vw/90vh,内部可滚(白名单) */
   #bigModal{position:fixed;inset:0;background:rgba(10,14,18,.72);display:flex;align-items:center;justify-content:center;z-index:210;padding:22px}
@@ -172,11 +196,13 @@
   #stationHint{margin-top:6px;font-size:11px;color:var(--dim)}
 
   /* 边界与负结果 Tab:七条双列网格(措辞一字不改红线) */
-  .negGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
-  .negGrid .item{border:1px solid var(--line);border-left:4px solid var(--stop);background:#fff;padding:7px 9px;border-radius:0 3px 3px 0}
-  .negGrid .item h3{font-size:11.5px;margin-bottom:3px;display:flex;justify-content:space-between;gap:6px}
-  .negGrid .item p{font-size:11px;color:#333;line-height:1.42}
-  .negGrid .item img{width:100%;max-height:76px;object-fit:cover;margin-top:5px;border:1px solid var(--line);cursor:zoom-in;border-radius:2px}
+  /* 0724 任务C 舒展态:align-items:start 让每卡取自然高度(原先被同行最高卡拉齐,配图卡旁产生大片空白);
+     行距/内距放宽。红线:h3/p 的 innerHTML 逐字节不动,配图一律在 h3/p 之外(见下 .item img)。 */
+  .negGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;align-items:start}
+  .negGrid .item{border:1px solid var(--line);border-left:4px solid var(--stop);background:#fff;padding:12px 14px;border-radius:0 3px 3px 0}
+  .negGrid .item h3{font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;gap:6px;line-height:1.45}
+  .negGrid .item p{font-size:11.5px;color:#333;line-height:1.62}
+  .negGrid .item img{width:100%;max-height:150px;object-fit:cover;margin-top:9px;border:1px solid var(--line);cursor:zoom-in;border-radius:2px}
 
   /* Lightbox(图片放大,§A.3 同规格 max 90vw/90vh) */
   #lightbox{position:fixed;inset:0;background:rgba(10,14,18,.88);display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:10px}
@@ -234,16 +260,18 @@
   <span><b>不宣称</b>完整现场闭环(9/9=运行成功计数,0714 独立复核降级口径)</span>
 </div>
 
-<div id="pageTabs" role="tablist" aria-label="页面分区" aria-orientation="horizontal">
-  <button type="button" role="tab" id="tab-views" aria-selected="true" aria-controls="panel-views">证据画面</button>
-  <button type="button" role="tab" id="tab-chain" aria-selected="false" aria-controls="panel-chain" tabindex="-1">证据链</button>
-  <button type="button" role="tab" id="tab-matrix" aria-selected="false" aria-controls="panel-matrix" tabindex="-1">I/O 矩阵</button>
-  <button type="button" role="tab" id="tab-neg" aria-selected="false" aria-controls="panel-neg" tabindex="-1">边界与负结果</button>
-</div>
+<nav id="pageTabs" aria-label="页面分区导航">
+  <a href="#panel-views" id="tab-views" data-current="1">证据画面</a>
+  <a href="#panel-chain" id="tab-chain">证据链</a>
+  <a href="#panel-matrix" id="tab-matrix">I/O 矩阵</a>
+  <a href="#panel-neg" id="tab-neg">边界与负结果</a>
+</nav>
 
 <main>
 
-<section id="panel-views" class="tabPanel" role="tabpanel" aria-labelledby="tab-views" tabindex="0">
+<section id="panel-views" class="tabPanel" aria-label="证据画面">
+  <div class="sectionLead"><span class="idx">01</span><h2>证据画面</h2>
+    <span class="lead">Factory I/O 现场截图,无重建 3D;三视图各答一题,点图放大看细节。</span></div>
 
   <details id="pageIntro">
     <summary>本页回答四个问题(点开)</summary>
@@ -290,7 +318,9 @@
 
 </section>
 
-<section id="panel-chain" class="tabPanel" role="tabpanel" aria-labelledby="tab-chain" tabindex="0" hidden>
+<section id="panel-chain" class="tabPanel" aria-label="证据链">
+  <div class="sectionLead"><span class="idx">02</span><h2>证据链</h2>
+    <span class="lead">每条主张 → 原始文件路径 → 采集时间 → 限制条件,逐条可溯源核验。</span></div>
 
     <section aria-label="证据链网格">
       <h2>证据链(主张 → 缩略图 → 原始文件路径 → 采集时间 → 限制条件)</h2>
@@ -410,7 +440,9 @@
 
 </section>
 
-<section id="panel-matrix" class="tabPanel" role="tabpanel" aria-labelledby="tab-matrix" tabindex="0" hidden>
+<section id="panel-matrix" class="tabPanel" aria-label="I/O 矩阵">
+  <div class="sectionLead"><span class="idx">03</span><h2>I/O 矩阵</h2>
+    <span class="lead">66 份诊断日志按时间组 × 六相位成矩阵;点格看该份日志,点站看点表与图证。</span></div>
 
     <section aria-label="I/O 矩阵仪表">
       <h2>I/O 与动作链:11 组×6 相位矩阵热格</h2>
@@ -447,7 +479,9 @@
 
 </section>
 
-<section id="panel-neg" class="tabPanel" role="tabpanel" aria-labelledby="tab-neg" tabindex="0" hidden>
+<section id="panel-neg" class="tabPanel" aria-label="边界与负结果">
+  <div class="sectionLead"><span class="idx">04</span><h2>边界与负结果</h2>
+    <span class="lead">如实列出未成功与能力边界——这些与成功证据同等重要,措辞逐字未改。</span></div>
     <section id="neg" aria-label="边界与负结果">
       <h2>边界与负结果(升格专区 · 如实列出,未只展示成功)</h2>
       <div class="sub">措辞与原页一字不改(C8 红线);呈现位置升格为独立 Tab 分区(双列网格),并按有则配图原则关联已有截图。</div>
@@ -1430,33 +1464,26 @@ document.addEventListener("keydown", (e)=>{
   if(!bigModal.hidden){ closeModal(); }
 });
 
-/* ---- 顶部 4 Tab(0722 一屏返工 §C):点击切换 + 左右键/Home/End 移动,Tab 键在选中项与面板间聚焦 ---- */
+/* ---- 0724 任务C:4 Tab 互斥切换 → 滚动式锚点导航 ----
+   四节全部常显、上下滚动依次阅读;导航链接靠原生 href 锚点跳转(html{scroll-behavior:smooth}),
+   当前节由 IntersectionObserver 高亮(data-current)。不再有 hidden 面板与 aria-selected 语义。 */
 const TAB_KEYS = ["views","chain","matrix","neg"];
-function activateTab(key){
-  TAB_KEYS.forEach(k=>{
-    const btn = byId("tab-"+k), panel = byId("panel-"+k);
-    const active = k===key;
-    btn.setAttribute("aria-selected", String(active));
-    btn.tabIndex = active ? 0 : -1;
-    panel.hidden = !active;
+const navLinks = new Map(TAB_KEYS.map(k => [k, byId("tab-" + k)]));
+function markCurrent(key){
+  navLinks.forEach((link, k) => {
+    if (k === key) link.setAttribute("data-current", "1");
+    else link.removeAttribute("data-current");
   });
 }
-TAB_KEYS.forEach(k=> byId("tab-"+k).addEventListener("click", ()=>activateTab(k)));
-byId("pageTabs").addEventListener("keydown",(e)=>{
-  if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
-  const cur = document.activeElement.id.replace("tab-","");
-  const idx = TAB_KEYS.indexOf(cur);
-  if(idx === -1) return;
-  let next = idx;
-  if(e.key==="ArrowRight") next=(idx+1)%TAB_KEYS.length;
-  else if(e.key==="ArrowLeft") next=(idx-1+TAB_KEYS.length)%TAB_KEYS.length;
-  else if(e.key==="Home") next=0;
-  else if(e.key==="End") next=TAB_KEYS.length-1;
-  e.preventDefault();
-  activateTab(TAB_KEYS[next]);
-  byId("tab-"+TAB_KEYS[next]).focus();
-});
-activateTab("views");
+/* rootMargin 上边界压到粘性头部之下(48 顶栏 + 35 口径带 + 38 导航 ≈ 130px),
+   使"当前节"判定与视觉一致;取最靠上的可见节为当前。 */
+const sectionObserver = new IntersectionObserver(entries => {
+  const visible = entries.filter(e => e.isIntersecting)
+    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+  if (visible.length) markCurrent(visible[0].target.id.replace("panel-", ""));
+}, { rootMargin: "-130px 0px -55% 0px", threshold: 0 });
+TAB_KEYS.forEach(k => { const panel = byId("panel-" + k); if (panel) sectionObserver.observe(panel); });
+markCurrent("views");
 </script>
 </body>
 </html>
