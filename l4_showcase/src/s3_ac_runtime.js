@@ -11,6 +11,9 @@
   "use strict";
 
   const TRACE_SCHEMA = "s3-dynamic-trace-v2";
+  /* 0728 #23:行程速度剖面图控制器。挂模块级而非函数内——createRuntimeDom 负责挂载、
+     渲染循环里的 drawSpeed 负责每帧更新,两者分处不同函数,共享一个引用。 */
+  let speedProfile = null;
   const PROCESS_STEPS = [
     "LOAD_IN", "INBOUND_TRAVEL", "STORE_HANDLE", "LINK_TRAVEL",
     "RETRIEVE_HANDLE", "OUTBOUND_TRAVEL", "SCAN_EXIT"
@@ -746,6 +749,10 @@
       operationKey: op, phaseName: segment.phaseName, phaseProgress: found.progress,
       operationProgress, loop: found.loop, elapsedLocal: found.local, simTime,
       machine, targetSlot, cargoGid, cargoOwner: segment.owner,
+      /* 0728 #23:本腿的双轴起终点与运动档位,供行程速度剖面图使用(它必须画**整段**曲线,
+         只有 machine 的瞬时速度不够)。motion 直读 trace.meta,不硬编码——02 的档1 是
+         constant_speed 匀速档,剖面图要如实画成一条平台而不是硬凑三段。 */
+      legFrom: segment.from, legTo: segment.to, motion: trace.meta.motion,
       queueGids: event.queue_waiting_gids.slice(), inventoryRows,
       event, faulted: segment.phaseName === "FAULT_RECOVERY", faultIndex: segment.faultIndex,
       presentationOnly: segment.simModelled === false || segment.presentationZeroDuration === true,
@@ -1033,8 +1040,29 @@
     function disposePath(path) {
       scene.remove(path.group);
       path.group.traverse(object => { if (object.geometry) object.geometry.dispose(); });
-      path.material.dispose();
-      if (path.haloMaterial) path.haloMaterial.dispose();
+      path.dispose();
+    }
+
+    /* 0728 #23:场景内运动学三段染色的适用腿。只取双轴行程腿,且**排除 LINK_TRAVEL**——
+       它已被 dashPolyline 拆成虚线段用来编码"空驶",再叠一层分段粗细两种语义会互相打架;
+       拆段后的点列也不再是等 progress 采样,时间参数已经失真。零侵入 operationPathPlan:
+       起终点按 operationKey 从 event 直接取,不改那个被契约测试锁着的纯函数。 */
+    const MOTION_LEGS = Object.freeze({
+      INBOUND_TRAVEL: event => [[0, 0], [event.store_slot.col, event.store_slot.tier]],
+      OUTBOUND_TRAVEL: event => [[event.retrieve_slot.col, event.retrieve_slot.tier], [0, 0]]
+    });
+
+    function kinematicBreaksFor(from, to, motion) {
+      if (!root.S3SpeedProfile) return null;
+      const dx = Math.abs(to[0] - from[0]), dz = Math.abs(to[1] - from[1]);
+      const tx = axisTime(dx, VX, AX, motion), tz = axisTime(dz, VZ, AZ, motion);
+      const total = Math.max(tx, tz);
+      if (!(total > 0)) return null;
+      const lead = tx >= tz ? {distance: dx, vmax: VX, accel: AX} : {distance: dz, vmax: VZ, accel: AZ};
+      const seg = root.S3SpeedProfile.segmentsOf(lead.distance, lead.vmax, lead.accel, motion);
+      /* 匀速档(档1)整段无加减速,三角形剖面无匀速平台——两者都如实回落单段,不硬凑三段。 */
+      if (seg.constant || seg.triangular || !(seg.cruiseEnd - seg.cruiseStart > 1e-9)) return null;
+      return [seg.cruiseStart / total, seg.cruiseEnd / total];
     }
 
     function clearPaths() { while (livePaths.length) disposePath(livePaths.pop()); }
@@ -1074,10 +1102,13 @@
         /* M5:交织空驶腿拆虚线段;多段共享 operationKey,emphasis 与审计端点语义不变 */
         const pieces = plan.operationKey === "LINK_TRAVEL" ? dashPolyline(points, .62, .38) : [points];
         const arrowPiece = Math.floor(pieces.length / 2);
+        const legOf = MOTION_LEGS[plan.operationKey];
+        const breaks = legOf && pieces.length === 1
+          ? kinematicBreaksFor(...legOf(event), trace.meta.motion) : null;
         pieces.forEach((piece, pieceIndex) => {
           const path = addPath(piece, {color: colors[plan.kind], opacity: .28, radius: .065, haloRadius: .12,
             arrowCount: pieces.length === 1 ? plan.arrowCount : (pieceIndex === arrowPiece ? 1 : 0),
-            operationKey: plan.operationKey, kind: plan.kind});
+            operationKey: plan.operationKey, kind: plan.kind, kinematicBreaks: breaks});
           path.operationKey = plan.operationKey; path.kind = plan.kind; path.baseColor = colors[plan.kind];
           path.auditPoints = plan.points.map(point => ({x: point.x, y: point.y, z: point.z}));
           livePaths.push(path);
@@ -1092,10 +1123,13 @@
       const current = STEP_INDEX[operationKey];
       livePaths.forEach(path => {
         const index = STEP_INDEX[path.operationKey];
-        path.material.color.setHex(index === current ? (RETRIEVAL_SIDE.has(path.operationKey) ? 0x00a3c8 : 0xff6a00) : path.baseColor);
-        path.material.opacity = index === current ? .96 : index < current ? .42 : .24;
-        path.material.depthTest = index !== current;
-        if (path.haloMaterial) path.haloMaterial.opacity = index === current ? .84 : index < current ? .10 : 0;
+        /* 分段路径下各段浓度不同,统一走内核的 setAppearance——直接写 path.material 只会改到匀速段。 */
+        path.setAppearance({
+          colorHex: index === current ? (RETRIEVAL_SIDE.has(path.operationKey) ? 0x00a3c8 : 0xff6a00) : path.baseColor,
+          opacity: index === current ? .96 : index < current ? .42 : .24,
+          depthTest: index !== current,
+          haloOpacity: index === current ? .84 : index < current ? .10 : 0
+        });
         path.group.traverse(object => { if (object.isMesh) object.renderOrder = index === current ? (object.material === path.material ? 6 : 5) : 1; });
       });
     }
@@ -1489,19 +1523,37 @@
       return {context, width: rect.width, height: rect.height};
     }
 
+    /* 0728 #23(两页同步,用户拍板「同步,抽进公共模块」):旧 drawSpeed 画的是两根「当前时刻
+       速度条」,且其画布(#liveChartWrap 内的 #speed)自一屏返工起就 display:none,每帧画进
+       一张 0×0 的画布——纯空转。换成整段行程的速度-时间剖面,由 src/s3_speed_profile.js 驱动,
+       与 01 页共用同一实现;两页真实存在的口径差异(01 含满载升降折减、02 另有匀速档)按各页
+       数据原样传参,不在公共模块里"统一"掉。 */
+    function speedProfileSpec(frame) {
+      if (!root.S3SpeedProfile || !frame.legFrom || !frame.legTo) return null;
+      const dx = Math.abs(frame.legTo[0] - frame.legFrom[0]), dz = Math.abs(frame.legTo[1] - frame.legFrom[1]);
+      if (!(dx > 0) && !(dz > 0)) return null;      /* 原地作业腿(装卸/扫码)没有行程,不画 */
+      const motion = frame.motion;
+      const total = Math.max(axisTime(dx, VX, AX, motion), axisTime(dz, VZ, AZ, motion));
+      if (!(total > 0)) return null;
+      const constant = motion === S3Motion.CONSTANT;
+      return {
+        axes: [{key: "x", color: root.S3SpeedProfile.PALETTE.x, distance: dx, vmax: VX, accel: AX, motion},
+          {key: "z", color: root.S3SpeedProfile.PALETTE.z, distance: dz, vmax: VZ, accel: AZ, motion}],
+        time: total * clamp(frame.phaseProgress, 0, 1),
+        hint: `${STEP_LABEL[frame.operationKey] || frame.operationKey} · ${total.toFixed(1)} s`,
+        /* 02 的 trace 无满载折减(model = trapezoid_accel),不写折减系数——那是 01 的口径。 */
+        note: constant ? `匀速档 · X ${VX} / Z ${VZ}` : `X ${VX}/${AX} · Z ${VZ}/${AZ}`
+      };
+    }
+
     function drawSpeed(frame) {
-      const surface = canvasContext("speed"); if (!surface) return;
-      const {context: g, width, height} = surface, left = 28, right = width - 8, top = 8, bottom = height - 14;
-      g.strokeStyle = "#d8dee3"; g.lineWidth = 1;
-      [0, .5, 1].forEach(part => { const y = bottom - part * (bottom - top); g.beginPath(); g.moveTo(left, y); g.lineTo(right, y); g.stroke(); });
-      const bars = [{label: "X", value: Math.abs(frame.machine.vx), max: VX, color: "#17365d"}, {label: "Z", value: Math.abs(frame.machine.vz), max: VZ, color: "#4a6fa5"}];
-      bars.forEach((bar, index) => {
-        const y = top + 8 + index * Math.max(16, (bottom - top) / 2);
-        g.fillStyle = "#66717a"; g.font = "9px Consolas"; g.fillText(bar.label, 4, y + 3);
-        g.fillStyle = "#e5e9ec"; g.fillRect(left, y - 5, right - left, 8);
-        g.fillStyle = bar.color; g.fillRect(left, y - 5, (right - left) * clamp(bar.value / bar.max, 0, 1), 8);
-        g.fillStyle = "#26343e"; g.textAlign = "right"; g.fillText(`${bar.value.toFixed(2)} m/s`, right, y + 3); g.textAlign = "left";
-      });
+      if (!speedProfile) return;
+      const spec = speedProfileSpec(frame);
+      /* 收起时一并清空审计,避免 QA 快照残留上一条行程腿的数据(与 01 同因同修)。 */
+      if (!spec) { speedProfile.clear(); speedProfile.setVisible(false); return; }
+      speedProfile.setVisible(true);
+      speedProfile.setHint(spec.hint);
+      speedProfile.update(spec);
     }
 
     function drawSlotMap(frame) {
@@ -2015,7 +2067,10 @@
         stockPool: stockPool.length, queuePool: queuePool.length, queueVisibleGids: lastQueueGids.slice(), pathCount: livePaths.length, sceneMeshes,
         stockVisual: {source: "event_inventory_snapshot", gradeCounts: Object.assign({}, lastStockGradeCounts), lidCount: stockLidMesh.count, solidGreenShell: false},
         pathPlan: livePaths.map(path => ({operationKey: path.operationKey, kind: path.kind, opacity: path.material.opacity,
-          start: Object.assign({}, path.auditPoints[0]), end: Object.assign({}, path.auditPoints[path.auditPoints.length - 1])})),
+          start: Object.assign({}, path.auditPoints[0]), end: Object.assign({}, path.auditPoints[path.auditPoints.length - 1]),
+          /* 0728 #23:运动学分段证据(单段腿为 ["single"])。 */
+          bands: path.bands.map(band => band.key)})),
+        speedProfile: speedProfile ? speedProfile.audit() : null,
         operationKey: lastFrame && lastFrame.operationKey, phaseName: lastFrame && lastFrame.phaseName,
         faulted: Boolean(lastFrame && lastFrame.faulted), faultIndex: lastFrame && lastFrame.faultIndex,
         cargoOwner: lastFrame && lastFrame.cargoOwner,
@@ -2165,6 +2220,20 @@
     if (root.S3Tooltip && root.S3TooltipCopy) {
       root.S3Tooltip.register(root.S3TooltipCopy.page02);
       root.S3Tooltip.firstVisitHint({key: "s3_tip_hint_02_v1", autoDismissMs: 15000});
+    }
+
+    /* 0728 #23:行程速度剖面挂进三维视口(与 01 同一模块)。落点取**三维区的外侧上角**:
+       01 的信息栏在左、三维画布贴右,故卡片在右上;本页信息栏在右、三维画布(#gl)贴左只占
+       约 1200px 宽,右上角其实落在右栏浮层上,故卡片在左上。两页因此仍是同一条视觉规则。
+       #viewport 覆盖整页(两页都是),不能想当然按 right 定位——实测过。 */
+    const speedHost = doc.getElementById("viewport");
+    if (root.S3SpeedProfile && speedHost) {
+      speedProfile = root.S3SpeedProfile.mount({
+        host: speedHost, doc, id: "speedProfile02",
+        title: "行程速度剖面", hint: "梯形加减速 · 双轴独立到位",
+        place: {top: "50px", left: "10px"}
+      });
+      if (speedProfile) speedProfile.setVisible(false);
     }
   }
 

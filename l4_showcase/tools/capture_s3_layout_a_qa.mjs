@@ -20,6 +20,8 @@ const SCENE_CORE = join(SHOWCASE, 'src', 's3_scene_core.js');
 const HEAT_LAYER = join(SHOWCASE, 'src', 's3_heat_layer.js');
 /* 0728 3D 抽离步3:双轴运动学同样外提为两页共用模块(口径由 test_s3_motion_parity.mjs 锁死)。 */
 const MOTION = join(SHOWCASE, 'src', 's3_motion.js');
+/* 0728 #23:行程速度剖面图(两页共用)。 */
+const SPEED_PROFILE = join(SHOWCASE, 'src', 's3_speed_profile.js');
 /* 0728 阶段二:悬浮解释层与文案表(文案是要给评委看的内容,同样纳入哈希快照锁定)。 */
 const TOOLTIP = join(SHOWCASE, 'src', 's3_tooltip.js');
 const TOOLTIP_COPY = join(SHOWCASE, 'src', 's3_tooltip_copy.js');
@@ -53,7 +55,8 @@ const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; char
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 mkdirSync(OUT, {recursive: true});
 const liveFiles = {
-  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, motion: MOTION, tooltip: TOOLTIP, tooltipCopy: TOOLTIP_COPY, store: STORE, interactions: INTERACTIONS,
+  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, motion: MOTION, speedProfile: SPEED_PROFILE,
+  tooltip: TOOLTIP, tooltipCopy: TOOLTIP_COPY, store: STORE, interactions: INTERACTIONS,
   shellCss: join(SHOWCASE, 'src', 's3_shell_v2.css'), /* 0719 V2 壳体共享语法 */
   three: join(SHOWCASE, 'src', 'lib', 'three.min.js'),
   orbit: join(SHOWCASE, 'src', 'lib', 'OrbitControls.js'),
@@ -74,6 +77,7 @@ const snapshotTargets = {
   sceneCore: join(SNAPSHOT, 'src', 's3_scene_core.js'),
   heatLayer: join(SNAPSHOT, 'src', 's3_heat_layer.js'),
   motion: join(SNAPSHOT, 'src', 's3_motion.js'),
+  speedProfile: join(SNAPSHOT, 'src', 's3_speed_profile.js'),
   tooltip: join(SNAPSHOT, 'src', 's3_tooltip.js'),
   tooltipCopy: join(SNAPSHOT, 'src', 's3_tooltip_copy.js'),
   store: join(SNAPSHOT, 'src', 's3_fill_store.js'),
@@ -222,7 +226,10 @@ try {
       releaseBadgeInAxis: document.getElementById('releaseBadge').closest('#axisRight') !== null,
       evidenceInAxis: document.getElementById('fillEvidence').closest('#axisRight') !== null,
       selectionReasonPresent: /固定四项权重|首个可用格|行程时间最短/.test(document.getElementById('decisionWrap').textContent),
-      speedCanvasPresent: Boolean(document.getElementById('speed')),
+      /* 0728 #23:旧 #speed 画布(「双轴速度」两根速度条)已随 #liveChartWrap 一并删除——
+         它自一屏返工起就 display:none,每帧画进 0×0 画布空转。取而代之的是三维视口内的
+         行程速度剖面卡片,断言随之改为它存在;是否**可见**由 motionProfile* 系列门按腿判定。 */
+      speedProfileCardPresent: Boolean(document.getElementById('speedProfile01')),
       /* 0722 一屏返工:phaseRail(七步条)随决策依据/批次KPI一并永久搬入放大层——常驻区
          只留 3D + 精华条,七步条不再是"必须常驻"的信息,sceneCaption 的当前步骤文字已
          覆盖"现在做什么"的核心诉求(见 docs/施工规格_一屏返工0722.md §B.1)。 */
@@ -554,6 +561,16 @@ try {
         incomplete: coverage.filter(c => c.matched > 0 && c.has.length < 4).map(c => c.selector),
         probes};
     });
+    /* 0728 #23:运动模型标签(轴状态行角上)必须常显——此前该口径只活在 #raceBanner 的
+       hover 展开态里,评委不悬停就永远看不到,那等于没披露。 */
+    report.motionBadgeAudit = await tipPage.evaluate(() => {
+      const badge = document.getElementById('motionModelBadge');
+      if (!badge) return {present: false};
+      const rect = badge.getBoundingClientRect(), style = getComputedStyle(badge);
+      return {present: true, text: badge.textContent.trim(),
+        visible: style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0,
+        inViewport: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight};
+    });
     await tipPage.close();
   }
 
@@ -676,6 +693,46 @@ try {
       report.tooltipAudit.unmatched.length === 0 && report.tooltipAudit.incomplete.length === 0 &&
       report.tooltipAudit.probes.length >= 5 &&
       report.tooltipAudit.probes.every(p => p.shown && p.onScreen && p.sections.length === 3),
+    /* --- 0728 #23:行程速度剖面(用户拍板「剖面图 + 场景分段路径」) ---
+       ① 两条行程腿上必须有非空剖面审计,且轴参数与本页 sim 口径逐位一致;
+       ② **满载升降折减只在载货腿成立**——载货 Z 额定 0.5×0.8=0.4、空载 0.5,这道门把
+          「折减别被误用到空载腿 / 别被顺手统一掉」钉死(0728 拍板:速度不是 bug,不许统一渲染层);
+       ③ leadKey 必须等于两轴中总时长较大者,即"慢轴决定节拍"。 */
+    motionProfileOnTravel: (() => {
+      const travel = report.states.filter(item => /_(LADEN_TRAVEL|EMPTY_RETURN)_/.test(item.name));
+      if (travel.length < 2) return false;
+      return travel.every(item => {
+        const profile = item.snapshot.speedProfile;
+        if (!profile || !(profile.total > 0) || !Array.isArray(profile.axes) || profile.axes.length !== 2) return false;
+        const x = profile.axes.find(axis => axis.key === 'x'), z = profile.axes.find(axis => axis.key === 'z');
+        if (!x || !z) return false;
+        const laden = /_LADEN_TRAVEL_/.test(item.name);
+        return x.vmax === 2 && x.accel === .5 && z.accel === .3 &&
+          Math.abs(z.vmax - (laden ? .4 : .5)) < 1e-9 &&
+          profile.leadKey === (x.total >= z.total ? 'x' : 'z');
+      });
+    })(),
+    /* 原地作业腿(入口交接 / 货叉作业)没有行程,剖面必须收起而不是画一张空图。 */
+    motionProfileHiddenOffTravel: report.states
+      .filter(item => /_(INFEED_HANDOFF|STORE_HANDLE)_/.test(item.name))
+      .every(item => item.snapshot.speedProfile === null),
+    /* 场景内三段染色:行程腿为梯形时必须是 accel/cruise/decel 三段 + 两枚匀速段界环,
+       且匀速段最粗;主导轴为三角形剖面(加不满额定速度)时如实退化单段——不硬凑三段。
+       非行程腿一律单段。 */
+    kinematicBandsConsistent: report.states.every(item => (item.snapshot.paths || []).every(path => {
+      const bands = path.bands || [], rings = path.rings || [], radii = path.bandRadii || [];
+      const isTravel = path.key === 'LADEN_TRAVEL' || path.key === 'EMPTY_RETURN';
+      if (!isTravel) return bands.length === 1 && bands[0] === 'single';
+      if (bands.length === 3) {
+        return bands.join('/') === 'accel/cruise/decel' && rings.length === 2 &&
+          radii[1] > radii[0] && radii[1] > radii[2];
+      }
+      return bands.length === 1 && bands[0] === 'single' && rings.length === 0;
+    })),
+    /* 口径披露:运动模型标签常显、在视口内、且写明满载折减系数。 */
+    motionModelBadgeVisible: Boolean(report.motionBadgeAudit) && report.motionBadgeAudit.present === true &&
+      report.motionBadgeAudit.visible === true && report.motionBadgeAudit.inViewport === true &&
+      /梯形加减速/.test(report.motionBadgeAudit.text) && /×0\.8/.test(report.motionBadgeAudit.text),
     /* --- 0728 新增:箭头遮挡守卫必须真的在起作用——采样中不得出现「箭头可见 且 判定被遮挡」。
        旧守卫只按水平距离 .60 判,实测漏 4 帧(箭头插进载货台),故此门按三维相交结果断言。 --- */
     fx28ArrowNeverSwallowed: report.states.every(item => {

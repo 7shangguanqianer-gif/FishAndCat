@@ -69,7 +69,27 @@ try {
       awraOfflineGroup: !!document.querySelector('#strategySelect optgroup[label*="离线"]'),
     };
   });
+  /* 0728 #23:行程速度剖面(两页共用 src/s3_speed_profile.js)。逐腿 seek:三条双轴行程腿
+     必须显示且轴参数与本页 trace 口径一致(**Z 额定 0.5,不含 01 的满载折减**——这道门
+     把「别把 01 的折减顺手抄到 02」钉死);四条原地作业腿必须收起且审计清空。 */
+  report.speedProfile = await page.evaluate(async () => {
+    const legs = ['LOAD_IN', 'INBOUND_TRAVEL', 'STORE_HANDLE', 'LINK_TRAVEL', 'RETRIEVE_HANDLE', 'OUTBOUND_TRAVEL', 'SCAN_EXIT'];
+    const out = { cardPresent: !!document.getElementById('speedProfile02'), legs: [] };
+    for (const op of legs) {
+      try { window.__S3_QA.seek(2, op, .5); } catch (error) { out.legs.push({ op, error: String(error).slice(0, 80) }); continue; }
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const card = document.getElementById('speedProfile02');
+      const profile = window.__S3_QA.snapshot().renderer?.speedProfile || null;
+      const plan = window.__S3_QA.snapshot().renderer?.pathPlan || [];
+      out.legs.push({ op, visible: !!card && getComputedStyle(card).display !== 'none',
+        axes: profile ? profile.axes.map(x => [x.key, x.vmax, x.accel]) : null,
+        lead: profile ? profile.leadKey : null,
+        bands: plan.map(p => [p.operationKey, (p.bands || []).join('/')]) });
+    }
+    return out;
+  });
   await page.screenshot({ path: join(OUT, 'mixed_02_boot.png'), fullPage: false });
+  const TRAVEL_LEGS = new Set(['INBOUND_TRAVEL', 'LINK_TRAVEL', 'OUTBOUND_TRAVEL']);
   const a = {
     booted: report.boot.booted === true && report.boot.loading === false,
     runtimeErrors0: report.boot.runtimeErrors === 0 && report.runtimeErrors.length === 0,
@@ -79,6 +99,15 @@ try {
     no智能路由: report.gov.hasBadName === false,
     fiveLanes: JSON.stringify(report.gov.lanes) === JSON.stringify(['seq', 'near', 'score', 'AUTO', 'awra']),
     awraOfflineDisclosed: report.gov.awraOfflineGroup === true,
+    /* 0728 #23:剖面卡片存在;三条行程腿显示、四条原地作业腿收起(不画空图)。 */
+    speedProfilePerLeg: report.speedProfile.cardPresent === true &&
+      report.speedProfile.legs.length === 7 &&
+      report.speedProfile.legs.every(leg => leg.visible === TRAVEL_LEGS.has(leg.op)),
+    /* 本页运动常量:X 2.0/0.5、Z 0.5/0.3。**Z 必须是 0.5 而不是 0.4**——0.4 是 01 页
+       载货腿的满载折减口径,抄到本页就是把两页 sim 模型混为一谈(0728:速度差异不是 bug)。 */
+    speedProfileAxisCalibre: report.speedProfile.legs
+      .filter(leg => TRAVEL_LEGS.has(leg.op) && leg.axes)
+      .every(leg => JSON.stringify(leg.axes) === JSON.stringify([['x', 2, .5], ['z', .5, .3]])),
   };
   report.assertions = a; report.pass = Object.values(a).every(Boolean);
   report.errors = Object.entries(a).filter(([, v]) => !v).map(([k]) => k);

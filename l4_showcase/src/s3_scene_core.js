@@ -273,21 +273,87 @@ class PiecewiseLinearCurve extends THREE.Curve{
     return target.copy(this.points[i]).lerp(this.points[i+1],f-i);}
 }
 const PATH_ARROW_MIN=S3_SCENE_CONFIG.path.arrowCountMin;
+/* 0728 #23:按归一化 progress 截取点列,断点处线性插值补出精确端点(不补会在段间留缝)。
+   注意 sampledMachinePath 是**按 progress 等分采样**而非按空间等距,所以 index/(n-1) 天然
+   就是时间参数——运动学分段能直接落在点索引上,无需再做弧长参数化。 */
+function sliceByProgress(points,from,to){
+  const last=points.length-1,f=Math.max(0,Math.min(1,from))*last,t=Math.max(0,Math.min(1,to))*last;
+  if(t-f<=1e-9)return[];
+  const at=u=>{const i=Math.min(last-1,Math.floor(u));return points[i].clone().lerp(points[i+1],u-i);};
+  const out=[at(f)];
+  for(let i=Math.ceil(f+1e-9);i<=Math.floor(t-1e-9);i+=1)out.push(points[i].clone());
+  out.push(at(t));
+  return out.filter((point,index)=>index===0||point.distanceTo(out[index-1])>1e-6);
+}
+/* 0728 #23 场景内运动学分段(用户拍板「剖面图 + 场景分段路径」):
+   加速 / 匀速 / 减速三段用**同色相 + 不同粗细与浓度**区分,不引入第三种颜色——路径颜色本身
+   已编码操作类型(入库橙 / 空载蓝),再叠色相会与操作语义打架。匀速段粗而实、加减速段细而淡,
+   即便打印成灰度或色觉异常也能靠粗细读出来。匀速段起止各放一个刻度环,把"何时到达 vmax /
+   何时开始减速"钉在场景里,与 HUD 剖面图的两条段界线互为印证。 */
+const KINEMATIC_BANDS=Object.freeze([
+  Object.freeze({key:"accel",radiusScale:.58,opacityScale:.58}),
+  Object.freeze({key:"cruise",radiusScale:1.30,opacityScale:1}),
+  Object.freeze({key:"decel",radiusScale:.58,opacityScale:.58})
+]);
 function addPath(points,options={}){const group=new THREE.Group(),material=new THREE.MeshBasicMaterial({
     color:options.color??C.path,transparent:true,opacity:options.opacity??.2,depthWrite:false,depthTest:true}),
     haloMaterial=new THREE.MeshBasicMaterial({color:0xf7fbff,transparent:true,opacity:0,depthWrite:false,depthTest:false});
   const clean=points.filter((point,index)=>index===0||point.distanceTo(points[index-1])>1e-6);
+  const materials=[material];const bands=[];
+  material.userData.opacityScale=1;
   if(clean.length===1){const halo=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),haloMaterial),marker=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),material);
     halo.position.copy(clean[0]);marker.position.copy(clean[0]);group.add(halo,marker);}
   else{const curve=new PiecewiseLinearCurve(clean),segments=Math.max(12,clean.length-1);
-    const halo=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.haloRadius??.25,8,false),haloMaterial),
-      mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.radius??.16,8,false),material);group.add(halo,mesh);
+    const halo=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,options.haloRadius??.25,8,false),haloMaterial);group.add(halo);
+    const radius=options.radius??.16;
+    /* breaks=[匀速起, 匀速止](归一化 progress)。缺省或退化(三角形速度剖面、零行程)时
+       回落成单段——不假装存在一个不存在的匀速平台。 */
+    const breaks=options.kinematicBreaks;
+    const usable=Array.isArray(breaks)&&breaks.length===2&&breaks[1]-breaks[0]>.02&&breaks[0]>.02&&breaks[1]<.98;
+    if(usable){
+      const ranges=[[0,breaks[0]],[breaks[0],breaks[1]],[breaks[1],1]];
+      ranges.forEach((range,index)=>{
+        const band=KINEMATIC_BANDS[index],piece=sliceByProgress(clean,range[0],range[1]);
+        if(piece.length<2)return;
+        const bandMaterial=index===1?material:new THREE.MeshBasicMaterial({
+          color:material.color.getHex(),transparent:true,opacity:material.opacity*band.opacityScale,depthWrite:false,depthTest:true});
+        bandMaterial.userData.opacityScale=band.opacityScale;
+        if(index!==1)materials.push(bandMaterial);
+        const tube=new THREE.Mesh(new THREE.TubeGeometry(new PiecewiseLinearCurve(piece),Math.max(8,piece.length-1),radius*band.radiusScale,8,false),bandMaterial);
+        tube.userData.kinematicBand=band.key;group.add(tube);
+        bands.push({key:band.key,from:range[0],to:range[1],radius:Number((radius*band.radiusScale).toFixed(4))});
+      });
+      /* 刻度环:法线对齐该点切向,才不会在斜行程上看成一个椭圆片。 */
+      [breaks[0],breaks[1]].forEach(fr=>{
+        const p=curve.getPoint(fr),p2=curve.getPoint(Math.min(1,fr+.01)),dir=p2.clone().sub(p);
+        if(dir.lengthSq()<1e-8)return;dir.normalize();
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(radius*2.15,radius*.42,6,16),material);
+        ring.position.copy(p);ring.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),dir);
+        ring.userData.kinematicMark=fr===breaks[0]?"cruiseStart":"cruiseEnd";group.add(ring);
+      });
+    }else{
+      const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,radius,8,false),material);group.add(mesh);
+      bands.push({key:"single",from:0,to:1,radius:Number(radius.toFixed(4))});
+    }
     /* PATH_ARROW_MIN:02 的虚线段允许显式 0 箭头,01 至少 1;默认 2 两页一致。 */
     const arrowCount=Math.max(PATH_ARROW_MIN,Math.min(3,options.arrowCount??2));
     Array.from({length:arrowCount},(_,index)=>(index+1)/(arrowCount+1)).forEach(fr=>{const p=curve.getPoint(fr),p2=curve.getPoint(Math.min(1,fr+.02)),dir=p2.clone().sub(p);
       if(dir.lengthSq()<1e-8)return;dir.normalize();const arrow=new THREE.Mesh(new THREE.ConeGeometry(.15,.36,10),material);
       arrow.position.copy(p);arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);group.add(arrow);});}
-  group.userData={operationKey:options.operationKey||null,kind:options.kind||null};scene.add(group);return {group,material,haloMaterial};}
+  group.userData={operationKey:options.operationKey||null,kind:options.kind||null};scene.add(group);
+  /* 统一外观入口:分段后各段有各自的材质与浓度系数,调用方不该(也不必)知道有几段。
+     两页原先直接写 path.material.opacity/.depthTest/.color 的写法在分段路径上只会改到一段。 */
+  function setAppearance(state){
+    materials.forEach(item=>{
+      if(state.colorHex!=null)item.color.setHex(state.colorHex);
+      if(state.opacity!=null)item.opacity=state.opacity*(item.userData.opacityScale??1);
+      if(state.depthTest!=null)item.depthTest=state.depthTest;
+    });
+    if(state.haloOpacity!=null)haloMaterial.opacity=state.haloOpacity;
+  }
+  function dispose(){materials.forEach(item=>item.dispose());haloMaterial.dispose();}
+  return {group,material,haloMaterial,materials,bands,setAppearance,dispose,kinematic:usableBands(bands)};}
+function usableBands(bands){return bands.length>1?Object.freeze(bands.map(band=>Object.freeze(band))):null;}
 /* 目标位线框。 */
 const targetMat=new THREE.LineBasicMaterial({color:C.amber,transparent:true,opacity:.9});
 const targetBox=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.92,.92,.92)),targetMat);

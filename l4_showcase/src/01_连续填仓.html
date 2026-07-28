@@ -1574,8 +1574,6 @@ document.documentElement.dataset.s3Mode='fill-only-candidate';
 /* 信息架构：把同源动态数据移回左侧；三维画面始终留在右侧，不再切页。 */
 const rail=document.getElementById('workHud'),viewportEl=document.getElementById('viewport');
 const railHead=document.createElement('div');railHead.id='railHead';railHead.innerHTML=`<div class="brandLock"><span class="abbWord">ABB</span><div><div class="eyebrow">${VISUAL.sub}</div><h1>${VISUAL.name}</h1></div></div><div class="matrix">20 × 20<br>SIM / T3</div>`;rail.prepend(railHead);
-const speedCanvas=document.createElement('canvas'),liveChartWrap=document.createElement('section');speedCanvas.id='speed';liveChartWrap.id='liveChartWrap';
-liveChartWrap.innerHTML='<div class="cap"><b>双轴速度</b><span>X / Z · m/s</span></div>';liveChartWrap.append(speedCanvas);
 const slotMapWrap=document.createElement('section');slotMapWrap.id='slotMapWrap';slotMapWrap.innerHTML='<div class="mapHead"><div><b>20 × 20 货位规则图</b><span>列 → / 层 ↑ · 起始快照 + 周期存取</span></div><strong>133 / 400</strong></div><div class="mapRule"><i class="hatch"></i><span>(列 + 层) mod 3 = 0 → 预占禁用</span></div><canvas id="slotMap"></canvas><div class="mapKey"><span><i class="free"></i>可用空位</span><span><span class="gradeChips"><i class="heavy"></i><i class="mid"></i><i class="light"></i></span>在库：重 / 中 / 轻</span><span><i class="target"></i>当前目标</span><span><i class="moving"></i>随载货物</span></div>';
 const railFacts=document.createElement('section');railFacts.id='railFacts';railFacts.innerHTML='<div><b id="factCycle">-- / 100</b><span>混合周期</span></div><div><b id="factQueue">--</b><span>等待队列</span></div><div><b id="factAlarm">--</b><span>活动故障</span></div>';
 const traceStats=document.createElement('section');traceStats.id='traceStats';traceStats.setAttribute('aria-label','当前单 seed trace 统计');
@@ -1586,7 +1584,7 @@ const sceneCaption=document.createElement('div');sceneCaption.id='sceneCaption';
 const reserveRuleBadge=document.createElement('div');reserveRuleBadge.id='reserveRuleBadge';reserveRuleBadge.setAttribute('aria-label','三维轨迹与预占图例');
 reserveRuleBadge.innerHTML='<span class="in"><i></i>入库</span><span class="empty"><i></i>空载</span><span class="out"><i></i>出库</span><span class="blocked"><i></i>预占</span>';sceneCaption.append(reserveRuleBadge);
 const sceneTelemetry=document.createElement('section');sceneTelemetry.id='sceneTelemetry';sceneTelemetry.setAttribute('aria-label','设备运动');
-sceneTelemetry.append(document.getElementById('axisHud'),liveChartWrap);sceneDock.append(sceneTelemetry);
+sceneTelemetry.append(document.getElementById('axisHud'));sceneDock.append(sceneTelemetry);
 const sceneTools=document.createElement('section');sceneTools.id='sceneTools';sceneTools.setAttribute('aria-label','三维镜头与回放速度');
 sceneTools.innerHTML='<div class="toolHead"><b>镜头与演示倍率</b><span>不改 SIM / KPI</span></div><div class="toolRow"><input id="playbackSpeed" type="range" min="0.25" max="5" step="0.05" value="1" list="playbackTicks" aria-label="演示速度倍率"><datalist id="playbackTicks"><option value="0.25"></option><option value="0.5"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="5"></option></datalist><output id="playbackValue" for="playbackSpeed">1.00×</output></div><div class="toolNote">0.25× 慢放 · 5.00× 快放 · 吸附 0.25/0.5/1/2/3/5</div>';
 sceneDock.append(sceneTools);
@@ -1740,6 +1738,7 @@ resizeScene();
 </script>
 <script src="./s3_heat_layer.js"></script>
 <script src="./s3_motion.js"></script>
+<script src="./s3_speed_profile.js"></script>
 <script src="./s3_tooltip.js"></script>
 <script src="./s3_tooltip_copy.js"></script>
 <script src="./s3_fill_candidate_runtime.js"></script>

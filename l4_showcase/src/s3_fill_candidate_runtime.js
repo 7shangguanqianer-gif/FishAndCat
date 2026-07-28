@@ -385,15 +385,38 @@
 
   function disposePaths() {
     livePaths.forEach(path => { scene.remove(path.group); path.group.traverse(object => { if (object.geometry) object.geometry.dispose(); });
-      path.material.dispose(); if (path.haloMaterial) path.haloMaterial.dispose(); });
+      path.dispose(); });
     livePaths = [];
   }
+
+  const pathRingMarks = path => {
+    const marks = [];
+    path.group.traverse(object => { if (object.userData && object.userData.kinematicMark) marks.push(object.userData.kinematicMark); });
+    return marks;
+  };
 
   function sampledMachinePath(from, to, loaded) {
     return Array.from({length: 33}, (_, index) => {
       const point = motionPoint(from, to, index / 32, loaded);
       return new THREE.Vector3(point.x + .5, IO.y, point.z + .5 + (loaded ? CARGO_Z_OFFSET : 0));
     });
+  }
+
+  /* 0728 #23:双轴行程的匀速段起止(归一化 progress),交给 addPath 做场景内三段染色。
+     取**主导轴(慢轴)**的段界——双轴同步时慢轴决定节拍(S3Motion.point 的 total = max(tx,tz)),
+     快轴的段界落在别处,同时铺两套只会互相打架。行程短到加不满 vmax 时速度剖面退化成三角形,
+     此时返回 null 让路径回落成单段:不假装存在一个不存在的匀速平台。 */
+  function kinematicBreaksFor(from, to, loaded) {
+    if (!root.S3SpeedProfile) return null;
+    const dx = Math.abs(to[0] - from[0]), dz = Math.abs(to[1] - from[1]);
+    const vzEffective = VZ * (loaded ? LADEN_VY_FACTOR : 1);
+    const tx = S3Motion.axisTime(dx, VX, AX), tz = S3Motion.axisTime(dz, vzEffective, AZ);
+    const total = Math.max(tx, tz);
+    if (!(total > 0)) return null;
+    const lead = tx >= tz ? {distance: dx, vmax: VX, accel: AX} : {distance: dz, vmax: vzEffective, accel: AZ};
+    const seg = root.S3SpeedProfile.segmentsOf(lead.distance, lead.vmax, lead.accel);
+    if (seg.triangular || !(seg.cruiseEnd - seg.cruiseStart > 1e-9)) return null;
+    return [seg.cruiseStart / total, seg.cruiseEnd / total];
   }
 
   function pathPlans(event) {
@@ -408,9 +431,11 @@
       TRANSFER_ANCHOR.y + (RACK.loadY - TRANSFER_ANCHOR.y) * index / 16, tier + .5 + CARGO_Z_OFFSET));
     return [
       {key: "INFEED_HANDOFF", points: infeed, arrows: 3},
-      {key: "LADEN_TRAVEL", points: sampledMachinePath([0, 0], [col, tier], true), arrows: 3},
+      {key: "LADEN_TRAVEL", points: sampledMachinePath([0, 0], [col, tier], true), arrows: 3,
+        breaks: kinematicBreaksFor([0, 0], [col, tier], true)},
       {key: "STORE_HANDLE", points: store, arrows: 1},
-      {key: "EMPTY_RETURN", points: sampledMachinePath([col, tier], [0, 0], false), arrows: 3}
+      {key: "EMPTY_RETURN", points: sampledMachinePath([col, tier], [0, 0], false), arrows: 3,
+        breaks: kinematicBreaksFor([col, tier], [0, 0], false)}
     ];
   }
 
@@ -420,16 +445,16 @@
       pathSignature = signature; disposePaths();
       pathPlans(event).forEach(plan => {
         const path = addPath(plan.points, {color: PATH_COLOR[plan.key], opacity: .28, arrowCount: plan.arrows,
-          operationKey: plan.key, kind: "fill", radius: .065, haloRadius: .12});
+          operationKey: plan.key, kind: "fill", radius: .065, haloRadius: .12, kinematicBreaks: plan.breaks});
         path.key = plan.key; path.points = plan.points.map(point => point.toArray()); livePaths.push(path);
       });
     }
     const activeIndex = STEP_ORDER.indexOf(activeKey);
     livePaths.forEach(path => {
       const index = STEP_ORDER.indexOf(path.key), active = index === activeIndex;
-      path.material.opacity = active ? .98 : activeIndex < 0 ? .36 : index < activeIndex ? .42 : .24;
-      path.material.depthTest = !active;
-      if (path.haloMaterial) path.haloMaterial.opacity = active ? .72 : 0;
+      /* 分段路径下各段浓度不同,统一走内核的 setAppearance——直接写 path.material 只会改到匀速段。 */
+      path.setAppearance({opacity: active ? .98 : activeIndex < 0 ? .36 : index < activeIndex ? .42 : .24,
+        depthTest: !active, haloOpacity: active ? .72 : 0});
       path.group.renderOrder = active ? 7 : 2;
     });
   }
@@ -691,16 +716,43 @@
       reservedCells: diffs.filter(value => value === null).length};
   }
 
+  /* 0728 #23:旧 drawSpeed 画的是两根「当前时刻速度条」,且自 0721 一屏返工起其画布
+     (#liveChartWrap 内的 #speed)就被 display:none,每帧画进一张 0×0 的画布——纯空转。
+     换成整段行程的速度-时间剖面:同一份数据,曲线才回答得了「加速多久、何时匀速、
+     何时开始减速、两轴谁先到位」,而这正是本页运动学模型的卖点。 */
+  let speedProfile = null;
+
+  function speedProfileSpec(frame) {
+    const slot = frame.slot;
+    if (frame.idle || !slot || !frame.operation) return null;
+    const laden = frame.operation === "LADEN_TRAVEL";
+    const empty = frame.operation === "EMPTY_RETURN";
+    if (!laden && !empty) return null;
+    const from = laden ? [0, 0] : slot, to = laden ? slot : [0, 0];
+    const dx = Math.abs(to[0] - from[0]), dz = Math.abs(to[1] - from[1]);
+    const vzEffective = VZ * (laden ? LADEN_VY_FACTOR : 1);
+    const total = Math.max(S3Motion.axisTime(dx, VX, AX), S3Motion.axisTime(dz, vzEffective, AZ));
+    return {
+      axes: [{key: "x", label: "X 行走", color: root.S3SpeedProfile.PALETTE.x, distance: dx, vmax: VX, accel: AX},
+        {key: "z", label: "Z 升降", color: root.S3SpeedProfile.PALETTE.z, distance: dz, vmax: vzEffective, accel: AZ}],
+      time: total * frame.phaseProgress,
+      /* 阶段名走卡片副标题(setHint),不进画布——画布顶部再写一遍"速度剖面"就成了标题重复。 */
+      hint: laden ? `载货行程 · ${total.toFixed(1)} s` : `空载回程 · ${total.toFixed(1)} s`,
+      /* 常量口径,非实时值——实时速度的主位在轴状态行,此处不重复(同一数字只许一个主位)。
+         满载升降折减只在载货腿成立(sim 模型如此),空载回程不写,免得口径张冠李戴。 */
+      note: laden ? `X ${VX}/${AX} · Z ${VZ}×${LADEN_VY_FACTOR}/${AZ}` : `X ${VX}/${AX} · Z ${VZ}/${AZ}`
+    };
+  }
+
   function drawSpeed(frame) {
-    const surface = canvasSurface("speed"); if (!surface) return;
-    const {context: g, width, height} = surface, left = 28, right = width - 8, top = 8, bottom = height - 12;
-    [{label: "X", value: Math.abs(frame.machine.vx), max: VX, color: "#ff000f"},
-      {label: "Z", value: Math.abs(frame.machine.vz), max: VZ, color: "#7b2cbf"}].forEach((bar, index) => {
-      const y = top + 8 + index * Math.max(15, (bottom - top) / 2); g.fillStyle = "#66717a"; g.font = "9px Consolas"; g.fillText(bar.label, 4, y + 3);
-      g.fillStyle = "#e1e6e9"; g.fillRect(left, y - 5, right - left, 8); g.fillStyle = bar.color;
-      g.fillRect(left, y - 5, (right - left) * clamp(bar.value / bar.max, 0, 1), 8); g.fillStyle = "#26343e"; g.textAlign = "right";
-      g.fillText(`${bar.value.toFixed(2)} m/s`, right, y + 3); g.textAlign = "left";
-    });
+    if (!speedProfile) return;
+    const spec = speedProfileSpec(frame);
+    /* 收起时必须把审计一并清空:否则 QA 快照里会残留上一条行程腿的剖面数据,
+       出现「卡片已隐藏、审计仍报有曲线」的假象(首版实测到 STORE_HANDLE 帧仍带着载货腿的值)。 */
+    if (!spec) { speedProfile.clear(); speedProfile.setVisible(false); return; }
+    speedProfile.setVisible(true);
+    speedProfile.setHint(spec.hint);
+    speedProfile.update(spec);
   }
 
   function configureDom() {
@@ -711,6 +763,11 @@
     governanceStyle.textContent =
       ".statsDelta{position:absolute;top:2px;right:2px;padding:1px 2px;font:800 6.5px/1 Consolas,monospace}" +
       ".statsDelta.better{color:#1d6b2e;background:#e2f2e5}.statsDelta.worse{color:#8a4a00;background:#fdeeda}" +
+      /* 0728 #23 口径披露:轴状态行右上角常显运动模型标签(02 同位早有「档3 · …」,01 一直缺,
+         于是评委看到两页速度不同却看不到"为什么不同")。绝对定位挂角,不改 b 的既有块级布局。 */
+      "#axisHud{position:relative}" +
+      "#motionModelBadge{position:absolute;top:0;right:0;padding:1px 5px;border-radius:2px;background:#eef2f5;" +
+        "color:#3f4d58;font:700 7px/1.5 Consolas,monospace;white-space:nowrap;cursor:help;border-left:2px solid #ff000f}" +
       "#traceStats .conservedCell{background:#fffbe8;outline:1px dashed #c9a800;outline-offset:-1px}" +
       "#traceStats .conservedCell b{font-size:8.5px}#traceStats .conservedCell small{color:#7a6a00}" +
       "#decisionWrap .tieNote{margin-top:4px;padding:4px 6px;border-left:3px solid #17365d;background:#eef3f8;color:#3c4c5c;font:7.5px/1.35 \"Microsoft YaHei\",sans-serif}" +
@@ -810,6 +867,37 @@
     if (root.S3Tooltip && root.S3TooltipCopy) {
       root.S3Tooltip.register(root.S3TooltipCopy.page01);
       root.S3Tooltip.firstVisitHint({key: "s3_tip_hint_01_v1", autoDismissMs: 15000});
+    }
+
+    /* 0728 #23 口径披露(0728 拍板③「两者都要」的后一半):运动模型标签常显在轴状态行角上。
+       此前该口径只存在于 #raceBanner 的 hover 展开态(.raceBannerFull 实测 display:none),
+       评委不悬停就永远看不到。字段真读 payload.shared_input_provenance.motion,不硬编码;
+       全文(含 02 对照与行业依据)仍在悬浮层里,这里只留一句能被一眼扫到的结论。 */
+    {
+      const axisHudEl = byId("axisHud"), axisHudTitle = axisHudEl && axisHudEl.querySelector("b");
+      const motionMeta = (payload.shared_input_provenance && payload.shared_input_provenance.motion) || {};
+      if (axisHudTitle) {
+        const badge = document.createElement("span");
+        badge.id = "motionModelBadge";
+        badge.textContent = `${motionMeta.accel ? "梯形加减速" : "匀速"}` +
+          (motionMeta.laden_vy_factor ? ` · 满载升降 ×${motionMeta.laden_vy_factor}` : "");
+        axisHudEl.insertBefore(badge, axisHudTitle.nextSibling);
+      }
+    }
+
+    /* 0728 #23:行程速度剖面挂进三维视口(而非底部 dock)——与场景内的加速/匀速/减速
+       分段路径同框,两者互相印证;dock 实测只剩约 36px 净高,放不下读得出梯形的图。
+       右上角是本页视口内唯一常年不被货架、堆垛机与倍率滑块占用的区域。 */
+    if (root.S3SpeedProfile) {
+      speedProfile = root.S3SpeedProfile.mount({
+        host: viewportEl, id: "speedProfile01",
+        /* 不传 keys 图例:泳道左侧已标 X / Z 并用同色曲线,再来一行色块就是重复。 */
+        title: "行程速度剖面", hint: "梯形加减速 · 双轴独立到位",
+        /* A 布局下 #viewport 覆盖整页(左栏是浮层),顶栏 40px + 入库进度节点条到 ~90px 都在
+           它的坐标系里——top 必须让开这两条,否则卡片压在顶栏上。 */
+        place: {top: "100px", right: "10px"}
+      });
+      if (speedProfile) speedProfile.setVisible(false);
     }
 
     /* 0722d 回迁(双向取中拍板):①dock 第五列「赛段走势」——6 容量节点三算法期望取货 SVG 折线,
@@ -1393,7 +1481,12 @@
       inventorySize: frame.rows.length, inventoryGids: frame.rows.map(row => row.gid),
       cargo: {visible: cargo.visible, gid: cargo.visible ? cargo.userData.gid : null, owner: cargo.userData.owner || null,
         position: cargo.position.toArray()}, machine: Object.assign({}, frame.machine), paths: livePaths.map(path => ({key: path.key,
-        opacity: path.material.opacity, start: path.points[0], end: path.points[path.points.length - 1]})),
+        opacity: path.material.opacity, start: path.points[0], end: path.points[path.points.length - 1],
+        /* 0728 #23:场景内运动学分段的可断言证据——bands 为该腿的段序(单段行程为 ["single"]),
+           rings 为匀速段起止的两枚刻度环。行程短到加不满 vmax 时剖面退化为三角形,此时如实单段。 */
+        bands: path.bands.map(band => band.key), bandRadii: path.bands.map(band => band.radius),
+        rings: pathRingMarks(path)})),
+      speedProfile: speedProfile ? speedProfile.audit() : null,
       topology: topologyAudit, topologyProjection: topologyProjectionAudit(), camera: cameraSnapshot(), timingAudit,
       scorePolicyAudit: {sharedLoadHeightFactor: payload.score_policy.known_collinearity.stability_raw_equals_energy_proxy_raw,
         uiRule: payload.score_policy.known_collinearity.ui_rule,
