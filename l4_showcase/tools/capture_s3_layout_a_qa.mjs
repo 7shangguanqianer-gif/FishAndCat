@@ -16,6 +16,8 @@ const RUNTIME = join(SHOWCASE, 'src', 's3_fill_candidate_runtime.js');
 /* 0728 3D 抽离步1:公共三维内核已从页面内联外提为独立文件,与 runtime 同属页面一等依赖,
    必须一起进哈希快照,否则快照目录缺文件 → 页面 3D 起不来 → 全部断言归零(FAIL 0/0)。 */
 const SCENE_CORE = join(SHOWCASE, 'src', 's3_scene_core.js');
+/* 0728 3D 抽离步2:货位热度层同样外提为两页共用模块,一并进快照。 */
+const HEAT_LAYER = join(SHOWCASE, 'src', 's3_heat_layer.js');
 const STORE = join(SHOWCASE, 'src', 's3_fill_store.js');
 const INTERACTIONS = join(SHOWCASE, 'src', 's3_layout_a_interactions.js');
 const DATA_GATE = join(SHOWCASE, 'out', 's3_fill_data_gate');
@@ -46,7 +48,7 @@ const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; char
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 mkdirSync(OUT, {recursive: true});
 const liveFiles = {
-  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, store: STORE, interactions: INTERACTIONS,
+  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, store: STORE, interactions: INTERACTIONS,
   shellCss: join(SHOWCASE, 'src', 's3_shell_v2.css'), /* 0719 V2 壳体共享语法 */
   three: join(SHOWCASE, 'src', 'lib', 'three.min.js'),
   orbit: join(SHOWCASE, 'src', 'lib', 'OrbitControls.js'),
@@ -65,6 +67,7 @@ const snapshotTargets = {
   source: join(SNAPSHOT, 'src', PAGE_NAME),
   runtime: join(SNAPSHOT, 'src', 's3_fill_candidate_runtime.js'),
   sceneCore: join(SNAPSHOT, 'src', 's3_scene_core.js'),
+  heatLayer: join(SNAPSHOT, 'src', 's3_heat_layer.js'),
   store: join(SNAPSHOT, 'src', 's3_fill_store.js'),
   interactions: join(SNAPSHOT, 'src', 's3_layout_a_interactions.js'),
   shellCss: join(SNAPSHOT, 'src', 's3_shell_v2.css'),
@@ -647,11 +650,27 @@ try {
           JSON.stringify(audit.targets[audit.activeLane]) === JSON.stringify(item.snapshot.target));
     }) && laneStates.seq.mapAudit.activeLane === 'seq' && laneStates.score.mapAudit.activeLane === 'score',
     /* --- 0717 #26-2 → 0722c 过时审计 P1 改版:金顶淘汰(0718b 用户否),热门视觉=货位色阶热力
-       (02 现行):goldRetired 恒真、默认 heat3DOn 时热力罩数=在库总数、图例改「访问频率」。 --- */
+       (02 现行):goldRetired 恒真、默认 heat3DOn 时热力罩数=在库总数、图例改「访问频率」。
+       0728 抽离步2:载体从箱顶薄片升级为整格前罩,探针改名 cellHeatCount;前罩必须落在
+       货架前缘梁(y≤.042)与箱盖前脸(y=.06)之间的净空带内,否则会与箱体/梁互穿。 --- */
     fx26HotVisual: report.states.every(item => item.snapshot.hotVisual.goldRetired === true &&
       item.snapshot.hotVisual.heatAudit && item.snapshot.hotVisual.heatAudit.heat3DOn === true &&
-      item.snapshot.hotVisual.heatLidCount === item.snapshot.inventoryCount &&
-      item.snapshot.hotVisual.legendPresent),
+      item.snapshot.hotVisual.cellHeatCount === item.snapshot.inventoryCount &&
+      item.snapshot.hotVisual.cellHeatVisible === true &&
+      item.snapshot.hotVisual.cellHeatFrontY - item.snapshot.hotVisual.cellHeatThickness / 2 > .042 &&
+      item.snapshot.hotVisual.cellHeatFrontY + item.snapshot.hotVisual.cellHeatThickness / 2 < .06 &&
+      item.snapshot.hotVisual.legendPresent && item.snapshot.hotVisual.zoneLegendPresent),
+    /* --- 0728 抽离步2 新增:近 I/O 热区包络(Golden Zone)。包络必须由热门货**实际所在格子**推出
+       (bounds.cells === 该帧在库热门件数),库存长起来后必须真的可见,且包围盒不得退化成单格。 --- */
+    fx28HotZoneEnvelope: (() => {
+      const grown = report.states.filter(item => item.snapshot.hotVisual.hotInventoryCount >= 2);
+      return grown.length > 0 && grown.every(item => {
+        const zone = item.snapshot.hotVisual.hotZone;
+        return Boolean(zone) && zone.ready === true && zone.visible === true && Boolean(zone.bounds) &&
+          zone.bounds.cells === item.snapshot.hotVisual.hotInventoryCount &&
+          zone.bounds.maxCol >= zone.bounds.minCol && zone.bounds.maxTier >= zone.bounds.minTier;
+      });
+    })(),
     /* --- 0717 #26-3:冷门送远解说卡(score 首件 G001 出卡;热门件 G134 不出) --- */
     fx26ColdFarNote: firstEventState.reserveNotePresent === true &&
       report.states.filter(item => item.name.startsWith('event134_')).every(item => item.snapshot.reserveNotePresent === false),

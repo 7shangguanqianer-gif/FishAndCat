@@ -316,31 +316,33 @@
   }));
   const lidMesh = new THREE.InstancedMesh(stockLidGeometry, M.lid, stockCapacity);
   lidMesh.count = 0; stockGroup.add(lidMesh);
-  /* 0722c 过时审计 P1:金顶盖(0717 #26-2)清除——0718b 用户已否 gold-cap(「逐箱装饰把聚集拆成
-     孤立点」),02 现行=货位色阶热力(instanceColor 按 freq 秩归一连续上色)+3D/2D 开关。01 对齐:
-     热力罩盖于箱盖上方,白基色 Basic 平涂(不受光,热度色如实),opacity 同 02 实测口径 .78;
-     色阶同 02:冷灰 #aeb8c0 → 琥珀 #e7b800 → 热红 #c0392b(冷端不用蓝,防与等级蓝系撞色)。
-     instanceColor 必须按容量预分配(02 踩坑注:setColorAt 首调按当时 count 分配,count=0 时写入虚空)。 */
-  const heatLidMesh = new THREE.InstancedMesh(
-    stockLidGeometry,
-    new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: .78, depthWrite: false}),
-    stockCapacity);
-  heatLidMesh.count = 0; heatLidMesh.castShadow = false; heatLidMesh.receiveShadow = false;
-  heatLidMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(stockCapacity * 3).fill(1), 3);
-  stockGroup.add(heatLidMesh);
-  const HEAT_COLD = new THREE.Color(0xaeb8c0), HEAT_MID = new THREE.Color(0xe7b800), HEAT_HOT = new THREE.Color(0xc0392b);
-  const heatColorFor = (function(){
-    const scratch = new THREE.Color();
-    return function(gid) {
-      const rank = freqRankByGid.get(gid);
-      const t = rank ? 1 - (rank - 1) / 266 : 0;   /* rank 1(最热)→t=1;rank 267→t=0 */
-      if (t <= .5) scratch.copy(HEAT_COLD).lerp(HEAT_MID, t * 2);
-      else scratch.copy(HEAT_MID).lerp(HEAT_HOT, (t - .5) * 2);
-      return scratch;
-    };
-  })();
+  /* 0728 抽离步2(用户点名「01 的热力图表现形式落后 02」+ 七问②拍板「整格色阶 + Golden Zone 热区」):
+     ① 载体从**箱顶薄片**升级为**整格前罩**——旧实现把 stockLidGeometry(.86×.88×.08)叠在箱盖上方,
+        正视角只露一条薄边(02 在 0719 已因同样问题从背板改前罩,01 未跟进,是同源分叉的典型代差);
+        新实现用公共模块的 .96×.96 前罩铺满格口,总览尺度直读「热门贴底近 I/O」。
+     ② 新增近 I/O 热区包络(Golden Zone):热门货(freq 前 20%)**实际所在格子**的包围盒,
+        由放置结果推出、不是预设的一块金区。
+     前罩所在的 y 由本页货箱尺寸留出的净空带定,与 02 不同(本页箱体更大):
+        货架前缘梁 y ∈ [-.022, .042](母版 addInstances(N,.064,.072,…,y=.01));
+        箱体 BoxGeometry(.84,.86,.72) @ y=RACK.loadY → 前脸 y=.07;
+        箱盖 BoxGeometry(.86,.88,.08) @ y=RACK.loadY → 前脸 y=.06(比箱体更靠前,是真正的下界);
+        故净空带 = (.042, .06),取中心 .051、厚 .012,两侧各留 3 mm。 */
+  const CELL_HEAT_Y = .051, CELL_HEAT_THICKNESS = .012;
+  const cellHeatMesh = S3HeatLayer.createCellHeatMesh(THREE,
+    {group: stockGroup, capacity: stockCapacity, frontY: CELL_HEAT_Y, thickness: CELL_HEAT_THICKNESS});
+  const hotZone = S3HeatLayer.createHotZone(THREE,
+    /* minCells 2:填仓页库存是从零长起来的,只有 1 件热门货时包围盒退化成单格,圈了等于没圈。 */
+    {scene, loadY: RACK.loadY, depth: RACK.depth, minCells: 2});
+  const heatColor = S3HeatLayer.createColorScale(THREE);
+  /* 秩归一:rank 1(最热)→ t=1;末位 → t=0。分母取真实名次跨度,不写死 266。 */
+  const HEAT_RANK_SPAN = Math.max(1, freqRankByGid.size - 1);
+  const heatColorFor = gid => {
+    const rank = freqRankByGid.get(gid);
+    return heatColor(rank ? 1 - (rank - 1) / HEAT_RANK_SPAN : 0);
+  };
   let heat3DOn = true;   /* 默认开:SCORE 热门聚集是本页论证卖点;关=等级完整视图(02 双视图哲学) */
   let heat2DOn = true;
+  function applyHeat3D() { cellHeatMesh.visible = heat3DOn; hotZone.setVisible(heat3DOn); }
   if (cargo.parent) cargo.parent.remove(cargo); scene.add(cargo); cargo.visible = false;
 
   const activeMaterials = Object.fromEntries(Object.entries(gradeMaterial).map(([grade, material]) => {
@@ -354,26 +356,32 @@
     const signature = `${laneId}:${managedCount}`;
     if (signature === stockSignature) return;
     stockSignature = signature;
-    const counts = {heavy: 0, mid: 0, light: 0}; let lidCount = 0, heatCount = 0;
+    const counts = {heavy: 0, mid: 0, light: 0}; let lidCount = 0;
+    const hotCells = [];
     rows.forEach(row => {
       const grade = good(row.gid).grade;
       stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .46); stockDummy.updateMatrix();
       stockMeshes[grade].setMatrixAt(counts[grade]++, stockDummy.matrix);
       stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .84); stockDummy.updateMatrix();
-      /* 0722c:全部货箱统一灰顶盖;热力罩(freq 秩归一连续色)叠于其上,开关可关(关=等级完整视图) */
-      lidMesh.setMatrixAt(lidCount++, stockDummy.matrix);
-      if (heat3DOn) {
-        stockDummy.position.set(row.col + .5, RACK.loadY, row.tier + .845); stockDummy.updateMatrix();
-        heatLidMesh.setMatrixAt(heatCount, stockDummy.matrix);
-        heatLidMesh.setColorAt(heatCount, heatColorFor(row.gid));
-        heatCount += 1;
-      }
+      /* 0722c:全部货箱统一灰顶盖;热度不涂在箱上(等级色要保可读),由货位前罩承载 */
+      lidMesh.setMatrixAt(lidCount, stockDummy.matrix);
+      /* 0728:整格前罩铺满格口(col+.5, CELL_HEAT_Y, tier+.5),按 freq 秩归一连续上色 */
+      stockDummy.position.set(row.col + .5, CELL_HEAT_Y, row.tier + .5); stockDummy.updateMatrix();
+      cellHeatMesh.setMatrixAt(lidCount, stockDummy.matrix);
+      cellHeatMesh.setColorAt(lidCount, heatColorFor(row.gid));
+      lidCount += 1;
+      if (hotGids.has(row.gid)) hotCells.push(row);
     });
     Object.entries(stockMeshes).forEach(([grade, mesh]) => { mesh.count = counts[grade]; mesh.instanceMatrix.needsUpdate = true; });
     lidMesh.count = lidCount; lidMesh.instanceMatrix.needsUpdate = true;
-    heatLidMesh.count = heatCount; heatLidMesh.instanceMatrix.needsUpdate = true;
-    if (heatLidMesh.instanceColor) heatLidMesh.instanceColor.needsUpdate = true;
-    lastHeatAudit = {heat3DOn, heat2DOn, heatCount, hotSetSize: hotGids.size};
+    /* 矩阵与颜色恒写满(不再受 heat3DOn 门控):开关只切 visible。旧实现在关热力时不写实例,
+       再开就得等下一次库存变化才恢复——那是 bug,不是性能优化。 */
+    cellHeatMesh.count = lidCount; cellHeatMesh.instanceMatrix.needsUpdate = true;
+    if (cellHeatMesh.instanceColor) cellHeatMesh.instanceColor.needsUpdate = true;
+    hotZone.update(hotCells);
+    applyHeat3D();
+    lastHeatAudit = {heat3DOn, heat2DOn, heatCount: lidCount, hotSetSize: hotGids.size,
+      hotZoneCells: hotCells.length, hotZoneReady: hotZone.ready, hotZoneBounds: hotZone.bounds};
   }
 
   function disposePaths() {
@@ -775,11 +783,17 @@
     /* 0722c P1:dock 图例「金顶 = 热门前 20%」清除 → 访问频率色带 + 3D/2D 热力开关(02 现行双开关语言)。 */
     byId("reserveRuleBadge").innerHTML = '<span class="in"><i></i>入库路径</span><span class="empty"><i></i>空载回程</span><span class="blocked"><i></i>预占</span>' +
       '<span class="heatKey"><i style="background:linear-gradient(90deg,#aeb8c0,#e7b800,#c0392b);width:26px"></i>访问频率:低→高</span>' +
+      /* 0728 抽离步2:热区包络需要自己的图例,否则评委看到那圈琥珀边框不知道它在断言什么。
+         文案只写**口径**不写结论:本页从空填到满,267 件全部入库时 53 件热门必然摊满 20×20,
+         包围盒到终态一定是全场——若图例写死「近存取口」,那一刻就成了假陈述。 */
+      '<span class="zoneKey"><i style="background:rgba(231,184,0,.16);border:1.5px solid #ffb100;width:14px"></i>热门货包络 · freq 前 20% 所在格</span>' +
       '<label class="heatToggle"><input type="checkbox" id="heat3dToggle" checked>3D 热力</label>' +
       '<label class="heatToggle"><input type="checkbox" id="heat2dToggle" checked>2D 热力</label>';
     const heat3DBox = byId("heat3dToggle"), heat2DBox = byId("heat2dToggle");
     if (heat3DBox) heat3DBox.addEventListener("change", () => {
-      heat3DOn = !!heat3DBox.checked; stockSignature = ""; renderFrame(currentFrame());
+      /* 只切可见性:实例矩阵/颜色恒常驻,关了再开立刻恢复(旧实现清 stockSignature 重建,
+         关掉再打开会空到下一次库存变化才回来) */
+      heat3DOn = !!heat3DBox.checked; applyHeat3D();
     });
     if (heat2DBox) heat2DBox.addEventListener("change", () => {
       heat2DOn = !!heat2DBox.checked; renderFrame(currentFrame());
@@ -1383,9 +1397,13 @@
       /* 0722c:金顶探针退役,热力探针接任——goldRetired 恒真供 QA 断言「金色装饰家族已清除」 */
       inventoryCount: lastFrame ? lastFrame.rows.length : 0,
       hotVisual: {goldRetired: true, heatAudit: lastHeatAudit,
-        heatLidCount: heatLidMesh.count,
+        /* 0728 抽离步2:探针改名——载体已从箱顶薄片(lid)换成整格前罩(cell cover) */
+        cellHeatCount: cellHeatMesh.count, cellHeatVisible: cellHeatMesh.visible,
+        cellHeatFrontY: CELL_HEAT_Y, cellHeatThickness: CELL_HEAT_THICKNESS,
+        hotZone: {ready: hotZone.ready, visible: hotZone.mesh.visible, bounds: hotZone.bounds},
         hotInventoryCount: lastFrame ? lastFrame.rows.filter(row => hotGids.has(row.gid)).length : 0,
-        legendPresent: /访问频率/.test(byId("reserveRuleBadge").textContent)},
+        legendPresent: /访问频率/.test(byId("reserveRuleBadge").textContent),
+        zoneLegendPresent: /热门货包络/.test(byId("reserveRuleBadge").textContent)},
       reserveNotePresent: Boolean(document.querySelector("#decisionWrap .reserveNote")),
       narrativeAudit: {
         scenario: SCENARIO,

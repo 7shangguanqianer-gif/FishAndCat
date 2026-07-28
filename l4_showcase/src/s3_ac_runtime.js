@@ -876,13 +876,12 @@
        three.js 透明陷阱规避(issue 27170/Mugen87 惯例,fetch 一手):depthWrite:false 防黑块;
        本场景全部前罩共面同深、实例互不重叠 → InstancedMesh 无内建实例排序的已知限制不适用。
        只给**在库货位**上罩:空位无存储活动、自然无热度(诚实呈现,不编造)。 */
-    const cellHeatGeometry = new THREE.BoxGeometry(.96, .02, .96);
-    const cellHeatMesh = new THREE.InstancedMesh(cellHeatGeometry,
-      new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: .78, depthWrite: false}), stockCapacity);
-    /* opacity .78:实测 .45 时黄罩×蓝箱混成绿色、热度色阶失真;.78 热度主导保真,与 2D「热度纯净」双视图哲学一致(heat 关=等级完整视图) */
-    cellHeatMesh.count = 0; cellHeatMesh.castShadow = false; cellHeatMesh.receiveShadow = false;
-    cellHeatMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(stockCapacity * 3).fill(1), 3);
-    stockGroup.add(cellHeatMesh);
+    /* 0728 抽离步2:前罩的几何/材质/预分配口径统一交给 s3_heat_layer.js(与 01 页共用同一实现),
+       本页只提供容量与前罩所在的 y(CELL_HEAT_Y,由本页货箱尺寸留出的净空带定,见下)。
+       opacity .78 等实测口径已随实现搬进公共模块,数值不变。 */
+    const CELL_HEAT_Y = RACK.loadY - .40; /* -.40:盖过 lid 前脸(-.38),否则每格上沿露深色条 */
+    const cellHeatMesh = S3HeatLayer.createCellHeatMesh(THREE,
+      {group: stockGroup, capacity: stockCapacity, frontY: CELL_HEAT_Y});
     /* 0718 #26-2 改版:弃逐箱金顶,顶盖改「货位色阶热力图」——每箱盖按 freq_true 归一化连续上色(冷蓝→琥珀→热红),
        用 InstancedMesh.instanceColor(setColorAt)零额外几何。材质基色设白,让 instanceColor 就是真实热度色;仍保持 4 次绘制。 */
     /* 顶盖用 MeshBasicMaterial(平涂不受光)让 instanceColor 满饱和呈现,热度色如实可读;基色白=最终色即热度色。 */
@@ -929,35 +928,18 @@
     /* 注:instanceColor 必须按容量预分配。three.js 的 setColorAt 首调时按当时 count 分配,若 count 还是 0
        会分配成 Float32Array(0),后续 setColorAt 全部写入虚空(本轮实测踩过:colorArrayLen=0、色阶恒不显现)。
        见上 cellHeatMesh 的预分配。 */
-    /* 色阶:三段插值 冷=中性浅灰(#aeb8c0)→琥珀(#e7b800)→热红(#c0392b);t 由 freq_true 的秩归一化。
-       冷端**不用蓝**:货箱等级色本身是蓝系(重/中/轻),冷蓝框会与蓝箱语义撞色糊成一片;
-       改中性灰后低频不抢注意力、暖/热才真正跳出来(注意力预算给热门)。 */
-    const HEAT_COLD = new THREE.Color(0xaeb8c0), HEAT_MID = new THREE.Color(0xe7b800), HEAT_HOT = new THREE.Color(0xc0392b);
-    const heatScratch = new THREE.Color(), gradeScratch = new THREE.Color();
-    function heatColor(t) {
-      t = t < 0 ? 0 : t > 1 ? 1 : t;
-      return t < .5 ? heatScratch.copy(HEAT_COLD).lerp(HEAT_MID, t * 2)
-                    : heatScratch.copy(HEAT_MID).lerp(HEAT_HOT, (t - .5) * 2);
-    }
+    /* 0728 抽离步2:色阶(冷中性灰 #aeb8c0 → 琥珀 #e7b800 → 热红 #c0392b)与热区包络实体
+       统一由 s3_heat_layer.js 提供,与 01 页共用;色值、opacity、padding 一个数字未改。
+       冷端不用蓝的理由随实现搬进公共模块注释(与蓝系等级色撞色)。 */
+    const heatColor = S3HeatLayer.createColorScale(THREE);
     let freqRank = new Map();
-    /* 0718 #26-2 B层·近 I/O 热区包络:热门货(freq_true 前 20%)实际所在格子的包围盒,半透明琥珀块 + 亮描边;随 setTrace 重算。 */
-    const hotZoneMat = new THREE.MeshBasicMaterial({color: 0xe7b800, transparent: true, opacity: .10, depthWrite: false, side: THREE.DoubleSide});
-    const hotZoneMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), hotZoneMat);
-    hotZoneMesh.visible = false; hotZoneMesh.renderOrder = 2; scene.add(hotZoneMesh);
-    const hotZoneEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
-      new THREE.LineBasicMaterial({color: 0xffb100, transparent: true, opacity: .95}));
-    hotZoneEdges.visible = false; hotZoneEdges.renderOrder = 6; scene.add(hotZoneEdges);
+    /* 0718 #26-2 B层·近 I/O 热区包络:热门货(freq_true 前 20%)实际所在格子的包围盒;随 setTrace 重算。 */
+    const hotZone = S3HeatLayer.createHotZone(THREE, {scene, loadY: RACK.loadY, depth: RACK.depth, minCells: 1});
     function updateHotZone(trace) {
       const rows = Array.isArray(trace.initial_inventory) ? trace.initial_inventory.filter(r => hotGids.has(r.gid)) : [];
-      if (!rows.length) { hotZoneReady = false; applyHeat3D(); return; }
-      let minCol = Infinity, maxCol = -Infinity, minTier = Infinity, maxTier = -Infinity;
-      rows.forEach(r => { minCol = Math.min(minCol, r.col); maxCol = Math.max(maxCol, r.col);
-        minTier = Math.min(minTier, r.tier); maxTier = Math.max(maxTier, r.tier); });
-      const cx = (minCol + maxCol + 1) / 2, cz = (minTier + maxTier + 1) / 2;
-      const sx = (maxCol - minCol + 1) + .14, sz = (maxTier - minTier + 1) + .14, sy = RACK.depth + .12;
-      hotZoneMesh.position.set(cx, RACK.loadY, cz); hotZoneMesh.scale.set(sx, sy, sz);
-      hotZoneEdges.position.copy(hotZoneMesh.position); hotZoneEdges.scale.copy(hotZoneMesh.scale);
-      hotZoneReady = true; applyHeat3D();
+      hotZone.update(rows);
+      hotZoneReady = hotZone.ready;
+      applyHeat3D();
     }
     /* 0718 热度开关:3D(货位色框 + 热区包络)与 2D(左栏货位图热力)各一个。
        开关 DOM 挂在已有的「货位热度」图例面板内——**不动左栏栅格**(该处每加内容都会触发一轮 @media 断点
@@ -965,7 +947,7 @@
     let heat3DOn = true, heat2DOn = true, hotZoneReady = false;
     function applyHeat3D() {
       cellHeatMesh.visible = heat3DOn;
-      hotZoneMesh.visible = hotZoneEdges.visible = heat3DOn && hotZoneReady;
+      hotZone.setVisible(heat3DOn);
     }
     const heat3DBox = document.getElementById("heat3dToggle"), heat2DBox = document.getElementById("heat2dToggle");
     if (heat3DBox) { heat3DBox.checked = heat3DOn; heat3DBox.addEventListener("change", () => { heat3DOn = !!heat3DBox.checked; applyHeat3D(); }); }
@@ -1013,7 +995,7 @@
       inventory.forEach(wrapper => {
         const row = wrapper.row, item = good(row.gid), grade = stockGradeMeshes[item.grade] ? item.grade : "mid";
         /* 货位热度前罩(位置着色):半透明贴货格前脸,热度可见且等级色透出 */
-        stockDummy.position.set(row.col + .5, RACK.loadY - .40, row.tier + .5); stockDummy.updateMatrix(); /* -.40:盖过 lid 前脸(-.38),否则每格上沿露深色条 */
+        stockDummy.position.set(row.col + .5, CELL_HEAT_Y, row.tier + .5); stockDummy.updateMatrix();
         cellHeatMesh.setMatrixAt(lidCount, stockDummy.matrix);
         cellHeatMesh.setColorAt(lidCount, heatColor(freqRank.has(row.gid) ? freqRank.get(row.gid) : .5));
         /* 货箱本体=等级色(重/中/轻),保持原样不被热度覆盖 */
