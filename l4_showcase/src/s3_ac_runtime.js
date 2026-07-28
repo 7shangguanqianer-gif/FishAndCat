@@ -47,10 +47,15 @@
   const TIER_MECHANISM_LABEL = Object.freeze({1: "匀速运动学", 2: "梯形加减速", 3: "加减速+故障+潮汐"});
   /* W1-5+W1-6:tierSeg 按钮上的机理小字(原 <small>)移入悬浮解释,顶栏改单行;这里是三档悬浮文案
      的唯一来源,与 TIER_MECHANISM_LABEL 分工——后者是徽章短词,这里是完整一句话解释。 */
+  /* 0724 运动模型口径披露(用户问「01/02 同倍速速度显示不一致是不是 bug」的结论落地):
+     不是渲染 bug——本页 trace meta 的 motion = trapezoid_accel(不含满载升降折减),
+     01 连续入库页数据门为 trapezoid_accel_plus_laden_vertical_factor(laden_vy_factor=0.8,
+     warehouse_sim.py:78,行业依据 Mecalux/Muvro)。两页各自渲染都忠实于自己的 trace,
+     故不改任何一边运动学代码(改了会让显示速度与本页 trace 时刻脱节),改为如实披露。 */
   const TIER_TOOLTIP = Object.freeze({
     1: "匀速运动学:只验证数据模型的时间结构,无动力学细节;用于建立基线",
-    2: "梯形加减速:行走/升降按加减速度限幅,贴近真机动力学",
-    3: "综合情景:加减速 + 故障注入(MTBF/MTTR)+ 到达潮汐,最接近真实运行;本页默认档"
+    2: "梯形加减速:行走/升降按加减速度限幅,贴近真机动力学。本页运动模型 trapezoid_accel,不含满载升降折减(01 连续入库页含 ×0.8),故同倍速下升降速度显示与 01 不同,属两页 sim 口径差异,非渲染误差",
+    3: "综合情景:加减速 + 故障注入(MTBF/MTTR)+ 到达潮汐,最接近真实运行;本页默认档。运动模型同档 2(trapezoid_accel,不含满载升降折减——与 01 连续入库页的口径差异见该页口径条)"
   });
   const PROFILE_TOOLTIP = "均匀：各货访问频率接近，无明显热门；偏斜：少数高频件（帕累托型），热区聚集、算法红利最大；重货：重件占比高，承重约束主导";
   const OWNER_LABEL = Object.freeze({

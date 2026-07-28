@@ -834,8 +834,21 @@
     const raceBannerLineText = `三算法同一到达队列 · 同一数据门 · 单 seed ${payload.shared_input_provenance.profile.seed}` +
       `(30-seed 佐证见证据 s3_fill_seed_sweep_${SCENARIO}_2026_2055.json)· SIM`;
     const raceBannerSubText = `数据抽查:三条在线 lane 的 shared_input_sha256 唯一值个数 = ${sameInputSet.size}(应为 1)← payload.online_lanes[].shared_input_sha256(数据源:./s3_fill_store.js)`;
+    /* 0724 运动模型口径披露(用户问「01/02 同倍速速度显示不一致是不是 bug」的结论落地):
+       不是渲染 bug——两页 sim 数据本身模型不同,各自渲染层都忠实于自己的 trace:
+         01(本页)= trapezoid_accel_plus_laden_vertical_factor,含满载垂直折减 laden_vy_factor=0.8
+                    (warehouse_sim.py:78,行业依据 Mecalux 0.818 / Muvro 0.667 取 0.80);
+         02(存取闭环)= trapezoid_accel,不含折减(其 trace meta motion 字段)。
+       故不改任何一边的运动学代码(改了会让显示速度与该页 trace 时刻脱节,那才是真 bug),
+       改为如实披露口径差异。字段真读 payload.shared_input_provenance.motion,不硬编码。 */
+    const motionMeta = (payload.shared_input_provenance && payload.shared_input_provenance.motion) || {};
+    const ladenFactor = motionMeta.laden_vy_factor;
+    const raceBannerMotionText = `运动模型:${motionMeta.accel ? "梯形加减速" : "匀速"} · 水平 ${motionMeta.vx_mps} / 升降 ${motionMeta.vy_mps} m/s` +
+      (ladenFactor ? ` · 满载升降折减 ×${ladenFactor}(laden_vy_factor,行业依据)` : "") +
+      ` —— 02 存取闭环页 trace 为 trapezoid_accel(不含满载折减),故同倍速下升降速度显示不同,属两页 sim 模型口径差异,非渲染误差。`;
     raceBanner.innerHTML = `<span class="raceBannerLine">${raceBannerLineText}</span>` +
-      `<div class="raceBannerFull">${raceBannerLineText}<span style="display:block;margin-top:4px;font:400 8.5px/1.3 Consolas,monospace;color:#8a6a55">${raceBannerSubText}</span></div>`;
+      `<div class="raceBannerFull">${raceBannerLineText}<span style="display:block;margin-top:4px;font:400 8.5px/1.3 Consolas,monospace;color:#8a6a55">${raceBannerSubText}</span>` +
+      `<span style="display:block;margin-top:4px;font:400 8.5px/1.35 Consolas,monospace;color:#6a747d">${raceBannerMotionText}</span></div>`;
 
     /* 0722 §B.1 新增:当前容量节点三算法关键指标微条(renderRaceMicro 每帧写入,见下方)。 */
     const raceMicroBar = document.createElement("section");
