@@ -1194,6 +1194,9 @@
       button.setAttribute("aria-label", `${label} ${value}；按 Enter 或空格查看定义`);
       button.setAttribute("aria-describedby", tipId); button.setAttribute("aria-expanded", "false");
       number.textContent = value; caption.textContent = label;
+      /* 0728:给每个 KPI 芯片打上标签标记,供悬浮文案表按指标逐项挂三段式解释
+         (CSS 选不了文本,只能靠这个 data 属性;不影响既有 tipBubble 行为)。 */
+      button.dataset.metric = label;
       if (sub) { const caliber = doc.createElement("i"); caliber.className = "statCaliber"; caliber.textContent = sub; caption.append(caliber); }
       tip.id = tipId; tip.className = "tipBubble"; tip.setAttribute("role", "tooltip"); tip.textContent = description;
       button.append(number, caption, tip);
@@ -1936,7 +1939,11 @@
       renderer.render(scene, camera);
       layoutStationTags(frame);
       layoutProjectedLabels(frame);
+      /* 悬浮层用事件委托,重渲染免疫;sweep 只给新出现的元素补 cursor/tabindex 与摘原生 title。
+         每 30 帧一次即可(≈0.5 s)。 */
+      if (root.S3Tooltip && (tooltipSweepTick = (tooltipSweepTick + 1) % 30) === 0) root.S3Tooltip.sweep();
     }
+    let tooltipSweepTick = 0;
 
     function refreshProjection() {
       /* 镜头拖动不改变业务帧，但会改变所有世界坐标的屏幕投影。
@@ -2152,6 +2159,13 @@
        内联标注,这里只补自定义浮层——原生 title 有系统延迟,三档 tooltip 已弃用同理弃用于此)。 */
     const profileInfoIcon = doc.getElementById("profileInfoIcon");
     if (profileInfoIcon) attachFixedTooltip(profileInfoIcon, PROFILE_TOOLTIP, "below");
+    /* 0728 悬浮全覆盖(用户拍板「全覆盖 + 首次进页引导」):文案表在 src/s3_tooltip_copy.js。
+       与本页既有的 attachFixedTooltip 并存——那三处(三档 / 货物画像 ⓘ)是随内容动态生成的
+       行内气泡,先保留;新层负责主界面上其余全部指标 / 图例 / 控件的三段式解释。 */
+    if (root.S3Tooltip && root.S3TooltipCopy) {
+      root.S3Tooltip.register(root.S3TooltipCopy.page02);
+      root.S3Tooltip.firstVisitHint({key: "s3_tip_hint_02_v1", autoDismissMs: 15000});
+    }
   }
 
   /* T5 · 证据中心:单一弹层承接旧 evidenceDock(本页证据链)+ comparisonLab(S1 受控对照)两套内容,

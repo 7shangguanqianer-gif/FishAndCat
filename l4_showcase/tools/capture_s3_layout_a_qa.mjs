@@ -20,6 +20,9 @@ const SCENE_CORE = join(SHOWCASE, 'src', 's3_scene_core.js');
 const HEAT_LAYER = join(SHOWCASE, 'src', 's3_heat_layer.js');
 /* 0728 3D 抽离步3:双轴运动学同样外提为两页共用模块(口径由 test_s3_motion_parity.mjs 锁死)。 */
 const MOTION = join(SHOWCASE, 'src', 's3_motion.js');
+/* 0728 阶段二:悬浮解释层与文案表(文案是要给评委看的内容,同样纳入哈希快照锁定)。 */
+const TOOLTIP = join(SHOWCASE, 'src', 's3_tooltip.js');
+const TOOLTIP_COPY = join(SHOWCASE, 'src', 's3_tooltip_copy.js');
 const STORE = join(SHOWCASE, 'src', 's3_fill_store.js');
 const INTERACTIONS = join(SHOWCASE, 'src', 's3_layout_a_interactions.js');
 const DATA_GATE = join(SHOWCASE, 'out', 's3_fill_data_gate');
@@ -50,7 +53,7 @@ const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; char
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 mkdirSync(OUT, {recursive: true});
 const liveFiles = {
-  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, motion: MOTION, store: STORE, interactions: INTERACTIONS,
+  source: SOURCE, runtime: RUNTIME, sceneCore: SCENE_CORE, heatLayer: HEAT_LAYER, motion: MOTION, tooltip: TOOLTIP, tooltipCopy: TOOLTIP_COPY, store: STORE, interactions: INTERACTIONS,
   shellCss: join(SHOWCASE, 'src', 's3_shell_v2.css'), /* 0719 V2 壳体共享语法 */
   three: join(SHOWCASE, 'src', 'lib', 'three.min.js'),
   orbit: join(SHOWCASE, 'src', 'lib', 'OrbitControls.js'),
@@ -71,6 +74,8 @@ const snapshotTargets = {
   sceneCore: join(SNAPSHOT, 'src', 's3_scene_core.js'),
   heatLayer: join(SNAPSHOT, 'src', 's3_heat_layer.js'),
   motion: join(SNAPSHOT, 'src', 's3_motion.js'),
+  tooltip: join(SNAPSHOT, 'src', 's3_tooltip.js'),
+  tooltipCopy: join(SNAPSHOT, 'src', 's3_tooltip_copy.js'),
   store: join(SNAPSHOT, 'src', 's3_fill_store.js'),
   interactions: join(SNAPSHOT, 'src', 's3_layout_a_interactions.js'),
   shellCss: join(SNAPSHOT, 'src', 's3_shell_v2.css'),
@@ -518,6 +523,40 @@ try {
   await modalPage.close();
   report.modalToggle = {modalClosedVisible, modalOpenCheck, modalClosedAfter};
 
+  /* --- 0728 阶段二:悬浮解释层覆盖审计。注册表逐条必须命中至少一个元素(否则是选择器写错了,
+     页面上看着"有悬浮"其实一片空白),且三段(是什么/为何这样/优 · 边界)必须齐全;
+     再实测悬停一次,确认气泡真的弹出、三段真的渲染出来、且完整落在视口内(不出画)。 --- */
+  {
+    const tipPage = await browser.newPage({viewport: {width: 1552, height: 900}});
+    await tipPage.goto(pageUrl, {waitUntil: 'load'});
+    await tipPage.waitForFunction(expected => window.__S3_FILL_QA?.snapshot?.().releaseId === expected && window.__S3_LAYOUT_A,
+      EXPECTED_RELEASE, {timeout: 30000});
+    await tipPage.evaluate(() => document.fonts.ready);
+    await tipPage.waitForTimeout(600);
+    report.tooltipAudit = await tipPage.evaluate(async () => {
+      if (!window.S3Tooltip) return {present: false};
+      const coverage = window.S3Tooltip.coverage();
+      const probes = [];
+      for (const entry of coverage.filter(c => c.matched > 0).slice(0, 8)) {
+        const el = document.querySelector(entry.selector);
+        el.dispatchEvent(new PointerEvent('pointerover', {bubbles: true}));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const bubble = document.querySelector('#s3TooltipLayer .s3tip');
+        const rect = bubble ? bubble.getBoundingClientRect() : null;
+        probes.push({selector: entry.selector, shown: !!bubble,
+          sections: bubble ? Array.from(bubble.querySelectorAll('.k')).map(k => k.textContent) : [],
+          onScreen: rect ? (rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight) : false});
+        window.S3Tooltip.hide();
+      }
+      return {present: true, registered: coverage.length,
+        matchedTotal: coverage.reduce((sum, c) => sum + Math.max(0, c.matched), 0),
+        unmatched: coverage.filter(c => c.matched === 0).map(c => c.selector),
+        incomplete: coverage.filter(c => c.matched > 0 && c.has.length < 4).map(c => c.selector),
+        probes};
+    });
+    await tipPage.close();
+  }
+
   report.finalHashes = Object.fromEntries(Object.entries(liveFiles).map(([key, path]) => [key, hash(path)]));
   const endpoint = Object.fromEntries(report.states.filter(item => item.name.startsWith('bookmark_')).map(item => [item.snapshot.managedCount, item.snapshot]));
   const bookmarkOverlays = Object.fromEntries(report.states.filter(item => item.name.startsWith('bookmark_')).map(item => [item.snapshot.managedCount, item.overlay]));
@@ -630,6 +669,13 @@ try {
         (done ? fx.arrowVisible === false : true) &&
         (fx.arrowBlocked === true ? fx.arrowVisible === false : true);
     }),
+    /* --- 0728 阶段二:悬浮解释层全覆盖门。注册表逐条必须命中元素、三段必须齐全,
+       且实测悬停时气泡真的弹出、三段真的渲染、完整落在视口内(窄容器里最容易出画)。 --- */
+    tooltipFullCoverage: Boolean(report.tooltipAudit) && report.tooltipAudit.present === true &&
+      report.tooltipAudit.registered >= 20 && report.tooltipAudit.matchedTotal >= 40 &&
+      report.tooltipAudit.unmatched.length === 0 && report.tooltipAudit.incomplete.length === 0 &&
+      report.tooltipAudit.probes.length >= 5 &&
+      report.tooltipAudit.probes.every(p => p.shown && p.onScreen && p.sections.length === 3),
     /* --- 0728 新增:箭头遮挡守卫必须真的在起作用——采样中不得出现「箭头可见 且 判定被遮挡」。
        旧守卫只按水平距离 .60 判,实测漏 4 帧(箭头插进载货台),故此门按三维相交结果断言。 --- */
     fx28ArrowNeverSwallowed: report.states.every(item => {

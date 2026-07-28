@@ -805,6 +805,12 @@
       heat2DOn = !!heat2DBox.checked; renderFrame(currentFrame());
     });
     byId("phaseNow").textContent = "入库进度 0 / 267"; byId("phaseClock").textContent = "等待连续回放";
+    /* 0728 悬浮全覆盖(用户拍板「全覆盖 + 首次进页引导」):文案表在 src/s3_tooltip_copy.js,
+       注册后由 s3_tooltip.js 事件委托驱动;首次进页给一次性提示,localStorage 记忆不打扰二次访问。 */
+    if (root.S3Tooltip && root.S3TooltipCopy) {
+      root.S3Tooltip.register(root.S3TooltipCopy.page01);
+      root.S3Tooltip.firstVisitHint({key: "s3_tip_hint_01_v1", autoDismissMs: 15000});
+    }
 
     /* 0722d 回迁(双向取中拍板):①dock 第五列「赛段走势」——6 容量节点三算法期望取货 SVG 折线,
        弹层全表的精简常驻版;②顶栏中段「终态总分一行」——填顶栏空白。数据全部 checkpoints/metrics 真读。 */
@@ -1081,14 +1087,14 @@
       return `<em class="statsDelta ${pct < 0 ? "better" : "worse"}">${pct < 0 ? "▼" : "▲"}${Math.abs(pct).toFixed(1)}%</em>`;
     };
     host.innerHTML = `<div class="statsHead"><b>批次 KPI(终态)</b><span>单种子 · 连续入库 · SIM</span></div><div class="statsGrid">` +
-      `<button class="metricHelp" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益(30 种子跑批方向一致)。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
-      `<button class="metricHelp" title="最重 20% 货物的平均层位，越低越稳(降低重心；30 种子跑批方向一致)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
-      `<button class="metricHelp" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值(30 种子跑批方向一致)"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
+      `<button class="metricHelp" data-metric="hot20" title="访问频次前 20% 热门货物的期望取货时间；把高频货放近端货位的直接收益(30 种子跑批方向一致)。角标为相对 SEQ 基线的变化，▼ 更优"><b>${metrics.hot20_retrieval_s.toFixed(2)} s</b><small>热门取货 ⓘ</small>${deltaBadge(metrics.hot20_retrieval_s, seqMetrics.hot20_retrieval_s)}</button>` +
+      `<button class="metricHelp" data-metric="heavy20" title="最重 20% 货物的平均层位，越低越稳(降低重心；30 种子跑批方向一致)"><b>${metrics.heavy20_mean_tier.toFixed(2)}</b><small>重货均层 ⓘ</small>${deltaBadge(metrics.heavy20_mean_tier, seqMetrics.heavy20_mean_tier)}</button>` +
+      `<button class="metricHelp" data-metric="liftwork" title="Σ 重量×提升高度，单位 kg·m；SIM 能耗代理，不是现场电表值(30 种子跑批方向一致)"><b>${Math.round(metrics.lift_work_proxy_kgm)}</b><small>能耗代理 kg·m ⓘ</small>${deltaBadge(metrics.lift_work_proxy_kgm, seqMetrics.lift_work_proxy_kgm)}</button>` +
       `<button class="metricHelp" title="${SCENARIO === "uniform" ?
         "全部 267 件的频次加权期望取货时间。本页为均匀货流对照情景(单种子 2026)：热门不突出，分层红利天然小，三算法趋同本身就是适用条件的诚实披露；30 种子稳健性跑批中 SCORE 均值仍最优(21.34 vs SEQ 21.69 s)但幅度小于偏斜情景——证据 evidence/s3_fill_seed_sweep_uniform_2026_2055.json" :
         "全部 267 件的频次加权期望取货时间。本页为单种子(2026)可复现样本，该种子恰 SEQ 占优；30 种子稳健性跑批(2026–2055)中 SCORE 均值最优(20.57 vs SEQ 21.70 s)，四项指标全部领先——证据 evidence/s3_fill_seed_sweep_skew_2026_2055.json"}"><b>${metrics.expected_retrieval_s.toFixed(2)} s</b><small>期望取货 ⓘ</small>${deltaBadge(metrics.expected_retrieval_s, seqMetrics.expected_retrieval_s)}</button>` +
-      `<button class="metricHelp" title="本连续入库数据门的硬约束违规"><b>${metrics.violations}</b><small>约束违规 ⓘ</small></button>` +
-      `<button class="metricHelp conservedCell" title="守恒量：填满口径下三种算法终态占据同一批 267 个货位，完工时长与总行程只取决于货位集合与同批货物，数学上必然三算法相等——能区分算法的是取货侧与分布侧指标"><b>${Math.round(metrics.makespan_s)} s · ${Math.round(metrics.round_trip_path_m)} m</b><small>完工/行程 · 三算法恒等 ⓘ</small></button></div>`;
+      `<button class="metricHelp" data-metric="violations" title="本连续入库数据门的硬约束违规"><b>${metrics.violations}</b><small>约束违规 ⓘ</small></button>` +
+      `<button class="metricHelp conservedCell" data-metric="conserved" title="守恒量：填满口径下三种算法终态占据同一批 267 个货位，完工时长与总行程只取决于货位集合与同批货物，数学上必然三算法相等——能区分算法的是取货侧与分布侧指标"><b>${Math.round(metrics.makespan_s)} s · ${Math.round(metrics.round_trip_path_m)} m</b><small>完工/行程 · 三算法恒等 ⓘ</small></button></div>`;
   }
 
   /* W7(0721 回灌 §1.3):决策解剖——评分瀑布 + Top-3 候选对比,固定读 SCORE lane(与右上角
@@ -1287,7 +1293,11 @@
       }
     }
     renderDecision(frame); renderScoreAnatomy(frame); renderRaceMicro(frame); updatePhaseRail(frame); updateText(frame); renderer.render(scene, camera); layoutTarget(frame);
+    /* 悬浮层用事件委托,重渲染免疫;sweep 只负责给新出现的元素补 cursor/tabindex 与摘原生 title。
+       每 30 帧一次即可(≈0.5 s),不必每帧扫。 */
+    if (root.S3Tooltip && (tooltipSweepTick = (tooltipSweepTick + 1) % 30) === 0) root.S3Tooltip.sweep();
   }
+  let tooltipSweepTick = 0;
 
   function currentFrame() { return state.idleCount === null ? activeFrame(state.model, state.elapsed) : idleFrame(state.model, state.idleCount); }
 
