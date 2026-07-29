@@ -85,7 +85,7 @@ button{font:inherit;cursor:pointer}
   <div class="rail-item" data-key="about"><button class="rail-icon" aria-label="关于">ⓘ</button><div class="flyout"><span class="k">i</span>关于</div></div>
 </nav>
 
-<iframe id="contentFrame" title="内容区" src="launch.html"></iframe>
+<iframe id="contentFrame" title="内容区" src="../src/00_导览.html"></iframe>
 
 <dialog id="aboutDialog">
   <div class="about-top"></div>
@@ -110,8 +110,10 @@ button{font:inherit;cursor:pointer}
 'use strict';
 
 var KEY_TO_SRC = {
-  launch: 'launch.html',
-  materials: 'launch.html#materials',
+  /* 0728c 用户拍板「00 页当壳首页」:原 launch.html 与 src/00_导览.html 是门面层的同源分叉
+     (前者有三页入口无成果数字,后者有数字无入口),已合并为后者一份,launch.html 随之删除。 */
+  launch: '../src/00_导览.html',
+  materials: '../src/00_导览.html#materials',
   '01': '../src/01_连续填仓.html',
   '02': '../src/02_入出闭环.html',
   '03': '../src/03_FIO物理证据.html'
@@ -184,7 +186,7 @@ railItems.forEach(function (item) {
 document.getElementById('aboutClose').addEventListener('click', function () { aboutDialog.close(); });
 aboutDialog.addEventListener('click', function (e) { if (e.target === aboutDialog) aboutDialog.close(); });
 
-/* 内容 iframe(launch.html / 场景页)与壳之间唯一通道:同源 postMessage,校验 source 标记与 origin。 */
+/* 内容 iframe(00 导览页 / 场景页)与壳之间唯一通道:同源 postMessage,校验 source 标记与 origin。 */
 window.addEventListener('message', function (ev) {
   if (ev.origin !== window.location.origin) return;
   var data = ev.data;

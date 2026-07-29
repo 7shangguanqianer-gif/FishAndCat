@@ -2,294 +2,419 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>智储优控 · 提交材料导览｜2026 ABB 杯智能仓储赛题</title>
+<!-- 空 favicon:阻止浏览器自动请求 /favicon.ico(离线产物里那是一条必然 404) -->
+<link rel="icon" href="data:,">
+<title>智储优控 · AS/RS 演示工作站 · 提交材料导览</title>
 <style>
 :root{
-  --abb:#ff000f;--ink:#1a1d21;--muted:#5c6670;--faint:#8a939c;
-  --line:#dde2e8;--soft:#f4f6f8;--bg:#eef1f4;--paper:#ffffff;
-  --navy:#17365d;--green:#1e7a4d;--amber:#9a6b00;--rail:224px;
+  --abb:#ff000f;--ink:#1a1a1a;--head:#16191d;--muted:#5d6871;--faint:#8a939c;
+  --line:#d5d8dc;--soft:#f4f6f8;--bg:#f2f2f2;--paper:#fff;
+  --navy:#17365d;--amber:#9a6b00;--ok:#1e7a4d;
 }
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0}
-body{min-width:1080px;min-height:640px;height:100vh;overflow:hidden;background:var(--bg);color:var(--ink);
-  font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
-  display:flex;flex-direction:column}
-button,a{font:inherit}button{color:inherit}
-.topline{height:5px;background:linear-gradient(90deg,var(--abb) 0 9%,var(--ink) 9%)}
+body{background:var(--bg);color:var(--ink);
+  font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+  display:flex;flex-direction:column;overflow:hidden}
+button,a{font:inherit;color:inherit}
 
-/* 品牌栏 */
-.masthead{height:56px;background:var(--paper);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;padding:0 22px;gap:18px;flex:none}
-.brand{font:700 17px/1 Georgia,"Songti SC","SimSun",serif;white-space:nowrap;letter-spacing:.5px}
-.brand i{font:900 19px Arial;color:var(--abb);font-style:normal;margin-right:9px}
-.docline{color:var(--faint);font:11px/1.4 "Microsoft YaHei",sans-serif;border-left:1px solid var(--line);padding-left:16px}
-.docline b{display:block;color:var(--muted);font-weight:600;font-size:12px}
-.ribbon-toggle{margin-left:auto;border:1px solid var(--line);background:var(--paper);color:var(--muted);
-  font-size:11px;padding:5px 11px;cursor:pointer;border-radius:3px}
-.ribbon-toggle:hover{border-color:var(--ink);color:var(--ink)}
+/* ── 顶栏:取值逐项复制 01/02 实测(.abbWord 900 24px Arial/-1.2px;eyebrow 8px/1.45px/#5d6871;
+      h1 18px/#16191d;底边 3px solid #ff000f)。00 页原有的衬线与双色渐变条已全部清除。 ── */
+.topbar{flex:none;height:48px;background:var(--paper);border-bottom:3px solid var(--abb);
+  display:flex;align-items:center;padding:0 18px;gap:14px;position:relative;z-index:30}
+.brandLock{display:flex;align-items:center;gap:11px}
+.abbWord{font:900 24px/1 Arial,sans-serif;letter-spacing:-1.2px;color:var(--abb)}
+.brandText .eyebrow{font:400 8px/1.3 "Microsoft YaHei",sans-serif;letter-spacing:1.45px;color:var(--muted)}
+.brandText h1{margin:1px 0 0;font:700 18px/1.15 "Microsoft YaHei",sans-serif;color:var(--head);white-space:nowrap}
+.topMeta{margin-left:auto;display:flex;align-items:center;gap:10px}
+.badgeOk{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:2px;
+  background:#e8f4ec;color:var(--ok);font:700 10px/1 "Microsoft YaHei",sans-serif;border-left:2px solid var(--ok)}
+.topFinger{font:10px/1 Consolas,monospace;color:var(--faint)}
 
-/* 指标带(可折叠;每项 hover/focus 出解释与验证路径) */
-.metric-ribbon{background:var(--paper);border-bottom:1px solid var(--line);
-  display:grid;grid-template-columns:1.1fr repeat(4,1fr);padding:11px 22px 13px;gap:14px;flex:none}
-.metric-ribbon.collapsed{display:none}
-.metric{position:relative;min-width:0;padding:2px 0 0 12px;border-left:3px solid #b9c2cb;cursor:default;outline:none}
+/* ── 主张条 ── */
+.claim{flex:none;background:var(--paper);border-bottom:1px solid var(--line);padding:13px 18px 0;position:relative;z-index:20}
+.claimHead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.claimHead b{font:700 20px/1.2 "Microsoft YaHei",sans-serif;color:var(--head);letter-spacing:-.2px}
+.claimHead span{font:11.5px/1.5 "Microsoft YaHei",sans-serif;color:var(--muted)}
+.metrics{display:grid;grid-template-columns:1.25fr repeat(4,1fr);gap:13px;padding:11px 0 13px}
+.metric{position:relative;min-width:0;padding:1px 0 0 11px;border-left:3px solid #b9c2cb;outline:none;cursor:help}
 .metric.primary{border-left-color:var(--abb)}
-.metric:focus{background:var(--soft)}
-.metric .value{display:block;font:700 20px/1.15 Consolas,"JetBrains Mono",monospace;color:var(--navy);white-space:nowrap}
-.metric .label{display:block;margin-top:4px;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.metric .tip{display:none;position:absolute;left:0;top:calc(100% + 8px);z-index:30;width:330px;
-  background:var(--ink);color:#e8ecef;border-radius:4px;padding:11px 13px;font-size:11.5px;line-height:1.65;
-  box-shadow:0 6px 20px rgba(20,24,28,.25)}
-.metric .tip b{color:#fff;display:block;margin-bottom:3px;font-size:12px}
-.metric .tip code{display:block;margin-top:6px;padding:6px 8px;background:#00000055;border-radius:3px;
-  font:10.5px/1.5 Consolas,monospace;color:#bcd3ea;user-select:all;overflow-wrap:anywhere}
-.metric:hover .tip,.metric:focus .tip,.metric .tip:hover{display:block}
+.metric:hover,.metric:focus{background:var(--soft)}
+.metric .v{display:block;font:700 21px/1.15 Consolas,"JetBrains Mono",monospace;color:var(--navy);white-space:nowrap}
+.metric .v em{font-style:normal;font-size:14px;color:#5b6b7d}
+.metric .v i{font-style:normal;font-size:13px;color:#5b6b7d;margin-left:1px}
+.metric .l{display:block;margin-top:3px;font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric .s{display:block;margin-top:1px;font:9.5px/1.3 Consolas,monospace;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric .tip{display:none;position:absolute;left:0;top:calc(100% + 7px);z-index:40;width:352px;
+  background:var(--paper);color:#17202b;border:1px solid #c9d0d6;border-left:3px solid var(--abb);border-radius:3px;
+  padding:9px 11px 10px;font-size:11.5px;line-height:1.6;box-shadow:0 6px 22px rgba(23,32,43,.16)}
+.metric .tip p{margin:0 0 5px}.metric .tip p:last-child{margin:0}
+.metric .tip .k{display:inline-block;color:#8a939b;font-weight:700;font-size:10px;letter-spacing:.06em;margin-right:6px}
+.metric .tip .how{border-top:1px dashed #dfe4e7;padding-top:5px;margin-top:6px;color:#4a5560;
+  font:10.5px/1.5 Consolas,monospace;user-select:all;overflow-wrap:anywhere}
+.metric:hover .tip,.metric:focus .tip{display:block}
 
-/* 两栏工作区 */
-.workspace{flex:1;min-height:0;display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:12px;padding:12px 16px}
-.rail,.reader{min-height:0;background:var(--paper);border:1px solid var(--line);border-radius:4px}
+/* ── 滚动区 ── */
+/* position:relative 有两个作用:①让 .chapBlock 的 offsetTop 以滚动容器为参照(否则
+   offsetParent 落到 body,offsetTop 里混进顶栏+主张条高度,浮标会整体高亮偏一章);
+   ②padding-right 给右侧章节浮标让位,否则浮标压住表格最右的「关键内容」列。 */
+.scroll{flex:1;min-height:0;overflow:auto;scroll-behavior:smooth;position:relative;padding-right:166px}
+@media(max-width:1240px){.scroll{padding-right:58px}}
+.sec{padding:18px 22px 4px;max-width:1520px;margin:0 auto}
+.secHead{display:flex;align-items:baseline;gap:12px;margin:0 0 11px}
+.secHead b{font:700 15px/1 "Microsoft YaHei",sans-serif;color:var(--head)}
+.secHead span{font:11px/1.4 "Microsoft YaHei",sans-serif;color:var(--muted)}
+.secHead i{flex:1;height:1px;background:var(--line);font-style:normal}
 
-/* 左栏 */
-.rail{display:flex;flex-direction:column;padding:16px 15px 12px;overflow:hidden}
-.rail-kicker{font:700 10px/1 Consolas,monospace;color:var(--abb);letter-spacing:2px}
-.rail h1{font:700 21px/1.2 Georgia,"Songti SC","SimSun",serif;margin:8px 0 6px}
-.rail .intro{font-size:11.5px;line-height:1.6;color:var(--muted);margin:0 0 12px}
-.chapter-nav{display:flex;flex-direction:column;gap:4px}
-.chapter-nav button{min-height:40px;border:0;border-left:3px solid transparent;background:var(--paper);
-  text-align:left;padding:6px 9px;cursor:pointer;display:grid;grid-template-columns:30px 1fr;align-items:center;border-radius:0 3px 3px 0}
-.chapter-nav button:hover{background:var(--soft)}
-.chapter-nav button[aria-selected="true"]{background:var(--ink);color:#fff;border-left-color:var(--abb)}
-.chapter-nav .no{font:11px Consolas,monospace;color:var(--faint)}
-.chapter-nav button[aria-selected="true"] .no{color:#ff8a92}
-.chapter-nav .name{font-size:13px;font-weight:650}
-.rail-tip{margin-top:auto;border-top:1px solid var(--line);padding-top:9px;color:var(--faint);font-size:10px;line-height:1.6}
+/* ── 场景卡 ── */
+.sceneGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sceneCard{background:var(--paper);border:1px solid var(--line);border-radius:4px;overflow:hidden;
+  display:flex;flex-direction:column;min-width:0}
+.sceneCard .thumb{aspect-ratio:16/10;background:#e9edef;overflow:hidden;border-bottom:1px solid var(--line)}
+.sceneCard .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.sceneCard .body{padding:10px 13px 12px;display:flex;flex-direction:column;flex:1;min-height:0}
+.sceneCard .no{font:700 10px/1 Consolas,monospace;color:var(--abb);letter-spacing:1.4px}
+.sceneCard .nm{margin:4px 0 0;font:700 15px/1.25 "Microsoft YaHei",sans-serif;color:var(--head)}
+.sceneCard .ti{margin:3px 0 0;font:11.5px/1.5 "Microsoft YaHei",sans-serif;color:#3b4650}
+.sceneCard .de{margin:5px 0 0;font:11px/1.6 "Microsoft YaHei",sans-serif;color:var(--muted)}
+.sceneCard .facts{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 0}
+.sceneCard .facts span{padding:2px 7px;background:var(--soft);border-radius:2px;
+  font:10px/1.4 Consolas,monospace;color:#4a5560}
+.sceneCard .go{margin-top:auto;padding-top:10px}
+.sceneCard .go button{width:100%;border:1px solid var(--navy);background:var(--navy);color:#fff;
+  padding:7px 0;font:700 12px/1 "Microsoft YaHei",sans-serif;border-radius:3px;cursor:pointer}
+.sceneCard .go button:hover{background:#22497a}
 
-/* 主阅读区 */
-.reader{display:grid;grid-template-rows:42px minmax(0,1fr);overflow:hidden}
-.readerbar{border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:10px;background:#fbfcfd}
-.crumb{font:11.5px "Microsoft YaHei",sans-serif;color:var(--muted)}
-.crumb b{color:var(--ink)}
-.next{margin-left:auto;border:1px solid var(--ink);background:var(--ink);color:#fff;padding:7px 14px;font-size:11.5px;cursor:pointer;border-radius:3px}
-.next:hover{background:#33383e}
-.page-stack{min-height:0;position:relative}
-.chapter{height:100%;overflow:auto;padding:24px 30px 22px;scrollbar-width:thin}
-.chapter[hidden]{display:none}
-.chapter-inner{max-width:980px}
-.eyebrow{font:700 10px/1 Consolas,monospace;letter-spacing:1.8px;color:var(--faint)}
-.chapter h2{font:700 clamp(22px,2.2vw,30px)/1.15 Georgia,"Songti SC","SimSun",serif;margin:8px 0 10px;letter-spacing:-.2px}
-.lede{font:14.5px/1.8 Georgia,"Songti SC","SimSun",serif;color:#2c3238;margin:0 0 16px}
+/* ── 章节浮标(补乙版弱点:滚动时始终知道自己在第几章) ── */
+.chapRail{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:25;
+  display:flex;flex-direction:column;gap:3px;background:rgba(255,255,255,.94);
+  border:1px solid var(--line);border-radius:4px;padding:6px 5px;box-shadow:0 4px 16px rgba(23,32,43,.12)}
+.chapRail button{display:flex;align-items:center;gap:7px;border:0;background:transparent;cursor:pointer;
+  padding:4px 7px 4px 6px;border-left:3px solid transparent;border-radius:0 3px 3px 0;white-space:nowrap}
+.chapRail button:hover{background:var(--soft)}
+.chapRail button[aria-current="true"]{background:var(--head);color:#fff;border-left-color:var(--abb)}
+.chapRail .n{font:700 9.5px/1 Consolas,monospace;color:var(--faint)}
+.chapRail button[aria-current="true"] .n{color:#ff8a92}
+.chapRail .t{font:11.5px/1 "Microsoft YaHei",sans-serif;font-weight:650}
+@media(max-width:1240px){.chapRail .t{display:none}}
 
-/* 清单表(配套说明载体) */
-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--paper)}
-th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;padding:7px 10px;border-bottom:2px solid var(--ink);white-space:nowrap}
-td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
-tr:last-child td{border-bottom:1px solid var(--ink)}
-td.f{font:600 12px Consolas,"JetBrains Mono",monospace;color:var(--navy);white-space:nowrap}
-td.f small{display:block;font:400 10px "Microsoft YaHei",sans-serif;color:var(--faint);margin-top:2px}
-td .path{font:11px Consolas,monospace;color:var(--muted);user-select:all}
-td .num{font:600 12px Consolas,monospace;color:var(--navy)}
-
-/* 边界注(每章一条) */
-.note{margin-top:14px;padding:10px 13px;background:var(--soft);border-left:3px solid var(--amber);
-  font-size:12px;line-height:1.7;color:#4c4f45;border-radius:0 3px 3px 0}
+/* ── 材料章块 ── */
+.chapBlock{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:18px 22px;margin-bottom:14px;scroll-margin-top:12px}
+.chapBlock:last-child{margin-bottom:22px}
+.chapTop{display:flex;align-items:flex-start;gap:14px}
+.chapTop .grow{flex:1;min-width:0}
+.openDir{flex:none;border:1px solid var(--line);background:var(--paper);color:#3b4650;
+  padding:6px 11px;font:700 11px/1 "Microsoft YaHei",sans-serif;border-radius:3px;cursor:pointer;white-space:nowrap}
+.openDir:hover{border-color:var(--navy);color:var(--navy);background:var(--soft)}
+.chapTable{width:100%;border-collapse:collapse;font-size:12px;background:var(--paper)}
+.chapTable th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;padding:6px 9px;
+  border-bottom:2px solid var(--head);white-space:nowrap}
+.chapTable td{padding:8px 9px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+.chapTable tr:last-child td{border-bottom:1px solid var(--head)}
+.chapTable td.f{white-space:nowrap}
+.pathBtn{border:0;background:transparent;padding:0;cursor:copy;text-align:left;
+  font:600 11.5px Consolas,"JetBrains Mono",monospace;color:var(--navy);border-bottom:1px dashed #b9c6d4}
+.pathBtn:hover{color:var(--abb);border-bottom-color:var(--abb)}
+.chapTable td.f small{display:block;font:400 9.5px "Microsoft YaHei",sans-serif;color:var(--faint);margin-top:2px}
+.eyebrowLine{font:700 9.5px/1 Consolas,monospace;letter-spacing:1.8px;color:var(--faint)}
+.chapH2{font:700 22px/1.2 "Microsoft YaHei",sans-serif;color:var(--head);margin:7px 0 8px;letter-spacing:-.2px}
+.lede{font:12.5px/1.75 "Microsoft YaHei",sans-serif;color:#3b4650;margin:0 0 13px;max-width:1000px}
+.note{margin-top:12px;padding:9px 12px;background:var(--soft);border-left:3px solid var(--amber);
+  font-size:11.5px;line-height:1.7;color:#4c4f45;border-radius:0 3px 3px 0}
 .note b{color:var(--amber);font-weight:700}
+.orderLine{margin-top:12px;padding:10px 12px;background:var(--soft);border-left:3px solid var(--navy);
+  font-size:12px;line-height:1.75;color:#39424b;border-radius:0 3px 3px 0}
+.orderLine b{color:var(--navy)}
+.pathNote{margin-top:10px;font:10.5px/1.6 Consolas,monospace;color:var(--faint)}
 
-/* 00 章专用 */
-.order-line{margin:14px 0 0;padding:11px 13px;background:var(--soft);border-left:3px solid var(--navy);
-  font-size:12.5px;line-height:1.75;color:#39424b;border-radius:0 3px 3px 0}
-.order-line b{color:var(--navy)}
-.kv{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.kv div{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:var(--paper)}
-.kv b{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px}
-.kv span{font-size:12px;line-height:1.6}
-
-@media(max-width:1180px){:root{--rail:204px}.workspace{gap:8px;padding-left:8px;padding-right:8px}.chapter{padding-left:18px;padding-right:18px}.metric-ribbon{padding-left:12px;padding-right:12px}.metric .value{font-size:17px}}
-@media(max-height:760px){.rail .intro{display:none}.rail h1{font-size:19px}.chapter-nav button{min-height:35px;padding:4px 9px}.rail-tip{display:none}.metric-ribbon{padding-top:9px;padding-bottom:10px}.metric .value{font-size:17px}}
-@media(max-width:980px){body{min-width:0;min-height:0;height:auto;display:block;overflow:auto}.metric-ribbon{grid-template-columns:repeat(2,1fr)}.metric .tip{width:260px}.workspace{height:auto;grid-template-columns:1fr;padding:8px}.rail,.reader{min-height:auto}.chapter-nav{display:grid;grid-template-columns:repeat(3,1fr)}.rail-tip{display:none}.reader{min-height:620px}}
+/* ── 底部条 + 轻提示 ── */
+.infobar{flex:none;height:30px;background:var(--head);color:#c9d2da;display:flex;align-items:center;
+  gap:14px;padding:0 18px;font:10.5px/1 Consolas,monospace;z-index:20}
+.infobar .sp{margin-left:auto}
+#toast{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);z-index:60;
+  background:var(--head);color:#fff;border-radius:3px;padding:8px 14px;
+  font:12px/1.4 "Microsoft YaHei",sans-serif;box-shadow:0 8px 26px rgba(23,32,43,.28);
+  opacity:0;pointer-events:none;transition:opacity .16s ease}
+#toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){.scroll{scroll-behavior:auto}#toast{transition:none}}
 </style>
 </head>
 <body>
-<div class="topline"></div>
-
-<header class="masthead">
-  <div class="brand"><i>ABB</i>智储优控</div>
-  <div class="docline"><b>提交材料导览</b>2026 ABB 杯 · 智能仓储赛题 · 初赛与决赛材料合并提交</div>
-  <button class="ribbon-toggle" id="ribbonToggle" type="button" aria-expanded="true">收起指标 ▲</button>
+<header class="topbar">
+  <div class="brandLock"><span class="abbWord">ABB</span>
+    <div class="brandText"><div class="eyebrow">2026 ABB 杯 · 智能仓储赛题</div><h1>智储优控 · AS/RS 演示工作站</h1></div>
+  </div>
+  <div class="topMeta"><span class="badgeOk">✓ 已校验 · SIM 轨迹</span><span class="topFinger">seed 2026 · sim_only</span></div>
 </header>
 
-<section class="metric-ribbon" id="ribbon" aria-label="关键指标(悬停或聚焦查看口径与验证路径)">
-  <div class="metric primary" tabindex="0">
-    <span class="value">8.17 ± 0.67 s</span><span class="label">期望取货时间 · 泛化主证</span>
-    <span class="tip" role="tooltip"><b>30-seed untouched final test(sim,加减速口径)</b>seeds 10001–10030,30/30 seed 全部正收益,失败与违规均为 0;5-seed 8.40±0.48 s 仅作回归锚,角色独立。<code>python sim/final_test_30seed.py</code></span>
-  </div>
-  <div class="metric" tabindex="0">
-    <span class="value">−61.6%</span><span class="label">较顺序基线降幅</span>
-    <span class="tip" role="tooltip"><b>频次加权期望取货时间的相对降幅(sim)</b>AWRA-LS 相对顺序放置基线,同批 30 seeds。<code>03_建模与仿真\out\final_test_30seed.csv</code></span>
-  </div>
-  <div class="metric" tabindex="0">
-    <span class="value">77 / 0</span><span class="label">控制器在线自测</span>
-    <span class="tip" role="tooltip"><b>Automation Builder PC 仿真,编译+在线回读级</b>77 项断言通过、0 失败,覆盖初始化、分配、策略、边界与状态机;不外推为实体 PLC 现场闭环。<code>02_PLC代码\plc_evidence.csv</code></span>
-  </div>
-  <div class="metric" tabindex="0">
-    <span class="value">98.5% / 99.19%</span><span class="label">算法选择达成率 · 双口径</span>
-    <span class="tip" role="tooltip"><b>390 个可比实例的词典序 oracle 达成率(sim)</b>98.5% 为匀速口径,99.19% 为加减速口径;两口径分别标注,均非理论上限。<code>python sim/oracle_gap.py [--accel]</code></span>
-  </div>
-  <div class="metric" tabindex="0">
-    <span class="value">9 / 9</span><span class="label">物理全链取放 · 技术预演</span>
-    <span class="tip" role="tooltip"><b>Factory I/O 54 格代表性场景(Python 直控)</b>三仓位各三次完整取放链运行成功;为技术预演证据,不等同完全闭环。<code>05_物理预演素材_加分\运行记录\</code></span>
+<section class="claim">
+  <div class="claimHead"><b>让立体仓库的每一次取货都更快</b><span>20 × 20 单巷道 AS/RS 的仓位分配优化 —— 从建模、仿真、PLC 实现到物理预演的完整证据链</span></div>
+  <div class="metrics">
+    <div class="metric primary" tabindex="0">
+      <span class="v">8.17 <em>± 0.67</em> s</span>
+      <span class="l">期望取货时间</span><span class="s">泛化主证 · 30-seed</span>
+      <span class="tip" role="tooltip">
+        <p><span class="k">是什么</span>30 个未参与调参的 seed(10001–10030)上,频次加权期望取货时间的均值 ± 样本标准差。</p>
+        <p><span class="k">口径与边界</span>30/30 seed 全部正收益,失败与约束违规均为 0;5-seed 8.40±0.48 s 仅作回归锚,不与本值混用。</p>
+        <p class="how">python sim/final_test_30seed.py</p>
+      </span>
+    </div>
+    <div class="metric" tabindex="0">
+      <span class="v">−61.6<i>%</i></span>
+      <span class="l">较顺序基线降幅</span><span class="s">同批 30 seeds</span>
+      <span class="tip" role="tooltip">
+        <p><span class="k">是什么</span>AWRA-LS 相对顺序放置基线(SEQ)的频次加权期望取货时间相对降幅。</p>
+        <p><span class="k">口径与边界</span>同批同 seed 对照(CRN);由 seq 21.242 s 与 awra 8.168 s 复算为 61.5%,官方口径按更高精度中间值记为 61.6%。</p>
+        <p class="how">sim/out/final_test_30seed.csv</p>
+      </span>
+    </div>
+    <div class="metric" tabindex="0">
+      <span class="v">77 / 0</span>
+      <span class="l">控制器在线自测</span><span class="s">通过 / 失败</span>
+      <span class="tip" role="tooltip">
+        <p><span class="k">是什么</span>Automation Builder PC 仿真中 77 项断言全部通过、0 失败,覆盖初始化、分配、策略、边界与状态机。</p>
+        <p><span class="k">口径与边界</span>编译+在线回读级证据,验证 ST 逻辑在该环境成立;不外推为实体 PLC 现场闭环。演进:0712=75 → 0716 加 T76=76 → 0717 加 T77=77。</p>
+        <p class="how">plc/06_PRG_Test.st:12 · tools/ab_scripting/logs/runtest_result_20260717_010514.txt</p>
+      </span>
+    </div>
+    <div class="metric" tabindex="0">
+      <span class="v">98.5 / 99.19<i>%</i></span>
+      <span class="l">算法选择达成率</span><span class="s">匀速 / 加减速双口径</span>
+      <span class="tip" role="tooltip">
+        <p><span class="k">是什么</span>场景检测器(lexicographic 档)在 390 个可比实例上所选**策略**,相对 per-instance 后验最优(VBS/oracle)的达成率 = exp_t_VBS / exp_t_sel × 100,仅在 excess_fail=0 的可比域计算。</p>
+        <p><span class="k">口径与边界</span>测的是「选得对不对」而非某个固定策略自身成绩——同表中固定用 AWRA 的达成率为 81.61%(匀速)/ 88.61%(加减速),与本数不是一回事。两种运动学口径分别标注,均非理论上限。</p>
+        <p class="how">python sim/oracle_gap.py [--accel]</p>
+      </span>
+    </div>
+    <div class="metric" tabindex="0">
+      <span class="v">9 / 9</span>
+      <span class="l">物理全链取放</span><span class="s">技术预演 · Factory I/O</span>
+      <span class="tip" role="tooltip">
+        <p><span class="k">是什么</span>Factory I/O 54 格场景中,三个仓位各三次完整取放链(出箱→取货→行车→放置→收叉)全部运行成功。</p>
+        <p><span class="k">口径与边界</span>54 格代表性场景的 Python 直控技术预演,验证动作链与 I/O 时序;不构成 400 仓位物理孪生或现场闭环。</p>
+        <p class="how">l2_factoryio/F3_H5证据保全_0716.md</p>
+      </span>
+    </div>
   </div>
 </section>
 
-<div class="workspace">
+<nav class="chapRail" aria-label="章节导航">
+  <button type="button" data-goto="secDemo" aria-current="true"><span class="n">▸</span><span class="t">演示场景</span></button>
+  <button type="button" data-goto="blk-c0" aria-current="false"><span class="n">00</span><span class="t">总览与阅读路径</span></button>
+  <button type="button" data-goto="blk-c1" aria-current="false"><span class="n">01</span><span class="t">验证报告</span></button>
+  <button type="button" data-goto="blk-c2" aria-current="false"><span class="n">02</span><span class="t">PLC 代码与 AB 工程</span></button>
+  <button type="button" data-goto="blk-c3" aria-current="false"><span class="n">03</span><span class="t">建模与仿真</span></button>
+  <button type="button" data-goto="blk-c4" aria-current="false"><span class="n">04</span><span class="t">可视化仿真(决赛件)</span></button>
+  <button type="button" data-goto="blk-c5" aria-current="false"><span class="n">05</span><span class="t">物理预演素材</span></button>
+</nav>
 
-<aside class="rail">
-  <div class="rail-kicker">2026 ABB CUP</div>
-  <h1>提交材料导览</h1>
-  <p class="intro">本页为提交包唯一导览入口,按目录编号讲解各材料的内容、用途与查证方式。</p>
-  <nav class="chapter-nav" role="tablist" aria-orientation="vertical" aria-label="材料章节">
-    <button role="tab" id="tab-c0" aria-controls="panel-c0" aria-selected="true" data-id="c0"><span class="no">00</span><span class="name">总览与阅读路径</span></button>
-    <button role="tab" id="tab-c1" aria-controls="panel-c1" aria-selected="false" data-id="c1" tabindex="-1"><span class="no">01</span><span class="name">验证报告</span></button>
-    <button role="tab" id="tab-c2" aria-controls="panel-c2" aria-selected="false" data-id="c2" tabindex="-1"><span class="no">02</span><span class="name">PLC 代码与 Automation Builder 工程</span></button>
-    <button role="tab" id="tab-c3" aria-controls="panel-c3" aria-selected="false" data-id="c3" tabindex="-1"><span class="no">03</span><span class="name">建模与仿真</span></button>
-    <button role="tab" id="tab-c4" aria-controls="panel-c4" aria-selected="false" data-id="c4" tabindex="-1"><span class="no">04</span><span class="name">可视化仿真(决赛件)</span></button>
-    <button role="tab" id="tab-c5" aria-controls="panel-c5" aria-selected="false" data-id="c5" tabindex="-1"><span class="no">05</span><span class="name">物理预演素材</span></button>
-  </nav>
-  <div class="rail-tip">键盘 ↑↓ 切换章节 · Home/End 跳转<br>指标带各项悬停或 Tab 聚焦可见口径与验证路径。</div>
-</aside>
-
-<main class="reader">
-  <div class="readerbar"><span class="crumb">智储优控 / <b id="crumb">总览与阅读路径</b></span><button class="next" id="nextChapter" type="button">下一章 · 验证报告 →</button></div>
-  <div class="page-stack">
-
-  <section class="chapter" role="tabpanel" id="panel-c0" aria-labelledby="tab-c0"><div class="chapter-inner">
-    <div class="eyebrow">00 · PACKAGE OVERVIEW</div>
-    <h2>提交包结构与阅读路径</h2>
-    <p class="lede">本作品面向 20 列 × 20 层单巷道自动化立体仓库的仓位优化问题,提交材料含初赛三项(建模及仿真、验证报告、AC500 编程实现)与决赛两项(可视化仿真编程实现代码、演示录屏),按以下五个目录组织。</p>
-    <table>
-      <tr><th style="width:220px">目录</th><th>内容</th><th style="width:120px">对应赛段</th></tr>
-      <tr><td class="f">01_验证报告\</td><td>验证报告 WORD 主文档与 PPT 答辩版</td><td>初赛</td></tr>
-      <tr><td class="f">02_PLC代码\</td><td>Automation Builder 完整工程、ST 源码导出、在线测试证据</td><td>初赛</td></tr>
-      <tr><td class="f">03_建模与仿真\</td><td>Python 仿真源码、场景库、统计产物与一键复现入口</td><td>初赛</td></tr>
-      <tr><td class="f">04_可视化仿真_决赛件\</td><td>自研 Web 三维可视化仿真源码、数据看板与演示录屏</td><td>决赛</td></tr>
-      <tr><td class="f">05_物理预演素材_加分\</td><td>Factory I/O 场景文件、全链运行记录与影像证据</td><td>补充证据</td></tr>
-    </table>
-    <div class="order-line"><b>建议阅读顺序(约 10 分钟):</b>01 报告摘要页 → 03 运行一键复现 → 02 打开 AB 工程与测试证据 → 04 打开三维回放与录屏 → 05 物理运行记录。评分对应关系:模型与验证报告见 01/03,AC500 实现见 02,可视化仿真见 04。</div>
-    <div class="kv">
-      <div><b>本导览与网页件打开方式</b><span>双击 .html 文件即在浏览器打开;全部本地运行,无需安装软件或联网。</span></div>
-      <div><b>AB 工程打开方式</b><span>Automation Builder 2.9 打开 02 目录工程文件;不便安装时可直接阅读同目录 ST 源码导出与测试证据。</span></div>
-      <div><b>指标口径约定</b><span>仿真统计标注 sim,控制器测试标注 AB PC 仿真,物理记录标注技术预演;三类证据分别陈述。</span></div>
+<div class="scroll" id="scroller">
+  <section class="sec" id="secDemo">
+    <div class="secHead"><b>演示场景</b><span>三个自研可视化件 · 点击进入</span><i></i></div>
+    <div class="sceneGrid">
+      <article class="sceneCard">
+        <div class="thumb"><img src="./assets/p01.png" alt="连续入库"></div>
+        <div class="body">
+          <span class="no">01</span>
+          <div class="nm">连续入库</div>
+          <div class="ti">空仓 0 → 267 的逐件放置决策</div>
+          <div class="de">三种在线算法同一到达队列、同一数据门并排推进,可逐件看「为什么选这一格」。</div>
+          <div class="facts"><span>267 件 / 400 格</span><span>三算法同帧对照</span><span>梯形加减速剖面</span></div>
+          <div class="go"><button type="button" data-nav-target="01" data-href="./01_连续填仓.html">进入 →</button></div>
+        </div>
+      </article>
+      <article class="sceneCard">
+        <div class="thumb"><img src="./assets/p02.png" alt="存取闭环"></div>
+        <div class="body">
+          <span class="no">02</span>
+          <div class="nm">存取闭环</div>
+          <div class="ti">存取交替的完整作业闭环</div>
+          <div class="de">一趟两单:入库放置与出库取货交织,含出库取货 → 扫码出场全链与故障停机情景。</div>
+          <div class="facts"><span>100 周期</span><span>七步作业分解</span><span>三档拟真模型</span></div>
+          <div class="go"><button type="button" data-nav-target="02" data-href="./02_入出闭环.html">进入 →</button></div>
+        </div>
+      </article>
+      <article class="sceneCard">
+        <div class="thumb"><img src="./assets/p03.png" alt="物理证据"></div>
+        <div class="body">
+          <span class="no">03</span>
+          <div class="nm">物理证据</div>
+          <div class="ti">Factory I/O 全链取放技术预演</div>
+          <div class="de">54 格物理场景中以 Python 经 Modbus 直控执行完整取放链,逐相位记录传感器与执行器时序。</div>
+          <div class="facts"><span>9 / 9 全链成功</span><span>现场截图无重建</span><span>负结果同样公开</span></div>
+          <div class="go"><button type="button" data-nav-target="03" data-href="./03_FIO物理证据.html">进入 →</button></div>
+        </div>
+      </article>
     </div>
-  </div></section>
-
-  <section class="chapter" role="tabpanel" id="panel-c1" aria-labelledby="tab-c1" hidden><div class="chapter-inner">
-    <div class="eyebrow">01 · VERIFICATION REPORT</div>
-    <h2>验证报告</h2>
-    <p class="lede">报告给出建模假设、算法描述、统计验证与工程实现证据的完整论述:建模部分定义货物画像(重量、访问频次、体积)、层承重约束与双轴运动学;验证部分报告 30-seed 泛化测试、生命周期统计检验与 18 情景鲁棒性矩阵。PPT 为同源摘要,用于答辩陈述。</p>
-    <table>
-      <tr><th style="width:230px">文件</th><th>说明</th><th style="width:270px">关键内容</th></tr>
-      <tr><td class="f">验证报告.docx<small>WORD 主文档</small></td><td>方法、统计与工程证据的主论述;全部数字由脚本生成并可溯源</td><td>期望取货时间 <span class="num">8.17±0.67 s</span>、降幅 <span class="num">61.6%</span>(sim,30-seed,30/30 正收益);统计检验与 18 情景鲁棒性矩阵见 §2/§4</td></tr>
-      <tr><td class="f">验证报告.pptx<small>答辩摘要版</small></td><td>与 WORD 同源的答辩用摘要,数字口径一致</td><td>方法总览、主要结果、证据边界</td></tr>
-    </table>
-    <div class="note"><b>口径注</b> 报告内所有仿真统计均标注 sim 与样本量;统计显著性断言均对应可运行的检验脚本(见 03 目录 lifecycle_stats.py)。</div>
-  </div></section>
-
-  <section class="chapter" role="tabpanel" id="panel-c2" aria-labelledby="tab-c2" hidden><div class="chapter-inner">
-    <div class="eyebrow">02 · PLC IMPLEMENTATION</div>
-    <h2>PLC 代码与 Automation Builder 工程</h2>
-    <p class="lede">核心分配算法以 Structured Text 实现并封装为功能块,输入输出参数与边界判断按工程规范设计;三页制 HMI 按操作频率与风险分层(运行调度、记录追溯、管理诊断)。完整 AB 工程随包提交,可直接打开、编译与在线仿真。</p>
-    <table>
-      <tr><th style="width:230px">文件</th><th>说明</th><th style="width:270px">关键内容</th></tr>
-      <tr><td class="f">*.project<small>Automation Builder 工程</small></td><td>完整工程(Automation Builder 2.9);含程序组织单元、HMI 三页与符号配置</td><td>编译 <span class="num">0 errors</span></td></tr>
-      <tr><td class="f">ST源码导出\<small>04_FB_Warehouse.st 等</small></td><td>全部 ST 源码的纯文本导出,便于不装 AB 时审阅</td><td>核心算法功能块化;边界判断与状态机注释完整</td></tr>
-      <tr><td class="f">06_PRG_Test.st<small>在线测试程序</small></td><td>在 AB PC 仿真中运行的自测程序,断言覆盖初始化、分配、策略、边界与状态机</td><td>在线自测 <span class="num">77 / 0</span>(通过/失败)</td></tr>
-      <tr><td class="f">黄金向量与等价性\<small>plc_evidence.csv 等</small></td><td>ST 与 Python 参考实现的同源对拍证据</td><td>放置分支差分 <span class="num">420/420</span> 一致;导出向量 20/20 逐位同源</td></tr>
-    </table>
-    <div class="note"><b>证据级别注</b> 77/0 为 Automation Builder PC 仿真的编译+在线回读级证据,验证 ST 逻辑与断言在该环境成立,不外推为实体 PLC 现场闭环。</div>
-  </div></section>
-
-  <section class="chapter" role="tabpanel" id="panel-c3" aria-labelledby="tab-c3" hidden><div class="chapter-inner">
-    <div class="eyebrow">03 · MODELING &amp; SIMULATION</div>
-    <h2>建模与仿真</h2>
-    <p class="lede">仿真框架统一货物到达流、可行性约束(占用、层限重、体积)与双轴运动学(VX=2.0 m/s、VZ=0.5 m/s,加减速口径 AX=0.5、AZ=0.3 m/s²),在固定随机种子下对 AWRA-LS、SCORE、NEAR、SEQ、CB、TOB、RANDOM 及规则选路 AUTO 做同批对照。AWRA-LS 在共用评分函数基础上增加批次优先级排序与至多 5 轮局部搜索。</p>
-    <table>
-      <tr><th style="width:230px">文件</th><th>说明</th><th style="width:270px">关键内容</th></tr>
-      <tr><td class="f">warehouse_sim.py<small>+ strategy_lib.py</small></td><td>仓库模型、评分函数、运动学与八种分配策略</td><td>评分四项(效率/稳定/能耗/预留)加权,公式与权重在源码中公开</td></tr>
-      <tr><td class="f">final_test_30seed.py</td><td>泛化主证的一键复现入口(untouched 测试集)</td><td>复现指标带全部主结果</td></tr>
-      <tr><td class="f">scenarios\<small>E01–E18 场景库</small></td><td>十八种货物情景(密度、偏斜、重货相关、噪声、故障、漂移)及 18 情景 × 8 策略 × 10 seeds 鲁棒性矩阵</td><td><span class="num">1440</span> runs(sim);含高密度不可行与全不可行反例场景</td></tr>
-      <tr><td class="f">oracle_gap.py<small>+ lifecycle_stats.py</small></td><td>算法选择达成率与生命周期统计检验脚本</td><td>达成率 <span class="num">98.5%</span>(匀速)/<span class="num">99.19%</span>(加减速);配对 t 检验</td></tr>
-      <tr><td class="f">out\<small>CSV 与图表产物</small></td><td>全部统计产物;报告中的数字均由此生成</td><td>与 01 报告逐数对应</td></tr>
-    </table>
-    <div class="note"><b>复现注</b> 根目录执行 <span class="path">python sim/final_test_30seed.py</span> 复现主证;<span class="path">python -B sim/run_all.py core_smoke</span> 运行全量回归。随机种子固定,结果与报告一致。两套运动学口径(匀速/加减速)在产物中分别标注。</div>
-  </div></section>
-
-  <section class="chapter" role="tabpanel" id="panel-c4" aria-labelledby="tab-c4" hidden><div class="chapter-inner">
-    <div class="eyebrow">04 · VISUAL SIMULATION (FINAL)</div>
-    <h2>可视化仿真(决赛件)</h2>
-    <p class="lede">可视化仿真以 Web 技术自主实现(HTML + JavaScript/WebGL),覆盖决赛任务要求:交互界面输入货物属性(序号、名称、重量、访问频次、体积),存放位置与路径规划统计(起点、终点、路径长度、执行时间),仓位布局与占用展示。三维回放由与 03 仿真同源的事件数据驱动;演示录屏与源码一一对应。全部页面双击即开、离线运行。</p>
-    <table>
-      <tr><th style="width:230px">文件</th><th>说明</th><th style="width:270px">关键内容</th></tr>
-      <tr><td class="f">00_导览_A.html<small>本页</small></td><td>提交包导览与材料讲解入口</td><td>—</td></tr>
-      <tr><td class="f">三维作业回放.html<small>样张系列 · 两页分工</small></td><td>20×20 逻辑仓的三维作业轨迹回放,两页各答一题:入出库闭环版演示存取交替作业(含出库取货→出场全链);连续填仓版演示空仓 0→267 的逐件放置决策与容量推进</td><td>同源 trace 驱动;运动学与仿真一致;取货效率为放置算法显式优化目标(赛题「存取效率」)</td></tr>
-      <tr><td class="f">运行数据看板.html</td><td>占用率、行程与八策略对照的统计视图</td><td>数据取自 03 目录产物</td></tr>
-      <tr><td class="f">演示录屏\<small>mp4</small></td><td>操作演示与讲解录屏,与上述页面一一对应</td><td>展示交互输入、统计信息与布局展示</td></tr>
-      <tr><td class="f">src\<small>全部源码</small></td><td>页面源码、运行时脚本与自动化验收脚本</td><td>三维件含 30 项运行时契约与逐帧几何审计</td></tr>
-    </table>
-    <div class="note"><b>口径注</b> 三维回放为 20×20 逻辑仓 sim 数据回放;入出库交接的演示补段不计入仿真时间与统计指标;页面不宣称与 PLC 或物理设备在线联动。</div>
-  </div></section>
-
-  <section class="chapter" role="tabpanel" id="panel-c5" aria-labelledby="tab-c5" hidden><div class="chapter-inner">
-    <div class="eyebrow">05 · PHYSICAL PREVIEW</div>
-    <h2>物理预演素材</h2>
-    <p class="lede">为验证控制逻辑在三维物理环境中的动作链与 I/O 时序,选取 Factory I/O 自动化仓库场景(54 仓位,含入口输送、堆垛机、货架与出口输送)进行技术预演:以 Python 经 Modbus 直控执行完整取放链(出箱、取货、行车、放置、收叉),记录传感器与执行器时序。</p>
-    <table>
-      <tr><th style="width:230px">文件</th><th>说明</th><th style="width:270px">关键内容</th></tr>
-      <tr><td class="f">*.factoryio<small>场景文件</small></td><td>Factory I/O 工作场景(含 Modbus 点表配置),可直接载入复现</td><td>54 仓位代表性场景</td></tr>
-      <tr><td class="f">运行记录\<small>诊断日志</small></td><td>全链取放的逐相位诊断日志(9 链 × 6 相位)</td><td>三仓位各三次全链取放 <span class="num">9 / 9</span> 运行成功</td></tr>
-      <tr><td class="f">影像证据\<small>关键帧与素材视频</small></td><td>取货、放置、货物落位的关键帧与全链过程素材</td><td>与诊断日志时间戳对应</td></tr>
-      <tr><td class="f">io_map.md<small>点表</small></td><td>传感器/执行器与 Modbus 地址映射说明</td><td>Entry、Load、叉臂/Lift、货架、Unload、Exit</td></tr>
-    </table>
-    <div class="note"><b>边界注</b> 本目录为 54 仓位代表性场景的 Python 直控技术预演,验证动作链与 I/O 时序,不构成 400 仓位物理孪生或完整现场闭环;AC500 仿真环境的 Modbus 主站直驱经两轮独立复核为当前环境负结果,相关记录随包归档。</div>
-  </div></section>
-
-  </div>
-</main>
-
+  </section>
+  <section class="sec" id="secMaterials">
+    <div class="secHead"><b>提交材料导览</b><span>按目录编号讲解各材料的内容、用途与查证方式</span><i></i></div>
+    <div class="chapBlock" id="blk-c0"><div class="chapTop"><div class="grow">
+    <div class="eyebrowLine">00 · PACKAGE OVERVIEW</div>
+    <h2 class="chapH2">提交包结构与阅读路径</h2></div></div>
+    <p class="lede">本作品面向 20 列 × 20 层单巷道自动化立体仓库的仓位优化问题,提交材料含初赛三项(建模及仿真、验证报告、AC500 编程实现)与决赛两项(可视化仿真编程实现代码、演示录屏)。</p><table class="chapTable"><tr><th style="width:230px">目录</th><th>内容</th><th style="width:110px">对应赛段</th></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="01_验证报告\">01_验证报告\</button></td><td>验证报告 WORD 主文档与 PPT 答辩版</td><td>初赛</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="02_PLC代码\">02_PLC代码\</button></td><td>Automation Builder 完整工程、ST 源码导出、在线测试证据</td><td>初赛</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="03_建模与仿真\">03_建模与仿真\</button></td><td>Python 仿真源码、场景库、统计产物与一键复现入口</td><td>初赛</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="04_可视化仿真_决赛件\">04_可视化仿真_决赛件\</button></td><td>自研 Web 三维可视化仿真源码、数据看板与演示录屏</td><td>决赛</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="05_物理预演素材_加分\">05_物理预演素材_加分\</button></td><td>Factory I/O 场景文件、全链运行记录与影像证据</td><td>补充证据</td></tr></table><div class="orderLine"><b>建议阅读顺序(约 10 分钟):</b>01 报告摘要页 → 03 运行一键复现 → 02 打开 AB 工程与测试证据 → 04 打开三维回放与录屏 → 05 物理运行记录。评分对应关系:模型与验证报告见 01/03,AC500 实现见 02,可视化仿真见 04。</div></div>
+    <div class="chapBlock" id="blk-c1"><div class="chapTop"><div class="grow">
+    <div class="eyebrowLine">01 · VERIFICATION REPORT</div>
+    <h2 class="chapH2">验证报告</h2></div><button class="openDir" type="button" data-material-key="01" data-label="验证报告">打开目录 ↗</button></div>
+    <p class="lede">报告给出建模假设、算法描述、统计验证与工程实现证据的完整论述。建模部分定义货物画像(重量、访问频次、体积)、层承重约束与双轴运动学;验证部分报告 30-seed 泛化测试、生命周期统计检验与 18 情景鲁棒性矩阵。</p><table class="chapTable"><tr><th style="width:250px">仓库中的位置</th><th style="width:150px">是什么</th><th>说明</th><th style="width:250px">关键内容</th></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="sim\out\验证报告_draft.docx">sim\out\验证报告_draft.docx</button></td><td>WORD 主文档(草稿)</td><td>由 sim/build_report.py 自动生成:方法、统计与工程证据的主论述,全部数字由脚本注入并可溯源</td><td>当前注入 147 个数字、来源清单待补 0 个;正文无硬编码性能数字</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="docs\报告大纲_验证报告.md">docs\报告大纲_验证报告.md</button></td><td>报告大纲</td><td>章节结构与各节应回答的问题</td><td>定稿 WORD 与答辩 PPT 尚待产出,见本章口径注</td></tr></table><div class="note"><b>口径注</b> 报告内所有仿真统计均标注 sim 与样本量;统计显著性断言均对应可运行的检验脚本(见 03 章 sim/lifecycle_stats.py)。**当前状态**:WORD 为 build_report.py 自动生成的草稿(sim/out/验证报告_draft.docx),定稿版与答辩 PPT 尚待产出,不在本次可查证范围内。</div><div class="pathNote">路径为<b>开发树中的真实位置</b>(当前可直接打开);点击路径复制,打包提交时对应上表 00 章的五个目录。</div></div>
+    <div class="chapBlock" id="blk-c2"><div class="chapTop"><div class="grow">
+    <div class="eyebrowLine">02 · PLC IMPLEMENTATION</div>
+    <h2 class="chapH2">PLC 代码与 Automation Builder 工程</h2></div><button class="openDir" type="button" data-material-key="02" data-label="PLC 代码与 AB 工程">打开目录 ↗</button></div>
+    <p class="lede">核心分配算法以 Structured Text 实现并封装为功能块,输入输出参数与边界判断按工程规范设计;三页制 HMI 按操作频率与风险分层(运行调度、记录追溯、管理诊断)。完整 AB 工程随包提交,可直接打开、编译与在线仿真。</p><table class="chapTable"><tr><th style="width:250px">仓库中的位置</th><th style="width:150px">是什么</th><th>说明</th><th style="width:250px">关键内容</th></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="plc\AB_Project">plc\AB_Project</button></td><td>Automation Builder 工程</td><td>完整工程(AB 2.9);含程序组织单元、HMI 三页与符号配置</td><td>编译 Compile complete 0 errors</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="plc\04_FB_Warehouse.st">plc\04_FB_Warehouse.st</button></td><td>核心功能块 ST 源码</td><td>分配算法功能块的纯文本源码,不装 AB 也可审阅</td><td>核心算法功能块化;边界判断与状态机注释完整</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="plc\06_PRG_Test.st">plc\06_PRG_Test.st</button></td><td>在线测试程序</td><td>在 AB PC 仿真中运行的自测程序,断言覆盖初始化、分配、策略、边界与状态机</td><td>在线自测 77 / 0(第 12 行 N_CASES:=77)</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="tools\ab_scripting\logs\">tools\ab_scripting\logs\</button></td><td>AB 在线读回日志</td><td>每轮 ab_sync 的编译与在线回读原始日志存档</td><td>0717 轮:Compile 0 errors + iPassed=77 / iFailed=0</td></tr></table><div class="note"><b>口径注</b> 77/0 为 Automation Builder PC 仿真的编译+在线回读级证据,验证 ST 逻辑与断言在该环境成立,不外推为实体 PLC 现场闭环。</div><div class="pathNote">路径为<b>开发树中的真实位置</b>(当前可直接打开);点击路径复制,打包提交时对应上表 00 章的五个目录。</div></div>
+    <div class="chapBlock" id="blk-c3"><div class="chapTop"><div class="grow">
+    <div class="eyebrowLine">03 · MODELING &amp; SIMULATION</div>
+    <h2 class="chapH2">建模与仿真</h2></div><button class="openDir" type="button" data-material-key="03" data-label="建模与仿真">打开目录 ↗</button></div>
+    <p class="lede">仿真框架统一货物到达流、可行性约束(占用、层限重、体积)与双轴运动学(VX=2.0 m/s、VZ=0.5 m/s,加减速口径 AX=0.5、AZ=0.3 m/s²),在固定随机种子下对 AWRA-LS、SCORE、NEAR、SEQ、CB、TOB、RANDOM 及规则选路 AUTO 做同批对照。</p><table class="chapTable"><tr><th style="width:250px">仓库中的位置</th><th style="width:150px">是什么</th><th>说明</th><th style="width:250px">关键内容</th></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="sim\warehouse_sim.py">sim\warehouse_sim.py</button></td><td>+ strategy_lib.py</td><td>仓库模型、评分函数、运动学与八种分配策略</td><td>评分四项(效率/稳定/能耗/预留)加权,公式与权重在源码中公开</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="sim\final_test_30seed.py">sim\final_test_30seed.py</button></td><td>泛化主证入口</td><td>一键复现 untouched 测试集</td><td>复现主张条全部主结果</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="sim\scenarios\">sim\scenarios\</button></td><td>E01–E18 场景库</td><td>十八种货物情景及 18 情景 × 8 策略 × 10 seeds 鲁棒性矩阵</td><td>1440 runs(sim);含高密度不可行与全不可行反例场景</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="sim\oracle_gap.py">sim\oracle_gap.py</button></td><td>+ lifecycle_stats.py</td><td>算法选择达成率与生命周期统计检验脚本</td><td>达成率 98.5%(匀速)/ 99.19%(加减速);配对 t 检验</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="sim\out\">sim\out\</button></td><td>CSV 与图表产物</td><td>全部统计产物;报告中的数字均由此生成</td><td>与 01 报告逐数对应</td></tr></table><div class="note"><b>口径注</b> 根目录执行 python sim/final_test_30seed.py 复现主证;python -B sim/run_all.py core_smoke 运行全量回归。随机种子固定,结果与报告一致。两套运动学口径(匀速/加减速)在产物中分别标注。</div><div class="pathNote">路径为<b>开发树中的真实位置</b>(当前可直接打开);点击路径复制,打包提交时对应上表 00 章的五个目录。</div></div>
+    <div class="chapBlock" id="blk-c4"><div class="chapTop"><div class="grow">
+    <div class="eyebrowLine">04 · VISUAL SIMULATION (FINAL)</div>
+    <h2 class="chapH2">可视化仿真(决赛件)</h2></div><button class="openDir" type="button" data-material-key="04" data-label="可视化仿真(决赛件)">打开目录 ↗</button></div>
+    <p class="lede">可视化仿真以 Web 技术自主实现(HTML + JavaScript/WebGL),覆盖决赛任务要求:交互界面输入货物属性,存放位置与路径规划统计,仓位布局与占用展示。三维回放由与 03 仿真同源的事件数据驱动。全部页面双击即开、离线运行。</p><table class="chapTable"><tr><th style="width:250px">仓库中的位置</th><th style="width:150px">是什么</th><th>说明</th><th style="width:250px">关键内容</th></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l4_showcase\src\00_导览.html">l4_showcase\src\00_导览.html</button></td><td>本页</td><td>提交包导览与三个演示页的统一入口</td><td>同时作为桌面工作站(Electron 壳)的首页</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l4_showcase\src\01_连续填仓.html">l4_showcase\src\01_连续填仓.html</button></td><td>连续入库</td><td>空仓 0→267 的逐件放置决策与容量推进,三算法同帧对照</td><td>同源 trace 驱动;含行程速度剖面与加减速分段路径</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l4_showcase\src\02_入出闭环.html">l4_showcase\src\02_入出闭环.html</button></td><td>存取闭环</td><td>存取交替作业,含出库取货→扫码出场全链与故障停机情景</td><td>100 周期;七步作业分解;三档拟真模型</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l4_showcase\src\03_FIO物理证据.html">l4_showcase\src\03_FIO物理证据.html</button></td><td>物理证据</td><td>Factory I/O 现场截图与逐相位时序的证据浏览器</td><td>9/9 全链成功;负结果同样公开</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l4_showcase\tools">l4_showcase\tools</button></td><td>验收脚本</td><td>全部自动化 QA 与契约测试</td><td>30 项运行时契约 + 01 页 68 项 / 02 页 10 项页面级 QA + 本导览页 10 项</td></tr></table><div class="note"><b>口径注</b> 三维回放为 20×20 逻辑仓 sim 数据回放;入出库交接的演示补段不计入仿真时间与统计指标;页面不宣称与 PLC 或物理设备在线联动。</div><div class="pathNote">路径为<b>开发树中的真实位置</b>(当前可直接打开);点击路径复制,打包提交时对应上表 00 章的五个目录。</div></div>
+    <div class="chapBlock" id="blk-c5"><div class="chapTop"><div class="grow">
+    <div class="eyebrowLine">05 · PHYSICAL PREVIEW</div>
+    <h2 class="chapH2">物理预演素材</h2></div><button class="openDir" type="button" data-material-key="05" data-label="物理预演素材">打开目录 ↗</button></div>
+    <p class="lede">为验证控制逻辑在三维物理环境中的动作链与 I/O 时序,选取 Factory I/O 自动化仓库场景(54 仓位,含入口输送、堆垛机、货架与出口输送)进行技术预演:以 Python 经 Modbus 直控执行完整取放链,记录传感器与执行器时序。</p><table class="chapTable"><tr><th style="width:250px">仓库中的位置</th><th style="width:150px">是什么</th><th>说明</th><th style="width:250px">关键内容</th></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l2_factoryio\f3_stacker_control.py">l2_factoryio\f3_stacker_control.py</button></td><td>直控脚本</td><td>Python 经 Modbus TCP 驱动堆垛机执行完整取放链的控制程序</td><td>出箱→取货→行车→放置→收叉全相位</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l2_factoryio\logs">l2_factoryio\logs</button></td><td>诊断日志</td><td>全链取放的逐相位诊断日志</td><td>三仓位各三次全链取放 9 / 9 运行成功</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l2_factoryio\media">l2_factoryio\media</button></td><td>影像证据</td><td>取货、放置、货物落位的关键帧与全链过程素材</td><td>与诊断日志时间戳对应</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l2_factoryio\io_map.md">l2_factoryio\io_map.md</button></td><td>点表</td><td>传感器/执行器与 Modbus 地址映射说明</td><td>Entry、Load、叉臂/Lift、货架、Unload、Exit</td></tr><tr><td class="f"><button class="pathBtn" type="button" data-copy="l2_factoryio\F3_H5证据保全_0716.md">l2_factoryio\F3_H5证据保全_0716.md</button></td><td>证据保全记录</td><td>9/9 全链取放的采集过程、轮次与对应影像的登记</td><td>revision 292;三仓位各三轮</td></tr></table><div class="note"><b>口径注</b> 本目录为 54 仓位代表性场景的 Python 直控技术预演,验证动作链与 I/O 时序,不构成 400 仓位物理孪生或完整现场闭环;AC500 仿真环境的 Modbus 主站直驱经两轮独立复核为当前环境负结果,相关记录随包归档。**场景文件说明**:Factory I/O 工作场景(.factoryio)为该软件的本地工程文件,当前不在本仓库内,复现需在 Factory I/O 中按 io_map.md 的点表自建或另行索取。</div><div class="pathNote">路径为<b>开发树中的真实位置</b>(当前可直接打开);点击路径复制,打包提交时对应上表 00 章的五个目录。</div></div>
+  </section>
 </div>
 
+<footer class="infobar"><span>智储优控 · 提交材料导览</span><span>20 × 20 单巷道 AS/RS</span><span class="sp">v1.1 · 0728</span></footer>
+<div id="toast" role="status" aria-live="polite"></div>
+
 <script>
-const CHAPTERS=[
-  {id:'c0',name:'总览与阅读路径'},
-  {id:'c1',name:'验证报告'},
-  {id:'c2',name:'PLC 代码与 Automation Builder 工程'},
-  {id:'c3',name:'建模与仿真'},
-  {id:'c4',name:'可视化仿真(决赛件)'},
-  {id:'c5',name:'物理预演素材'}
-];
-const tabs=[...document.querySelectorAll('[role="tab"]')],panels=[...document.querySelectorAll('[role="tabpanel"]')];
-let activeIndex=0;
-function setChapter(id,writeHash){if(writeHash===undefined)writeHash=true;
-let idx=CHAPTERS.findIndex(function(c){return c.id===id});if(idx<0)idx=0;activeIndex=idx;
-tabs.forEach(function(t,i){const on=i===idx;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1});
-panels.forEach(function(p,i){p.hidden=i!==idx});
-document.getElementById('crumb').textContent=CHAPTERS[idx].name;
-const next=CHAPTERS[(idx+1)%CHAPTERS.length];
-document.getElementById('nextChapter').textContent=idx===CHAPTERS.length-1?'回到总览 ↺':'下一章 · '+next.name+' →';
-if(writeHash&&location.hash!=='#/'+id)location.hash='/'+id}
-tabs.forEach(function(t,i){t.addEventListener('click',function(){setChapter(t.dataset.id)});
-t.addEventListener('keydown',function(e){let j=i;
-if(e.key==='ArrowDown'||e.key==='ArrowRight')j=(i+1)%tabs.length;
-else if(e.key==='ArrowUp'||e.key==='ArrowLeft')j=(i-1+tabs.length)%tabs.length;
-else if(e.key==='Home')j=0;else if(e.key==='End')j=tabs.length-1;else return;
-e.preventDefault();setChapter(tabs[j].dataset.id);tabs[j].focus()})});
-document.getElementById('nextChapter').onclick=function(){setChapter(CHAPTERS[(activeIndex+1)%CHAPTERS.length].id)};
-const ribbon=document.getElementById('ribbon'),rbtn=document.getElementById('ribbonToggle');
-rbtn.addEventListener('click',function(){const c=ribbon.classList.toggle('collapsed');
-rbtn.textContent=c?'展开指标 ▼':'收起指标 ▲';rbtn.setAttribute('aria-expanded',String(!c));
-try{localStorage.setItem('daolan-ribbon',c?'1':'0')}catch(_){}});
-try{if(localStorage.getItem('daolan-ribbon')==='1'){ribbon.classList.add('collapsed');rbtn.textContent='展开指标 ▼';rbtn.setAttribute('aria-expanded','false')}}catch(_){}
-document.querySelectorAll('.metric').forEach(function(m){m.addEventListener('keydown',function(e){if(e.key==='Escape')m.blur()})});
-addEventListener('hashchange',function(){const m=location.hash.match(/^#\/(.+)$/);setChapter(m?m[1]:'c0',false)});
-const initial=location.hash.match(/^#\/(.+)$/);setChapter(initial?initial[1]:'c0',false);
+'use strict';
+/* 本页既是浏览器直开的提交包导览,也是 Electron 桌面壳的首页(shell.html 的 KEY_TO_SRC
+   已把 launch 指向本页)。壳内经 postMessage 与壳通信;顶层直开时全部降级为本地行为,
+   不依赖任何 Electron API,也不报错。协议与原 launch.html 一致。 */
+var inShell = window.parent && window.parent !== window;
+
+function notifyShell(payload) {
+  if (!inShell) return false;
+  window.parent.postMessage(Object.assign({source: 'zhichu-shell'}, payload), window.location.origin);
+  return true;
+}
+
+var toastEl = document.getElementById('toast'), toastTimer = null;
+function toast(text) {
+  toastEl.textContent = text; toastEl.classList.add('on');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2200);
+}
+
+/* 三页入口:壳内让壳切 iframe;直开则本页跳转。 */
+Array.prototype.forEach.call(document.querySelectorAll('[data-nav-target]'), function (btn) {
+  btn.addEventListener('click', function () {
+    if (!notifyShell({type: 'navigate', target: btn.getAttribute('data-nav-target')})) {
+      window.location.href = btn.getAttribute('data-href');
+    }
+  });
+});
+
+/* 章级「打开目录」:壳内交主进程用系统默认程序打开;直开时降级为复制路径。 */
+Array.prototype.forEach.call(document.querySelectorAll('[data-material-key]'), function (btn) {
+  btn.addEventListener('click', function () {
+    var key = btn.getAttribute('data-material-key');
+    if (notifyShell({type: 'openMaterial', key: key})) return;
+    var row = btn.closest('.chapBlock').querySelector('.pathBtn');
+    copyText(row ? row.getAttribute('data-copy') : key, '浏览器中无法直接打开文件夹,已复制路径');
+  });
+});
+
+/* 文件行路径:一律点击复制——两种模式都可用,不依赖 Electron。 */
+function copyText(text, hint) {
+  var done = function () { toast((hint || '已复制路径') + ':' + text); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+  } else { fallbackCopy(text, done); }
+}
+function fallbackCopy(text, done) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta); done();
+}
+Array.prototype.forEach.call(document.querySelectorAll('.pathBtn'), function (btn) {
+  btn.addEventListener('click', function () { copyText(btn.getAttribute('data-copy')); });
+});
+
+/* 指标气泡:Esc 收起(键盘可达)。 */
+Array.prototype.forEach.call(document.querySelectorAll('.metric'), function (m) {
+  m.addEventListener('keydown', function (e) { if (e.key === 'Escape') m.blur(); });
+});
+
+/* ── 章节浮标 ──
+   点击滚到对应块;滚动时高亮当前块。用滚动位置判定而非 IntersectionObserver:
+   章块高度差异大(00 章短、03 章长),交叉比例阈值在长块上会长期不触发;
+   取「顶部越过判定线的最后一个块」语义稳定,且与用户对"当前在读哪章"的直觉一致。 */
+var scroller = document.getElementById('scroller');
+var railBtns = Array.prototype.slice.call(document.querySelectorAll('.chapRail button'));
+var targets = railBtns.map(function (b) { return document.getElementById(b.getAttribute('data-goto')); });
+
+/* 统一用「相对滚动容器」的纵坐标:.scroll 已设 position:relative,故 offsetTop 就是所需值;
+   仍走一次 rect 兜底,避免将来有人在中间插入定位祖先导致参照系再次漂移。 */
+function topOf(el) {
+  if (!el) return 0;
+  if (el.offsetParent === scroller) return el.offsetTop;
+  return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+}
+function setActive(index) {
+  railBtns.forEach(function (b, j) { b.setAttribute('aria-current', String(j === index)); });
+}
+
+/* 点击后**立即**高亮并短暂锁定:scroll-behavior:smooth 的动画期间 scroll 事件会持续触发
+   syncRail,用动画中途的 scrollTop 反复改写高亮,看起来就是"点了这章却亮着上一章"。
+   锁定窗口只压制动画期间的覆盖,窗口过后仍由滚动位置正常接管。 */
+var lockUntil = 0;
+railBtns.forEach(function (b, i) {
+  b.addEventListener('click', function () {
+    setActive(i);
+    lockUntil = Date.now() + 700;
+    if (targets[i]) scroller.scrollTo({top: topOf(targets[i]) - 10, behavior: 'smooth'});
+  });
+});
+
+function syncRail() {
+  if (Date.now() < lockUntil) return;
+  var line = scroller.scrollTop + 40, active = 0;
+  for (var i = 0; i < targets.length; i += 1) {
+    if (targets[i] && topOf(targets[i]) <= line) active = i;
+  }
+  /* 滚到底时强制高亮最后一章:最后一块可能不够高、顶部永远越不过判定线。 */
+  if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) active = targets.length - 1;
+  setActive(active);
+}
+scroller.addEventListener('scroll', syncRail, {passive: true});
+window.addEventListener('resize', syncRail);
+syncRail();
+
+/* 壳侧栏「材料」键导航到本页 #materials(KEY_TO_SRC 里 materials 指向 00_导览.html#materials),
+   此时直接把材料区滚到视口顶部——本页是滚动式,不能像旧 launch.html 那样只做一次高亮脉冲。 */
+function applyHash() {
+  if (window.location.hash !== '#materials') return;
+  var el = document.getElementById('secMaterials');
+  if (el) scroller.scrollTo({top: topOf(el) - 10, behavior: 'auto'});
+  syncRail();
+}
+window.addEventListener('hashchange', applyHash);
+applyHash();
+
+window.__D00_READY__ = true;
+window.__D00_AUDIT = {
+  inShell: inShell,
+  scenes: Array.prototype.map.call(document.querySelectorAll('[data-nav-target]'), function (b) {
+    return {key: b.getAttribute('data-nav-target'), href: b.getAttribute('data-href')};
+  }),
+  materialKeys: Array.prototype.map.call(document.querySelectorAll('[data-material-key]'), function (b) {
+    return b.getAttribute('data-material-key');
+  }),
+  paths: Array.prototype.map.call(document.querySelectorAll('.pathBtn'), function (b) {
+    return b.getAttribute('data-copy');
+  }),
+  chapters: railBtns.length,
+  metrics: Array.prototype.map.call(document.querySelectorAll('.metric .v'), function (v) {
+    return v.textContent.trim();
+  })
+};
 </script>
 </body>
 </html>

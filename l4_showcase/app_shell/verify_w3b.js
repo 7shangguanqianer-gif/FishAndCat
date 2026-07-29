@@ -212,15 +212,15 @@ async function main() {
     const cdpMetrics = await overrideDeviceMetrics1600x900(page);
 
     /* ---- a) 启动页渲染截图 ---- */
-    const launchFrame = await findChildFrame(page, 'launch.html');
-    await launchFrame.waitForFunction(() => !!window.__LAUNCH_READY__, { timeout: 20000 });
+    const homeFrame = await findChildFrame(page, '00_');
+    await homeFrame.waitForFunction(() => !!window.__D00_READY__, { timeout: 20000 });
     await sleep(300);
     await page.screenshot({ path: path.join(OUT_DIR, 'launch.png') });
     report.steps.push({ step: 'a_launch', ok: pageErrors.length === 0, pageErrorCount: pageErrors.length });
 
     /* ---- b) 「进入 02」→ iframe 内 __S3_QA 就绪 + WebGL 非全白 + 零 pageerror ---- */
     pageErrors.length = 0; consoleErrors.length = 0;
-    await launchFrame.click('button[data-nav-target="02"]');
+    await homeFrame.click('button[data-nav-target="02"]');
     const frame02 = await findChildFrame(page, '02_');
     const s3qaReadyMs = await waitS3QaReady(frame02, 30000);
     const webgl02 = await frame02.evaluate(webglCheckFn);

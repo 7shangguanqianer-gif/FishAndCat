@@ -1,5 +1,5 @@
 {
-  "_comment": "W3b 材料区路径映射。key = launch.html 内 mat-item 的 data-material-key(对应 mock 的 01/02/03/05 编号)。path 相对 F:\\abb_wh_work(main.js 内 PROJECT_ROOT = l4_showcase 的上一级)解析。todo=true 表示路径未定,main 进程直接返回 not-found,渲染侧提示占位文案。这些是占位路径,打包提交前需按最终提交清单核实到具体文件。",
+  "_comment": "W3b 材料区路径映射。key = launch.html 内 mat-item 的 data-material-key(对应 mock 的 01/02/03/05 编号)。path 相对 F:\\abb_wh_work(main.js 内 PROJECT_ROOT = l4_showcase 的上一级)解析。todo=true 表示路径未定,main 进程直接返回 not-found,渲染侧提示占位文案。这些是占位路径,打包提交前需按最终提交清单核实到具体文件。 0728c:补 04 决赛件;00 导览页每章「打开目录」按钮按本表 key 调用。",
   "01": {
     "label": "验证报告",
     "path": "docs",
@@ -17,6 +17,12 @@
     "path": "sim",
     "todo": false,
     "note": "Python 仿真源码、场景库、统计产物(sim/*.py)"
+  },
+  "04": {
+    "label": "可视化仿真(决赛件)",
+    "path": "l4_showcase/src",
+    "todo": false,
+    "note": "0728c 补:自研 Web 三维可视化仿真源码(00 导览/01 连续填仓/02 入出闭环/03 物理证据 四页 + 公共模块 + 验收脚本)。此前 materials.config.json 只有 01/02/03/05,缺决赛件本体。"
   },
   "05": {
     "label": "物理预演素材",
