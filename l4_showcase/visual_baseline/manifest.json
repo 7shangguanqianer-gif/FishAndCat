@@ -1,0 +1,60 @@
+{
+ "capturedAtCommit": "see git log",
+ "channelTol": 8,
+ "failRatio": 0.001,
+ "viewports": [
+  {
+   "key": "shell",
+   "width": 1552,
+   "height": 900
+  },
+  {
+   "key": "min",
+   "width": 1232,
+   "height": 800
+  }
+ ],
+ "shots": [
+  {
+   "name": "00_导览__shell.png",
+   "bytes": 498711
+  },
+  {
+   "name": "00_导览__min.png",
+   "bytes": 383906
+  },
+  {
+   "name": "01_连续填仓__shell.png",
+   "bytes": 91791
+  },
+  {
+   "name": "01_连续填仓__min.png",
+   "bytes": 75283
+  },
+  {
+   "name": "02_入出闭环__shell.png",
+   "bytes": 121589
+  },
+  {
+   "name": "02_入出闭环__min.png",
+   "bytes": 98123
+  },
+  {
+   "name": "03_FIO物理证据__shell.png",
+   "bytes": 1429516
+  },
+  {
+   "name": "03_FIO物理证据__min.png",
+   "bytes": 990645
+  },
+  {
+   "name": "04_AB工程__shell.png",
+   "bytes": 552322
+  },
+  {
+   "name": "04_AB工程__min.png",
+   "bytes": 533701
+  }
+ ],
+ "note": "基线在设计收敛开工前采集。三维 <canvas> 已用 #ff00ff 遮罩——本次收敛不动场景内部配色。"
+}
