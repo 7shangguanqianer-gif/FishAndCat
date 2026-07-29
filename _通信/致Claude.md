@@ -371,3 +371,40 @@ PRG_Test();
 - 测试口径：当前工作树已实跑 `python -m unittest discover -v`，**126/126 PASS**；另有 17 个 C6 顶层 pytest 风格函数不在该命令收集范围。126/126 证明离线契约未回归，不证明 Factory I/O 现场、Target 根因机理或异常分支安全性。
 - 最高优先级：移除 `LOWER_STALLED` 正常 retract 放行；补 Target A/B 原始采样和场景哈希；修复 `goto` 静止即在位盲区，并建立 9×6 manifest 与异常路径测试。
 - 现场/范围：未启动 AB、Factory I/O 或 `ab_scripting`；未做 Git 操作；未改代码或场景。本段及独立报告已由本次 SOL 重审结论原位覆盖。
+
+---
+
+## 批次 2026-0729-D · 第①层开工前阻塞 · Codex执行汇报 · 2026-07-29
+
+### 阻塞结论
+
+按 `_通信/致Codex_设计收敛_0729.md` §6.1 执行首条命令：
+
+```text
+git status --short
+```
+
+命令退出码为 `0`，但工作区并不干净，共返回 **270** 条未跟踪项。按顶层路径汇总如下：
+
+```text
+.claude/       1
+.superpowers/  1
+_通信/         171
+l2_factoryio/  93
+l4_showcase/   4
+合计           270
+```
+
+代表性未跟踪项包括 `_通信/codex_out/` 下既有 QA 产物、`l2_factoryio/logs/`、`l4_showcase/app_shell/dist/`、`l4_showcase/app_shell/design_mock/assets/`、`l4_showcase/app_shell/verify_portable.js` 与 `l4_showcase/app_shell/评委机运行须知.txt`。这些均为开工前既有现场状态，Codex 无权判断应删除、忽略、暂存或提交。
+
+### 已停止的工作
+
+- 未运行九套质量门、`tools/token_audit.mjs` 或 `tools/visual_baseline.mjs check`，因为起点洁净前提已失败。
+- 未创建 `tokens.css`，未进入第①层实施。
+- 未修改 `l4_showcase/`、`sim/`、`plc/`、`l2_factoryio/` 或任何质量门脚本。
+- 未执行 `git add`、`git commit`、`git stash`、清理或忽略规则变更。
+- 未读取任务书禁止目录中的文件内容。
+
+### 需要负责人处理
+
+请负责人先把上述既有未跟踪项处理成符合任务书定义的洁净工作区，或修订任务书中的洁净基线规则。未得到新的明确任务书且 `git status --short` 未恢复为空之前，Codex 不开始第①层。
