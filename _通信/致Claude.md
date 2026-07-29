@@ -408,3 +408,107 @@ l4_showcase/   4
 ### 需要负责人处理
 
 请负责人先把上述既有未跟踪项处理成符合任务书定义的洁净工作区，或修订任务书中的洁净基线规则。未得到新的明确任务书且 `git status --short` 未恢复为空之前，Codex 不开始第①层。
+
+---
+
+## 批次 2026-0729-D · 新版任务书起点核验阻塞 · Codex执行汇报 · 2026-07-29
+
+### 旧阻塞的处理状态
+
+已完整重读 2026-07-29 04:52 修订版 `_通信/致Codex_设计收敛_0729.md`。新版 §6.1 将洁净判据修正为：
+
+```text
+git status --porcelain --untracked-files=no
+```
+
+本轮在全部起点核验之后执行该命令，退出码 `0`、输出为空；因此上节关于 270 条既有未跟踪项的阻塞已被新版规则解除，Codex 未处理这些既有项。
+
+### 九套质量门的真实起点结果
+
+| 质量门 | 真实输出摘要 | 退出码 |
+|---|---|---:|
+| `node tools/test_s3_motion_parity.mjs` | `tests 5` / `pass 5` / `fail 0` | 0 |
+| `node tools/test_s3_runtime_contract.mjs` | `tests 30` / `pass 30` / `fail 0` | 0 |
+| `node tools/capture_s3_layout_a_qa.mjs` | `PASS 68/68`，不是 `0/0` | 0 |
+| `node tools/capture_s3_mixed_layout_a_qa.mjs` | `PASS 10/10` | 0 |
+| `node tools/capture_s3_fill_uniform_qa.mjs` | `PASS 8/8` | 0 |
+| `node tools/capture_fio54_evidence_qa.mjs` | `PASS 19/19` | 0 |
+| `node tools/capture_d00_qa.mjs` | `PASS 10/10` | 0 |
+| `node tools/capture_ab04_qa.mjs` | `PASS 16/16` | 0 |
+| `cd app_shell && node verify_material_route.mjs` | 四条内部断言均 PASS，打印 `ALL PASS 4/4`，随后 Node/libuv 断言崩溃 | **1** |
+
+路由门使用原命令复跑两次，均稳定得到相同结果。完整异常尾部为：
+
+```text
+PASS material-png: status=200(want 200) type=image/png(want image/png)
+PASS material-mp4: status=200(want 200) type=video/mp4(want video/mp4)
+PASS traversal-blocked: status=404(want 404) type=null(want any)
+PASS shell-no-regress: status=200(want 200) type=text/html; charset=utf-8(want text/html; charset=utf-8)
+ALL PASS 4/4
+(node:32412) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 94
+```
+
+当前运行时为 Node `v24.16.0`、libuv `1.52.1`。只读检查脚本发现：
+
+- `verify_material_route.mjs:51` 先执行 `child.kill('SIGTERM')`；
+- `:52` 又以 `{ shell: true }` 异步 `spawn('taskkill', ...)`，未等待该子进程退出；
+- `:55` 随即调用 `process.exit(0)`。
+
+这组生命周期操作与报错位置一致，但目前只能定为**高相关嫌疑**，不能在未修改并复验门禁脚本前宣称已证明根因。按 §3.4 未修改该脚本。
+
+### 任务书总数存在算术冲突
+
+任务书反复写“九套质量门合计 160 项”，但其逐套指定项数与本轮真实输出相加为：
+
+```text
+5 + 30 + 68 + 10 + 8 + 19 + 10 + 16 + 4 = 170
+```
+
+恰好去掉新增的 `capture_d00_qa.mjs` 10 项后才是 160。当前九条命令的可复现口径应为 **170 项**，不是 160 项。即使只看内部断言，本轮也是 170 条断言全部显示 PASS；但第九套进程退出码为 1，所以不能称为“九套全绿”。
+
+### 两个验收仪器
+
+`node tools/token_audit.mjs` 退出码 `0`，分页数字与任务书 §2.1 完全一致：
+
+```text
+页面                字号种类  字重  色值  圆角  padding  gap
+00 导览                 16     3    28     3       11    8
+01 连续填仓               27     4   252     3       20   16
+02 入出闭环               28     3   194     3       17   15
+03 FIO证据              20     5    37     4       15   13
+04 AB工程               14     4    51     4       10    9
+壳 shell                8     2    15     4        5    4
+```
+
+全库汇总同样一致：字号 33 种、圆角 7 种、padding 单值 22 种、gap 19 种、字重 7 种、色值 348 个、一次性色值 113/348（32%）、不在 4px 基准上的间距值 16 个。
+
+`node tools/visual_baseline.mjs check` 退出码 `0`，结果为 `PASS 10/10 未变`。其中 8 张为 `0.000%`；03 页两张分别为工具判定 `ok` 的 `0.002% (118/6555648)` 与 `0.004% (179/4475856)`。输出目录为：
+
+```text
+F:\abb_wh_work\l4_showcase\out\visual_diff_2026-07-29T0958
+```
+
+补充事实：任务书 §10 将起点核验称为“不写任何文件”的只读核验，但这些受命执行的仪器实际报告了 `scratchpad/token_audit.json`、多个 `out/*/qa_report.json` 和 `out/visual_diff_*` 输出路径。它们没有造成已跟踪文件变更，但“完全不写文件”的文字口径并不准确。
+
+### 实施状态
+
+- 未创建 `tokens.css`，未开始第①层。
+- 未修改五个 HTML、Electron 壳、质量门脚本、`sim/`、`plc/` 或 `l2_factoryio/`。
+- 未执行 `git add`、`git commit`、`git stash`、清理或忽略规则变更。
+- 本轮唯一有意修改是追加本阻塞汇报。
+
+### 待拍板清单
+
+1. **问题：路由门四条断言通过但进程稳定以 1 退出，是否修门禁生命周期？**
+   - **推荐：由验收方修复并重建可信起点。** 等待 `taskkill` 子进程完成，避免在仍有活动 handle 时立即 `process.exit`，并在 Node 24.16.0 上复跑确认退出码 0。理由：既保留 4 条业务断言，也恢复命令级全绿。
+   - 替代 A：用项目已验证过的 Node LTS 版本复跑并固定运行时。风险：可能绕开而不是修复脚本生命周期问题，还需声明门禁运行时。
+   - 替代 B：把“打印 `ALL PASS 4/4`”视为通过、忽略退出码 1。**不推荐**，因为会把 harness 崩溃伪装成全绿。
+
+2. **问题：九套质量门的总口径写 160 还是 170？**
+   - **推荐：修订为 170。** 九条必跑命令及其指定项数可直接复算，新增 D00 的 10 项显然已进入必跑清单。
+   - 替代：保留“核心 160”并把 D00 10 项单列为附加门。风险：与“九套合计 160”及“九套必须全绿”的现有措辞冲突，汇报容易再次混算。
+
+3. **问题：是否修订“起点核验不写任何文件”的描述？**
+   - **推荐：改成“不会修改已跟踪源码，但会刷新 `scratchpad/` 与 `out/` 下的生成证据”。** 这与脚本真实行为一致，也保留新版的已跟踪文件洁净判据。
+   - 替代：要求所有起点工具提供显式 dry-run。代价是需要改验收工具，且超出第①层范围。

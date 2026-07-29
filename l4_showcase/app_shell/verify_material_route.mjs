@@ -49,7 +49,24 @@ try {
   console.error('FAIL harness:', error.message);
 } finally {
   child.kill('SIGTERM');
-  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { shell: true });
+  /* 0729 修退出期竞态。原实现是
+       spawn('taskkill', [...], { shell: true });
+     spawn 出去**不等它结束**,下一行就 process.exit() —— taskkill 的 libuv async handle
+     还在初始化就被连根拆掉,于是炸在
+       Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 94
+     退出码变成 127。四项断言其实全过,是纯粹的收尾竞态,但对任何看退出码的调用方
+     (CI、批量跑门的脚本)都表现为"这套门失败了"。
+     管道方式下 6/6 必现,裸终端偶发为 0——所以用 `| tail -1` 看结果时会完全漏掉它。
+     改法:等 taskkill 真正结束再退;并去掉 shell:true(taskkill 是真实 exe,不需要 shell 包一层,
+     顺带消掉 DEP0190 那条警告)。 */
+  if (process.platform === 'win32') {
+    await new Promise(resolve => {
+      const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+      killer.on('close', resolve);
+      killer.on('error', resolve);   // taskkill 不在 PATH 也不该把整套门判失败
+    });
+  }
 }
 console.log(failed === 0 ? `ALL PASS ${CASES.length}/${CASES.length}` : `FAILED ${failed}/${CASES.length}`);
-process.exit(failed === 0 ? 0 : 1);
+/* 用 exitCode 而非 process.exit():让事件循环自然收尾,不再抢在 handle 关闭前拆进程 */
+process.exitCode = failed === 0 ? 0 : 1;
