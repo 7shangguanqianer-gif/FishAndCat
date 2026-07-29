@@ -80,6 +80,7 @@ button{font:inherit;cursor:pointer}
   <div class="rail-item" data-key="01"><button class="rail-icon" aria-label="01 连续填仓">①</button><div class="flyout"><span class="k">01</span>连续填仓</div></div>
   <div class="rail-item" data-key="02"><button class="rail-icon" aria-label="02 入出闭环">②</button><div class="flyout"><span class="k">02</span>入出闭环</div></div>
   <div class="rail-item" data-key="03"><button class="rail-icon" aria-label="03 FIO物理证据">③</button><div class="flyout"><span class="k">03</span>FIO物理证据</div></div>
+  <div class="rail-item" data-key="04"><button class="rail-icon" aria-label="04 AB工程">④</button><div class="flyout"><span class="k">04</span>AB工程</div></div>
   <div class="rail-sep"></div>
   <div class="rail-item" data-key="materials"><button class="rail-icon" aria-label="材料">📄</button><div class="flyout"><span class="k">DOC</span>提交材料</div></div>
   <div class="rail-item" data-key="about"><button class="rail-icon" aria-label="关于">ⓘ</button><div class="flyout"><span class="k">i</span>关于</div></div>
@@ -116,7 +117,9 @@ var KEY_TO_SRC = {
   materials: '../src/00_导览.html#materials',
   '01': '../src/01_连续填仓.html',
   '02': '../src/02_入出闭环.html',
-  '03': '../src/03_FIO物理证据.html'
+  '03': '../src/03_FIO物理证据.html',
+  /* 0729 新增:AB 工程页(赛题评分表「基于 ABB AC500 实现」占 30%,此前四页里近乎零呈现) */
+  '04': '../src/04_AB工程.html'
 };
 
 var frame = document.getElementById('contentFrame');

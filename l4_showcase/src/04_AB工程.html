@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AB 工程 · 从 ST 源码到 AC500 控制器</title><link rel="icon" href="data:,">
+<style>
+:root{--abb:#ff000f;--ink:#17202b;--dim:#5e6a73;--line:#c9d0d6;--line-soft:#dfe4e7;--bg:#f2f4f5;--card:#fff;--ok:#1d6b2e;--ok-bg:#e6f2e8;--warn:#8a6d00;--warn-bg:#fff6d8}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font:14px/1.5 "Microsoft YaHei","Segoe UI",sans-serif}
+html{scroll-behavior:smooth}
+#brand{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:14px;padding:0 20px;height:48px;background:var(--card);border-bottom:3px solid var(--abb);box-shadow:0 2px 10px #17202b12}
+#brand .logo{color:var(--abb);font-weight:900;font-size:22px;font-family:Arial;letter-spacing:1px}
+#brand h1{color:#16191d;font-size:16px;font-weight:700}
+#brand .tag{margin-left:auto;color:var(--dim);font-size:12px;font-weight:700}
+#scopeBand{position:sticky;top:48px;z-index:59;display:flex;gap:8px;align-items:center;white-space:nowrap;overflow-x:auto;padding:7px 20px;background:#fff7f5;font-size:12px;border-bottom:1px solid var(--line-soft);border-left:4px solid var(--abb)}
+#scopeBand b{color:#8a1a1a}
+#scopeBand .sep{color:#c2c9cf}
+main{max-width:1560px;margin:0 auto;padding:24px 20px 60px;display:flex;flex-direction:column;gap:52px}
+.sectionLead{display:flex;align-items:baseline;gap:14px;padding:0 2px 4px}
+.sectionLead .idx{font:900 34px/1 Consolas,monospace;color:#ffd0cc;letter-spacing:-1px}
+.sectionLead h2{font-size:23px;font-weight:800;letter-spacing:-.3px}
+.sectionLead .lead{margin-left:auto;color:var(--dim);font-size:12px;max-width:46%;text-align:right;line-height:1.5}
+section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 18px}
+.path{font-family:Consolas,monospace;font-size:11.5px;color:#17365d;word-break:break-all}
+.mono{font-family:Consolas,monospace}
+.src{font-family:Consolas,monospace;font-size:10.5px;color:#8792a0;margin-top:6px}
+.shotSlot{border:2px dashed #c9a227;background:repeating-linear-gradient(135deg,#fffdf3,#fffdf3 9px,#fff8dd 9px,#fff8dd 18px);border-radius:4px;padding:16px;text-align:center;color:#7a5c00}
+.shotSlot b{display:block;font-size:13px;margin-bottom:4px}
+.shotSlot span{font-size:11.5px;line-height:1.7}
+/* 断言矩阵共用 */
+.mx{display:grid;gap:3px}
+.cell{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font:600 10px Consolas,monospace;color:#fff;cursor:default;transition:transform .1s}
+.cell:hover{transform:scale(1.22);z-index:3;box-shadow:0 3px 10px #0003}
+.legend{display:flex;flex-wrap:wrap;gap:5px 12px;margin-top:12px;font-size:11px;color:var(--dim)}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.inv{background:#eef4fb;border-left:4px solid #17365d;padding:10px 13px;border-radius:0 3px 3px 0;font-size:12.5px;margin-top:12px}
+.inv code{font-family:Consolas,monospace;background:#dde7f3;padding:1px 5px;border-radius:2px}
+/* 分组块:标题完整不截断,块宽随内容;颜色=断言类型 */
+.gwrap{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+.gblk{border:1px solid;border-radius:4px;padding:8px 9px 9px;max-width:340px}
+.gttl{font:700 11px/1.45 "Microsoft YaHei",sans-serif;margin-bottom:6px}
+.gttl .jd{font-size:8.5px;font-weight:900;color:#8a6d00;background:#fff6d8;border-radius:2px;padding:0 3px;margin-left:3px;vertical-align:super;cursor:help}
+.gcells{display:flex;gap:3px;flex-wrap:wrap}
+.gcells .cell{width:21px;aspect-ratio:1}
+
+/* 终端(取自 C 版):开场钩子——一眼看出是真跑出来的,不是画的 */
+.term{background:#12171f;border-radius:5px;overflow:hidden;box-shadow:0 6px 24px #17202b26}
+.term .bar{background:#212936;padding:7px 13px;display:flex;align-items:center;gap:8px;font:11.5px Consolas,monospace;color:#94a3b4}
+.term .bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.term pre{padding:15px 17px;font:12px/1.85 Consolas,monospace;color:#cdd9e5;white-space:pre-wrap;margin:0}
+.term .cmd{color:#7ee081}.term .key{color:#ffd76e;font-weight:700}.term .ok{color:#6ee7a8;font-weight:700}.term .cm{color:#6b7a8c}
+/* 台账(取自 B 版):左列发生了什么,右列当时的原始日志 */
+.lrow{display:grid;grid-template-columns:210px 1fr;gap:22px;position:relative;padding:15px 0}
+.lrow+.lrow{border-top:1px dashed var(--line-soft)}
+.lleft{position:relative;padding-left:44px}
+.lleft .dot{position:absolute;left:0;top:2px;width:30px;height:30px;border-radius:50%;background:var(--abb);color:#fff;display:flex;align-items:center;justify-content:center;font:900 12px Consolas,monospace}
+.lleft:before{content:"";position:absolute;left:14px;top:34px;bottom:-30px;width:2px;background:var(--line)}
+.lrow:last-child .lleft:before{display:none}
+.lleft h3{font-size:14px;margin-bottom:3px}
+.lleft .big{font:900 27px/1.1 Consolas,monospace;color:var(--abb);letter-spacing:-1px}
+.lleft .unit{font-size:11px;color:var(--dim);font-weight:700}
+.lleft .sub{font-size:11.5px;color:var(--dim);margin-top:6px;line-height:1.55}
+.lright{background:#1e2530;border-radius:4px;padding:11px 13px;overflow:auto;min-width:0}
+.lright pre{font:11px/1.7 Consolas,monospace;color:#d6e2ee;white-space:pre-wrap}
+.lright .src{color:#7d8b9c;margin-top:8px;border-top:1px solid #2f3947;padding-top:6px}
+
+.objChip{font:11px/1.5 Consolas,monospace;padding:2px 7px;border-radius:3px;border:1px solid;white-space:nowrap}
+</style></head><body>
+<div id="brand"><span class="logo">ABB</span><h1>AB 工程 · 从 ST 源码到 AC500 控制器</h1><span class="tag">AC500 实现 · 初赛件</span></div>
+<div id="scopeBand"><b>口径</b> 全部数字取自 0717 归档日志与 ST 源码,可逐条复现 <span class="sep">|</span>
+ <b>边界</b> 77/0 = AC500 <b>PC 仿真</b>在线读回,不外推实体控制器现场性能 <span class="sep">|</span>
+ <b>时效</b> 最后一次真实 AB 场次 2026-07-17,此后工程未改动</div>
+<main>
+<div>
+  <div class="sectionLead"><span class="idx">01</span><h2>一条命令:同步、编译、在线跑测</h2>
+    <span class="lead">下面是 <span class="mono">ab_sync.ps1</span> 的真实输出。无头执行、不开图形界面,每轮自动存档成不可覆盖副本——所以任何人都能重跑并逐行比对。</span></div>
+  <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>
+    Windows PowerShell — ab_sync.ps1 — 2026-07-17 01:05</div><pre><span class="cmd">PS F:\abb_wh_work&gt; powershell -File tools\ab_scripting\ab_sync.ps1</span>
+<span class="cm"></span>
+=== [1/2] sync_st.py: .st -&gt; AB project (48 objects) + build + save ===
+<span class="key">--- summary: synced=48 fail=0 absent=[] missing_in_src=[]</span>
+<span class="key">MSG_ERR: Compile complete -- 0 errors, 1 warnings</span>
+<span class="key">MSG_ERR: Additional code checks complete -- 0 errors</span>
+<span class="ok">SAVE_OK</span>
+<span class="cm"></span>
+=== [2/2] run_test.py: online run PRG_Test ===
+LOGIN_OK; state=stop
+STATE after start: run
+<span class="key">PRG_Test.iPassed  = INT#77</span>
+<span class="key">PRG_Test.iFailed  = INT#0</span>
+PRG_Test.sLastFail = ''
+<span class="key">PRG_Test.xAllPass = TRUE</span>
+LOGOUT_OK
+<span class="ok">=== ALL GREEN: iPassed=77 iFailed=0 (N_CASES=77) ===</span></pre></div>
+</div>
+<div>
+  <div class="sectionLead"><span class="idx">02</span><h2>拆开看 · 五段各自的凭据</h2>
+    <span class="lead">左列是发生了什么,右列是当时的原始日志。每一段都能在仓库里翻到那个文件、那一行。</span></div>
+  <section>
+    <div class="lrow">
+      <div class="lleft"><div class="dot">01</div><h3>ST 源码</h3>
+        <div><span class="big">3872</span> <span class="unit">行</span></div>
+        <div class="sub">9 个 .st 文件 · 纯文本 · 不装 AB 也可审阅</div></div>
+      <div class="lright"><pre>01_DUTs.st                            74 行
+02_GVL.st                            204 行
+03_Functions.st                      423 行
+04_FB_Warehouse.st                  1585 行
+05_PRG_Main.st                       333 行
+06_PRG_Test.st                       975 行
+07_GVL_Data_generated.st             199 行
+08_GVL_WeightPolicy_generated.st      19 行
+09_FB_ScanLoadProbeNs_备用.st           60 行</pre><div class="src">plc/*.st(wc -l)</div></div>
+    </div>
+    <div class="lrow">
+      <div class="lleft"><div class="dot">02</div><h3>对象登记</h3>
+        <div><span class="big">48</span> <span class="unit">个对象</span></div>
+        <div class="sub">37 POU · 6 DUT · 5 GVL,登记表带「源码有、表里没有」护栏</div></div>
+      <div class="lright"><pre>MAP 共 48 条(tools/ab_scripting/sync_st.py)
+  pou  37
+  dut   6
+  gvl   5
+
+护栏:源文件里存在、MAP 未登记的 POU 一律点名
+  → log(&quot;NOT_IN_MAP:&quot;, sec_name, &quot;-- add it to MAP!&quot;)</pre><div class="src">tools/ab_scripting/sync_st.py</div></div>
+    </div>
+    <div class="lrow">
+      <div class="lleft"><div class="dot">03</div><h3>无头同步</h3>
+        <div><span class="big">48</span> <span class="unit">同步 / 0 失败</span></div>
+        <div class="sub">一条命令把 ST 灌进 AB 工程,不开图形界面</div></div>
+      <div class="lright"><pre>--- summary: synced=48 fail=0 absent=[] missing_in_src=[]</pre><div class="src">tools/ab_scripting/logs/sync_result_20260717_010514.txt:51</div></div>
+    </div>
+    <div class="lrow">
+      <div class="lleft"><div class="dot">04</div><h3>工程编译</h3>
+        <div><span class="big">0</span> <span class="unit">errors</span></div>
+        <div class="sub">编译与附加代码检查各一道,均零错误</div></div>
+      <div class="lright"><pre>MSG_ERR: Compile complete -- 0 errors, 1 warnings
+MSG_ERR: Additional code checks complete -- 0 errors
+SAVE_OK</pre><div class="src">tools/ab_scripting/logs/sync_result_20260717_010514.txt:54-57</div></div>
+    </div>
+    <div class="lrow">
+      <div class="lleft"><div class="dot">05</div><h3>在线自测</h3>
+        <div><span class="big">77</span> <span class="unit">通过 / 0 失败</span></div>
+        <div class="sub">AC500 PC 仿真在线读回,非源码自称</div></div>
+      <div class="lright"><pre>LOGIN_OK; state=stop
+STATE after start: run
+write xRunTests via: set_prepared_value('PRG_Test.xRunTests', 'TRUE')
+PRG_Test.iPassed  = INT#77
+PRG_Test.iFailed  = INT#0
+PRG_Test.sLastFail = ''
+PRG_Test.xAllPass = TRUE</pre><div class="src">tools/ab_scripting/logs/runtest_result_20260717_010514.txt:4-11</div></div>
+    </div></section>
+</div>
+
+<div>
+  <div class="sectionLead"><span class="idx">03</span><h2>48 个对象装在哪</h2>
+    <span class="lead">这不是从 ST 源码数出来的,是 <span class="mono">sync_st.py</span> 的登记表 MAP——
+      同步日志里 <span class="mono">SYNCED:</span> 恰好 48 条、按类型 37/6/5 逐类吻合。</span></div>
+  <section>
+    <div class="legend" style="gap:8px 18px;font-size:11.5px;margin:0 0 13px"><span><i style="background:#17365d"></i><b style="color:#17365d">POU 程序组织单元</b>
+       <span style="color:#8792a0">37 个</span></span><span><i style="background:#1d6b2e"></i><b style="color:#1d6b2e">DUT 自定义数据类型</b>
+       <span style="color:#8792a0">6 个</span></span><span><i style="background:#7a4b00"></i><b style="color:#7a4b00">GVL 全局变量表</b>
+       <span style="color:#8792a0">5 个</span></span></div>
+    <div class="gwrap">
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          01_DUTs.st <span style="color:#8792a0;font-weight:400">· 4 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#1d6b2e;background:#e6f2e8;border-color:#1d6b2e33"
+             title="ST_Good · DUT 自定义数据类型 · 源自 01_DUTs.st">ST_Good</span><span class="objChip" style="color:#1d6b2e;background:#e6f2e8;border-color:#1d6b2e33"
+             title="ST_Slot · DUT 自定义数据类型 · 源自 01_DUTs.st">ST_Slot</span><span class="objChip" style="color:#1d6b2e;background:#e6f2e8;border-color:#1d6b2e33"
+             title="ST_Stats · DUT 自定义数据类型 · 源自 01_DUTs.st">ST_Stats</span><span class="objChip" style="color:#1d6b2e;background:#e6f2e8;border-color:#1d6b2e33"
+             title="E_MainState · DUT 自定义数据类型 · 源自 01_DUTs.st">E_MainState</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          07_GVL_Data_generated.st <span style="color:#8792a0;font-weight:400">· 4 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#1d6b2e;background:#e6f2e8;border-color:#1d6b2e33"
+             title="ST_TestVec · DUT 自定义数据类型 · 源自 07_GVL_Data_generated.st">ST_TestVec</span><span class="objChip" style="color:#1d6b2e;background:#e6f2e8;border-color:#1d6b2e33"
+             title="ST_AwraCell · DUT 自定义数据类型 · 源自 07_GVL_Data_generated.st">ST_AwraCell</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_LoadDemoGoods · POU 程序组织单元 · 源自 07_GVL_Data_generated.st">FC_LoadDemoGoods</span><span class="objChip" style="color:#7a4b00;background:#fdf0da;border-color:#7a4b0033"
+             title="GVL_Data · GVL 全局变量表 · 源自 07_GVL_Data_generated.st">GVL_Data</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          02_GVL.st <span style="color:#8792a0;font-weight:400">· 3 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#7a4b00;background:#fdf0da;border-color:#7a4b0033"
+             title="GVL_Param · GVL 全局变量表 · 源自 02_GVL.st">GVL_Param</span><span class="objChip" style="color:#7a4b00;background:#fdf0da;border-color:#7a4b0033"
+             title="GVL_WH · GVL 全局变量表 · 源自 02_GVL.st">GVL_WH</span><span class="objChip" style="color:#7a4b00;background:#fdf0da;border-color:#7a4b0033"
+             title="GVL_Visu · GVL 全局变量表 · 源自 02_GVL.st">GVL_Visu</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          03_Functions.st <span style="color:#8792a0;font-weight:400">· 17 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CapCoef · POU 程序组织单元 · 源自 03_Functions.st">FC_CapCoef</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_IsPresetOccupied · POU 程序组织单元 · 源自 03_Functions.st">FC_IsPresetOccupied</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CheckFeasible · POU 程序组织单元 · 源自 03_Functions.st">FC_CheckFeasible</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_FitsPhysical · POU 程序组织单元 · 源自 03_Functions.st">FC_FitsPhysical</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_AxisTime · POU 程序组织单元 · 源自 03_Functions.st">FC_AxisTime</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CalcTravelTime · POU 程序组织单元 · 源自 03_Functions.st">FC_CalcTravelTime</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CalcDualCycleTime · POU 程序组织单元 · 源自 03_Functions.st">FC_CalcDualCycleTime</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CalcPathLen · POU 程序组织单元 · 源自 03_Functions.st">FC_CalcPathLen</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_TMax · POU 程序组织单元 · 源自 03_Functions.st">FC_TMax</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CalcScore · POU 程序组织单元 · 源自 03_Functions.st">FC_CalcScore</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_CalcPriority · POU 程序组织单元 · 源自 03_Functions.st">FC_CalcPriority</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_StateToColor · POU 程序组织单元 · 源自 03_Functions.st">FC_StateToColor</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_TravelLaden · POU 程序组织单元 · 源自 03_Functions.st">FC_TravelLaden</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_HandleTime · POU 程序组织单元 · 源自 03_Functions.st">FC_HandleTime</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_MaintToggle · POU 程序组织单元 · 源自 03_Functions.st">FC_MaintToggle</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_HeatColor · POU 程序组织单元 · 源自 03_Functions.st">FC_HeatColor</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FC_BlendLight · POU 程序组织单元 · 源自 03_Functions.st">FC_BlendLight</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          04_FB_Warehouse.st <span style="color:#8792a0;font-weight:400">· 17 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_InitWarehouse · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_InitWarehouse</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_SelectSlot · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_SelectSlot</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_AssignAllGoods · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_AssignAllGoods</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_AssignClassTurnover · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_AssignClassTurnover</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_LocalSwapImprove · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_LocalSwapImprove</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_Stats · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_Stats</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_AnimatePath · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_AnimatePath</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_BuildVisuPath · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_BuildVisuPath</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_ScanLoadProbe · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_ScanLoadProbe</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_VisuRefresh · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_VisuRefresh</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_GoodsInput · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_GoodsInput</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_QueryGood · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_QueryGood</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_RetrieveGood · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_RetrieveGood</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_RecordPage · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_RecordPage</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_SceneDetect · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_SceneDetect</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_UserAuth · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_UserAuth</span><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="FB_ParamGuard · POU 程序组织单元 · 源自 04_FB_Warehouse.st">FB_ParamGuard</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          05_PRG_Main.st <span style="color:#8792a0;font-weight:400">· 1 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="PRG_Main · POU 程序组织单元 · 源自 05_PRG_Main.st">PRG_Main</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          06_PRG_Test.st <span style="color:#8792a0;font-weight:400">· 1 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#17365d;background:#e6ecf5;border-color:#17365d33"
+             title="PRG_Test · POU 程序组织单元 · 源自 06_PRG_Test.st">PRG_Test</span></div>
+      </div>
+      <div class="gblk" style="border-color:#c9d0d6;background:#fafbfc;max-width:none;flex:1 1 300px">
+        <div class="gttl" style="color:#17202b;font-family:Consolas,monospace;font-size:11.5px">
+          08_GVL_WeightPolicy_generated.st <span style="color:#8792a0;font-weight:400">· 1 个</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><span class="objChip" style="color:#7a4b00;background:#fdf0da;border-color:#7a4b0033"
+             title="GVL_WeightPolicy · GVL 全局变量表 · 源自 08_GVL_WeightPolicy_generated.st">GVL_WeightPolicy</span></div>
+      </div></div>
+    <div class="src">来源:tools/ab_scripting/sync_st.py 的 MAP(48 条)与 tools/ab_scripting/logs/sync_result_20260717_010514.txt 的 SYNCED 行(48 条);
+      两侧按 pou/dut/gvl 逐类计数一致。<b>09_FB_ScanLoadProbeNs_备用.st</b> 是备用件,不在 MAP 内,故不计入 48。</div>
+    <div class="shotSlot"><b>📷 AB 工程树:Application 下的 48 个对象</b><span>重拍指令:只开 AB(关掉其余全部窗口)→ 左侧设备树展开 Application → 折叠无关分支只留对象列表 → 1920×1080 截设备树面板,勿截整屏</span></div>
+  </section>
+</div>
+
+<div>
+  <div class="sectionLead"><span class="idx">04</span><h2>77 项断言测了什么</h2>
+    <span class="lead">每格一项,<b>颜色=断言类型</b>。分组标题是 plc/06_PRG_Test.st 的注释原文,未经改写。</span></div>
+  <section><div class="legend" style="gap:8px 18px;font-size:11.5px"><span><i style="background:#1d6b2e"></i><b style="color:#1d6b2e">纯函数手算锚</b>
+     <span style="color:#8792a0">19 项 · 对单个 FC_ 纯函数,期望值人工算出,不依赖仓库状态</span></span><span><i style="background:#8a1a1a"></i><b style="color:#8a1a1a">边界与护栏</b>
+     <span style="color:#8792a0">29 项 · 非法输入/极端状态下不炸、不静默、按约定拒绝</span></span><span><i style="background:#17365d"></i><b style="color:#17365d">与 Python 对拍</b>
+     <span style="color:#8792a0">5 项 · 期望值来自 sim 导出向量,容差 1e-3(REAL 单精度 vs 双精度)</span></span><span><i style="background:#7a4b00"></i><b style="color:#7a4b00">端到端集成</b>
+     <span style="color:#8792a0">24 项 · 多个 FB 串起来跑,验最终落位与状态</span></span></div><div class="gwrap"><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T01-T04 承重系数:正常/顶层/负钳位/越上钳位</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T01 · 纯函数手算锚 · T01-T04 承重系数:正常/顶层/负钳位/越上钳位">1</div><div class="cell" style="background:#1d6b2e" title="T02 · 纯函数手算锚 · T01-T04 承重系数:正常/顶层/负钳位/越上钳位">2</div><div class="cell" style="background:#1d6b2e" title="T03 · 纯函数手算锚 · T01-T04 承重系数:正常/顶层/负钳位/越上钳位">3</div><div class="cell" style="background:#1d6b2e" title="T04 · 纯函数手算锚 · T01-T04 承重系数:正常/顶层/负钳位/越上钳位">4</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T05-T07 预占用历史三解读格数(49/231/134;官方口径 sum 见 T24)</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T05 · 纯函数手算锚 · T05-T07 预占用历史三解读格数(49/231/134;官方口径 sum 见 T24)">5</div><div class="cell" style="background:#1d6b2e" title="T06 · 纯函数手算锚 · T05-T07 预占用历史三解读格数(49/231/134;官方口径 sum 见 T24)">6</div><div class="cell" style="background:#1d6b2e" title="T07 · 纯函数手算锚 · T05-T07 预占用历史三解读格数(49/231/134;官方口径 sum 见 T24)">7</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T08-T10 行程时间双模型 + 路径长度(vx=2.0, vy=0.5 时的已知值)</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T08 · 纯函数手算锚 · T08-T10 行程时间双模型 + 路径长度(vx=2.0, vy=0.5 时的已知值)">8</div><div class="cell" style="background:#1d6b2e" title="T09 · 纯函数手算锚 · T08-T10 行程时间双模型 + 路径长度(vx=2.0, vy=0.5 时的已知值)">9</div><div class="cell" style="background:#1d6b2e" title="T10 · 纯函数手算锚 · T08-T10 行程时间双模型 + 路径长度(vx=2.0, vy=0.5 时的已知值)">10</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T11-T16 可行性边界:正常/预占/超重/负重/超容/越界</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T11 · 边界与护栏 · T11-T16 可行性边界:正常/预占/超重/负重/超容/越界">11</div><div class="cell" style="background:#8a1a1a" title="T12 · 边界与护栏 · T11-T16 可行性边界:正常/预占/超重/负重/超容/越界">12</div><div class="cell" style="background:#8a1a1a" title="T13 · 边界与护栏 · T11-T16 可行性边界:正常/预占/超重/负重/超容/越界">13</div><div class="cell" style="background:#8a1a1a" title="T14 · 边界与护栏 · T11-T16 可行性边界:正常/预占/超重/负重/超容/越界">14</div><div class="cell" style="background:#8a1a1a" title="T15 · 边界与护栏 · T11-T16 可行性边界:正常/预占/超重/负重/超容/越界">15</div><div class="cell" style="background:#8a1a1a" title="T16 · 边界与护栏 · T11-T16 可行性边界:正常/预占/超重/负重/超容/越界">16</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T17 超重货全库无可行位(&gt;100kg 连底层都放不下)</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T17 · 边界与护栏 · T17 超重货全库无可行位(&gt;100kg 连底层都放不下)">17</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T18 满仓无可行位(边界#所有仓位已满)</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T18 · 边界与护栏 · T18 满仓无可行位(边界#所有仓位已满)">18</div></div>
+    </div><div class="gblk" style="border-color:#17365d40;background:#e6ecf5">
+      <div class="gttl" style="color:#17365d">T19 评分一致性向量(Python 导出,容差1e-3;见 07_GVL_Data_generated.st)</div>
+      <div class="gcells"><div class="cell" style="background:#17365d" title="T19 · 与 Python 对拍 · T19 评分一致性向量(Python 导出,容差1e-3;见 07_GVL_Data_generated.st)">19</div></div>
+    </div><div class="gblk" style="border-color:#17365d40;background:#e6ecf5">
+      <div class="gttl" style="color:#17365d">T20 行程时间一致性向量(同上)</div>
+      <div class="gcells"><div class="cell" style="background:#17365d" title="T20 · 与 Python 对拍 · T20 行程时间一致性向量(同上)">20</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T21 演示批次载入自检(件数与来源标记)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T21 · 端到端集成 · T21 演示批次载入自检(件数与来源标记)">21</div></div>
+    </div><div class="gblk" style="border-color:#17365d40;background:#e6ecf5">
+      <div class="gttl" style="color:#17365d">T22 L1 加减速口径一致性向量(与 Python 梯形模型逐条比对)</div>
+      <div class="gcells"><div class="cell" style="background:#17365d" title="T22 · 与 Python 对拍 · T22 L1 加减速口径一致性向量(与 Python 梯形模型逐条比对)">22</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T23 双命令周期:已知值 + 不劣于单命令(C10)</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T23 · 纯函数手算锚 · T23 双命令周期:已知值 + 不劣于单命令(C10)">23</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T24 B1 官方口径(2026-07-06 答复):x+y 之和被3整除 = 133 格</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T24 · 纯函数手算锚 · T24 B1 官方口径(2026-07-06 答复):x+y 之和被3整除 = 133 格">24</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T25 AWRA-LS 全流程终局一致性(端到端护栏;0707,sim/consistency_probe 离线证明可绿)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T25 · 端到端集成 · T25 AWRA-LS 全流程终局一致性(端到端护栏;0707,sim/consistency_probe 离线证明可绿)">25</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)<sup class="jd" title="注释两属性都占,按主轴归类,可推翻">判</sup></div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T26 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">26</div><div class="cell" style="background:#8a1a1a" title="T27 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">27</div><div class="cell" style="background:#8a1a1a" title="T28 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">28</div><div class="cell" style="background:#8a1a1a" title="T29 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">29</div><div class="cell" style="background:#8a1a1a" title="T30 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">30</div><div class="cell" style="background:#8a1a1a" title="T31 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">31</div><div class="cell" style="background:#8a1a1a" title="T32 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">32</div><div class="cell" style="background:#8a1a1a" title="T33 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">33</div><div class="cell" style="background:#8a1a1a" title="T34 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">34</div><div class="cell" style="background:#8a1a1a" title="T35 · 边界与护栏 · T26-T35 边界判断扩充(0707,评分细则5&quot;边界判断充分&quot;;纯函数断言,手算期望)">35</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T36-T40 选位策略边界(0707;FB_SelectSlot 各策略正确性;仓库=上面 rule0 干净态)<sup class="jd" title="注释两属性都占,按主轴归类,可推翻">判</sup></div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T36 · 端到端集成 · T36-T40 选位策略边界(0707;FB_SelectSlot 各策略正确性;仓库=上面 rule0 干净态)">36</div><div class="cell" style="background:#7a4b00" title="T37 · 端到端集成 · T36-T40 选位策略边界(0707;FB_SelectSlot 各策略正确性;仓库=上面 rule0 干净态)">37</div><div class="cell" style="background:#7a4b00" title="T38 · 端到端集成 · T36-T40 选位策略边界(0707;FB_SelectSlot 各策略正确性;仓库=上面 rule0 干净态)">38</div><div class="cell" style="background:#7a4b00" title="T39 · 端到端集成 · T36-T40 选位策略边界(0707;FB_SelectSlot 各策略正确性;仓库=上面 rule0 干净态)">39</div><div class="cell" style="background:#7a4b00" title="T40 · 端到端集成 · T36-T40 选位策略边界(0707;FB_SelectSlot 各策略正确性;仓库=上面 rule0 干净态)">40</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T41 FB_GoodsInput 封装(评分细则6/7;0707 T2.2 抽取):正常/负输入/超重无位 三分支<sup class="jd" title="注释两属性都占,按主轴归类,可推翻">判</sup></div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T41 · 端到端集成 · T41 FB_GoodsInput 封装(评分细则6/7;0707 T2.2 抽取):正常/负输入/超重无位 三分支">41</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T42-T45 块3 画面服务(0708;前置=T41 留下的表:aGoods[1]=Id1轻货/aGoods[2]=Id3超重,count=2)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T42 · 端到端集成 · T42-T45 块3 画面服务(0708;前置=T41 留下的表:aGoods[1]=Id1轻货/aGoods[2]=Id3超重,count=2)">42</div><div class="cell" style="background:#7a4b00" title="T43 · 端到端集成 · T42-T45 块3 画面服务(0708;前置=T41 留下的表:aGoods[1]=Id1轻货/aGoods[2]=Id3超重,count=2)">43</div><div class="cell" style="background:#7a4b00" title="T44 · 端到端集成 · T42-T45 块3 画面服务(0708;前置=T41 留下的表:aGoods[1]=Id1轻货/aGoods[2]=Id3超重,count=2)">44</div><div class="cell" style="background:#7a4b00" title="T45 · 端到端集成 · T42-T45 块3 画面服务(0708;前置=T41 留下的表:aGoods[1]=Id1轻货/aGoods[2]=Id3超重,count=2)">45</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T46-T48 检修挂起(A3,putaway block 语义;干净仓:sum 口径 133 预占)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T46 · 端到端集成 · T46-T48 检修挂起(A3,putaway block 语义;干净仓:sum 口径 133 预占)">46</div><div class="cell" style="background:#7a4b00" title="T47 · 端到端集成 · T46-T48 检修挂起(A3,putaway block 语义;干净仓:sum 口径 133 预占)">47</div><div class="cell" style="background:#7a4b00" title="T48 · 端到端集成 · T46-T48 检修挂起(A3,putaway block 语义;干净仓:sum 口径 133 预占)">48</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖)<sup class="jd" title="注释两属性都占,按主轴归类,可推翻">判</sup></div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T49 · 纯函数手算锚 · T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖)">49</div><div class="cell" style="background:#1d6b2e" title="T50 · 纯函数手算锚 · T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖)">50</div><div class="cell" style="background:#1d6b2e" title="T51 · 纯函数手算锚 · T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖)">51</div><div class="cell" style="background:#1d6b2e" title="T52 · 纯函数手算锚 · T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖)">52</div><div class="cell" style="background:#1d6b2e" title="T53 · 纯函数手算锚 · T49-T53 场景检测器(A2;画像手算锚+推荐分支全覆盖)">53</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T54-T55 两级权限(A4:登录三段 + 守卫回滚)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T54 · 端到端集成 · T54-T55 两级权限(A4:登录三段 + 守卫回滚)">54</div><div class="cell" style="background:#7a4b00" title="T55 · 端到端集成 · T54-T55 两级权限(A4:登录三段 + 守卫回滚)">55</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T56 检修权限门(FC_MaintToggle 四分支:需管理员/挂起/恢复/越界)</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T56 · 纯函数手算锚 · T56 检修权限门(FC_MaintToggle 四分支:需管理员/挂起/恢复/越界)">56</div></div>
+    </div><div class="gblk" style="border-color:#1d6b2e40;background:#e6f2e8">
+      <div class="gttl" style="color:#1d6b2e">T57 FC_HeatColor 三段端点 + 防除 + FC_BlendLight 黑白极值(手算锚)</div>
+      <div class="gcells"><div class="cell" style="background:#1d6b2e" title="T57 · 纯函数手算锚 · T57 FC_HeatColor 三段端点 + 防除 + FC_BlendLight 黑白极值(手算锚)">57</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T58 aSlotOps 履历 + aSlotFreq 布局态(小批端到端:2 件 score 落位)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T58 · 端到端集成 · T58 aSlotOps 履历 + aSlotFreq 布局态(小批端到端:2 件 score 落位)">58</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T59 层高亮集成:计数正确 + 高亮色=FC_BlendLight(原色)(相对锚,免猜状态色)</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T59 · 端到端集成 · T59 层高亮集成:计数正确 + 高亮色=FC_BlendLight(原色)(相对锚,免猜状态色)">59</div></div>
+    </div><div class="gblk" style="border-color:#17365d40;background:#e6ecf5">
+      <div class="gttl" style="color:#17365d">T60 near 平局全序=(时间,层,列)=Python(N5-01 统一):等时对(0,1)vs(4,0)须选(4,0)</div>
+      <div class="gcells"><div class="cell" style="background:#17365d" title="T60 · 与 Python 对拍 · T60 near 平局全序=(时间,层,列)=Python(N5-01 统一):等时对(0,1)vs(4,0)须选(4,0)">60</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T61 FC_LoadDemoGoods 满仓护栏(N4-15:395+20&gt;400 拒载不部分写入;空仓正常加载)</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T61 · 边界与护栏 · T61 FC_LoadDemoGoods 满仓护栏(N4-15:395+20&gt;400 拒载不部分写入;空仓正常加载)">61</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T62 守卫回滚后评分立即用恢复值(N4-14 配套:值级生效;时序前置由 PRG_Main 结构保证)</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T62 · 边界与护栏 · T62 守卫回滚后评分立即用恢复值(N4-14 配套:值级生效;时序前置由 PRG_Main 结构保证)">62</div><div class="cell" style="background:#8a1a1a" title="T63 · 边界与护栏 · T62 守卫回滚后评分立即用恢复值(N4-14 配套:值级生效;时序前置由 PRG_Main 结构保证)">63</div><div class="cell" style="background:#8a1a1a" title="T64 · 边界与护栏 · T62 守卫回滚后评分立即用恢复值(N4-14 配套:值级生效;时序前置由 PRG_Main 结构保证)">64</div><div class="cell" style="background:#8a1a1a" title="T65 · 边界与护栏 · T62 守卫回滚后评分立即用恢复值(N4-14 配套:值级生效;时序前置由 PRG_Main 结构保证)">65</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T66 检测器 lexicographic 三分支(n=200→CB(4);60→AWRA(3);120→TOB(5))</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T66 · 端到端集成 · T66 检测器 lexicographic 三分支(n=200→CB(4);60→AWRA(3);120→TOB(5))">66</div><div class="cell" style="background:#7a4b00" title="T67 · 端到端集成 · T66 检测器 lexicographic 三分支(n=200→CB(4);60→AWRA(3);120→TOB(5))">67</div><div class="cell" style="background:#7a4b00" title="T68 · 端到端集成 · T66 检测器 lexicographic 三分支(n=200→CB(4);60→AWRA(3);120→TOB(5))">68</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T69 TOB 全流程终局一致性(同 T68;向量源=aTobExpect/TOB_*)<sup class="jd" title="注释两属性都占,按主轴归类,可推翻">判</sup></div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T69 · 端到端集成 · T69 TOB 全流程终局一致性(同 T68;向量源=aTobExpect/TOB_*)">69</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T70 ID 契约(N4-16):iId&lt;=0 拒收;重复 Id 拒收;正常唯一 Id 通过</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T70 · 边界与护栏 · T70 ID 契约(N4-16):iId&lt;=0 拒收;重复 Id 拒收;正常唯一 Id 通过">70</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T71 分片钳位(N4-18):nBatchPerCycle=0 时批量仍收敛(MAX(1,·) 防静默挂起)</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T71 · 边界与护栏 · T71 分片钳位(N4-18):nBatchPerCycle=0 时批量仍收敛(MAX(1,·) 防静默挂起)">71</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T72 违规一致性扫描(N4-20 扩):干净批=0;手动弄脏一件的记录坐标→检出&gt;=1</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T72 · 边界与护栏 · T72 违规一致性扫描(N4-20 扩):干净批=0;手动弄脏一件的记录坐标→检出&gt;=1">72</div></div>
+    </div><div class="gblk" style="border-color:#7a4b0040;background:#fdf0da">
+      <div class="gttl" style="color:#7a4b00">T73 检修真冻结(N4-23/A3):冻结源位存量不被重定位搬走;解除后允许搬</div>
+      <div class="gcells"><div class="cell" style="background:#7a4b00" title="T73 · 端到端集成 · T73 检修真冻结(N4-23/A3):冻结源位存量不被重定位搬走;解除后允许搬">73</div></div>
+    </div><div class="gblk" style="border-color:#8a1a1a40;background:#fde8e8">
+      <div class="gttl" style="color:#8a1a1a">T74 FC_TMax 除零钳位(N4-24):rVx=0 不炸且&gt;0;恢复后=38.0(max(9.5,38))</div>
+      <div class="gcells"><div class="cell" style="background:#8a1a1a" title="T74 · 边界与护栏 · T74 FC_TMax 除零钳位(N4-24):rVx=0 不炸且&gt;0;恢复后=38.0(max(9.5,38))">74</div><div class="cell" style="background:#8a1a1a" title="T75 · 边界与护栏 · T74 FC_TMax 除零钳位(N4-24):rVx=0 不炸且&gt;0;恢复后=38.0(max(9.5,38))">75</div><div class="cell" style="background:#8a1a1a" title="T76 · 边界与护栏 · T74 FC_TMax 除零钳位(N4-24):rVx=0 不炸且&gt;0;恢复后=38.0(max(9.5,38))">76</div></div>
+    </div><div class="gblk" style="border-color:#17365d40;background:#e6ecf5">
+      <div class="gttl" style="color:#17365d">T77 FC_TMax 跟随 xUseAccel 口径(0717 治理D;深审 P1-3)<sup class="jd" title="注释两属性都占,按主轴归类,可推翻">判</sup></div>
+      <div class="gcells"><div class="cell" style="background:#17365d" title="T77 · 与 Python 对拍 · T77 FC_TMax 跟随 xUseAccel 口径(0717 治理D;深审 P1-3)">77</div></div>
+    </div></div>
+    <div class="src">四类归属由 plc/06_PRG_Test.st 的分组注释判定;标「判」的 6 组注释本身两属性都占,按主轴归,可推翻。
+    合计 77 项 = 纯 19 / 界 29 / 拍 5 / 集 24</div><div class="inv"><b>这个数为什么骗不了人</b> —— 汇总循环
+ <code>FOR i := 1 TO N_CASES</code>(plc/06_PRG_Test.st:966-972)每轮必给 <code>iPassed</code> 或 <code>iFailed</code> 加一,
+ 故 <code>iPassed + iFailed ≡ N_CASES</code> 恒成立。读回两数之和 ≠ 77,说明跑的不是当前应用,而不是「有用例失败」。
+ 本轮读回 <code>77 + 0 = 77</code>,恒等式成立。</div>
+    <div class="src">来源:plc/06_PRG_Test.st 的 aResult[1..77] 赋值与分组注释;实测 77 条赋值、编号 1..77 无空洞、与 N_CASES=77 一致</div>
+  </section>
+</div>
+
+<div>
+  <div class="sectionLead"><span class="idx">05</span><h2>ST 与 Python 对拍</h2>
+    <span class="lead">同一组黄金向量在两侧逐位比对,容差 1e-3(PLC REAL 单精度 vs Python 双精度)。</span></div>
+  <section style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
+    <div style="flex:1;min-width:300px">
+      <table style="border-collapse:collapse;font-size:12.5px;width:100%">
+        <tr style="background:#f6f8f9"><th style="text-align:left;padding:6px 9px;border:1px solid var(--line-soft)">向量</th>
+          <th style="text-align:left;padding:6px 9px;border:1px solid var(--line-soft)">锁定值</th>
+          <th style="text-align:left;padding:6px 9px;border:1px solid var(--line-soft)">位置</th></tr>
+        <tr><td style="padding:6px 9px;border:1px solid var(--line-soft)">CB_EXPT</td>
+          <td class="mono" style="padding:6px 9px;border:1px solid var(--line-soft)">2.495106</td>
+          <td class="path" style="padding:6px 9px;border:1px solid var(--line-soft)">plc/07_GVL_Data_generated.st:105</td></tr>
+        <tr><td style="padding:6px 9px;border:1px solid var(--line-soft)">TOB_EXPT</td>
+          <td class="mono" style="padding:6px 9px;border:1px solid var(--line-soft)">2.143856</td>
+          <td class="path" style="padding:6px 9px;border:1px solid var(--line-soft)">plc/07_GVL_Data_generated.st:132</td></tr>
+      </table>
+      <div class="src">07 是生成文件,由 sim/export_st_vectors.py 重生;改了 Python 评分函数不重跑,T19/T20 会红——这是设计出来的护栏。</div>
+    </div>
+    <div class="shotSlot"><b>📷 在线自测读回监视页</b><span>重拍指令:AB 在线登录后停在 PRG_Test 的监视表,让 iPassed / iFailed / xAllPass 三行同框可见 → 截该监视面板,勿截整屏</span></div>
+  </section>
+</div>
+
+<div>
+  <div class="sectionLead"><span class="idx">06</span><h2>三页制 HMI</h2>
+    <span class="lead">按操作频率与风险分层:运行调度 / 记录追溯 / 管理诊断。画面元件的颜色由 PLC 侧每周期算好,
+      画面本身不写死颜色——改配色只改 <span class="mono">FC_StateToColor</span>。</span></div>
+  <section style="display:flex;gap:14px;flex-wrap:wrap">
+    <div class="shotSlot"><b>📷 P1 Console 运行调度页</b><span>重拍指令:AB 在线 RUN 中 → 切到 VisuMain → 用「全屏可视化」模式截,不要带 IDE 菜单与设备树 → 确认底部显示 Tests 77/77(0712 旧图是 75/75,已被 fix_visu_texts_0717.py 改掉)</span></div>
+    <div class="shotSlot"><b>📷 P2 Records 记录追溯页</b><span>重拍指令:同上切 VisuStats → 确认标题是「demo IDs 1..20」(0712 旧图写 901,902,903,同一次脚本改掉)</span></div>
+    <div class="shotSlot"><b>📷 P3 Admin 管理诊断页</b><span>重拍指令:同上切 VisuAdmin → 登录管理员态后截,让权限相关控件处于可用态</span></div>
+  </section>
+</div></main></body></html>
