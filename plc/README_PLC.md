@@ -4,6 +4,7 @@
 > 无实体PLC时可在AB PC仿真模式检查有限逻辑；这不等于实体AC500完整运行或性能验证。
 > 交付形式官方要求待确认(canonical D 清单),先按「AB 工程 + ST 源码」双备份准备。
 > **0717 基线**：当前 `06_PRG_Test.st` 声明 **77 项全部为真实断言**(T01-T59 核心 ST/静态匀速黄金向量、T60-T75 轨B 平局统一/容量护栏/CB-TOB/隐患清扫、T76 取出演示四分支、T77 FC_TMax 加减速口径),在线读回铁证 **iPassed=77 / iFailed=0 / xAllPass=TRUE**(`tools/ab_scripting/logs/runtest_result_20260717_010514.txt`)。历史基线:76/0=0716(E7 取出演示)、59/0=0712(最早读回锚),引用需带日期。
+> **⚠ 自己复现前先读 §2b**:两条规矩——①判据 `iPassed + iFailed ≡ N_CASES`,两数之和 ≠ 77 说明**跑的不是当前应用**,不是有用例失败;②**只认 `tools\ab_scripting\logs\` 里带时间戳的归档**,脚本目录下那两个 `*_result.txt` 是暂存文件,会被 git 操作改写。
 
 ## 1. 文件清单与导入对象对应
 
@@ -25,10 +26,71 @@
 3. 任务配置:Task(循环,10ms)→ 挂 PRG_Main;PRG_Test 可挂同任务(默认不触发,置 xRunTests 才跑)。
 4. 菜单 在线 → 仿真(Simulation)勾选 → 登录(Login)→ 运行(Run)。
 5. 首次验证顺序:
-   a. 自检基线：PRG_Test.xRunTests:=TRUE → **iPassed=77、iFailed=0**(0717 在线读回;76/0=0716、59/0=0712 为历史锚)。任何 ST 改动后必须重跑 `tools\ab_scripting\ab_sync.ps1` 取得新读回,源码计数本身不升级证据;
+   a. 自检基线：PRG_Test.xRunTests:=TRUE → **iPassed=77、iFailed=0**(0717 在线读回;76/0=0716、59/0=0712 为历史锚)。任何 ST 改动后必须重跑 `tools\ab_scripting\ab_sync.ps1` 取得新读回,源码计数本身不升级证据;**若读回不是 77/0,先按 §2b 判断是不是"跑的不是当前应用",不要先怀疑用例**;
    b. GVL_Visu.CmdLoadDemo := TRUE(载入 20 件演示货,与仿真同 seed 同源);
    c. GVL_Visu.SelStrategy := 3(AWRA-LS);CmdRunAssign := TRUE;
    d. 观察 fbAssign/fbImprove 分片推进(xBusy→xDone),看 GVL_WH.stStats:ViolCnt 必须=0。
+
+## 2b. 复现 77/0 的两条规矩(0729 补)
+
+**一句话**:①读回数少了先怀疑"跑的不是当前应用",别先怀疑用例;②证据只认 `logs\` 里的归档。
+
+### 2b-0 理论陷阱:改过 `VAR CONSTANT` 后走在线更改登录,读回的是旧应用的旧常量
+
+**自查判据(不用开 AB 就能判)**:汇总循环(`06_PRG_Test.st:966-972`)是
+```
+FOR i := 1 TO N_CASES DO
+    IF aResult[i] THEN iPassed := iPassed + 1; ELSE iFailed := iFailed + 1; ... END_IF
+END_FOR
+```
+每轮必给两个计数器之一加一,所以 **`iPassed + iFailed ≡ N_CASES` 恒成立**。
+→ **读回两数之和 ≠ 当前 `N_CASES`(现为 77),说明跑的不是当前应用,而不是"有用例失败"。**
+真有用例失败的样子是 `iPassed + iFailed = 77` 且 `iFailed > 0`,并且 `sLastFail` 会带上 `T<编号>`。
+
+**机制根因**:
+- `tools\ab_scripting\run_test.py:38` 是 `onapp.login(OnlineChangeOption.Try, True)` —— **在线更改**优先,不保证全量下载;
+- `N_CASES : INT := 77` 声明在 `06_PRG_Test.st:12` 的 `VAR CONSTANT` 段,该行注释自己写着「常量化=N4-08,**在线不可改**」;
+- 两者叠加 → 源码同步和编译都成功,新常量却没进到仿真 PLC 里跑的那份应用。
+
+**上述陷阱是"能发生",不是"已发生"** —— 截至 0729,仓库里**没有任何一次读回被它咬到过**的证据。
+之所以单独写这一节,是因为 0729 审计时差点把另一件事误判成它,见下。
+
+### 2b-1 别把 `runtest_result.txt` 当证据:它是暂存输出,又被 git 跟踪,内容与 mtime 会被 git 操作改写
+
+**误判经过(0729,已澄清)**:`tools\ab_scripting\runtest_result.txt` 的 mtime 是 **2026-07-27 21:44:26**,
+内容 `iPassed=INT#76 / iFailed=INT#0`。看上去像"7/27 跑了一次,只拿到 76",于是先被归因为上面那个在线更改陷阱。
+
+**实际不是。那天根本没跑 AB。** 四条独立证据:
+1. 它与 `logs\runtest_result_20260716_135644.txt` **逐字节完全相同**(连 ScriptEngine 的 `dir()` 列表和
+   `guid=74993588-...` 都一样);同批 `sync_result.txt` 与 `logs\sync_result_20260716_135644.txt` 也逐字节相同;
+2. 两个文件的 mtime **相同到纳秒**(`21:44:26.018723200`)。而脚本是分两阶段写的,中间隔着编译——
+   0716 那对归档就是 13:54 与 13:56,差两分钟。同纳秒只可能来自一次**复制/还原**;
+3. `git reflog` 里有 `c9a3363 HEAD@{2026-07-27 21:44:26 -0500}: reset: moving to HEAD` —— **时间戳完全吻合**;
+   同一刻被改写的还有 `l4_showcase\app_shell\package.json` 与 `package-lock.json`(对应 21:49 那次 QA 环境抢修);
+4. `logs\` 里没有任何 0727 的归档,而 `ab_sync.ps1` 的归档是**无条件**的。
+
+→ 那个 76 是 `git reset --hard` 把 **0716 提交的文件**还原回磁盘的结果,不是一次测试读回。
+**最后一次真实 AB 场次仍是 0717(`logs\*_20260717_010514`,77/0)**,此后至今未再跑过。
+
+**规矩(本节的实际价值)**:
+- **只认 `logs\` 里带时间戳的归档副本**,那是 `ab_sync.ps1` 每轮无条件复制、不被覆盖的证据;
+- **`tools\ab_scripting\` 根目录下的 `runtest_result.txt` / `sync_result.txt` 一律视为暂存**——
+  每次运行会先 `Remove-Item` 再重建,而它们又在 git 里,任何 `reset` / `checkout` / `stash` 都会改写它们的内容与 mtime;
+- 引用任何一次读回,**必须带上归档文件名里的时间戳**。
+
+### 2b-2 下次重验怎么做(尚未实证,做完请回填本节)
+1. 关掉 AB GUI(`ab_sync.ps1` 开头会拒绝在 GUI 开着时运行,防双实例毁工程);
+2. 走完整 `powershell -File tools\ab_scripting\ab_sync.ps1`,**不要单独调 `run_test.py`** ——
+   完整脚本才会归档日志并过 77/0 硬闸(该闸已于 0729 重写,见下);
+3. 若真读回 `iPassed+iFailed < N_CASES`,再把 `run_test.py:38` 的 `OnlineChangeOption.Try` 改成 `Never`
+   (禁在线更改、强制全量下载)后重跑 —— **此改法尚未实测,属待验证方案**;
+4. 日志归档进 `logs\` 并 `git add`,再回写 `sim\out\plc_evidence.csv`
+   (那是**手工登记源**,不是脚本产物,见 `sim\build_report.py:332`)。
+
+**0729 已把判据做进 `ab_sync.ps1` 的硬闸**:它现在从 `06_PRG_Test.st` 读 `N_CASES`(不再硬编码 77),
+并把两种失败分开报——`iPassed+iFailed ≠ N_CASES` 报 `!! STALE APPLICATION - this is NOT a test failure.`
+并指回本节;和值相等而 `iFailed>0` 才报 `!! REAL TEST FAILURE` 并打印 `sLastFail`。
+该闸门逻辑已用 0712/0716/0717 三份真实归档 + 一份合成的真失败日志实测过四条分支判定正确(未开 AB)。
 
 ## 3. 设计要点(答辩讲这几条)
 
